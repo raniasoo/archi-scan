@@ -40,18 +40,18 @@ const JUSO_API_BASE = 'https://business.juso.go.kr/addrlink'
 // API Endpoints
 const ENDPOINTS = {
   // MOLIT Building Register (data.go.kr) - Current ledger
-  buildingBasic: '/BldRgstService_v2/getBrBasisOulnInfo',           // 건축물대장 기본개요
-  buildingTitle: '/BldRgstService_v2/getBrTitleInfo',               // 건축물대장 표제부
-  buildingRecapTitle: '/BldRgstService_v2/getBrRecapTitleInfo',     // 건축물대장 총괄표제부
-  buildingFloor: '/BldRgstService_v2/getBrFlrOulnInfo',             // 건축물대장 층별개요
-  buildingExpos: '/BldRgstService_v2/getBrExposPubuseAreaInfo',     // 건축물대장 전유공용면적 (전유부)
-  buildingJijuk: '/BldRgstService_v2/getBrJijiguInfo',              // 건축물대장 지역지구구역
-  buildingAtchJibun: '/BldRgstService_v2/getBrAtchJibunInfo',       // 건축물대장 부속지번 (supplementary parcel)
+  buildingBasic: '/BldRgstHubService/getBrBasisOulnInfo',           // 건축물대장 기본개요
+  buildingTitle: '/BldRgstHubService/getBrTitleInfo',               // 건축물대장 표제부
+  buildingRecapTitle: '/BldRgstHubService/getBrRecapTitleInfo',     // 건축물대장 총괄표제부
+  buildingFloor: '/BldRgstHubService/getBrFlrOulnInfo',             // 건축물대장 층별개요
+  buildingExpos: '/BldRgstHubService/getBrExposPubuseAreaInfo',     // 건축물대장 전유공용면적 (전유부)
+  buildingJijuk: '/BldRgstHubService/getBrJijiguInfo',              // 건축물대장 지역지구구역
+  buildingAtchJibun: '/BldRgstHubService/getBrAtchJibunInfo',       // 건축물대장 부속지번 (supplementary parcel)
   
   // MOLIT Building Register - Closed/Removed ledger (폐쇄/말소)
-  closedBasic: '/BldRgstService_v2/getBrExitBasisOulnInfo',         // 폐쇄 기본개요
-  closedTitle: '/BldRgstService_v2/getBrExitTitleInfo',             // 폐쇄 표제부
-  closedRecapTitle: '/BldRgstService_v2/getBrExitRecapTitleInfo',   // 폐쇄 총괄표제부
+  closedBasic: '/BldRgstHubService/getBrExitBasisOulnInfo',         // 폐쇄 기본개요
+  closedTitle: '/BldRgstHubService/getBrExitTitleInfo',             // 폐쇄 표제부
+  closedRecapTitle: '/BldRgstHubService/getBrExitRecapTitleInfo',   // 폐쇄 총괄표제부
   
   // Land
   land: '/lndPrclServiceV1/getLndPrclByPNU',
