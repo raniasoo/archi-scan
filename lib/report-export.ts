@@ -1212,7 +1212,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     <!-- 2. 종합 검토 결과 -->
     <div class="section pdf-section">
       <h2 class="section-title">종합 검토 결과</h2>
-      <div class="summary-grid pdf-card-group">
+      <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
         <div class="summary-card">
           <p class="label">선정 배치안</p>
           <p class="value">${report.summary.selectedLayoutName}</p>
@@ -1350,7 +1350,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         <h2 class="section-title">5. 규모 산정 및 계획 구성</h2>
       </div>
       <div class="print-cards-block">
-        <div class="summary-grid pdf-card-group">
+        <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
           <div class="summary-card">
             <p class="label">선정 배치안</p>
             <p class="value">${report.planning.selectedLayoutName}</p>
@@ -1412,7 +1412,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 
       <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
 
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0;">
+      <div class="pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
         <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
           <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
           <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
@@ -1438,7 +1438,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
       </div>
       <div class="print-roi-block">
-        <div class="summary-grid pdf-card-group">
+        <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
           <div class="summary-card">
             <p class="label">손익분기 분양률</p>
             <p class="value">${report.feasibility.breakEvenRateFormatted}</p>
@@ -2698,7 +2698,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     <!-- 2. 종합 검토 결과 -->
     <div class="section pdf-section">
       <h2 class="section-title">종합 검토 결과</h2>
-      <div class="summary-grid pdf-card-group">
+      <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
         <div class="summary-card">
           <p class="label">선정 배치안</p>
           <p class="value">${report.summary.selectedLayoutName}</p>
@@ -2716,7 +2716,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
           <p class="value highlight">${report.summary.roiFormatted}</p>
         </div>
       </div>
-      <div class="summary-grid pdf-card-group">
+      <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
         <div class="summary-card">
           <p class="label">건폐율</p>
           <p class="value">${report.summary.buildingCoverageFormatted}</p>
@@ -2870,7 +2870,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         <h2 class="section-title">5. 규모 산정 및 계획 구성</h2>
       </div>
       <div class="print-cards-block">
-        <div class="summary-grid pdf-card-group">
+        <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
           <div class="summary-card">
             <p class="label">선정 배치안</p>
             <p class="value">${report.planning.selectedLayoutName}</p>
@@ -2930,7 +2930,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     <!-- 7. AI 분석 -->
     <section class="pdf-section pdf-section-7">
       <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0;">
+      <div class="pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
         <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
           <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
           <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
@@ -2956,7 +2956,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
       </div>
       <div class="print-roi-block">
-        <div class="summary-grid pdf-card-group">
+        <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
           <div class="summary-card">
             <p class="label">손익분기 분양률</p>
             <p class="value">${report.feasibility.breakEvenRateFormatted}</p>
