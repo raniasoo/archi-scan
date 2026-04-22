@@ -1026,13 +1026,14 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       margin-top: 8px; margin-bottom: 18px;
       padding-top: 3px; padding-bottom: 6px;
       font-weight: 700; line-height: 1.5; 
-      overflow: visible; display: block;
+      overflow: visible;
+      display: flex; align-items: center;
       height: auto; min-height: auto;
     }
     .section-title::before { 
-      content: ''; display: inline-block; vertical-align: top;
-      width: 4px; height: 22px; background: #0369a1; border-radius: 2px;
-      margin-right: 10px; margin-top: 1px;
+      content: ''; display: block; flex-shrink: 0;
+      width: 4px; height: 1em; background: #0369a1; border-radius: 2px;
+      margin-right: 10px;
     }
     .section-subtitle { 
       font-size: 15px; color: #6b7280; margin-bottom: 12px; 
@@ -1976,13 +1977,14 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       margin-top: 8px; margin-bottom: 18px;
       padding-top: 3px; padding-bottom: 6px;
       font-weight: 700; line-height: 1.5; 
-      overflow: visible; display: block;
+      overflow: visible;
+      display: flex; align-items: center;
       height: auto; min-height: auto;
     }
     .section-title::before { 
-      content: ''; display: inline-block; vertical-align: top;
-      width: 4px; height: 22px; background: #0369a1; border-radius: 2px;
-      margin-right: 10px; margin-top: 1px;
+      content: ''; display: block; flex-shrink: 0;
+      width: 4px; height: 1em; background: #0369a1; border-radius: 2px;
+      margin-right: 10px;
     }
     .section-subtitle { 
       font-size: 15px; color: #6b7280; margin-bottom: 12px; 
