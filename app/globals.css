@@ -1,0 +1,916 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+@custom-variant print (@media print);
+
+/* Premium Dark Theme for App UI */
+:root {
+  /* Dark Background for App */
+  --background: oklch(0.14 0.03 200);
+  --foreground: oklch(0.95 0.01 200);
+  --card: oklch(0.18 0.03 200);
+  --card-foreground: oklch(0.95 0.01 200);
+  --popover: oklch(0.18 0.03 200);
+  --popover-foreground: oklch(0.95 0.01 200);
+  --primary: oklch(0.65 0.14 175);
+  --primary-foreground: oklch(0.12 0.025 200);
+  --secondary: oklch(0.2 0.025 200);
+  --secondary-foreground: oklch(0.92 0.01 200);
+  --muted: oklch(0.22 0.02 200);
+  --muted-foreground: oklch(0.65 0.02 200);
+  --accent: oklch(0.3 0.08 175);
+  --accent-foreground: oklch(0.9 0.05 175);
+  --destructive: oklch(0.5 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.26 0.025 200);
+  --input: oklch(0.2 0.02 200);
+  --ring: oklch(0.65 0.14 175);
+  --chart-1: oklch(0.65 0.14 175);
+  --chart-2: oklch(0.7 0.12 185);
+  --chart-3: oklch(0.75 0.1 200);
+  --chart-4: oklch(0.7 0.15 80);
+  --chart-5: oklch(0.6 0.2 30);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.12 0.03 200);
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-primary: oklch(0.65 0.14 175);
+  --sidebar-primary-foreground: oklch(0.12 0.025 200);
+  --sidebar-accent: oklch(0.18 0.025 200);
+  --sidebar-accent-foreground: oklch(0.95 0 0);
+  --sidebar-border: oklch(0.24 0.025 200);
+  --sidebar-ring: oklch(0.65 0.14 175);
+  
+  /* Report-specific tokens (kept for reference) */
+  --report-cover-bg: oklch(0.16 0.05 190);
+  --report-cover-fg: oklch(0.98 0 0);
+  --report-section-border: oklch(0.65 0.14 175);
+  --report-highlight: oklch(0.28 0.06 175);
+  --report-premium: oklch(0.45 0.1 175);
+  --report-success: oklch(0.55 0.15 155);
+  --report-warning: oklch(0.65 0.15 80);
+  --report-danger: oklch(0.55 0.2 25);
+}
+
+.dark {
+  --background: oklch(0.18 0.02 200);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.22 0.02 200);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.22 0.02 200);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.65 0.14 175);
+  --primary-foreground: oklch(0.15 0.02 200);
+  --secondary: oklch(0.25 0.018 200);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.25 0.018 200);
+  --muted-foreground: oklch(0.68 0.02 200);
+  --accent: oklch(0.3 0.06 175);
+  --accent-foreground: oklch(0.9 0.05 175);
+  --destructive: oklch(0.5 0.18 25);
+  --destructive-foreground: oklch(0.96 0 0);
+  --border: oklch(0.3 0.02 200);
+  --input: oklch(0.25 0.018 200);
+  --ring: oklch(0.65 0.14 175);
+  --chart-1: oklch(0.65 0.14 175);
+  --chart-2: oklch(0.7 0.12 185);
+  --chart-3: oklch(0.75 0.1 200);
+  --chart-4: oklch(0.7 0.15 80);
+  --chart-5: oklch(0.6 0.2 30);
+  --sidebar: oklch(0.15 0.02 200);
+  --sidebar-foreground: oklch(0.96 0 0);
+  --sidebar-primary: oklch(0.65 0.14 175);
+  --sidebar-primary-foreground: oklch(0.15 0.02 200);
+  --sidebar-accent: oklch(0.22 0.018 200);
+  --sidebar-accent-foreground: oklch(0.96 0 0);
+  --sidebar-border: oklch(0.28 0.018 200);
+  --sidebar-ring: oklch(0.65 0.14 175);
+  
+  --report-cover-bg: oklch(0.2 0.04 190);
+  --report-cover-fg: oklch(0.96 0 0);
+  --report-section-border: oklch(0.65 0.14 175);
+  --report-highlight: oklch(0.28 0.06 175);
+  --report-premium: oklch(0.5 0.12 175);
+  --report-success: oklch(0.55 0.15 155);
+  --report-warning: oklch(0.65 0.15 80);
+  --report-danger: oklch(0.55 0.2 25);
+}
+
+@theme inline {
+  --font-sans: 'Noto Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', 'Consolas', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html, body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100vh;
+  }
+}
+
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==============================================
+   Report-specific Component Styles
+   ============================================== */
+
+/* Report Wrapper - Sand Beige Premium Light Style (Isolated) */
+.report-wrapper {
+  /* Sand Beige Background #F6F1E8 */
+  background: oklch(0.955 0.015 85);
+  /* Brown Charcoal Text #2F2A24 */
+  color: oklch(0.25 0.02 55);
+  padding: 1rem;
+  border-radius: 0.75rem;
+}
+
+/* Report Cover - Premium with Forest Green accent */
+.report-cover {
+  background: oklch(0.995 0.008 90);
+  color: oklch(0.25 0.02 55);
+  padding: 1.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid oklch(0.88 0.02 80);
+  box-shadow: 0 4px 16px -4px oklch(0.5 0.05 55 / 0.12);
+  position: relative;
+}
+
+.report-cover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, oklch(0.48 0.1 155), oklch(0.68 0.06 140));
+  border-radius: 0.625rem 0.625rem 0 0;
+}
+
+.report-cover h1 {
+  color: oklch(0.25 0.02 55);
+}
+
+.report-cover-compact {
+  background: oklch(0.995 0.008 90);
+  color: oklch(0.25 0.02 55);
+  padding: 1.5rem 1.25rem;
+  border-radius: 0.625rem;
+  border: 1px solid oklch(0.88 0.02 80);
+  box-shadow: 0 3px 12px -3px oklch(0.5 0.05 55 / 0.1);
+  position: relative;
+}
+
+.report-cover-compact::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, oklch(0.48 0.1 155), oklch(0.68 0.06 140));
+  border-radius: 0.625rem 0.625rem 0 0;
+}
+
+.report-cover-compact h1 {
+  color: oklch(0.25 0.02 55);
+}
+
+/* Report Card - Isolated light style for report sections */
+.report-card {
+  /* Cream White #FFFDF9 */
+  background: #FFFDF9;
+  /* Border #DED6C8 */
+  border: 1px solid #DED6C8;
+  border-radius: 0.625rem;
+  box-shadow: 0 2px 8px rgba(47, 42, 36, 0.06);
+}
+
+/* Report utility classes for isolated light theme */
+.report-text {
+  color: #2F2A24 !important;
+}
+
+.report-text-muted {
+  color: #746B5E !important;
+}
+
+.report-bg-secondary {
+  background: #F0F3EA !important;
+}
+
+.report-border {
+  border-color: #DED6C8 !important;
+}
+
+.report-text-primary {
+  color: #2F6B4F !important;
+}
+
+.report-highlight-bg {
+  background: rgba(143, 162, 135, 0.15) !important;
+}
+
+.report-highlight-border {
+  border-color: rgba(47, 107, 79, 0.3) !important;
+}
+
+/* Section Title - Sand Beige & Forest Green */
+.report-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: oklch(0.25 0.02 55);
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid oklch(0.88 0.02 80);
+  margin-bottom: 0.875rem;
+}
+
+.report-section-title::before {
+  content: '';
+  width: 3px;
+  height: 1.125rem;
+  background: oklch(0.48 0.1 155);
+  border-radius: 2px;
+}
+
+.report-section-title svg {
+  color: oklch(0.48 0.1 155);
+}
+
+/* Summary Cards Grid */
+.report-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .report-summary-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.report-summary-card {
+  background: oklch(0.995 0.008 90);
+  border: 1px solid oklch(0.88 0.02 80);
+  border-radius: 0.5rem;
+  padding: 0.875rem 0.625rem;
+  text-align: center;
+  box-shadow: 0 1px 3px oklch(0.5 0.05 55 / 0.06);
+}
+
+.report-summary-card-highlight {
+  background: oklch(0.955 0.02 130);
+  border-color: oklch(0.68 0.06 140);
+}
+
+.report-summary-card-premium {
+  background: oklch(0.94 0.03 145);
+  border-color: oklch(0.48 0.1 155);
+}
+
+.report-summary-card .label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: oklch(0.5 0.025 55);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.25rem;
+}
+
+.report-summary-card .value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: oklch(0.25 0.02 55);
+  line-height: 1.2;
+}
+
+.report-summary-card-highlight .value,
+.report-summary-card-premium .value {
+  color: oklch(0.42 0.1 155);
+}
+
+.report-summary-card .unit {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: oklch(0.5 0.025 55);
+  margin-left: 0.125rem;
+}
+
+/* Judgment Box - Sand Beige & Forest Green */
+.report-judgment-box {
+  background: oklch(0.94 0.03 145);
+  border: 1px solid oklch(0.68 0.06 140);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  position: relative;
+}
+
+.report-judgment-box::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  width: 3px;
+  background: oklch(0.48 0.1 155);
+  border-radius: 2px;
+}
+
+.report-judgment-box.success {
+  background: oklch(0.94 0.035 145);
+  border-color: oklch(0.6 0.08 150);
+}
+
+.report-judgment-box.success::before {
+  background: oklch(0.48 0.1 155);
+}
+
+.report-judgment-box.warning {
+  background: oklch(0.96 0.03 85);
+  border-color: oklch(0.78 0.08 80);
+}
+
+.report-judgment-box.warning::before {
+  background: oklch(0.6 0.12 75);
+}
+
+.report-judgment-box.danger {
+  background: oklch(0.96 0.03 25);
+  border-color: oklch(0.78 0.08 25);
+}
+
+.report-judgment-box.danger::before {
+  background: oklch(0.55 0.14 25);
+}
+
+/* Key Points List */
+.report-key-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.report-key-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.report-key-points li:last-child {
+  border-bottom: none;
+}
+
+/* Tables - Sand Beige & Forest Green */
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.report-table th {
+  background: oklch(0.955 0.02 130);
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  font-weight: 500;
+  color: oklch(0.38 0.03 55);
+  border: 1px solid oklch(0.88 0.02 80);
+}
+
+.report-table td {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid oklch(0.9 0.015 80);
+  color: oklch(0.25 0.02 55);
+  background: oklch(0.995 0.008 90);
+}
+
+.report-table td.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Status Badges - Sand Beige & Forest Green */
+.report-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.report-badge-success {
+  background: oklch(0.94 0.035 145);
+  color: oklch(0.42 0.1 155);
+}
+
+.report-badge-warning {
+  background: oklch(0.95 0.04 85);
+  color: oklch(0.5 0.08 75);
+}
+
+.report-badge-danger {
+  background: oklch(0.95 0.04 25);
+  color: oklch(0.5 0.1 25);
+}
+
+.report-badge-info {
+  background: oklch(0.94 0.03 130);
+  color: oklch(0.45 0.06 140);
+}
+
+/* Risk Cards */
+.report-risk-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .report-risk-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.report-risk-card {
+  background: oklch(0.97 0.015 85);
+  border: 1px solid oklch(0.88 0.02 80);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.report-risk-card h4 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: oklch(0.45 0.06 55);
+  margin-bottom: 0.625rem;
+}
+
+.report-risk-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.report-risk-card li {
+  position: relative;
+  padding-left: 0.875rem;
+  font-size: 0.75rem;
+  color: oklch(0.38 0.03 55);
+  line-height: 1.6;
+}
+
+.report-risk-card li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  width: 4px;
+  height: 4px;
+  background: oklch(0.6 0.08 55);
+  border-radius: 50%;
+}
+
+/* AI Score Cards */
+.report-ai-scores {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.625rem;
+}
+
+@media (min-width: 480px) {
+  .report-ai-scores {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.report-ai-score {
+  background: oklch(0.995 0.008 90);
+  border: 1px solid oklch(0.88 0.02 80);
+  border-radius: 0.5rem;
+  padding: 0.875rem 0.5rem;
+  text-align: center;
+  box-shadow: 0 1px 3px oklch(0.5 0.05 55 / 0.06);
+}
+
+.report-ai-score.highlight {
+  background: oklch(0.94 0.03 145);
+  border-color: oklch(0.48 0.1 155);
+}
+
+.report-ai-score .label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: oklch(0.5 0.025 55);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.25rem;
+}
+
+.report-ai-score .value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: oklch(0.42 0.1 155);
+  line-height: 1.2;
+}
+
+.report-ai-score.highlight .value {
+  font-size: 1.75rem;
+  color: oklch(0.38 0.12 155);
+}
+
+/* Conclusion Box - Sand Beige & Forest Green */
+.report-conclusion {
+  background: oklch(0.94 0.03 145);
+  border: 1px solid oklch(0.68 0.06 140);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.report-conclusion-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 480px) {
+  .report-conclusion-items {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Footer - Sand Beige & Forest Green */
+.report-footer {
+  background: oklch(0.97 0.015 85);
+  border: 1px solid oklch(0.88 0.02 80);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.report-footer p {
+  font-size: 0.6875rem;
+  color: oklch(0.5 0.025 55);
+  line-height: 1.6;
+}
+
+.report-footer a {
+  color: oklch(0.48 0.1 155);
+}
+
+/* =====================================================
+   Print Styles for A4 Professional Report Output
+   ===================================================== */
+@media print {
+  /* Page Setup - A4 Portrait with balanced margins */
+  @page {
+    size: A4 portrait;
+    margin: 12mm 12mm 14mm 12mm;
+  }
+  
+  /* Base Reset for Print */
+  html, body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif !important;
+    font-size: 10pt;
+    line-height: 1.5;
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+    margin: 0;
+    padding: 0;
+    overflow: visible !important;
+  }
+  
+  /* ===========================================
+     HIDE APP UI ELEMENTS (Not for print)
+     =========================================== */
+  .no-print,
+  .print\\:hidden,
+  [data-print-hide],
+  nav,
+  header:not(.print-header),
+  .step-indicator,
+  .tab-navigation,
+  .action-buttons,
+  .floating-button,
+  .sidebar-handle,
+  button:not(.print-visible),
+  [role="tablist"],
+  [data-radix-scroll-area-viewport] > div > div:first-child {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Hide app frame dark backgrounds */
+  .app-frame,
+  .app-wrapper,
+  .dark-wrapper,
+  [class*="bg-background"],
+  [class*="bg-card"]:not(.print-card) {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  /* ===========================================
+     PAGE BREAK CONTROLS
+     =========================================== */
+  .avoid-break,
+  .print-section,
+  table,
+  [class*="Card"],
+  .summary-card,
+  .revenue-card-group,
+  .risk-grid,
+  .conclusion-box,
+  .report-summary-card,
+  .report-risk-card,
+  .report-ai-score,
+  .report-judgment-box {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .page-break-before,
+  .print-new-page {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+  
+  .page-break-after {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+  
+  /* ===========================================
+     TYPOGRAPHY FOR PRINT
+     =========================================== */
+  p, li, td, span {
+    font-size: 10pt;
+    line-height: 1.45;
+    color: #2d2d2d !important;
+  }
+  
+  .section-title,
+  .report-section-title,
+  h2 {
+    font-size: 12pt;
+    font-weight: 600;
+    color: #1a3a5c !important;
+    margin-bottom: 6pt;
+  }
+  
+  h3 {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #2a4a6c !important;
+  }
+  
+  [class*="text-muted"],
+  [class*="text-gray"],
+  [class*="text-slate"] {
+    color: #4a4a4a !important;
+  }
+  
+  /* ===========================================
+     CARD & BOX STYLING FOR PRINT
+     =========================================== */
+  [class*="Card"],
+  .print-card {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+    margin-bottom: 8pt;
+    padding: 10pt;
+  }
+  
+  .print-accent-teal {
+    background: #f0fdfa !important;
+    border-color: #99f6e4 !important;
+  }
+  
+  .print-accent-green {
+    background: #f0fdf4 !important;
+    border-color: #bbf7d0 !important;
+  }
+  
+  .print-accent-amber {
+    background: #fefce8 !important;
+    border-color: #fef08a !important;
+  }
+  
+  /* ===========================================
+     TABLE STYLING FOR PRINT
+     =========================================== */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 9pt;
+    margin: 6pt 0;
+  }
+  
+  th {
+    background: #f1f5f9 !important;
+    border: 1px solid #d1d5db !important;
+    padding: 6pt 8pt;
+    font-weight: 500;
+    text-align: left;
+    color: #475569 !important;
+  }
+  
+  td {
+    border: 1px solid #e5e7eb !important;
+    padding: 5pt 8pt;
+    vertical-align: middle;
+  }
+  
+  td[data-type="number"],
+  .text-right {
+    text-align: right !important;
+  }
+  
+  tr:nth-child(even) td {
+    background: #fafafa !important;
+  }
+  
+  /* ===========================================
+     REPORT COVER FOR PRINT
+     =========================================== */
+  .report-cover,
+  .report-cover-compact {
+    background: linear-gradient(135deg, #1e3a5f, #2a5a7f) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color: white !important;
+    break-after: page;
+    page-break-after: always;
+  }
+  
+  /* ===========================================
+     SPECIFIC SECTION STYLES FOR PRINT
+     =========================================== */
+  .profit-card {
+    background: #f0fdf4 !important;
+    border-color: #86efac !important;
+  }
+  
+  .loss-card {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+  }
+  
+  .report-judgment-box.success {
+    background: #ecfdf5 !important;
+    border-color: #6ee7b7 !important;
+  }
+  
+  .report-risk-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6pt;
+    break-inside: avoid;
+  }
+  
+  .report-risk-card {
+    background: #fefce8 !important;
+    border: 1px solid #fde68a !important;
+    border-radius: 4px;
+    padding: 8pt;
+  }
+  
+  .report-ai-scores {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6pt;
+  }
+  
+  .report-ai-score {
+    background: #f0fdfa !important;
+    border: 1px solid #99f6e4 !important;
+    padding: 8pt 6pt;
+    text-align: center;
+  }
+  
+  .report-conclusion {
+    background: #f0fdfa !important;
+    border: 1px solid #99f6e4 !important;
+    padding: 10pt;
+  }
+  
+  /* ===========================================
+     LAYOUT ADJUSTMENTS FOR PRINT
+     =========================================== */
+  .bg-background,
+  .bg-card,
+  .bg-secondary,
+  [class*="bg-slate-9"],
+  [class*="bg-gray-9"],
+  [class*="bg-zinc-9"] {
+    background: #ffffff !important;
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 10pt !important;
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 6pt !important;
+  }
+  
+  .gap-6 {
+    gap: 10pt !important;
+  }
+  
+  .gap-4 {
+    gap: 6pt !important;
+  }
+  
+  .print-container {
+    max-width: 180mm;
+    margin: 0 auto;
+    padding: 0;
+  }
+  
+  /* ===========================================
+     FORCE COLOR PRINTING
+     =========================================== */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  [style*="background"],
+  [class*="bg-blue"],
+  [class*="bg-green"],
+  [class*="bg-red"],
+  [class*="bg-yellow"],
+  [class*="bg-emerald"],
+  [class*="bg-teal"],
+  [class*="bg-cyan"],
+  [class*="bg-rose"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
