@@ -413,14 +413,25 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
       console.error(`[JUSO] API error: code=${errorCode}, message=${errorMessage}`)
       
       const isAuthError = errorCode === 'E0001' || errorCode === 'E0006'
-      const authHint = isAuthError 
-        ? '. 주의: Juso API는 juso.go.kr에서 발급받은 별도 키가 필요합니다 (data.go.kr 키와 다름)'
-        : ''
+      
+      // 명확한 한국어 에러 메시지
+      let koreanMessage = ''
+      if (errorCode === 'E0001') {
+        koreanMessage = '주소 API 인증 실패: 유효하지 않은 API 키입니다. juso.go.kr에서 발급받은 키를 확인해주세요.'
+      } else if (errorCode === 'E0006') {
+        koreanMessage = '주소 API 접근 거부: 서비스 이용이 허가되지 않았습니다. API 키 권한을 확인해주세요.'
+      } else if (errorCode === '-999') {
+        koreanMessage = '주소 API 시스템 오류: 일시적인 서버 장애입니다. 잠시 후 다시 시도해주세요.'
+      } else if (errorCode === 'E0005') {
+        koreanMessage = '주소 API 요청 오류: 잘못된 요청입니다. 주소 형식을 확인해주세요.'
+      } else {
+        koreanMessage = `주소 API 오류 (${errorCode}): ${errorMessage || '알 수 없는 오류'}`
+      }
       
       return { 
         resolved: null, 
         status: isAuthError ? 'auth-error' : 'invalid-request', 
-        message: `${errorMessage || errorCode}${authHint}`,
+        message: koreanMessage,
         rawResponse: { 
           requestUrl: logUrl, 
           httpStatus: response.status,
@@ -1477,15 +1488,20 @@ export async function lookupSiteData(
         diagnostics.stoppedAt = 'juso'
         diagnostics.apiResponse = { status: 'not-called', message: 'MOLIT 호출 중단 - Juso 주소 변환 실패' }
         
-        // Determine error message based on Juso failure reason
-        let errorMsg = 'Juso 주소 변환에 실패하여 건축물대장 조회를 수행할 수 없습니다.'
-        if (jusoResult.status === 'auth-error') {
-          errorMsg = `Juso API 인증 오류: ${jusoResult.message}. JUSO_API_KEY를 juso.go.kr에서 발급받아 설정해주세요.`
-        } else if (jusoResult.status === 'no-results') {
-          errorMsg = '입력하신 주소를 찾을 수 없습니다. 주소를 확인 후 다시 시도해주세요.'
-        } else if (jusoResult.status === 'key-missing') {
-          errorMsg = 'Juso API 키가 설정되지 않았습니다. JUSO_API_KEY 환경변수를 설정해주세요.'
-        }
+      // Determine error message based on Juso failure reason - 명확한 한국어 메시지
+      let errorMsg = 'Juso 주소 변환에 실패하여 건축물대장 조회를 수행할 수 없습니다.'
+      if (jusoResult.status === 'auth-error') {
+        // jusoResult.message already contains detailed Korean message from resolveAddressWithJuso
+        errorMsg = jusoResult.message || '주소 API 인증에 실패했습니다. API 키를 확인해주세요.'
+      } else if (jusoResult.status === 'no-results') {
+        errorMsg = '입력하신 주소를 찾을 수 없습니다. 정확한 도로명 또는 지번 주소를 입력해주세요.'
+      } else if (jusoResult.status === 'key-missing') {
+        errorMsg = '주소 API 키가 설정되지 않았습니다. 관리자에게 문의해주세요.'
+      } else if (jusoResult.status === 'network-error') {
+        errorMsg = '주소 API 서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.'
+      } else if (jusoResult.status === 'invalid-request') {
+        errorMsg = jusoResult.message || '주소 형식이 올바르지 않습니다. 주소를 확인해주세요.'
+      }
         
         return {
           success: false,

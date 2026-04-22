@@ -840,16 +840,24 @@
   }
   
   .report-ai-scores {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6pt;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6pt !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
   
   .report-ai-score {
     background: #f0fdfa !important;
     border: 1px solid #99f6e4 !important;
-    padding: 8pt 6pt;
-    text-align: center;
+    padding: 8pt 6pt !important;
+    text-align: center !important;
+    break-inside: avoid !important;
+  }
+  
+  .report-ai-score.highlight {
+    background: #ecfdf5 !important;
+    border-color: #6ee7b7 !important;
   }
   
   .report-conclusion {
