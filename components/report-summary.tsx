@@ -2487,7 +2487,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
             <div className="report-ai-scores">
               <div className="report-ai-score">
                 <p className="label">법규 부합성</p>
-                <p className="value">{layout.scores?.regulationCompliance ?? layout.scores?.regulatory ?? (layout.coverage <= 60 ? 90 : 70)}</p>
+                <p className="value">{layout.scores?.regulationCompliance ?? (layout.coverage <= 60 ? 90 : 70)}</p>
               </div>
               <div className="report-ai-score">
                 <p className="label">사업성</p>
@@ -2495,7 +2495,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
               </div>
               <div className="report-ai-score">
                 <p className="label">상품성</p>
-                <p className="value">{layout.scores?.marketability ?? layout.scores?.livability ?? (financials.roi > 15 ? 78 : 65)}</p>
+                <p className="value">{layout.scores?.marketability ?? (financials.roi > 15 ? 78 : 65)}</p>
               </div>
               <div className="report-ai-score highlight">
                 <p className="label">종합 점수</p>
