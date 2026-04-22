@@ -94,19 +94,20 @@ const HARDCODED_MOLIT_KEY = '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba
 const HARDCODED_JUSO_KEY = 'devU01TX0FVVEgyMDI2MDQyMjIwMDgxNjExNzk4MjA='
 
 function getApiKey(): string {
-  // FORCE hardcoded MOLIT key
+  // 환경변수 우선, 없으면 하드코딩 키 사용
   const envKey = process.env.MOLIT_API_KEY
-  const key = HARDCODED_MOLIT_KEY
-  console.log(`[MOLIT] getApiKey: envExists=${!!envKey}, envLen=${envKey?.length || 0}, FORCED hardcoded key (${key.length} chars)`)
+  const key = (envKey && envKey.length > 10) ? envKey : HARDCODED_MOLIT_KEY
+  const source = (envKey && envKey.length > 10) ? 'ENV' : 'HARDCODED'
+  console.log(`[MOLIT] getApiKey: source=${source}, len=${key.length}`)
   return key
 }
 
 function getJusoApiKey(): string {
-  // FORCE hardcoded JUSO key - actual dev key from juso.go.kr (44 chars with 'dev' prefix)
+  // 환경변수 우선, 없으면 하드코딩 키 사용
   const envKey = process.env.JUSO_API_KEY
-  const key = HARDCODED_JUSO_KEY
-  const keyPreview = key.substring(0, 8) + '...' + key.substring(key.length - 4)
-  console.log(`[JUSO] v207: envExists=${!!envKey}, envLen=${envKey?.length || 0}, ACTUAL_KEY_LEN=${key.length}, preview=${keyPreview}`)
+  const key = (envKey && envKey.length > 10) ? envKey : HARDCODED_JUSO_KEY
+  const source = (envKey && envKey.length > 10) ? 'ENV' : 'HARDCODED'
+  console.log(`[JUSO] getJusoApiKey: source=${source}, len=${key.length}`)
   return key
 }
 
