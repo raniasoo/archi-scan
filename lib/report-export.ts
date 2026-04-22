@@ -1350,7 +1350,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         <h2 class="section-title">5. 규모 산정 및 계획 구성</h2>
       </div>
       <div class="print-cards-block">
-        <div class="summary-grid">
+        <div class="summary-grid pdf-card-group">
           <div class="summary-card">
             <p class="label">선정 배치안</p>
             <p class="value">${report.planning.selectedLayoutName}</p>
@@ -1438,7 +1438,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
       </div>
       <div class="print-roi-block">
-        <div class="summary-grid">
+        <div class="summary-grid pdf-card-group">
           <div class="summary-card">
             <p class="label">손익분기 분양률</p>
             <p class="value">${report.feasibility.breakEvenRateFormatted}</p>
@@ -2870,7 +2870,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         <h2 class="section-title">5. 규모 산정 및 계획 구성</h2>
       </div>
       <div class="print-cards-block">
-        <div class="summary-grid">
+        <div class="summary-grid pdf-card-group">
           <div class="summary-card">
             <p class="label">선정 배치안</p>
             <p class="value">${report.planning.selectedLayoutName}</p>
@@ -2956,7 +2956,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
       </div>
       <div class="print-roi-block">
-        <div class="summary-grid">
+        <div class="summary-grid pdf-card-group">
           <div class="summary-card">
             <p class="label">손익분기 분양률</p>
             <p class="value">${report.feasibility.breakEvenRateFormatted}</p>
