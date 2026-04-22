@@ -682,6 +682,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         break-inside: avoid !important;
         page-break-inside: avoid !important;
         display: block !important;
+        padding: 0 !important;
+        margin: 0 !important;
       }
       .print-footer {
         margin-top: 8px !important;
@@ -1016,7 +1018,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     .cover .company { margin-top: 60px; font-size: 14px; color: #5eead4; font-weight: 600; line-height: 1.5; padding-bottom: 4px; display: block; }
     
     /* 섹션 - 화이트 테마 */
-    .section { padding: 28px 0; border-bottom: 1px solid #e5e7eb; background: #ffffff; overflow: visible; }
+    .section { padding: 16px 0; border-bottom: 1px solid #e5e7eb; background: #ffffff; overflow: visible; }
     
     /* 섹션 제목 - 하단 잘림 완전 방지 */
     .section-title { 
@@ -1268,8 +1270,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 
     <!-- 4. 대상지 분석 -->
     <div class="section pdf-section">
-      <h2 class="section-title">2. 대상지 분석</h2>
-      <div class="pdf-table-wrap">
+      <div class="pdf-card-group" style="padding:0; margin:0;">
+        <h2 class="section-title" style="margin-bottom:8px;">2. 대상지 분석</h2>
+        <div class="pdf-table-wrap">
         <table>
           <thead><tr><th>항목</th><th>내용</th></tr></thead>
           <tbody>
@@ -1281,6 +1284,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
             <tr><td>지구단위계획</td><td>${report.siteAnalysis.districtPlan}</td></tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
 
@@ -1973,7 +1977,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     .cover .company { margin-top: 60px; font-size: 14px; color: #5eead4; font-weight: 600; line-height: 1.5; padding-bottom: 4px; display: block; }
     
     /* 섹션 - 화이트 테마 */
-    .section { padding: 28px 0; border-bottom: 1px solid #e5e7eb; background: #ffffff; overflow: visible; }
+    .section { padding: 16px 0; border-bottom: 1px solid #e5e7eb; background: #ffffff; overflow: visible; }
     
     /* 섹션 제목 - 하단 잘림 완전 방지 */
     .section-title { 
@@ -2479,6 +2483,8 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         break-inside: avoid !important;
         page-break-inside: avoid !important;
         display: block !important;
+        padding: 0 !important;
+        margin: 0 !important;
       }
       .print-footer {
         margin-top: 8px !important;
@@ -2767,8 +2773,9 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
 
     <!-- 4. 대상지 분석 -->
     <div class="section pdf-section">
-      <h2 class="section-title">2. 대상지 분석</h2>
-      <div class="pdf-table-wrap">
+      <div class="pdf-card-group" style="padding:0; margin:0;">
+        <h2 class="section-title" style="margin-bottom:8px;">2. 대상지 분석</h2>
+        <div class="pdf-table-wrap">
         <table>
           <tbody>
             <tr><td style="width: 120px; color: #64748b;">소재지</td><td>${report.siteAnalysis.address}</td></tr>
@@ -2779,6 +2786,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
             <tr><td style="color: #64748b;">지구단위계획</td><td>${report.siteAnalysis.districtPlan}</td></tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
 
