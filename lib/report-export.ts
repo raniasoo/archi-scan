@@ -1269,8 +1269,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </div>
 
     <!-- 4. 대상지 분석 -->
-    <div class="section pdf-section">
-      <div class="pdf-card-group" style="padding:0; margin:0;">
+    <div class="section pdf-section pdf-card-group">
+      <div style="padding:0; margin:0;">
         <h2 class="section-title" style="margin-bottom:8px;">2. 대상지 분석</h2>
         <div class="pdf-table-wrap">
         <table>
@@ -1318,7 +1318,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </section>
 
     <!-- 6. 배치안 비교 검토 -->
-    <div class="section pdf-section">
+    <div class="section pdf-section pdf-card-group">
       <h2 class="section-title">4. 배치안 비교 검토</h2>
       <div class="pdf-table-wrap">
         <table>
@@ -1441,7 +1441,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       <div class="print-title-group">
         <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
       </div>
-      <div class="print-roi-block">
+      <div class="print-roi-block pdf-card-group">
         <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
           <div class="summary-card">
             <p class="label">손익분기 분양률</p>
@@ -1617,13 +1617,20 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     // 섹션 내부 블록들을 개별적으로 수집
     const sections = iframeDoc.querySelectorAll('.pdf-section, .section');
     sections.forEach((section) => {
+      // pdf-card-group이 있으면 그룹 단위로 처리
+      const cardGroups = section.querySelectorAll('.pdf-card-group');
+      if (cardGroups.length > 0) {
+        // 섹션 전체를 하나의 블록으로 (제목 + 내용 분리 방지)
+        contentBlocks.push(section as HTMLElement);
+        return;
+      }
+      
       // 섹션 제목
       const title = section.querySelector('.section-title, .print-title-group, h2') as HTMLElement | null;
-      if (title) contentBlocks.push(title);
       
       // 섹션 내부 하위 블록들 (카드, 표, 박스 등)
       const innerBlocks = section.querySelectorAll(
-        '.summary-card, .metric-card, .pdf-card-group, ' +
+        '.summary-card, .metric-card, ' +
         'table, .report-table, ' +
         '.opinion-box, .info-box, .verdict-box, .conclusion-box, ' +
         '.ai-score-grid, .ai-analysis-summary, .ai-analysis-reason, .ai-analysis-warning, ' +
@@ -1634,8 +1641,9 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       );
       
       if (innerBlocks.length > 0) {
+        // 제목과 첫 번째 내용 블록을 함께 처리 (제목 고아 방지)
+        if (title) contentBlocks.push(title);
         innerBlocks.forEach((block) => {
-          // 이미 추가된 블록의 자식인지 확인
           let isChild = false;
           for (const existing of contentBlocks) {
             if (existing.contains(block) && existing !== block) {
@@ -2772,8 +2780,8 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     </div>
 
     <!-- 4. 대상지 분석 -->
-    <div class="section pdf-section">
-      <div class="pdf-card-group" style="padding:0; margin:0;">
+    <div class="section pdf-section pdf-card-group">
+      <div style="padding:0; margin:0;">
         <h2 class="section-title" style="margin-bottom:8px;">2. 대상지 분석</h2>
         <div class="pdf-table-wrap">
         <table>
@@ -2836,7 +2844,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     </section>
 
     <!-- 6. 배치안 비교 검토 -->
-    <div class="section pdf-section">
+    <div class="section pdf-section pdf-card-group">
       <h2 class="section-title">4. 배치안 비교 검토</h2>
       <div class="pdf-table-wrap">
         <table>
@@ -2963,7 +2971,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       <div class="print-title-group">
         <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
       </div>
-      <div class="print-roi-block">
+      <div class="print-roi-block pdf-card-group">
         <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
           <div class="summary-card">
             <p class="label">손익분기 분양률</p>
