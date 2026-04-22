@@ -1655,8 +1655,8 @@ export async function lookupSiteData(
 * Check if MOLIT API is configured
 */
 export function isMolitConfigured(): boolean {
-  // Use fallback if env var is not set
-  return !!(process.env.MOLIT_API_KEY || FALLBACK_MOLIT_KEY)
+  // Use hardcoded key as fallback if env var is not set
+  return !!(process.env.MOLIT_API_KEY || HARDCODED_MOLIT_KEY)
 }
 
 /**
@@ -1664,6 +1664,6 @@ export function isMolitConfigured(): boolean {
   * Requires separate JUSO_API_KEY from juso.go.kr
   */
 export function isJusoConfigured(): boolean {
-  // Use fallback if env var is not set
-  return !!(process.env.JUSO_API_KEY || FALLBACK_JUSO_KEY)
+  // Use hardcoded key as fallback if env var is not set
+  return !!(process.env.JUSO_API_KEY || HARDCODED_JUSO_KEY)
 }

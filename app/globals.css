@@ -840,16 +840,32 @@
   }
   
   .report-ai-scores {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6pt;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6pt !important;
+    width: 100% !important;
   }
   
   .report-ai-score {
+    display: block !important;
     background: #f0fdfa !important;
     border: 1px solid #99f6e4 !important;
-    padding: 8pt 6pt;
-    text-align: center;
+    padding: 8pt 6pt !important;
+    text-align: center !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .report-ai-score .label {
+    display: block !important;
+    font-size: 7pt !important;
+    margin-bottom: 3pt !important;
+  }
+  
+  .report-ai-score .value {
+    display: block !important;
+    font-size: 14pt !important;
+    font-weight: 700 !important;
   }
   
   .report-conclusion {
