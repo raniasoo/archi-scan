@@ -1255,7 +1255,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </div>
 
     <!-- 3. 검토 개요 -->
-    <div class="section pdf-section">
+    <div class="section pdf-section pdf-card-group">
       <h2 class="section-title">1. 검토 개요</h2>
       <p style="margin-bottom: 16px;">${report.overview.purpose}</p>
       <h4 class="section-subtitle">검토 범위</h4>
@@ -1412,7 +1412,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </section>
 
     <!-- 7. AI 분석 -->
-    <section class="pdf-section pdf-section-7">
+    <section class="pdf-section pdf-section-7 pdf-card-group">
 
       <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
 
@@ -2764,7 +2764,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     </div>
 
     <!-- 3. 검토 개요 -->
-    <div class="section pdf-section">
+    <div class="section pdf-section pdf-card-group">
       <h2 class="section-title">1. 검토 개요</h2>
       <p style="margin-bottom: 16px;">${report.overview.purpose}</p>
       <table>
@@ -2944,7 +2944,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     </section>
 
     <!-- 7. AI 분석 -->
-    <section class="pdf-section pdf-section-7">
+    <section class="pdf-section pdf-section-7 pdf-card-group">
       <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
       <div class="pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
         <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
@@ -2984,7 +2984,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         </div>
       </div>
       <div class="print-scenario-block">
-        <h4 class="section-subtitle">시나리��� 분석</h4>
+        <h4 class="section-subtitle">시나리오 분석</h4>
         <table>
           <thead><tr><th>시나리오</th><th class="text-center">분양가 변동</th><th class="text-center">예상 ROI</th></tr></thead>
           <tbody>
