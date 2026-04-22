@@ -637,7 +637,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     <div class="grid-2" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 12px;">
       <div class="stat-box text-center">
         <div class="stat-label">법규 적합성</div>
-        <div class="stat-value">${layout.scores?.regulationCompliance ?? layout.scores?.regulatory ?? (layout.coverage <= 60 ? 90 : 70)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
+        <div class="stat-value">${layout.scores?.regulationCompliance ?? (layout.coverage <= 60 ? 90 : 70)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
       <div class="stat-box text-center">
         <div class="stat-label">사업성</div>
@@ -645,7 +645,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       </div>
       <div class="stat-box text-center">
         <div class="stat-label">상품성</div>
-        <div class="stat-value">${layout.scores?.marketability ?? layout.scores?.livability ?? (financials.roi > 15 ? 78 : 65)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
+        <div class="stat-value">${layout.scores?.marketability ?? (financials.roi > 15 ? 78 : 65)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
       <div class="stat-box text-center">
         <div class="stat-label">종합 점수</div>
