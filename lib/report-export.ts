@@ -1048,20 +1048,20 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     
     /* 종합 결과 카드 - 상단 정렬, 패딩 확대 */
     .summary-grid { 
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-      gap: 12px; margin-bottom: 12px; overflow: visible;
+      display: grid; grid-template-columns: repeat(4, 1fr); 
+      gap: 8px; margin-bottom: 12px; overflow: visible;
     }
     .summary-card { 
       background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; 
-      padding: 16px 18px; overflow: visible;
+      padding: 10px 8px; overflow: visible;
     }
     .summary-card .label { 
       font-size: 11px; color: #64748b; margin-bottom: 6px; 
       line-height: 1.5; padding-bottom: 3px; display: block;
     }
     .summary-card .value { 
-      font-size: 18px; font-weight: 700; color: #1e293b; 
-      line-height: 1.45; padding-bottom: 5px; display: block;
+      font-size: 14px; font-weight: 700; color: #1e293b; 
+      line-height: 1.3; padding-bottom: 3px; display: block;
     }
     .summary-card .value.highlight { color: #0d9488; }
     
@@ -1409,9 +1409,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 
     <!-- 7. AI 분석 -->
     <section class="pdf-section pdf-section-7">
-      <div class="print-title-group">
-        <h2 class="section-title">7. AI 분석</h2>
-      </div>
+
+      <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
+
       <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0;">
         <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
           <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
@@ -2005,20 +2005,20 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     
     /* 종합 결과 카드 - 상단 정렬, 패딩 확대 */
     .summary-grid { 
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-      gap: 12px; margin-bottom: 12px; overflow: visible;
+      display: grid; grid-template-columns: repeat(4, 1fr); 
+      gap: 8px; margin-bottom: 12px; overflow: visible;
     }
     .summary-card { 
       background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; 
-      padding: 16px 18px; overflow: visible;
+      padding: 10px 8px; overflow: visible;
     }
     .summary-card .label { 
       font-size: 11px; color: #64748b; margin-bottom: 6px; 
       line-height: 1.5; padding-bottom: 3px; display: block;
     }
     .summary-card .value { 
-      font-size: 18px; font-weight: 700; color: #1e293b; 
-      line-height: 1.45; padding-bottom: 5px; display: block;
+      font-size: 14px; font-weight: 700; color: #1e293b; 
+      line-height: 1.3; padding-bottom: 3px; display: block;
     }
     .summary-card .value.highlight { color: #0d9488; }
     
@@ -2929,9 +2929,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
 
     <!-- 7. AI 분석 -->
     <section class="pdf-section pdf-section-7">
-      <div class="print-title-group">
-        <h2 class="section-title">7. AI 분석</h2>
-      </div>
+      <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
       <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0;">
         <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
           <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
