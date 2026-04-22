@@ -103,10 +103,11 @@ function getApiKey(): string {
 }
 
 function getJusoApiKey(): string {
-  // 환경변수 우선, 없으면 하드코딩 키 사용
   const envKey = process.env.JUSO_API_KEY
-  const key = (envKey && envKey.length > 10) ? envKey : HARDCODED_JUSO_KEY
-  const source = (envKey && envKey.length > 10) ? 'ENV' : 'HARDCODED'
+  // vcp_ 로 시작하는 키는 Vercel 토큰이므로 JUSO 키가 아님 → 하드코딩 키 사용
+  const isValidJusoKey = envKey && envKey.length > 10 && !envKey.startsWith('vcp_')
+  const key = isValidJusoKey ? envKey : HARDCODED_JUSO_KEY
+  const source = isValidJusoKey ? 'ENV' : 'HARDCODED'
   console.log(`[JUSO] getJusoApiKey: source=${source}, len=${key.length}`)
   return key
 }
