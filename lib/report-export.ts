@@ -1030,9 +1030,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       height: auto; min-height: auto;
     }
     .section-title::before { 
-      content: ''; display: inline-block; vertical-align: middle;
-      width: 4px; height: 18px; background: #0369a1; border-radius: 2px;
-      margin-right: 12px; margin-bottom: 3px;
+      content: ''; display: inline-block; vertical-align: top;
+      width: 4px; height: 22px; background: #0369a1; border-radius: 2px;
+      margin-right: 10px; margin-top: 1px;
     }
     .section-subtitle { 
       font-size: 15px; color: #6b7280; margin-bottom: 12px; 
@@ -1997,9 +1997,9 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       height: auto; min-height: auto;
     }
     .section-title::before { 
-      content: ''; display: inline-block; vertical-align: middle;
-      width: 4px; height: 18px; background: #0369a1; border-radius: 2px;
-      margin-right: 12px; margin-bottom: 3px;
+      content: ''; display: inline-block; vertical-align: top;
+      width: 4px; height: 22px; background: #0369a1; border-radius: 2px;
+      margin-right: 10px; margin-top: 1px;
     }
     .section-subtitle { 
       font-size: 15px; color: #6b7280; margin-bottom: 12px; 
