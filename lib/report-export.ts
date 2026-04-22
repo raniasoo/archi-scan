@@ -1405,10 +1405,37 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       </div>
     </section>
 
-    <!-- 7. 시나리오 및 사업기간 분석 -->
+    </section>
+
+    <!-- 7. AI 분석 -->
     <section class="pdf-section pdf-section-7">
       <div class="print-title-group">
-        <h2 class="section-title">7. 시나리오 및 사업기간 분석</h2>
+        <h2 class="section-title">7. AI 분석</h2>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0;">
+        <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
+          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
+        </div>
+        <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">사업성</p>
+          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</p>
+        </div>
+        <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">상품성</p>
+          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</p>
+        </div>
+        <div style="text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px;">
+          <p style="font-size:11px; color:#064e3b; margin-bottom:6px; font-weight:600;">종합 점수</p>
+          <p style="font-size:26px; font-weight:700; color:#065f46;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. 시나리오 및 사업기간 분석 -->
+    <section class="pdf-section pdf-section-8">
+      <div class="print-title-group">
+        <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
       </div>
       <div class="print-roi-block">
         <div class="summary-grid">
@@ -1449,10 +1476,10 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 
     <!-- 8 + 9 + Footer 그룹 - 마지막 페이지 -->
     <div class="print-final-page-group">
-      <!-- 8. 리스크 및 고려사항 -->
-      <section class="pdf-section pdf-section-8">
+      <!-- 9. 리스크 및 고려사항 -->
+      <section class="pdf-section pdf-section-9">
         <div class="print-title-group">
-          <h2 class="section-title">8. 리스크 및 고려사항</h2>
+          <h2 class="section-title">9. 리스크 및 고려사항</h2>
         </div>
         <div class="print-risk-block">
           <div class="risk-grid">
@@ -1484,10 +1511,10 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         </div>
       </section>
 
-      <!-- 9. 결론 및 제안 -->
-      <section class="pdf-section pdf-section-9">
+      <!-- 10. 결론 및 제안 -->
+      <section class="pdf-section pdf-section-10">
         <div class="print-conclusion-group">
-          <h2 class="section-title">9. 결론 및 제안</h2>
+          <h2 class="section-title">10. 결론 및 제안</h2>
           <p style="color: #374151; line-height: 1.8; margin-top: 12px;">${report.conclusion.finalParagraph}</p>
           <div class="verdict-box">
             <p style="font-size: 16px; color: #065f46;">${report.conclusion.summaryBox}</p>
@@ -2898,10 +2925,37 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       </div>
     </section>
 
-    <!-- 7. 시나리오 및 사업기간 분석 -->
+    </section>
+
+    <!-- 7. AI 분석 -->
     <section class="pdf-section pdf-section-7">
       <div class="print-title-group">
-        <h2 class="section-title">7. 시나리오 및 사업기간 분석</h2>
+        <h2 class="section-title">7. AI 분석</h2>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0;">
+        <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
+          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
+        </div>
+        <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">사업성</p>
+          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</p>
+        </div>
+        <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">상품성</p>
+          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</p>
+        </div>
+        <div style="text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px;">
+          <p style="font-size:11px; color:#064e3b; margin-bottom:6px; font-weight:600;">종합 점수</p>
+          <p style="font-size:26px; font-weight:700; color:#065f46;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. 시나리오 및 사업기간 분석 -->
+    <section class="pdf-section pdf-section-8">
+      <div class="print-title-group">
+        <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
       </div>
       <div class="print-roi-block">
         <div class="summary-grid">
@@ -2934,10 +2988,10 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
 
     <!-- 8 + 9 + Footer 그룹 - 마지막 페이지 -->
     <div class="print-final-page-group">
-      <!-- 8. 리스크 및 고려사항 -->
-      <section class="pdf-section pdf-section-8">
+      <!-- 9. 리스크 및 고려사항 -->
+      <section class="pdf-section pdf-section-9">
         <div class="print-title-group">
-          <h2 class="section-title">8. 리스크 및 고려사항</h2>
+          <h2 class="section-title">9. 리스크 및 고려사항</h2>
         </div>
         <div class="print-risk-block">
           <div class="risk-grid">
@@ -2969,10 +3023,10 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         </div>
       </section>
 
-      <!-- 9. 결론 및 제안 -->
-      <section class="pdf-section pdf-section-9">
+      <!-- 10. 결론 및 제안 -->
+      <section class="pdf-section pdf-section-10">
         <div class="print-conclusion-group">
-          <h2 class="section-title">9. 결론 및 제안</h2>
+          <h2 class="section-title">10. 결론 및 제안</h2>
           <p style="color: #374151; line-height: 1.8; margin-top: 12px;">${report.conclusion.finalParagraph}</p>
           <div class="verdict-box">
             <p style="font-size: 16px; color: #065f46;">${report.conclusion.summaryBox}</p>
