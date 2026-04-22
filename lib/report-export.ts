@@ -1257,15 +1257,17 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     <!-- 3. 검토 개요 -->
     <div class="section pdf-section pdf-card-group">
       <h2 class="section-title">1. 검토 개요</h2>
-      <p style="margin-bottom: 16px;">${report.overview.purpose}</p>
-      <h4 class="section-subtitle">검토 범위</h4>
-      <ul style="list-style: disc; margin-left: 20px; color: #374151;">
-        ${report.overview.scope.map(item => `<li>${item}</li>`).join('')}
-      </ul>
-      <h4 class="section-subtitle" style="margin-top: 16px;">검토 기준</h4>
-      <ul style="list-style: disc; margin-left: 20px; color: #374151;">
-        ${report.overview.standards.map(item => `<li>${item}</li>`).join('')}
-      </ul>
+      <div class="print-block" style="padding:0; margin:0;">
+        <p style="margin-bottom: 12px;">${report.overview.purpose}</p>
+        <h4 class="section-subtitle">검토 범위</h4>
+        <ul style="list-style: disc; margin-left: 20px; color: #374151; margin-bottom:8px;">
+          ${report.overview.scope.map(item => `<li>${item}</li>`).join('')}
+        </ul>
+        <h4 class="section-subtitle" style="margin-top: 12px;">검토 기준</h4>
+        <ul style="list-style: disc; margin-left: 20px; color: #374151;">
+          ${report.overview.standards.map(item => `<li>${item}</li>`).join('')}
+        </ul>
+      </div>
     </div>
 
     <!-- 4. 대상지 분석 -->
@@ -1617,46 +1619,27 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     // 섹션 내부 블록들을 개별적으로 수집
     const sections = iframeDoc.querySelectorAll('.pdf-section, .section');
     sections.forEach((section) => {
-      // pdf-card-group이 있으면 그룹 단위로 처리
-      const cardGroups = section.querySelectorAll('.pdf-card-group');
-      if (cardGroups.length > 0) {
-        // 섹션 전체를 하나의 블록으로 (제목 + 내용 분리 방지)
-        contentBlocks.push(section as HTMLElement);
-        return;
-      }
+      const title = section.querySelector(':scope > .section-title, :scope > h2, :scope > .print-title-group') as HTMLElement | null;
       
-      // 섹션 제목
-      const title = section.querySelector('.section-title, .print-title-group, h2') as HTMLElement | null;
-      
-      // 섹션 내부 하위 블록들 (카드, 표, 박스 등)
       const innerBlocks = section.querySelectorAll(
-        '.summary-card, .metric-card, ' +
-        'table, .report-table, ' +
-        '.opinion-box, .info-box, .verdict-box, .conclusion-box, ' +
-        '.ai-score-grid, .ai-analysis-summary, .ai-analysis-reason, .ai-analysis-warning, ' +
-        '.risk-grid, .risk-category, ' +
-        '.scenario-table, .cost-breakdown, ' +
-        '.key-points, .key-point, ' +
-        '.print-footer'
+        ':scope > .pdf-card-group, ' +
+        ':scope > .print-cards-block, :scope > .print-details-block, ' +
+        ':scope > .print-cost-block, :scope > .print-roi-block, :scope > .print-scenario-block, ' +
+        ':scope > .print-risk-block, :scope > .print-conclusion-group, :scope > .print-block, ' +
+        ':scope > .pdf-table-wrap, :scope > .conclusion-box, :scope > .opinion-box, ' +
+        ':scope > table'
       );
       
       if (innerBlocks.length > 0) {
-        // 제목과 첫 번째 내용 블록을 함께 처리 (제목 고아 방지)
         if (title) contentBlocks.push(title);
         innerBlocks.forEach((block) => {
           let isChild = false;
           for (const existing of contentBlocks) {
-            if (existing.contains(block) && existing !== block) {
-              isChild = true;
-              break;
-            }
+            if (existing !== block && existing.contains(block)) { isChild = true; break; }
           }
-          if (!isChild) {
-            contentBlocks.push(block as HTMLElement);
-          }
+          if (!isChild) contentBlocks.push(block as HTMLElement);
         });
       } else {
-        // 내부 블록이 없으면 섹션 전체를 블록으로 추가
         contentBlocks.push(section as HTMLElement);
       }
     });
