@@ -94,13 +94,8 @@ const HARDCODED_MOLIT_KEY = '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba
 const HARDCODED_JUSO_KEY = 'devU01TX0FVVEgyMDI2MDQyMjIwMDgxNjExNzk4MjA='
 
 function getApiKey(): string {
-  // 환경변수 우선, 없거나 형식 불일치 시 하드코딩 키 사용
-  const envKey = process.env.MOLIT_API_KEY
-  const isValid = envKey && envKey.length === 64 && /^[0-9a-f]+$/i.test(envKey)
-  const key = isValid ? envKey : HARDCODED_MOLIT_KEY
-  const src = isValid ? 'ENV' : 'HARDCODED'
-  console.log(`[MOLIT] getApiKey: source=${src}, len=${key.length}`)
-  return key
+  // HARDCODED_MOLIT_KEY 고정 사용 (Vercel 환경변수 값과 무관하게 정상 작동 보장)
+  return HARDCODED_MOLIT_KEY
 }
 
 function getJusoApiKey(): string {
