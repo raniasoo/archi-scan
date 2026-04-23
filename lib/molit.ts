@@ -825,18 +825,23 @@ async function fetchBuildingMultiEndpoint(params: BuildingLookupParams, platGbCd
     jiLeadingZero: (params.ji || '0000').startsWith('0'),
   }
   
-  // platGbCd 시도 순서: 전달된 값 → 다른 값 → 생략
-  const otherPlatGbCd = platGbCd === '0' ? '1' : '0'
-  const platGbCdSequence = [platGbCd, otherPlatGbCd, '']
+  // platGbCd 시도 순서: 0(대지) → 1(산) → 생략
+  const platGbCdSequence = ['0', '1', '']
   
-  console.log(`[MOLIT] Multi-endpoint sent values: ${JSON.stringify(sentValues)}, platGbCd sequence=${JSON.stringify(platGbCdSequence)}`)
+  // 핵심 엔드포인트 2개만 사용 (타임아웃 방지)
+  const FAST_ENDPOINTS = [
+    MOLIT_BUILDING_ENDPOINTS_CURRENT[0], // 기본개요
+    MOLIT_BUILDING_ENDPOINTS_CURRENT[2], // 총괄표제부
+  ]
+  
+  console.log(`[MOLIT] Fast lookup: sigunguCd=${params.sigunguCd}, bjdongCd=${params.bjdongCd}, bun=${params.bun}, ji=${params.ji}`)
   
   // ========================================
-  // Phase 1: Try current ledger endpoints (모든 platGbCd 순환)
+  // Phase 1: 기본개요+총괄표제부로 platGbCd 순환
   // ========================================
   for (const pgCd of platGbCdSequence) {
-    console.log(`[MOLIT] Phase 1: Trying current ledger with platGbCd=${pgCd || 'omitted'}...`)
-    const currentResult = await tryEndpointList(params, MOLIT_BUILDING_ENDPOINTS_CURRENT, attemptedEndpoints, pgCd)
+    console.log(`[MOLIT] Phase 1: platGbCd=${pgCd || 'omitted'}...`)
+    const currentResult = await tryEndpointList(params, FAST_ENDPOINTS, attemptedEndpoints, pgCd)
     
     if (currentResult.result?.data) {
       return {
@@ -865,19 +870,18 @@ async function fetchBuildingMultiEndpoint(params: BuildingLookupParams, platGbCd
   }
   
   // ========================================
-  // Phase 2: Try closed/removed ledger endpoints (모든 platGbCd 순환)
+  // Phase 2: 나머지 엔드포인트 platGbCd=0으로만 시도
   // ========================================
-  for (const pgCd of platGbCdSequence) {
-    console.log(`[MOLIT] Phase 2: Trying closed ledger with platGbCd=${pgCd || 'omitted'}...`)
-    const closedResult = await tryEndpointList(params, MOLIT_BUILDING_ENDPOINTS_CLOSED, attemptedEndpoints, pgCd)
-    
-    if (closedResult.result?.data) {
-      return {
-        data: closedResult.result.data,
-        apiStatus: closedResult.result.apiStatus,
-        message: closedResult.result.message,
-        totalCount: closedResult.result.totalCount,
-        endpointUsed: closedResult.endpointUsed || 'unknown',
+  console.log(`[MOLIT] Phase 2: trying remaining endpoints with platGbCd=0...`)
+  const closedResult = await tryEndpointList(params, MOLIT_BUILDING_ENDPOINTS_CLOSED, attemptedEndpoints, '0')
+  
+  if (closedResult.result?.data) {
+    return {
+      data: closedResult.result.data,
+      apiStatus: closedResult.result.apiStatus,
+      message: closedResult.result.message,
+      totalCount: closedResult.result.totalCount,
+      endpointUsed: closedResult.endpointUsed || 'unknown',
         attemptedEndpoints,
         sentValues,
         familyUsed: 'closed',
