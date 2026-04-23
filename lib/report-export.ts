@@ -507,6 +507,12 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         break-after: avoid !important;
         page-break-after: avoid !important;
       }
+      /* 제목 바로 다음 요소도 새 페이지 시작 금지 */
+      .section-title + *,
+      .print-title-group + * {
+        break-before: avoid !important;
+        page-break-before: avoid !important;
+      }
       
       /* ===== 섹션 헤더 래퍼 ===== */
       .section-header,
@@ -520,9 +526,21 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       .verdict-box,
       .conclusion-box,
       .opinion-box,
-      .risk-grid,
-      .ai-analysis-summary,
+      .ai-analysis-summary {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      /* 리스크 그리드: 분할 허용 (큰 경우 빈 공간 유발) */
+      .risk-grid {
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+      }
+      /* table은 기본 분할 허용, 단 작은 테이블은 보호 */
       table {
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+      }
+      tr {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }
@@ -2299,6 +2317,12 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         break-after: avoid !important;
         page-break-after: avoid !important;
       }
+      /* 제목 바로 다음 요소도 새 페이지 시작 금지 */
+      .section-title + *,
+      .print-title-group + * {
+        break-before: avoid !important;
+        page-break-before: avoid !important;
+      }
       
       /* ===== 섹션 헤더 래퍼 ===== */
       .section-header,
@@ -2312,9 +2336,21 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       .verdict-box,
       .conclusion-box,
       .opinion-box,
-      .risk-grid,
-      .ai-analysis-summary,
+      .ai-analysis-summary {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      /* 리스크 그리드: 분할 허용 (큰 경우 빈 공간 유발) */
+      .risk-grid {
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+      }
+      /* table은 기본 분할 허용, 단 작은 테이블은 보호 */
       table {
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+      }
+      tr {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }

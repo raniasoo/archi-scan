@@ -593,8 +593,8 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
 
   <div class="section" style="page-break-before: auto;">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '6' : '5'}</span> 사업성 검토</div>
-    <p style="font-weight: 500; margin-bottom: 12px;">사업비 추정</p>
-    <table>
+    <table style="page-break-before: avoid; break-before: avoid;">
+      <caption style="font-weight: 500; text-align: left; padding: 0 0 8px 0; color: #374151;">사업비 추정</caption>
       <thead>
         <tr><th>항목</th><th class="text-right">금액</th><th>비고</th></tr>
       </thead>
