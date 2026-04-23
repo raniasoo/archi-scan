@@ -52,7 +52,7 @@ function validateAddressCompleteness(address: string): { valid: boolean; message
   return { valid: true }
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<MolitLookupResponse>> {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Parse request body
     const body = await request.json() as MolitLookupRequest
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<MolitLook
     const jusoKeyRaw = process.env.JUSO_API_KEY
     
     const demoDiagnostics: MolitDiagnostics = {
-      lookupPath: isConfigured ? 'configured' : 'env-missing',
+      lookupPath: 'none',
       config: {
         molitApiKey: isConfigured,
         jusoApiKey: isJusoConfiguredFlag,
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<MolitLook
     }
     
     // Check for manual parcel override (include rawMode and platGbCd flags)
-    const manualParcel = body.manualParcel as { 
+    const manualParcelRaw = body.manualParcel as { 
       sigunguCd?: string
       bjdongCd?: string
       bun?: string
@@ -152,6 +152,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<MolitLook
       rawMode?: boolean
       platGbCd?: string
     } | undefined
+    
+    const manualParcel = (manualParcelRaw?.sigunguCd && manualParcelRaw?.bjdongCd) ? {
+      sigunguCd: manualParcelRaw.sigunguCd,
+      bjdongCd: manualParcelRaw.bjdongCd,
+      bun: manualParcelRaw.bun || '0000',
+      ji: manualParcelRaw.ji || '0000',
+      rawMode: manualParcelRaw.rawMode,
+      platGbCd: manualParcelRaw.platGbCd,
+    } : undefined
     
     // Log the manual parcel to verify rawMode and platGbCd are passed
     if (manualParcel) {
