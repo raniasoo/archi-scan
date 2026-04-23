@@ -286,13 +286,14 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       .ai-score-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }
       .ai-score-card { display: block !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important; padding: 10px 8px !important; text-align: center !important; break-inside: avoid !important; }
       .stat-box { display: block !important; background: #f8fafc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      /* 섹션 page-break - 제목만 묶기, 섹션 전체는 분할 허용 */
+      /* 제목 + 바로 다음 요소 함께 묶기 (가장 신뢰할 수 있는 방법) */
       .section-title { page-break-after: avoid; break-after: avoid; }
-      /* 작은 요소만 분할 방지 */
-      .stat-box { page-break-inside: avoid; break-inside: avoid; }
+      .section-title + * { page-break-before: avoid; break-before: avoid; }
+      /* 작은 카드/박스만 내부 분할 방지, 큰 테이블은 허용 */
       .ai-score-card { page-break-inside: avoid; break-inside: avoid; }
       .risk-box { page-break-inside: avoid; break-inside: avoid; }
-      .highlight { page-break-inside: avoid; break-inside: avoid; }
+      /* stat-box는 작은 것만 */
+      .stat-box.small { page-break-inside: avoid; break-inside: avoid; }
       /* 플로팅 UI 숨김 */
       .no-print { display: none !important; }
       /* 표지 print */
@@ -552,7 +553,6 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         ${isRecommended ? '<span class="badge badge-blue">추천</span>' : ''}
       </div>
     </div>
-    
     <div class="grid-2" style="grid-template-columns: repeat(4, 1fr); margin: 8px 0;">
       <div class="stat-box text-center">
         <div class="stat-label">세대수</div>
@@ -593,7 +593,6 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
 
   <div class="section" style="page-break-before: auto;">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '6' : '5'}</span> 사업성 검토</div>
-    
     <p style="font-weight: 500; margin-bottom: 12px;">사업비 추정</p>
     <table>
       <thead>
@@ -670,7 +669,6 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
 
   <div class="section">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '8' : '7'}</span> AI 분석</div>
-    
     <div class="ai-score-grid">
       <div class="ai-score-card">
         <div class="stat-label">법규 적합성</div>
