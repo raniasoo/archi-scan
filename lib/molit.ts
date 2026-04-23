@@ -39,19 +39,19 @@ const JUSO_API_BASE = 'https://business.juso.go.kr/addrlink'
 
 // API Endpoints
 const ENDPOINTS = {
-  // MOLIT Building Register (data.go.kr) - Current ledger (v2)
-  buildingBasic: '/BldRgstService_v2/getBrBasisOulnInfo',           // 건축물대장 기본개요
-  buildingTitle: '/BldRgstService_v2/getBrTitleInfo',               // 건축물대장 표제부
-  buildingRecapTitle: '/BldRgstService_v2/getBrRecapTitleInfo',     // 건축물대장 총괄표제부
-  buildingFloor: '/BldRgstService_v2/getBrFlrOulnInfo',             // 건축물대장 층별개요
-  buildingExpos: '/BldRgstService_v2/getBrExposPubuseAreaInfo',     // 건축물대장 전유공용면적 (전유부)
-  buildingJijuk: '/BldRgstService_v2/getBrJijiguInfo',              // 건축물대장 지역지구구역
-  buildingAtchJibun: '/BldRgstService_v2/getBrAtchJibunInfo',       // 건축물대장 부속지번 (supplementary parcel)
+  // MOLIT Building Register (data.go.kr) - Current ledger (HubService)
+  buildingBasic: '/BldRgstHubService/getBrBasisOulnInfo',           // 건축물대장 기본개요
+  buildingTitle: '/BldRgstHubService/getBrTitleInfo',               // 건축물대장 표제부
+  buildingRecapTitle: '/BldRgstHubService/getBrRecapTitleInfo',     // 건축물대장 총괄표제부
+  buildingFloor: '/BldRgstHubService/getBrFlrOulnInfo',             // 건축물대장 층별개요
+  buildingExpos: '/BldRgstHubService/getBrExposPubuseAreaInfo',     // 건축물대장 전유공용면적 (전유부)
+  buildingJijuk: '/BldRgstHubService/getBrJijiguInfo',              // 건축물대장 지역지구구역
+  buildingAtchJibun: '/BldRgstHubService/getBrAtchJibunInfo',       // 건축물대장 부속지번 (supplementary parcel)
   
   // MOLIT Building Register - Closed/Removed ledger (폐쇄/말소)
-  closedBasic: '/BldRgstService_v2/getBrExitBasisOulnInfo',         // 폐쇄 기본개요
-  closedTitle: '/BldRgstService_v2/getBrExitTitleInfo',             // 폐쇄 표제부
-  closedRecapTitle: '/BldRgstService_v2/getBrExitRecapTitleInfo',   // 폐쇄 총괄표제부
+  closedBasic: '/BldRgstHubService/getBrExitBasisOulnInfo',         // 폐쇄 기본개요
+  closedTitle: '/BldRgstHubService/getBrExitTitleInfo',             // 폐쇄 표제부
+  closedRecapTitle: '/BldRgstHubService/getBrExitRecapTitleInfo',   // 폐쇄 총괄표제부
   
   // Land
   land: '/lndPrclServiceV1/getLndPrclByPNU',
@@ -153,10 +153,9 @@ async function fetchMolitApi<T>(options: FetchOptions): Promise<FetchMolitResult
   
   const url = new URL(`${MOLIT_API_BASE}${endpoint}`)
   
-  // Add service key and common params
-  url.searchParams.set('serviceKey', apiKey)
+  // Add common params (NOT serviceKey - added directly to avoid encoding issues)
   url.searchParams.set('_type', 'json')
-  url.searchParams.set('numOfRows', '10')  // Get more results
+  url.searchParams.set('numOfRows', '10')
   url.searchParams.set('pageNo', '1')
   
   // Add custom params - preserve string values exactly
@@ -166,9 +165,13 @@ async function fetchMolitApi<T>(options: FetchOptions): Promise<FetchMolitResult
     console.log(`[MOLIT] Param: ${key} = "${stringValue}" (type: ${typeof value}, length: ${stringValue.length})`)
   }
   
+  // Build final URL with serviceKey inserted directly (not URL-encoded by URLSearchParams)
+  const baseUrlWithParams = url.toString()
+  const finalUrl = `${baseUrlWithParams}&serviceKey=${apiKey}`
+  
   // Build debug URL with masked key
   const maskedKey = apiKey.substring(0, 8) + '...' + apiKey.substring(apiKey.length - 4)
-  const debugUrl = url.toString().replace(apiKey, maskedKey)
+  const debugUrl = finalUrl.replace(apiKey, maskedKey)
   meta.requestUrl = debugUrl
   console.log(`[MOLIT] Full request URL: ${debugUrl}`)
   
@@ -184,7 +187,7 @@ async function fetchMolitApi<T>(options: FetchOptions): Promise<FetchMolitResult
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeout)
     
-    const response = await fetch(url.toString(), {
+    const response = await fetch(finalUrl, {
       method: 'GET',
       signal: controller.signal,
       headers: {
