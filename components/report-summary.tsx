@@ -286,13 +286,21 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       .ai-score-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }
       .ai-score-card { display: block !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important; padding: 10px 8px !important; text-align: center !important; break-inside: avoid !important; }
       .stat-box { display: block !important; background: #f8fafc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      /* 섹션 page-break */
-      .section { page-break-inside: avoid; break-inside: avoid; }
+      /* 섹션 page-break - 제목만 묶기, 섹션 전체는 분할 허용 */
       .section-title { page-break-after: avoid; break-after: avoid; }
+      /* 작은 요소만 분할 방지 */
+      .stat-box { page-break-inside: avoid; break-inside: avoid; }
+      .ai-score-card { page-break-inside: avoid; break-inside: avoid; }
+      .risk-box { page-break-inside: avoid; break-inside: avoid; }
+      .highlight { page-break-inside: avoid; break-inside: avoid; }
       /* 플로팅 UI 숨김 */
       .no-print { display: none !important; }
       /* 표지 print */
       .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      /* 고아 줄 방지 */
+      p { orphans: 3; widows: 3; }
+      /* 테이블이 페이지 중간에서 끊기지 않도록 */
+      tr { page-break-inside: avoid; break-inside: avoid; }
     }
     @media screen and (max-width: 600px) {
       body { padding: 10px; font-size: 10pt; }
@@ -335,7 +343,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     .cover .meta-label { font-size: 9pt; color: #94a3b8; margin-bottom: 4px; }
     .cover .meta-value { font-size: 11pt; font-weight: 500; }
     .doc-number { font-size: 9pt; color: #64748b; margin-bottom: 16px; }
-    .section { margin-bottom: 24px; page-break-inside: avoid; break-inside: avoid; }
+    .section { margin-bottom: 24px; }
     .section-header { page-break-after: avoid; break-after: avoid; }
     .section-title { font-size: 13pt; font-weight: 700; color: #1e293b; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; page-break-after: avoid; break-after: avoid; }
     .section-number { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #f1f5f9; border-radius: 4px; font-size: 11pt; color: #475569; }
@@ -347,7 +355,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     .highlight { background: #f0f9ff; border: 1px solid #bae6fd; padding: 16px; border-radius: 6px; margin: 16px 0; }
     .highlight-title { font-weight: 600; color: #0369a1; margin-bottom: 8px; }
     .warning { background: #fffbeb; border: 1px solid #fde68a; padding: 12px 16px; border-radius: 6px; font-size: 10pt; color: #92400e; margin: 12px 0; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
     .ai-score-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
     .ai-score-card { background: #f8fafc; padding: 12px 8px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center; }
     .stat-box { background: #f8fafc; padding: 10px 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
@@ -545,7 +553,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       </div>
     </div>
     
-    <div class="grid-2" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="grid-2" style="grid-template-columns: repeat(4, 1fr); margin: 8px 0;">
       <div class="stat-box text-center">
         <div class="stat-label">세대수</div>
         <div class="stat-value">${layout.units}<span style="font-size: 10pt; font-weight: 400;">세대</span></div>
@@ -577,13 +585,13 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       </div>
     </div>
 
-    <p style="margin-top: 20px; font-weight: 500;">배치 특성</p>
+    <p style="margin-top: 12px; font-weight: 500;">배치 특성</p>
     <div class="feature-tags">
       ${layout.features.map(f => `<span class="feature-tag">✓ ${f}</span>`).join('')}
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" style="page-break-before: auto;">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '6' : '5'}</span> 사업성 검토</div>
     
     <p style="font-weight: 500; margin-bottom: 12px;">사업비 추정</p>
