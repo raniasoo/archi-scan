@@ -635,7 +635,7 @@ async function fetchBuildingEndpoint(
       console.log(`[MOLIT] ${endpointConfig.name} upstream error: HTTP ${meta.httpStatus}`)
       return { 
         data: null, 
-        apiStatus: 'upstream-error', 
+        apiStatus: 'network-error' as const, 
         message: `Upstream HTTP ${meta.httpStatus}: ${meta.statusText}`, 
         debug 
       }
@@ -753,18 +753,6 @@ async function tryEndpointList(
       status: result.apiStatus,
       totalCount: result.totalCount || 0,
       message: result.message,
-      debug: result.debug ? {
-        requestUrl: result.debug.requestUrl,
-        httpStatus: result.debug.httpStatus,
-        statusText: result.debug.statusText,
-        responseHeaders: result.debug.responseHeaders,
-        resultCode: result.debug.resultCode,
-        resultMsg: result.debug.resultMsg,
-        totalCount: result.debug.totalCount,
-        itemsLength: result.debug.itemsLength,
-        rawResponsePreview: result.debug.rawResponsePreview,
-        platGbCd: result.debug.platGbCd,
-      } : undefined,
     })
     
     if (result.data) {
@@ -797,11 +785,11 @@ async function fetchSupplementaryParcels(params: BuildingLookupParams): Promise<
   
   // The result might be a single item or array
   const items = Array.isArray(result.data) ? result.data : [result.data]
-  const parcels = items.map((item: Record<string, unknown>) => ({
-    bun: String(item.bun || '').padStart(4, '0'),
-    ji: String(item.ji || '').padStart(4, '0'),
-    regstrGbCd: String(item.regstrGbCd || ''),
-    regstrGbCdNm: String(item.regstrGbCdNm || ''),
+  const parcels = items.map((item: MolitBuildingBasicItem) => ({
+    bun: String((item as unknown as Record<string, unknown>).bun || '').padStart(4, '0'),
+    ji: String((item as unknown as Record<string, unknown>).ji || '').padStart(4, '0'),
+    regstrGbCd: String((item as unknown as Record<string, unknown>).regstrGbCd || ''),
+    regstrGbCdNm: String((item as unknown as Record<string, unknown>).regstrGbCdNm || ''),
   }))
   
   console.log(`[MOLIT] Found ${parcels.length} supplementary parcels:`, parcels)
@@ -886,10 +874,9 @@ async function fetchBuildingMultiEndpoint(params: BuildingLookupParams, platGbCd
       message: closedResult.result.message,
       totalCount: closedResult.result.totalCount,
       endpointUsed: closedResult.endpointUsed || 'unknown',
-        attemptedEndpoints,
-        sentValues,
-        familyUsed: 'closed',
-      }
+      attemptedEndpoints,
+      sentValues,
+      familyUsed: 'closed',
     }
   }
   
@@ -1460,7 +1447,7 @@ export async function lookupSiteData(
       lookupPath = 'juso-resolved'
       
       // bdMgtSn에서 platGbCd 추출 (0=대지, 1=산)
-      const resolvedAny = jusoResult.resolved as Record<string, unknown>
+      const resolvedAny = jusoResult.resolved as unknown as Record<string, unknown>
       if (resolvedAny['platGbCdFromBdMgtSn'] !== undefined) {
         platGbCd = String(resolvedAny['platGbCdFromBdMgtSn'])
         console.log(`[MOLIT] platGbCd extracted from bdMgtSn: ${platGbCd}`)
@@ -1599,7 +1586,6 @@ export async function lookupSiteData(
       endpointUsed: result.endpointUsed,
       familyUsed: result.familyUsed,
       attempted: result.attemptedEndpoints,
-      endpoints: endpointsForUI, // UI-friendly endpoint details
       sentValues: result.sentValues,
       supplementaryParcels: result.supplementaryParcels,
     }
@@ -1609,7 +1595,7 @@ export async function lookupSiteData(
       console.log(`[MOLIT] Building data found via ${result.endpointUsed}:`, result.data.bldNm || '(no name)')
       
       const siteData = mapBuildingToSiteData(result.data)
-      siteData.dataSource = lookupPath === 'juso-resolved' ? 'building' : 'building-fallback'
+      siteData.dataSource = 'building'
       
       diagnostics.apiResponse = {
         status: 'success-with-data',
@@ -1646,7 +1632,7 @@ export async function lookupSiteData(
         bjdongCode: bjdongCd,
         bun,
         ji,
-        dataSource: lookupPath,
+        dataSource: 'address' as const,
         fetchedAt: new Date().toISOString(),
       },
     }
