@@ -475,11 +475,13 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
     if (bdMgtSn.length >= 19) {
       sigunguCd = bdMgtSn.substring(0, 5)
       bjdongCd = bdMgtSn.substring(5, 10)
-      // Skip 산여부 (1 char)
+      const platGbCdFromBdMgtSn = bdMgtSn.substring(10, 11)  // 0=대지, 1=산
       bun = bdMgtSn.substring(11, 15)
       ji = bdMgtSn.substring(15, 19)
       
-      console.log(`[JUSO] Parsed bdMgtSn: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, bun=${bun}, ji=${ji}`)
+      console.log(`[JUSO] Parsed bdMgtSn: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, platGbCd=${platGbCdFromBdMgtSn}, bun=${bun}, ji=${ji}`)
+      // platGbCdFromBdMgtSn을 resolved에 저장하여 MOLIT 조회에 활용
+      ;(resolved as Record<string, unknown>)['platGbCdFromBdMgtSn'] = platGbCdFromBdMgtSn
     } else {
       console.log(`[JUSO] bdMgtSn too short or missing: "${bdMgtSn}" (length: ${bdMgtSn.length})`)
       return { 
@@ -1455,13 +1457,20 @@ export async function lookupSiteData(
       ji = jusoResult.resolved.ji
       lookupPath = 'juso-resolved'
       
+      // bdMgtSn에서 platGbCd 추출 (0=대지, 1=산)
+      const resolvedAny = jusoResult.resolved as Record<string, unknown>
+      if (resolvedAny['platGbCdFromBdMgtSn'] !== undefined) {
+        platGbCd = String(resolvedAny['platGbCdFromBdMgtSn'])
+        console.log(`[MOLIT] platGbCd extracted from bdMgtSn: ${platGbCd}`)
+      }
+      
       diagnostics.lookupPath = 'juso-resolved'
       diagnostics.jusoResult.jibunAddr = jusoResult.resolved.jibunAddr
       diagnostics.jusoResult.bdMgtSn = jusoResult.resolved.bdMgtSn
       diagnostics.jusoResult.extractedCodes = { sigunguCd, bjdongCd, bun, ji }
       diagnostics.stoppedAt = 'molit' // Will proceed to MOLIT
       
-      console.log(`[MOLIT] Using Juso-resolved data: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, bun=${bun}, ji=${ji}`)
+      console.log(`[MOLIT] Using Juso-resolved data: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, bun=${bun}, ji=${ji}, platGbCd=${platGbCd}`)
     } else {
       // ========================================
       // Step 2: Juso failed - STOP for road addresses (no fallback)
