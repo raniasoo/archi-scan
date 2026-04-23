@@ -838,56 +838,63 @@ async function fetchBuildingMultiEndpoint(params: BuildingLookupParams, platGbCd
     jiLeadingZero: (params.ji || '0000').startsWith('0'),
   }
   
-  console.log(`[MOLIT] Multi-endpoint sent values: ${JSON.stringify(sentValues)}, platGbCd=${platGbCd || 'omitted'}`)
+  // platGbCd 시도 순서: 전달된 값 → 다른 값 → 생략
+  const otherPlatGbCd = platGbCd === '0' ? '1' : '0'
+  const platGbCdSequence = [platGbCd, otherPlatGbCd, '']
+  
+  console.log(`[MOLIT] Multi-endpoint sent values: ${JSON.stringify(sentValues)}, platGbCd sequence=${JSON.stringify(platGbCdSequence)}`)
   
   // ========================================
-  // Phase 1: Try current ledger endpoints
+  // Phase 1: Try current ledger endpoints (모든 platGbCd 순환)
   // ========================================
-  console.log(`[MOLIT] Phase 1: Trying current ledger endpoints with platGbCd=${platGbCd || 'omitted'}...`)
-  const currentResult = await tryEndpointList(params, MOLIT_BUILDING_ENDPOINTS_CURRENT, attemptedEndpoints, platGbCd)
-  
-  if (currentResult.result?.data) {
-    return {
-      data: currentResult.result.data,
-      apiStatus: currentResult.result.apiStatus,
-      message: currentResult.result.message,
-      totalCount: currentResult.result.totalCount,
-      endpointUsed: currentResult.endpointUsed || 'unknown',
-      attemptedEndpoints,
-      sentValues,
-      familyUsed: 'current',
+  for (const pgCd of platGbCdSequence) {
+    console.log(`[MOLIT] Phase 1: Trying current ledger with platGbCd=${pgCd || 'omitted'}...`)
+    const currentResult = await tryEndpointList(params, MOLIT_BUILDING_ENDPOINTS_CURRENT, attemptedEndpoints, pgCd)
+    
+    if (currentResult.result?.data) {
+      return {
+        data: currentResult.result.data,
+        apiStatus: currentResult.result.apiStatus,
+        message: currentResult.result.message,
+        totalCount: currentResult.result.totalCount,
+        endpointUsed: currentResult.endpointUsed || 'unknown',
+        attemptedEndpoints,
+        sentValues,
+        familyUsed: 'current',
+      }
+    }
+    if (currentResult.result?.apiStatus === 'auth-error') {
+      return {
+        data: null,
+        apiStatus: 'auth-error',
+        message: currentResult.result.message,
+        totalCount: 0,
+        endpointUsed: currentResult.endpointUsed || 'unknown',
+        attemptedEndpoints,
+        sentValues,
+        familyUsed: 'none',
+      }
     }
   }
   
-  if (currentResult.result?.apiStatus === 'auth-error') {
-    return {
-      data: null,
-      apiStatus: 'auth-error',
-      message: currentResult.result.message,
-      totalCount: 0,
-      endpointUsed: currentResult.endpointUsed || 'unknown',
-      attemptedEndpoints,
-      sentValues,
-      familyUsed: 'none',
-    }
-  }
-  
   // ========================================
-  // Phase 2: Try closed/removed ledger endpoints
+  // Phase 2: Try closed/removed ledger endpoints (모든 platGbCd 순환)
   // ========================================
-  console.log(`[MOLIT] Phase 2: Current ledger empty, trying closed ledger with platGbCd=${platGbCd || 'omitted'}...`)
-  const closedResult = await tryEndpointList(params, MOLIT_BUILDING_ENDPOINTS_CLOSED, attemptedEndpoints, platGbCd)
-  
-  if (closedResult.result?.data) {
-    return {
-      data: closedResult.result.data,
-      apiStatus: closedResult.result.apiStatus,
-      message: closedResult.result.message,
-      totalCount: closedResult.result.totalCount,
-      endpointUsed: closedResult.endpointUsed || 'unknown',
-      attemptedEndpoints,
-      sentValues,
-      familyUsed: 'closed',
+  for (const pgCd of platGbCdSequence) {
+    console.log(`[MOLIT] Phase 2: Trying closed ledger with platGbCd=${pgCd || 'omitted'}...`)
+    const closedResult = await tryEndpointList(params, MOLIT_BUILDING_ENDPOINTS_CLOSED, attemptedEndpoints, pgCd)
+    
+    if (closedResult.result?.data) {
+      return {
+        data: closedResult.result.data,
+        apiStatus: closedResult.result.apiStatus,
+        message: closedResult.result.message,
+        totalCount: closedResult.result.totalCount,
+        endpointUsed: closedResult.endpointUsed || 'unknown',
+        attemptedEndpoints,
+        sentValues,
+        familyUsed: 'closed',
+      }
     }
   }
   
