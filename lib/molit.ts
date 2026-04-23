@@ -813,70 +813,42 @@ async function fetchBuildingMultiEndpoint(params: BuildingLookupParams, platGbCd
     jiLeadingZero: (params.ji || '0000').startsWith('0'),
   }
   
-  // 단 1번만 호출 - getBrBasisOulnInfo + platGbCd=0 (가장 일반적)
-  console.log(`[MOLIT] Single call: sigunguCd=${params.sigunguCd}, bjdongCd=${params.bjdongCd}, bun=${params.bun}, ji=${params.ji}`)
+  console.log(`[MOLIT] Multi-attempt: sigunguCd=${params.sigunguCd}, bjdongCd=${params.bjdongCd}, bun=${params.bun}, ji=${params.ji}, platGbCd=${platGbCd}`)
   
-  const singleEndpoint = MOLIT_BUILDING_ENDPOINTS_CURRENT[0] // getBrBasisOulnInfo
-  const singleResult = await tryEndpointList(params, [singleEndpoint], attemptedEndpoints, '0')
-  
-  if (singleResult.result?.data) {
-    return {
-      data: singleResult.result.data,
-      apiStatus: singleResult.result.apiStatus,
-      message: singleResult.result.message,
-      totalCount: singleResult.result.totalCount,
-      endpointUsed: singleResult.endpointUsed || 'unknown',
-      attemptedEndpoints,
-      sentValues,
-      familyUsed: 'current',
-    }
-  }
-  
-  if (singleResult.result?.apiStatus === 'auth-error') {
-    return {
-      data: null,
-      apiStatus: 'auth-error',
-      message: singleResult.result.message,
-      totalCount: 0,
-      endpointUsed: singleResult.endpointUsed || 'unknown',
-      attemptedEndpoints,
-      sentValues,
-      familyUsed: 'none',
-    }
-  }
-  
-  // platGbCd=0 실패 시 platGbCd 생략으로 1번 더 시도
-  const retryResult = await tryEndpointList(params, [singleEndpoint], attemptedEndpoints, '')
-  
-  if (retryResult.result?.data) {
-    return {
-      data: retryResult.result.data,
-      apiStatus: retryResult.result.apiStatus,
-      message: retryResult.result.message,
-      totalCount: retryResult.result.totalCount,
-      endpointUsed: retryResult.endpointUsed || 'unknown',
-      attemptedEndpoints,
-      sentValues,
-      familyUsed: 'current',
-    }
-  }
+  const basicEndpoint = MOLIT_BUILDING_ENDPOINTS_CURRENT[0]   // getBrBasisOulnInfo  (기본개요)
+  const titleEndpoint = MOLIT_BUILDING_ENDPOINTS_CURRENT[1]   // getBrTitleInfo       (표제부)
+  const recapEndpoint = MOLIT_BUILDING_ENDPOINTS_CURRENT[2]   // getBrRecapTitleInfo  (총괄표제부)
   
   // ========================================
-  // Phase 2: 총괄표제부로 1번 더
+  // Phase 1: platGbCd 순환 시도 (0→1→생략)
+  //   - platGbCd=0  대지(일반) 
+  //   - platGbCd=1  산 (bdMgtSn에서 추출된 경우 포함)
+  //   - platGbCd='' 생략 (전체)
   // ========================================
-  const recapEndpoint = MOLIT_BUILDING_ENDPOINTS_CURRENT[2] // getBrRecapTitleInfo
-  const closedResult = await tryEndpointList(params, [recapEndpoint], attemptedEndpoints, '0')
+  const platGbCdCandidates: string[] = ['0']
+  if (platGbCd === '1') platGbCdCandidates.push('1') // bdMgtSn이 산으로 판단한 경우도 시도
+  platGbCdCandidates.push('') // 생략 항상 마지막에
   
-  if (closedResult.result?.data) {
-    return {
-      data: closedResult.result.data,
-      apiStatus: closedResult.result.apiStatus,
-      message: closedResult.result.message,
-      totalCount: closedResult.result.totalCount,
-      endpointUsed: closedResult.endpointUsed || 'unknown',
-      attemptedEndpoints,
-      sentValues,
-      familyUsed: 'closed',
+  for (const pgCd of platGbCdCandidates) {
+    // 기본개요 시도
+    const r1 = await tryEndpointList(params, [basicEndpoint], attemptedEndpoints, pgCd)
+    if (r1.result?.apiStatus === 'auth-error') {
+      return { data: null, apiStatus: 'auth-error', message: r1.result.message, totalCount: 0, endpointUsed: 'auth-error', attemptedEndpoints, sentValues, familyUsed: 'none' }
+    }
+    if (r1.result?.data) {
+      return { data: r1.result.data, apiStatus: r1.result.apiStatus, message: r1.result.message, totalCount: r1.result.totalCount, endpointUsed: r1.endpointUsed || 'unknown', attemptedEndpoints, sentValues, familyUsed: 'current' }
+    }
+    
+    // 표제부 시도
+    const r2 = await tryEndpointList(params, [titleEndpoint], attemptedEndpoints, pgCd)
+    if (r2.result?.data) {
+      return { data: r2.result.data, apiStatus: r2.result.apiStatus, message: r2.result.message, totalCount: r2.result.totalCount, endpointUsed: r2.endpointUsed || 'unknown', attemptedEndpoints, sentValues, familyUsed: 'current' }
+    }
+    
+    // 총괄표제부 시도
+    const r3 = await tryEndpointList(params, [recapEndpoint], attemptedEndpoints, pgCd)
+    if (r3.result?.data) {
+      return { data: r3.result.data, apiStatus: r3.result.apiStatus, message: r3.result.message, totalCount: r3.result.totalCount, endpointUsed: r3.endpointUsed || 'unknown', attemptedEndpoints, sentValues, familyUsed: 'current' }
     }
   }
   
