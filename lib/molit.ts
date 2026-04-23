@@ -346,11 +346,11 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
     const encodedKeyword = encodeURIComponent(address)
     
     // confmKey is NOT encoded - use as-is (it contains '=' at the end which must stay as '=')
-    const requestUrl = `${baseUrl}?confmKey=${apiKey}&keyword=${encodedKeyword}&resultType=json&countPerPage=10&currentPage=1`
+    const requestUrl = `${baseUrl}?confmKey=${apiKey}&keyword=${encodedKeyword}&resultType=json&countPerPage=10&currentPage=1&detail=Y`
     
     // Build masked URL for logging
     const maskedKey = apiKey.substring(0, 8) + '...' + apiKey.substring(apiKey.length - 4)
-    const logUrl = `${baseUrl}?confmKey=${maskedKey}&keyword=${encodedKeyword}&resultType=json&countPerPage=10&currentPage=1`
+    const logUrl = `${baseUrl}?confmKey=${maskedKey}&keyword=${encodedKeyword}&resultType=json&countPerPage=10&currentPage=1&detail=Y`
     
     console.log(`[JUSO] Request URL (key masked): ${logUrl}`)
     console.log(`[JUSO] Key length: ${apiKey.length}, ends with '=': ${apiKey.endsWith('=')}`)
