@@ -281,23 +281,49 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     @media print {
       body { padding: 0; }
       @page { size: A4; margin: 15mm; }
+      /* 그리드 카드 레이아웃 print 강제 적용 */
+      .grid-2 { display: grid !important; }
+      .ai-score-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }
+      .ai-score-card { display: block !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important; padding: 10px 8px !important; text-align: center !important; break-inside: avoid !important; }
+      .stat-box { display: block !important; background: #f8fafc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      /* 섹션 page-break */
+      .section { page-break-inside: avoid; break-inside: avoid; }
+      .section-title { page-break-after: avoid; break-after: avoid; }
+      /* 플로팅 UI 숨김 */
+      .no-print { display: none !important; }
+      /* 표지 print */
+      .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
     @media screen and (max-width: 600px) {
-      body { padding: 12px; font-size: 10pt; }
-      .cover { padding: 24px 12px; }
-      .cover h1 { font-size: 16pt; }
-      .cover .meta { flex-direction: column; gap: 10px; }
-      .grid-2 { grid-template-columns: 1fr 1fr; gap: 8px; }
-      .risk-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      body { padding: 10px; font-size: 10pt; }
+      /* 표지 - 잘림 방지 */
+      .cover { padding: 20px 10px; }
+      .cover h1 { font-size: 14pt; word-break: keep-all; overflow-wrap: break-word; line-height: 1.4; }
+      .cover .address { font-size: 11pt; word-break: break-all; }
+      .cover .meta { flex-direction: column; gap: 8px; }
+      /* 그리드 - 모바일 2열 */
+      .grid-2 { grid-template-columns: 1fr 1fr; gap: 6px; }
+      .risk-grid { grid-template-columns: 1fr; gap: 8px; }
+      /* AI 점수 카드 - 모바일 2x2 */
+      .ai-score-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+      .ai-score-card { padding: 8px 6px; }
+      /* 표 */
       table { font-size: 8pt; display: block; overflow-x: auto; white-space: nowrap; }
-      th, td { padding: 6px 8px; min-width: 60px; }
-      .stat-box { padding: 8px 6px; }
+      th, td { padding: 5px 6px; min-width: 55px; }
+      /* 카드/박스 */
+      .stat-box { padding: 7px 6px; }
       .stat-value { font-size: 11pt; }
       .stat-label { font-size: 8pt; }
-      .section { margin-bottom: 16px; padding-bottom: 12px; }
+      /* 섹션 간격 압축 */
+      .section { margin-bottom: 14px; padding-bottom: 10px; }
+      .section-title { font-size: 12pt; margin-bottom: 10px; padding-bottom: 8px; }
+      /* 여백 압축 */
+      .highlight { padding: 8px 10px; margin: 8px 0; }
+      .conclusion { padding: 12px; margin: 10px 0; }
       .feature-tags { gap: 4px; }
       .feature-tag { padding: 3px 6px; font-size: 8pt; }
-      .highlight { padding: 10px 12px; }
+      /* 섹션 타이틀 잘림 방지 */
+      .section-title span { word-break: keep-all; }
     }
     .cover { text-align: center; padding: 60px 20px; margin-bottom: 40px; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; border-radius: 8px; }
     .cover h1 { font-size: 24pt; font-weight: 700; margin-bottom: 8px; }
@@ -309,8 +335,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     .cover .meta-label { font-size: 9pt; color: #94a3b8; margin-bottom: 4px; }
     .cover .meta-value { font-size: 11pt; font-weight: 500; }
     .doc-number { font-size: 9pt; color: #64748b; margin-bottom: 16px; }
-    .section { margin-bottom: 32px; page-break-inside: avoid; }
-    .section-title { font-size: 13pt; font-weight: 700; color: #1e293b; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section { margin-bottom: 24px; page-break-inside: avoid; break-inside: avoid; }
+    .section-header { page-break-after: avoid; break-after: avoid; }
+    .section-title { font-size: 13pt; font-weight: 700; color: #1e293b; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; page-break-after: avoid; break-after: avoid; }
     .section-number { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #f1f5f9; border-radius: 4px; font-size: 11pt; color: #475569; }
     table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10pt; }
     th, td { padding: 10px 14px; border: 1px solid #e2e8f0; text-align: left; }
@@ -321,6 +348,8 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     .highlight-title { font-weight: 600; color: #0369a1; margin-bottom: 8px; }
     .warning { background: #fffbeb; border: 1px solid #fde68a; padding: 12px 16px; border-radius: 6px; font-size: 10pt; color: #92400e; margin: 12px 0; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+    .ai-score-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+    .ai-score-card { background: #f8fafc; padding: 12px 8px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center; }
     .stat-box { background: #f8fafc; padding: 10px 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
     .stat-label { font-size: 8pt; color: #64748b; margin-bottom: 3px; }
     .stat-value { font-size: 14pt; font-weight: 700; color: #1e293b; }
@@ -634,20 +663,20 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   <div class="section">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '8' : '7'}</span> AI 분석</div>
     
-    <div class="grid-2" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 12px;">
-      <div class="stat-box text-center">
+    <div class="ai-score-grid">
+      <div class="ai-score-card">
         <div class="stat-label">법규 적합성</div>
         <div class="stat-value">${layout.scores?.regulationCompliance ?? (layout.coverage <= 60 ? 90 : 70)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
-      <div class="stat-box text-center">
+      <div class="ai-score-card">
         <div class="stat-label">사업성</div>
         <div class="stat-value">${layout.scores?.profitability ?? (financials.roi > 20 ? 85 : financials.roi > 12 ? 70 : 55)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
-      <div class="stat-box text-center">
+      <div class="ai-score-card">
         <div class="stat-label">상품성</div>
         <div class="stat-value">${layout.scores?.marketability ?? (financials.roi > 15 ? 78 : 65)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
-      <div class="stat-box text-center">
+      <div class="ai-score-card">
         <div class="stat-label">종합 점수</div>
         <div class="stat-value" style="color: #166534;">${layout.scores?.overall ?? Math.round((financials.roi > 20 ? 85 : financials.roi > 12 ? 70 : 55) * 0.95)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
