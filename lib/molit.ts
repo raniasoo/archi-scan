@@ -151,37 +151,21 @@ async function fetchMolitApi<T>(options: FetchOptions): Promise<FetchMolitResult
     return { data: null, meta }
   }
   
-  const url = new URL(`${MOLIT_API_BASE}${endpoint}`)
+  // 프록시 route와 동일한 방식으로 URL 직접 구성 (URLSearchParams 미사용)
+  const sigunguCd = params.sigunguCd || ''
+  const bjdongCd = params.bjdongCd || ''
+  const bun = params.bun || '0000'
+  const ji = params.ji || '0000'
+  const platGbCd = params.platGbCd || ''
+  const platGbPart = platGbCd ? `&platGbCd=${platGbCd}` : ''
   
-  // Add common params (NOT serviceKey - added directly to avoid encoding issues)
-  url.searchParams.set('_type', 'json')
-  url.searchParams.set('numOfRows', '10')
-  url.searchParams.set('pageNo', '1')
+  const finalUrl = `${MOLIT_API_BASE}${endpoint}?serviceKey=${apiKey}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}${platGbPart}&bun=${bun}&ji=${ji}&_type=json&numOfRows=10&pageNo=1`
   
-  // Add custom params - preserve string values exactly
-  for (const [key, value] of Object.entries(params)) {
-    const stringValue = String(value)
-    url.searchParams.set(key, stringValue)
-    console.log(`[MOLIT] Param: ${key} = "${stringValue}" (type: ${typeof value}, length: ${stringValue.length})`)
-  }
-  
-  // Build final URL with serviceKey inserted directly (not URL-encoded by URLSearchParams)
-  const baseUrlWithParams = url.toString()
-  const finalUrl = `${baseUrlWithParams}&serviceKey=${apiKey}`
-  
-  // Build debug URL with masked key
   const maskedKey = apiKey.substring(0, 8) + '...' + apiKey.substring(apiKey.length - 4)
   const debugUrl = finalUrl.replace(apiKey, maskedKey)
   meta.requestUrl = debugUrl
-  console.log(`[MOLIT] Full request URL: ${debugUrl}`)
-  
-  // Debug: Verify zero-padding is preserved
-  if (params.bun) {
-    console.log(`[MOLIT] DEBUG bun check: input="${params.bun}", sent="${url.searchParams.get('bun')}", zeros preserved: ${url.searchParams.get('bun')?.startsWith('0')}`)
-  }
-  if (params.ji) {
-    console.log(`[MOLIT] DEBUG ji check: input="${params.ji}", sent="${url.searchParams.get('ji')}", zeros preserved: ${url.searchParams.get('ji')?.startsWith('0')}`)
-  }
+  console.log(`[MOLIT] Request URL: ${debugUrl}`)
+  console.log(`[MOLIT] Params: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, platGbCd=${platGbCd || 'omitted'}, bun=${bun}, ji=${ji}`)
   
   try {
     const controller = new AbortController()
