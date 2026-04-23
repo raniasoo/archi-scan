@@ -825,55 +825,59 @@ async function fetchBuildingMultiEndpoint(params: BuildingLookupParams, platGbCd
     jiLeadingZero: (params.ji || '0000').startsWith('0'),
   }
   
-  // platGbCd 시도 순서: 0(대지) → 1(산) → 생략
-  const platGbCdSequence = ['0', '1', '']
+  // 단 1번만 호출 - getBrBasisOulnInfo + platGbCd=0 (가장 일반적)
+  console.log(`[MOLIT] Single call: sigunguCd=${params.sigunguCd}, bjdongCd=${params.bjdongCd}, bun=${params.bun}, ji=${params.ji}`)
   
-  // 핵심 엔드포인트 2개만 사용 (타임아웃 방지)
-  const FAST_ENDPOINTS = [
-    MOLIT_BUILDING_ENDPOINTS_CURRENT[0], // 기본개요
-    MOLIT_BUILDING_ENDPOINTS_CURRENT[2], // 총괄표제부
-  ]
+  const singleEndpoint = MOLIT_BUILDING_ENDPOINTS_CURRENT[0] // getBrBasisOulnInfo
+  const singleResult = await tryEndpointList(params, [singleEndpoint], attemptedEndpoints, '0')
   
-  console.log(`[MOLIT] Fast lookup: sigunguCd=${params.sigunguCd}, bjdongCd=${params.bjdongCd}, bun=${params.bun}, ji=${params.ji}`)
-  
-  // ========================================
-  // Phase 1: 기본개요+총괄표제부로 platGbCd 순환
-  // ========================================
-  for (const pgCd of platGbCdSequence) {
-    console.log(`[MOLIT] Phase 1: platGbCd=${pgCd || 'omitted'}...`)
-    const currentResult = await tryEndpointList(params, FAST_ENDPOINTS, attemptedEndpoints, pgCd)
-    
-    if (currentResult.result?.data) {
-      return {
-        data: currentResult.result.data,
-        apiStatus: currentResult.result.apiStatus,
-        message: currentResult.result.message,
-        totalCount: currentResult.result.totalCount,
-        endpointUsed: currentResult.endpointUsed || 'unknown',
-        attemptedEndpoints,
-        sentValues,
-        familyUsed: 'current',
-      }
+  if (singleResult.result?.data) {
+    return {
+      data: singleResult.result.data,
+      apiStatus: singleResult.result.apiStatus,
+      message: singleResult.result.message,
+      totalCount: singleResult.result.totalCount,
+      endpointUsed: singleResult.endpointUsed || 'unknown',
+      attemptedEndpoints,
+      sentValues,
+      familyUsed: 'current',
     }
-    if (currentResult.result?.apiStatus === 'auth-error') {
-      return {
-        data: null,
-        apiStatus: 'auth-error',
-        message: currentResult.result.message,
-        totalCount: 0,
-        endpointUsed: currentResult.endpointUsed || 'unknown',
-        attemptedEndpoints,
-        sentValues,
-        familyUsed: 'none',
-      }
+  }
+  
+  if (singleResult.result?.apiStatus === 'auth-error') {
+    return {
+      data: null,
+      apiStatus: 'auth-error',
+      message: singleResult.result.message,
+      totalCount: 0,
+      endpointUsed: singleResult.endpointUsed || 'unknown',
+      attemptedEndpoints,
+      sentValues,
+      familyUsed: 'none',
+    }
+  }
+  
+  // platGbCd=0 실패 시 platGbCd 생략으로 1번 더 시도
+  const retryResult = await tryEndpointList(params, [singleEndpoint], attemptedEndpoints, '')
+  
+  if (retryResult.result?.data) {
+    return {
+      data: retryResult.result.data,
+      apiStatus: retryResult.result.apiStatus,
+      message: retryResult.result.message,
+      totalCount: retryResult.result.totalCount,
+      endpointUsed: retryResult.endpointUsed || 'unknown',
+      attemptedEndpoints,
+      sentValues,
+      familyUsed: 'current',
     }
   }
   
   // ========================================
-  // Phase 2: 나머지 엔드포인트 platGbCd=0으로만 시도
+  // Phase 2: 총괄표제부로 1번 더
   // ========================================
-  console.log(`[MOLIT] Phase 2: trying remaining endpoints with platGbCd=0...`)
-  const closedResult = await tryEndpointList(params, MOLIT_BUILDING_ENDPOINTS_CLOSED, attemptedEndpoints, '0')
+  const recapEndpoint = MOLIT_BUILDING_ENDPOINTS_CURRENT[2] // getBrRecapTitleInfo
+  const closedResult = await tryEndpointList(params, [recapEndpoint], attemptedEndpoints, '0')
   
   if (closedResult.result?.data) {
     return {
