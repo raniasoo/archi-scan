@@ -1720,8 +1720,8 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
             windowWidth: 794,
           });
           const nextImgHeight = (nextCanvas.height * contentWidth) / nextCanvas.width;
-          // 제목 + 다음 블록 높이의 60% (최소 50mm, 최대 80mm)
-          const nextMinHeight = Math.min(Math.max(nextImgHeight * 0.6, 50), 80);
+          // 제목 + 다음 블록 전체 높이 (다음 블록이 한 페이지보다 크면 usableHeight/2 사용)
+          const nextMinHeight = Math.min(nextImgHeight, usableHeight * 0.5);
           minHeightNeeded = imgHeight + nextMinHeight;
         } catch {
           minHeightNeeded = imgHeight + 60; // fallback
