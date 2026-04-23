@@ -472,16 +472,15 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
     let bun = '0000'
     let ji = '0000'
     
+    let platGbCdFromBdMgtSn = '0'  // 기본값 대지
     if (bdMgtSn.length >= 19) {
       sigunguCd = bdMgtSn.substring(0, 5)
       bjdongCd = bdMgtSn.substring(5, 10)
-      const platGbCdFromBdMgtSn = bdMgtSn.substring(10, 11)  // 0=대지, 1=산
+      platGbCdFromBdMgtSn = bdMgtSn.substring(10, 11)  // 0=대지, 1=산
       bun = bdMgtSn.substring(11, 15)
       ji = bdMgtSn.substring(15, 19)
       
       console.log(`[JUSO] Parsed bdMgtSn: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, platGbCd=${platGbCdFromBdMgtSn}, bun=${bun}, ji=${ji}`)
-      // platGbCdFromBdMgtSn을 resolved에 저장하여 MOLIT 조회에 활용
-      ;(resolved as Record<string, unknown>)['platGbCdFromBdMgtSn'] = platGbCdFromBdMgtSn
     } else {
       console.log(`[JUSO] bdMgtSn too short or missing: "${bdMgtSn}" (length: ${bdMgtSn.length})`)
       return { 
@@ -499,7 +498,7 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
       }
     }
     
-    const resolved: ResolvedAddress = {
+    const resolved: ResolvedAddress & { platGbCdFromBdMgtSn?: string } = {
       roadAddr: juso.roadAddr || '',
       roadAddrPart1: juso.roadAddrPart1 || '',
       jibunAddr: juso.jibunAddr || '',
@@ -512,6 +511,7 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
       bun,
       ji,
       lookupPath: 'juso-resolved',
+      platGbCdFromBdMgtSn,
     }
     
     console.log(`[JUSO] Address resolved successfully:`, {
