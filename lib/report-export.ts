@@ -1708,11 +1708,24 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       // 현재 페이지 남은 공간
       const availableHeight = usableHeight - (currentY - topMargin);
       
-      // 제목인 경우: 다음 블록의 높이도 미리 계산
+      // 제목 고아 방지: 제목이면 다음 블록 실제 높이 포함해서 판단
       let minHeightNeeded = imgHeight;
       if (isTitle && i + 1 < contentBlocks.length) {
-        // 제목 + 다음 블록의 최소 40mm (또는 실제 높이의 30%)
-        minHeightNeeded = imgHeight + 40;
+        // 다음 블록을 미리 캡처해서 실제 높이 계산
+        try {
+          const nextCanvas = await html2canvas(contentBlocks[i + 1], {
+            scale: 1, // 빠른 캡처용 저해상도
+            useCORS: true,
+            logging: false,
+            windowWidth: 794,
+          });
+          const nextImgHeight = (nextCanvas.height * contentWidth) / nextCanvas.width;
+          // 제목 + 다음 블록 높이의 60% (최소 50mm, 최대 80mm)
+          const nextMinHeight = Math.min(Math.max(nextImgHeight * 0.6, 50), 80);
+          minHeightNeeded = imgHeight + nextMinHeight;
+        } catch {
+          minHeightNeeded = imgHeight + 60; // fallback
+        }
       }
       
       // 공간 부족 시 새 페이지
