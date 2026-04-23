@@ -94,11 +94,12 @@ const HARDCODED_MOLIT_KEY = '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba
 const HARDCODED_JUSO_KEY = 'devU01TX0FVVEgyMDI2MDQyMjIwMDgxNjExNzk4MjA='
 
 function getApiKey(): string {
-  // 환경변수 우선, 없으면 하드코딩 키 사용
   const envKey = process.env.MOLIT_API_KEY
-  const key = (envKey && envKey.length > 10) ? envKey : HARDCODED_MOLIT_KEY
-  const source = (envKey && envKey.length > 10) ? 'ENV' : 'HARDCODED'
-  console.log(`[MOLIT] getApiKey: source=${source}, len=${key.length}`)
+  // 유효한 MOLIT 키: 64자리 hex (data.go.kr 발급). 그 외는 하드코딩 키 사용
+  const isValidMolitKey = envKey && envKey.length === 64 && /^[0-9a-f]+$/i.test(envKey)
+  const key = isValidMolitKey ? envKey : HARDCODED_MOLIT_KEY
+  const source = isValidMolitKey ? 'ENV' : 'HARDCODED'
+  console.log(`[MOLIT] getApiKey: source=${source}, len=${key.length}, envLen=${envKey?.length || 0}`)
   return key
 }
 
