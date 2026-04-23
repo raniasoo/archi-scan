@@ -94,9 +94,13 @@ const HARDCODED_MOLIT_KEY = '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba
 const HARDCODED_JUSO_KEY = 'devU01TX0FVVEgyMDI2MDQyMjIwMDgxNjExNzk4MjA='
 
 function getApiKey(): string {
-  // 항상 하드코딩 키 사용 (환경변수 키가 잘못 설정된 경우 대비)
-  console.log(`[MOLIT] getApiKey: HARDCODED, len=${HARDCODED_MOLIT_KEY.length}`)
-  return HARDCODED_MOLIT_KEY
+  // 환경변수 우선, 없거나 형식 불일치 시 하드코딩 키 사용
+  const envKey = process.env.MOLIT_API_KEY
+  const isValid = envKey && envKey.length === 64 && /^[0-9a-f]+$/i.test(envKey)
+  const key = isValid ? envKey : HARDCODED_MOLIT_KEY
+  const src = isValid ? 'ENV' : 'HARDCODED'
+  console.log(`[MOLIT] getApiKey: source=${src}, len=${key.length}`)
+  return key
 }
 
 function getJusoApiKey(): string {
