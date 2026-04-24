@@ -492,9 +492,8 @@ export default function ArchiScanPage() {
         if (s.siteArea) setSiteArea(s.siteArea)
         if (s.strategy) setStrategy(s.strategy)
         if (s.regulation) setRegulation(s.regulation)
-        // supplementData는 저장된 주소와 일치할 때만 복원 (다른 주소면 리셋)
-        if (s.supplementData && s.address) setSupplementData(s.supplementData)
-        if (s.molitSupplementData && s.address) setMolitSupplementData(s.molitSupplementData)
+        // supplementData, molitSupplementData는 복원 안 함
+        // → 자동조회 시 항상 새로 추론 (캐시 오염 방지)
         if (s.layouts?.length) {
           setLayouts(s.layouts)
           if (s.currentStep && s.currentStep !== 'input') setCurrentStep(s.currentStep)
