@@ -782,11 +782,16 @@ export default function ArchiScanPage() {
       fetch('/api/zone-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji, address: roadAddr }),
+        body: JSON.stringify({
+          sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd,
+          bun: data.bun, ji: data.ji, address: roadAddr,
+          entX: data.entX, entY: data.entY,  // 좌표 추가 → 직접 용도지역 조회
+        }),
       })
         .then(r => r.json())
         .then(res => {
-          const zoneLookup = mapZoneString(res.zoneType || '')
+          // zoneCode(코드값) 우선, 없으면 zoneType(한글) → mapZoneString 변환
+          const zoneLookup = res.zoneCode || mapZoneString(res.zoneType || '')
           if (zoneLookup) {
             applyZoneData(zoneLookup, roadAddr, false, coords)
             console.log('[v0] zone-lookup 완료:', zoneLookup, '(', res.source, ')')
