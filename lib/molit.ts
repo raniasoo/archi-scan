@@ -1608,9 +1608,10 @@ export async function lookupSiteData(
       
       const siteData = mapBuildingToSiteData(result.data)
       siteData.dataSource = 'building'
-      // JUSO에서 받은 건물 입구 좌표 추가
-      if (jusoResult.resolved?.entX) siteData.entX = jusoResult.resolved.entX
-      if (jusoResult.resolved?.entY) siteData.entY = jusoResult.resolved.entY
+      // JUSO에서 받은 건물 입구 좌표 추가 (diagnostics 통해 접근, 스코프 안전)
+      const diagJuso = diagnostics.jusoResult as Record<string, unknown> | undefined
+      if (diagJuso?.entX) siteData.entX = diagJuso.entX as number
+      if (diagJuso?.entY) siteData.entY = diagJuso.entY as number
       
       diagnostics.apiResponse = {
         status: 'success-with-data',
