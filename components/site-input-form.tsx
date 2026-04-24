@@ -393,6 +393,18 @@ export function SiteInputForm({
         if (onMolitDataFetched) {
           onMolitDataFetched(result.data)
         }
+        // 보완 데이터도 부모에 전달 (건폐율/용적률 업데이트용)
+        if (onSupplementDataChange && mappedZone) {
+          const supplementToSync: SupplementData = {
+            zoneType: mappedZone,
+            roadCondition: mappedRoadCondition,
+            heightLimit: mappedHeightLimit,
+            hasDistrictPlan: hasDistrict,
+            districtPlanNotes: hasDistrict ? '지구단위계획 적용' : '',
+            additionalNotes: '',
+          }
+          onSupplementDataChange(supplementToSync)
+        }
       } else {
         // Determine the appropriate state based on diagnostics
         const lookupPath = result.diagnostics?.lookupPath

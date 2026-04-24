@@ -679,6 +679,22 @@ export default function ArchiScanPage() {
       'commercial-general','commercial-neighborhood','industrial'] as const
     type ValidZoneType = typeof validZoneTypes[number]
     
+    // 용도지역별 건폐율/용적률 (국계법 기준)
+    const coverageByZone: Record<string, number> = {
+      'residential-exclusive-1': 50, 'residential-exclusive-2': 50,
+      'residential-1': 60, 'residential-2': 60, 'residential-3': 50,
+      'semi-residential': 70, 'commercial-neighborhood': 70,
+      'commercial-general': 80, 'commercial-central': 90,
+      'industrial-general': 70, 'green-natural': 20,
+    }
+    const farByZone: Record<string, number> = {
+      'residential-exclusive-1': 100, 'residential-exclusive-2': 150,
+      'residential-1': 200, 'residential-2': 250, 'residential-3': 300,
+      'semi-residential': 500, 'commercial-neighborhood': 900,
+      'commercial-general': 1300, 'commercial-central': 1500,
+      'industrial-general': 400, 'green-natural': 100,
+    }
+
     setRegulation(prev => ({
       ...prev,
       zoneType: (validZoneTypes as readonly string[]).includes(mappedZone)
@@ -688,6 +704,8 @@ export default function ArchiScanPage() {
       roadWidth,
       roadCondition: roadConditionEnum as import('@/lib/regulation-types').RoadCondition,
       additionalNotes: hasDistrict ? '지구단위계획 적용' : prev.additionalNotes,
+      maxCoverageRatio: coverageByZone[mappedZone] ?? prev.maxCoverageRatio,
+      maxFloorAreaRatio: farByZone[mappedZone] ?? prev.maxFloorAreaRatio,
     }))
 
     // siteArea도 업데이트 (MOLIT에서 직접 받은 값)
