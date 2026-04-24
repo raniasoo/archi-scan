@@ -284,7 +284,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       /* 그리드 카드 레이아웃 print 강제 적용 */
       .grid-2 { display: grid !important; }
       .ai-score-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }
-      .ai-score-card { display: block !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important; padding: 10px 8px !important; text-align: center !important; break-inside: avoid !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .ai-score-card { display: block !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important; padding: 10px 8px !important; text-align: center !important; break-inside: avoid !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; width: 100% !important; min-width: 0 !important; }
       .stat-box { display: block !important; background: #f8fafc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       /* 제목 + 바로 다음 요소 함께 묶기 (가장 신뢰할 수 있는 방법) */
       .section-title { page-break-after: avoid; break-after: avoid; }
@@ -315,8 +315,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       .risk-grid { grid-template-columns: 1fr; gap: 8px; }
       /* AI 점수 카드 - 모바일 2x2 */
       .ai-score-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
-      .ai-score-card { padding: 8px 6px; }
-      /* 표 */
+      .ai-score-card { padding: 8px 6px; min-height: 0; }
+      /* 5번 섹션 카드 모바일 축소 */
+      .stat-box { padding: 7px 6px; }
       table { font-size: 8pt; display: block; overflow-x: auto; white-space: nowrap; }
       th, td { padding: 5px 6px; min-width: 55px; }
       /* 카드/박스 */
@@ -581,7 +582,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       <div class="stat-box">
         <div class="stat-label">용적률</div>
         <div class="stat-value">${far}%</div>
-        <div class="stat-note">법정 200% 대비 적정</div>
+        <div class="stat-note">법정 ${regulation?.maxFloorAreaRatio ?? 200}% 기준</div>
       </div>
     </div>
 
@@ -1396,7 +1397,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       pdf.setFontSize(6.5)
       pdf.setTextColor(148, 163, 184)
       pdf.text(`(${Math.round(gfa * 0.3025).toLocaleString()}평)`, margin + 3, y + 16)
-      pdf.text("법정 200% 대비 적정", margin + contentWidth / 2 + 5, y + 16)
+      pdf.text(`법정 ${regulation?.maxFloorAreaRatio ?? 200}% 기준`, margin + contentWidth / 2 + 5, y + 16)
       y += 22
       
       // Features - compact
