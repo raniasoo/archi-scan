@@ -774,6 +774,11 @@ export default function ArchiScanPage() {
             applyZoneData(inferred, roadAddr, false, coords)
             console.log('[v0] zone-lookup 완료:', inferred, '(', res.source, ')')
           }
+          // 면적 자동입력 (MOLIT 실패 시 Vworld 필지 면적 사용)
+          if (res.siteArea && res.siteArea > 0) {
+            setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0) ? String(Math.round(res.siteArea)) : prev)
+            console.log('[v0] zone-lookup 면적 자동입력:', res.siteArea)
+          }
         })
         .catch(e => console.warn('[v0] zone-lookup 실패:', e))
     }
