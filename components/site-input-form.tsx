@@ -787,6 +787,34 @@ export function SiteInputForm({
                   <Edit3 className="h-3 w-3 mr-1" />
                   {showManualInput ? '수동 입력 닫기' : '직접 지번 입력하기'}
                 </Button>
+
+                {/* 수동 입력으로 계속하기 버튼 */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // JUSO 데이터로 supplement 자동입력 후 계속 진행
+                    const roadAddr = resolvedJuso.roadAddr || address
+                    const mappedRoadCondition =
+                      roadAddr.includes('대로') ? '12m-plus' :
+                      roadAddr.includes('로') ? '8m-plus' :
+                      roadAddr.includes('길') ? '4m-plus' : '6m-plus'
+                    setSupplementData(prev => ({
+                      zoneType: prev?.zoneType || 'residential-2',
+                      roadCondition: mappedRoadCondition,
+                      heightLimit: prev?.heightLimit ?? 30,
+                      hasDistrictPlan: prev?.hasDistrictPlan ?? false,
+                      districtPlanNotes: prev?.districtPlanNotes || '',
+                      additionalNotes: prev?.additionalNotes || '',
+                    }))
+                    setShowSupplementForm(true)
+                  }}
+                  className="w-full border-primary/30 text-primary"
+                >
+                  <Edit3 className="h-3 w-3 mr-1" />
+                  수동으로 정보 입력하고 계속하기
+                </Button>
                 
                 {/* Manual parcel input form */}
                 {showManualInput && (
