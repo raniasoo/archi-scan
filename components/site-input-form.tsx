@@ -1,7 +1,7 @@
 "use client"
 // @version STABLE-v215 | Critical: Supplement data syncs to parent regulation state
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -95,6 +95,10 @@ export function SiteInputForm({
   const [showSupplementForm, setShowSupplementForm] = useState(false)
   const [supplementData, setSupplementData] = useState<SupplementData | null>(null)
   const [isSavingSupplement, setIsSavingSupplement] = useState(false)
+
+  // address stale closure 방지용 ref
+  const addressRef = useRef(address)
+  useEffect(() => { addressRef.current = address }, [address])
   
   // Environment status for API keys
   const [envStatus, setEnvStatus] = useState<{
@@ -341,9 +345,8 @@ export function SiteInputForm({
           : molitZone.includes('계획관리') ? 'management-planned'
           : ''
 
-        // 접도 현황 - 주소 도로명 접미사로 추론
-        // 대로(boulevard) ≥ 25m / 로(road) ≥ 12m / 길(street) ≥ 4m
-        const roadAddr = result.data.roadAddress || address
+        // 접도 현황 - 주소 도로명 접미사로 추론 (ref로 stale closure 방지)
+        const roadAddr = result.data.roadAddress || addressRef.current || address
         const mappedRoadCondition =
           roadAddr.includes('대로') ? '12m-plus' :
           roadAddr.includes('로') ? '8m-plus' :

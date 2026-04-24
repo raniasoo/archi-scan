@@ -161,6 +161,7 @@ export async function geocodeAddress(
 
     const json = await res.json()
     const status = json?.response?.status
+    console.log('[vworld] geocode road status:', status, '| error:', json?.response?.error)
     if (status !== 'OK') {
       // 도로명 실패 시 지번으로 재시도
       const params2 = new URLSearchParams({
@@ -172,13 +173,19 @@ export async function geocodeAddress(
         type: 'parcel',
         format: 'json',
         key: apiKey,
+        domain: 'v0-archi-scan-layout-generator.vercel.app',
       })
       const res2 = await fetch(`https://api.vworld.kr/req/address?${params2}`, {
+        headers: {
+          'Referer': 'https://v0-archi-scan-layout-generator.vercel.app',
+          'Origin': 'https://v0-archi-scan-layout-generator.vercel.app',
+        },
         signal: AbortSignal.timeout(8000),
       })
       const json2 = await res2.json()
+      console.log('[vworld] geocode parcel status:', json2?.response?.status, '| error:', json2?.response?.error)
       if (json2?.response?.status !== 'OK') {
-        return { success: false, error: '좌표 변환 실패' }
+        return { success: false, error: `좌표 변환 실패: road=${status} parcel=${json2?.response?.status} msg=${JSON.stringify(json2?.response?.error)}` }
       }
       const pt2 = json2.response.result.point
       return { success: true, lng: parseFloat(pt2.x), lat: parseFloat(pt2.y) }
