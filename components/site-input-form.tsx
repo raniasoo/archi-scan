@@ -120,7 +120,8 @@ export function SiteInputForm({
         zoneType: externalSupplement.zoneCode!,
         // roadCondition: 이미 사용자가 저장한 값이 있으면 유지, 없으면 새로 설정
         roadCondition: prev?.roadCondition || roadCondition,
-        heightLimit: externalSupplement.heightLimit ?? prev?.heightLimit ?? null,
+        // heightLimit: externalSupplement에서 새 값이 오면 항상 업데이트 (이전값 유지 X)
+        heightLimit: externalSupplement.heightLimit ?? null,
         hasDistrictPlan: externalSupplement.hasDistrictPlan ?? prev?.hasDistrictPlan ?? false,
         districtPlanNotes: prev?.districtPlanNotes || '',
         additionalNotes: prev?.additionalNotes || '',

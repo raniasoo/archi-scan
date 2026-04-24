@@ -759,8 +759,8 @@ export default function ArchiScanPage() {
     if (mappedZone) {
       // MOLIT 성공 + 용도지역 직접 반환
       applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
-    } else if (data.buildingCoverage != null && data.buildingCoverage > 0) {
-      // MOLIT 성공했지만 용도지역 없음 → 건폐율/용적률로 역추론 (zone-lookup 불필요)
+    } else if (data.buildingCoverage != null && data.buildingCoverage > 0 && !data.sigunguCd) {
+      // MOLIT 성공 + 건폐율 있음 + PNU 없어서 zone-lookup 불가 → 역추론 (최후 수단)
       const cov = data.buildingCoverage
       const far = data.floorAreaRatio ?? 0
       let inferred = ''
@@ -774,7 +774,7 @@ export default function ArchiScanPage() {
       else if (cov <= 80 && far <= 1300) inferred = 'commercial-general'
       else if (cov <= 90 && far <= 1500) inferred = 'commercial-central'
       else                               inferred = 'residential-2'
-      console.log('[v0] 건폐율/용적률 역추론:', cov, far, '→', inferred)
+      console.log('[v0] 역추론(PNU없음):', cov, far, '→', inferred)
       applyZoneData(inferred, roadAddr, hasDistrict, coords)
     } else {
       // MOLIT 실패 또는 건폐율 없음 → zone-lookup으로 보완
