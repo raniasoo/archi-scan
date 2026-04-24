@@ -23,16 +23,55 @@ function getVworldApiKey(): string {
   return trimmed
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const apiKey = getVworldApiKey()
-  const rawKey = process.env.VWORLD_API_KEY
-  return NextResponse.json({
-    vworldApiKey: `설정됨 (${apiKey.length}자, ${apiKey.substring(0, 8)}...)`,
-    configured: true,
-    source: rawKey && rawKey.trim() === apiKey ? 'env' : 'fallback',
-    envRaw: rawKey ? `${rawKey.length}자` : '없음',
-    timestamp: new Date().toISOString(),
+  const url = req.nextUrl.searchParams.get('url')
+  
+  // 직접 URL 테스트 모드
+  if (url) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+      const text = await res.text()
+      return NextResponse.json({ status: res.status, body: text.substring(0, 500) })
+    } catch (e) {
+      return NextResponse.json({ error: String(e) })
+    }
+  }
+
+  // 기본: geocoding 테스트
+  const testAddress = '서울특별시 강남구 테헤란로 152'
+  const geoParams = new URLSearchParams({
+    service: 'address', request: 'getcoord', version: '2.0',
+    crs: 'EPSG:4326', address: testAddress, type: 'road', format: 'json',
+    key: apiKey, domain: 'v0-archi-scan-layout-generator.vercel.app',
   })
+  
+  try {
+    console.log('[vworld-diag] Testing geocode API...')
+    const res = await fetch(`https://api.vworld.kr/req/address?${geoParams}`, {
+      headers: {
+        'Referer': 'https://v0-archi-scan-layout-generator.vercel.app',
+        'Origin': 'https://v0-archi-scan-layout-generator.vercel.app',
+      },
+      signal: AbortSignal.timeout(8000),
+    })
+    const text = await res.text()
+    console.log('[vworld-diag] geocode response:', text.substring(0, 300))
+    return NextResponse.json({
+      apiKey: `${apiKey.substring(0, 8)}... (${apiKey.length}자)`,
+      source: process.env.VWORLD_API_KEY ? 'env' : 'fallback',
+      geocodeStatus: res.status,
+      geocodeBody: text.substring(0, 500),
+      timestamp: new Date().toISOString(),
+    })
+  } catch (e) {
+    console.log('[vworld-diag] geocode error:', String(e))
+    return NextResponse.json({
+      apiKey: `${apiKey.substring(0, 8)}... (${apiKey.length}자)`,
+      error: String(e),
+      timestamp: new Date().toISOString(),
+    })
+  }
 }
 
 export async function POST(req: NextRequest) {
