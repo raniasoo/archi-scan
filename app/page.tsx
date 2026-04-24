@@ -662,7 +662,7 @@ export default function ArchiScanPage() {
       maxFloors: Math.floor(heightLimit / 3.3),
       roadWidth,
       roadCondition: roadConditionEnum as import('@/lib/regulation-types').RoadCondition,
-      additionalNotes: hasDistrict ? '지구단위계획 적용' : '',
+      additionalNotes: hasDistrict ? '지구단위계획 적용' : prev.additionalNotes,
     }))
 
     // siteArea도 업데이트 (MOLIT에서 직접 받은 값)
@@ -670,7 +670,7 @@ export default function ArchiScanPage() {
       setSiteArea(String(Math.round(data.siteArea)))
     }
 
-    console.log('[v0] MOLIT data fetched → molitSupplementData:', { mappedZone, roadWidth, heightLimit, hasDistrict })
+    console.log('[v0] handleMolitDataFetched 완료:', { mappedZone, roadWidth, roadConditionEnum, heightLimit, hasDistrict })
   }
 
   const handleGenerate = async () => {

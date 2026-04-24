@@ -57,8 +57,11 @@ export async function POST(req: NextRequest) {
       if (!address) {
         return NextResponse.json({ success: false, error: '주소 또는 좌표 필요' }, { status: 400 })
       }
+      console.log('[vworld] geocoding address:', address)
       const geoResult = await geocodeAddress(address, apiKey)
+      console.log('[vworld] geocode result:', JSON.stringify(geoResult))
       if (!geoResult.success) {
+        console.log('[vworld] geocode failed, using demo')
         return NextResponse.json({
           success: false,
           error: `좌표 변환 실패: ${geoResult.error}`,
@@ -70,8 +73,10 @@ export async function POST(req: NextRequest) {
       coordLat = geoResult.lat!
     }
 
+    console.log('[vworld] fetching parcel for:', coordLng, coordLat)
     // 지적 폴리곤 조회
     const parcelResult = await fetchParcelPolygon(coordLng, coordLat, apiKey)
+    console.log('[vworld] parcel result success:', parcelResult.success, 'error:', parcelResult.error)
 
     if (!parcelResult.success) {
       return NextResponse.json({
