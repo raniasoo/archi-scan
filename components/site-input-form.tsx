@@ -50,10 +50,15 @@ interface SiteInputFormProps {
   onGenerate: () => void
   isGenerating: boolean
   buttonText?: string
-  // New: callback for MOLIT data merge
   onMolitDataFetched?: (data: MolitSiteData) => void
-  // CRITICAL: callback to sync supplement data to parent regulation state
   onSupplementDataChange?: (data: SupplementData) => void
+  // zone-lookup 완료 후 page.tsx가 밀어주는 보완 데이터
+  externalSupplement?: {
+    zoneCode?: string
+    roadWidth?: number
+    heightLimit?: number
+    hasDistrictPlan?: boolean
+  } | null
 }
 
 export function SiteInputForm({
@@ -66,6 +71,7 @@ export function SiteInputForm({
   buttonText = "배치안 생성하기",
   onMolitDataFetched,
   onSupplementDataChange,
+  externalSupplement,
 }: SiteInputFormProps) {
   const [lookupState, setLookupState] = useState<AutoLookupStatus>('idle')
   const [lookupError, setLookupError] = useState<string | null>(null)
@@ -99,8 +105,34 @@ export function SiteInputForm({
   // address stale closure 방지용 ref
   const addressRef = useRef(address)
   useEffect(() => { addressRef.current = address }, [address])
-  
-  // Environment status for API keys
+
+  // zone-lookup 완료 후 외부에서 밀어준 데이터로 보완 입력 자동 완성
+  useEffect(() => {
+    if (!externalSupplement?.zoneCode) return
+    const zoneLabel: Record<string, string> = {
+      'residential-exclusive-1': '제1종전용주거지역', 'residential-exclusive-2': '제2종전용주거지역',
+      'residential-1': '제1종일반주거지역', 'residential-2': '제2종일반주거지역',
+      'residential-3': '제3종일반주거지역', 'semi-residential': '준주거지역',
+      'commercial-neighborhood': '근린상업지역', 'commercial-central': '중심상업지역',
+      'commercial-general': '일반상업지역', 'industrial-general': '일반공업지역',
+      'green-natural': '자연녹지지역', 'green-production': '생산녹지지역',
+      'management-planned': '계획관리지역',
+    }
+    const rw = externalSupplement.roadWidth ?? 8
+    const roadCondition = rw >= 25 ? '25m 이상' : rw >= 12 ? '12m 이상' : rw >= 8 ? '8m 이상' : rw >= 6 ? '6m 이상' : '4m 미만'
+    const autoData: SupplementData = {
+      zoneType: zoneLabel[externalSupplement.zoneCode] || externalSupplement.zoneCode,
+      roadCondition,
+      heightLimit: externalSupplement.heightLimit ?? null,
+      hasDistrictPlan: externalSupplement.hasDistrictPlan ?? false,
+      districtPlanNotes: '',
+      additionalNotes: '',
+    }
+    setSupplementData(autoData)
+    if (onSupplementDataChange) onSupplementDataChange(autoData)
+  }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit])
+
+
   const [envStatus, setEnvStatus] = useState<{
     molit: { configured: boolean; keyPreview: string | null; status: string }
     juso: { configured: boolean; keyPreview: string | null; status: string }
@@ -825,26 +857,28 @@ export function SiteInputForm({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    // JUSO 데이터로 접도만 자동 추론, 용도지역은 사용자가 직접 선택
-                    const roadAddr = resolvedJuso.roadAddr || address
-                    const mappedRoadCondition =
-                      roadAddr.includes('대로') ? '12m-plus' :
-                      roadAddr.includes('로') ? '8m-plus' :
-                      roadAddr.includes('길') ? '4m-plus' : '6m-plus'
-                    setSupplementData(prev => ({
-                      zoneType: prev?.zoneType && prev.zoneType !== 'residential-2' ? prev.zoneType : '',
-                      roadCondition: mappedRoadCondition,
-                      heightLimit: prev?.heightLimit ?? null,
-                      hasDistrictPlan: prev?.hasDistrictPlan ?? false,
-                      districtPlanNotes: prev?.districtPlanNotes || '',
-                      additionalNotes: prev?.additionalNotes || '',
-                    }))
+                    // externalSupplement(zone-lookup)가 있으면 이미 채워진 상태
+                    if (!externalSupplement?.zoneCode) {
+                      const roadAddr = resolvedJuso.roadAddr || address
+                      const mappedRoadCondition =
+                        roadAddr.includes('대로') ? '12m-plus' :
+                        roadAddr.includes('로') ? '8m-plus' :
+                        roadAddr.includes('길') ? '4m-plus' : '6m-plus'
+                      setSupplementData(prev => ({
+                        zoneType: prev?.zoneType && prev.zoneType !== 'residential-2' ? prev.zoneType : '',
+                        roadCondition: mappedRoadCondition,
+                        heightLimit: prev?.heightLimit ?? null,
+                        hasDistrictPlan: prev?.hasDistrictPlan ?? false,
+                        districtPlanNotes: prev?.districtPlanNotes || '',
+                        additionalNotes: prev?.additionalNotes || '',
+                      }))
+                    }
                     setShowSupplementForm(true)
                   }}
-                  className="w-full border-primary/30 text-primary"
+                  className={`w-full ${externalSupplement?.zoneCode ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/5' : 'border-primary/30 text-primary'}`}
                 >
                   <Edit3 className="h-3 w-3 mr-1" />
-                  수동으로 정보 입력하고 계속하기
+                  {externalSupplement?.zoneCode ? '자동입력 완료 — 확인하고 계속하기' : '수동으로 정보 입력하고 계속하기'}
                 </Button>
                 
                 {/* Manual parcel input form */}

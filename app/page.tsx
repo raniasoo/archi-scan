@@ -1484,6 +1484,7 @@ export default function ArchiScanPage() {
                     buttonText="설계 전략 선택으로"
                     onSupplementDataChange={handleSupplementDataChange}
                     onMolitDataFetched={handleMolitDataFetched}
+                    externalSupplement={molitSupplementData.zoneCode ? molitSupplementData : null}
                   />
                 </CardContent>
               </Card>
