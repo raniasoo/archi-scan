@@ -553,19 +553,29 @@ export default function ArchiScanPage() {
       additionalNotes: data.hasDistrictPlan 
         ? (data.districtPlanNotes || '지구단위계획 적용')
         : '',
-      // Update ratios based on zone type
-      maxCoverageRatio: zoneType === 'residential-1' ? 50 :
-                        zoneType === 'residential-2' ? 50 :
+      // Update ratios based on zone type (국계법 기준)
+      maxCoverageRatio: zoneType === 'residential-exclusive-1' ? 50 :
+                        zoneType === 'residential-exclusive-2' ? 50 :
+                        zoneType === 'residential-1' ? 60 :
+                        zoneType === 'residential-2' ? 60 :
                         zoneType === 'residential-3' ? 50 :
-                        zoneType === 'semi-residential' ? 60 :
-                        zoneType === 'commercial-general' ? 60 :
-                        zoneType === 'commercial-neighborhood' ? 60 : prev.maxCoverageRatio,
-      maxFloorAreaRatio: zoneType === 'residential-1' ? 150 :
-                         zoneType === 'residential-2' ? 200 :
-                         zoneType === 'residential-3' ? 250 :
-                         zoneType === 'semi-residential' ? 400 :
-                         zoneType === 'commercial-general' ? 800 :
-                         zoneType === 'commercial-neighborhood' ? 600 : prev.maxFloorAreaRatio,
+                        zoneType === 'semi-residential' ? 70 :
+                        zoneType === 'commercial-general' ? 80 :
+                        zoneType === 'commercial-neighborhood' ? 70 :
+                        zoneType === 'commercial-central' ? 90 :
+                        zoneType === 'industrial-general' ? 70 :
+                        zoneType === 'green-natural' ? 20 : prev.maxCoverageRatio,
+      maxFloorAreaRatio: zoneType === 'residential-exclusive-1' ? 100 :
+                         zoneType === 'residential-exclusive-2' ? 150 :
+                         zoneType === 'residential-1' ? 200 :
+                         zoneType === 'residential-2' ? 250 :
+                         zoneType === 'residential-3' ? 300 :
+                         zoneType === 'semi-residential' ? 500 :
+                         zoneType === 'commercial-general' ? 1300 :
+                         zoneType === 'commercial-neighborhood' ? 900 :
+                         zoneType === 'commercial-central' ? 1500 :
+                         zoneType === 'industrial-general' ? 400 :
+                         zoneType === 'green-natural' ? 100 : prev.maxFloorAreaRatio,
     }))
     
     // Also update siteArea if provided
