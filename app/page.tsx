@@ -21,6 +21,7 @@ import { SiteInputForm } from "@/components/site-input-form"
 import type { SupplementData } from "@/components/manual-supplement-form"
 import { LayoutCard } from "@/components/layout-card"
 import { LayoutComparison } from "@/components/layout-comparison"
+import { BuildingVolume3D } from "@/components/building-volume-3d"
 import { FloorPlan } from "@/components/floor-plan"
 import { generateFloorPlanDXF, downloadDXF } from "@/lib/dxf-generator"
 import { FinancialAnalysis } from "@/components/financial-analysis"
@@ -423,6 +424,7 @@ export default function ArchiScanPage() {
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
+  const [show3DVolume, setShow3DVolume] = useState(false)
   const [regulation, setRegulation] = useState<ZoningRegulation>(getDefaultRegulation())
   const [strategy, setStrategy] = useState<DesignStrategy>("profitability")
   const [supplementData, setSupplementData] = useState<{
@@ -1110,6 +1112,18 @@ export default function ArchiScanPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* 3D 볼륨 모델 모달 */}
+      {show3DVolume && selectedLayoutData && (
+        <BuildingVolume3D
+          layoutName={selectedLayoutData.name}
+          floors={selectedLayoutData.floors}
+          siteArea={siteAreaNum}
+          coverage={selectedLayoutData.coverage}
+          sitePolygon={sitePolygon}
+          onClose={() => setShow3DVolume(false)}
+        />
+      )}
+
       {/* DXF 미리보기 모달 - 실제 FloorPlan 컴포넌트 사용 */}
       {showDxfPreview && selectedLayoutData && (
         <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col">
@@ -2109,6 +2123,14 @@ export default function ArchiScanPage() {
                   DXF 저장 ({selectedFloor}층)
                 </button>
               </div>
+              {/* 3D 볼륨 버튼 */}
+              <button
+                onClick={() => setShow3DVolume(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-purple-500/30 text-purple-400 bg-purple-500/5 hover:bg-purple-500/10 transition-colors text-sm font-medium"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                3D 볼륨 모델 보기
+              </button>
               <Button onClick={() => setCurrentStep("financial")} size="lg" className="gap-2 w-full md:w-auto">
                 이 배치안의 사업성 보기
                 <ChevronRight className="h-5 w-5" />
