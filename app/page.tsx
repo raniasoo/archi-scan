@@ -646,13 +646,14 @@ export default function ArchiScanPage() {
     })
 
     // regulation state도 동시 업데이트
+    const validZoneTypes = ['residential-1','residential-2','residential-3','semi-residential',
+      'commercial-general','commercial-neighborhood','industrial'] as const
+    type ValidZoneType = typeof validZoneTypes[number]
+    
     setRegulation(prev => ({
       ...prev,
-      zoneType: (['residential-1','residential-2','residential-3','semi-residential',
-        'commercial-general','commercial-neighborhood','industrial'] as const)
-        .includes(mappedZone as typeof ['residential-1','residential-2','residential-3',
-          'semi-residential','commercial-general','commercial-neighborhood','industrial'][number])
-        ? mappedZone as typeof prev.zoneType : prev.zoneType,
+      zoneType: (validZoneTypes as readonly string[]).includes(mappedZone)
+        ? (mappedZone as ValidZoneType) : prev.zoneType,
       maxHeight: heightLimit,
       maxFloors: Math.floor(heightLimit / 3.3),
       roadWidth,
