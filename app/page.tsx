@@ -719,10 +719,10 @@ export default function ArchiScanPage() {
     const roadWidth = roadAddr.includes('대로') ? 25 :
                       roadAddr.includes('로') ? 12 :
                       roadAddr.includes('길') ? 6 : 8
-    const roadConditionEnum = roadWidth >= 25 ? '25m' :
-                              roadWidth >= 12 ? '12m' :
-                              roadWidth >= 8  ? '8m' :
-                              roadWidth >= 6  ? '6m' : '4m'
+    const roadConditionEnum = roadWidth >= 12 ? '12m-plus' :
+                              roadWidth >= 8  ? '8m-plus' :
+                              roadWidth >= 6  ? '6m-plus' :
+                              roadWidth >= 4  ? '4m-plus' : 'under-4m'
     const heightLimit = heightByZone[zone] ?? 30
 
     setMolitSupplementData(prev => ({ ...prev, zoneCode: zone, roadWidth, heightLimit, hasDistrictPlan: hasDistrict, ...extra }))

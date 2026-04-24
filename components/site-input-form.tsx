@@ -109,19 +109,14 @@ export function SiteInputForm({
   // zone-lookup 완료 후 외부에서 밀어준 데이터로 보완 입력 자동 완성
   useEffect(() => {
     if (!externalSupplement?.zoneCode) return
-    const zoneLabel: Record<string, string> = {
-      'residential-exclusive-1': '제1종전용주거지역', 'residential-exclusive-2': '제2종전용주거지역',
-      'residential-1': '제1종일반주거지역', 'residential-2': '제2종일반주거지역',
-      'residential-3': '제3종일반주거지역', 'semi-residential': '준주거지역',
-      'commercial-neighborhood': '근린상업지역', 'commercial-central': '중심상업지역',
-      'commercial-general': '일반상업지역', 'industrial-general': '일반공업지역',
-      'green-natural': '자연녹지지역', 'green-production': '생산녹지지역',
-      'management-planned': '계획관리지역',
-    }
+    // roadCondition: ManualSupplementForm 코드 형식 사용
     const rw = externalSupplement.roadWidth ?? 8
-    const roadCondition = rw >= 25 ? '25m 이상' : rw >= 12 ? '12m 이상' : rw >= 8 ? '8m 이상' : rw >= 6 ? '6m 이상' : '4m 미만'
+    const roadCondition = rw >= 12 ? '12m-plus' :
+                          rw >= 8  ? '8m-plus' :
+                          rw >= 6  ? '6m-plus' :
+                          rw >= 4  ? '4m-plus' : 'under-4m'
     const autoData: SupplementData = {
-      zoneType: zoneLabel[externalSupplement.zoneCode] || externalSupplement.zoneCode,
+      zoneType: externalSupplement.zoneCode,  // ZONE_TYPE_OPTIONS의 코드값 그대로
       roadCondition,
       heightLimit: externalSupplement.heightLimit ?? null,
       hasDistrictPlan: externalSupplement.hasDistrictPlan ?? false,
