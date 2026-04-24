@@ -617,7 +617,17 @@ export default function ArchiScanPage() {
       molitZone.includes('생산녹지') ? 'green-production' :
       molitZone.includes('계획관리') ? 'management-planned' : ''
 
-    if (!mappedZone) return
+    // zoneType 없어도 (MOLIT 실패) entX/entY 좌표는 저장 (지적도용)
+    if (!mappedZone) {
+      if (data.entX || data.entY) {
+        setMolitSupplementData(prev => ({
+          ...prev,
+          entX: data.entX,
+          entY: data.entY,
+        }))
+      }
+      return
+    }
 
     const heightByZone: Record<string, number> = {
       'residential-exclusive-1': 9, 'residential-exclusive-2': 12,

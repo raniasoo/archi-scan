@@ -1465,6 +1465,10 @@ export async function lookupSiteData(
       diagnostics.jusoResult.jibunAddr = jusoResult.resolved.jibunAddr
       diagnostics.jusoResult.bdMgtSn = jusoResult.resolved.bdMgtSn
       diagnostics.jusoResult.extractedCodes = { sigunguCd, bjdongCd, bun, ji }
+      // JUSO 좌표 포함 (Vworld 폴백용)
+      if (jusoResult.resolved.entX) diagnostics.jusoResult.entX = jusoResult.resolved.entX
+      if (jusoResult.resolved.entY) diagnostics.jusoResult.entY = jusoResult.resolved.entY
+      if (jusoResult.resolved.roadAddr) diagnostics.jusoResult.roadAddr = jusoResult.resolved.roadAddr
       diagnostics.stoppedAt = 'molit' // Will proceed to MOLIT
       
       console.log(`[MOLIT] Using Juso-resolved data: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, bun=${bun}, ji=${ji}, platGbCd=${platGbCd}`)

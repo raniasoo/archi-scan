@@ -433,6 +433,17 @@ export function SiteInputForm({
         // Even on error, pass partial data if available
         if (result.data && onMolitDataFetched) {
           onMolitDataFetched(result.data)
+        } else if (classifiedStatus === 'success-empty' && onMolitDataFetched) {
+          // JUSO 좌표만이라도 전달 (지적도 위치 표시용)
+          const jusoData = result.diagnostics?.jusoResult
+          if (jusoData?.entX || jusoData?.entY || jusoData?.roadAddr) {
+            onMolitDataFetched({
+              entX: jusoData.entX,
+              entY: jusoData.entY,
+              roadAddress: jusoData.roadAddr,
+              address: jusoData.jibunAddr,
+            } as import('@/types/molit').MolitSiteData)
+          }
         }
       }
     } catch (error) {
