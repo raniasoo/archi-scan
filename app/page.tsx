@@ -407,8 +407,8 @@ export default function ArchiScanPage() {
     setShowPricingModal 
   } = useSubscription()
   
-  const [address, setAddress] = useState("서울 종로구 평창길 180-4")
-  const [siteArea, setSiteArea] = useState("660")
+  const [address, setAddress] = useState("")
+  const [siteArea, setSiteArea] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [layouts, setLayouts] = useState<LayoutOption[]>([])
   const [selectedLayout, setSelectedLayout] = useState<number | null>(null)
@@ -665,7 +665,7 @@ export default function ArchiScanPage() {
   const handleExcelImport = (importedData: ImportedReportData) => {
     // Update state with imported data
     setAddress(importedData.address || '')
-    setSiteArea(String(importedData.siteArea || 0))
+    setSiteArea(importedData.siteArea && importedData.siteArea > 0 ? String(importedData.siteArea) : '')
     
     // Safe layouts access with fallback
     const importedLayouts = importedData.layouts || []
@@ -802,7 +802,7 @@ export default function ArchiScanPage() {
     }
     
     setAddress(snapshot.address || '')
-    setSiteArea(String(snapshot.siteArea || 0))
+    setSiteArea(snapshot.siteArea && snapshot.siteArea > 0 ? String(snapshot.siteArea) : '')
     
     // Restore regulation (with safe fallback)
     const snapshotRegulation = snapshot.regulation || {}

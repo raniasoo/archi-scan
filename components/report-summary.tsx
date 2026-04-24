@@ -284,7 +284,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       /* 그리드 카드 레이아웃 print 강제 적용 */
       .grid-2 { display: grid !important; }
       .ai-score-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }
-      .ai-score-card { display: block !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important; padding: 10px 8px !important; text-align: center !important; break-inside: avoid !important; }
+      .ai-score-card { display: block !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important; padding: 10px 8px !important; text-align: center !important; break-inside: avoid !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       .stat-box { display: block !important; background: #f8fafc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       /* 제목 + 바로 다음 요소 함께 묶기 (가장 신뢰할 수 있는 방법) */
       .section-title { page-break-after: avoid; break-after: avoid; }
