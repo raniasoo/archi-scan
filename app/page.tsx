@@ -24,6 +24,7 @@ import { LayoutComparison } from "@/components/layout-comparison"
 import { BuildingVolume3D } from "@/components/building-volume-3d"
 import { FloorPlan } from "@/components/floor-plan"
 import { generateFloorPlanDXF, downloadDXF } from "@/lib/dxf-generator"
+import { fetchLandPrice, formatLandPricePerM2, formatLandCost } from "@/lib/land-price"
 import { FinancialAnalysis } from "@/components/financial-analysis"
 import { ReportSummary } from "@/components/report-summary"
 import { ExcelImport, type ImportedReportData } from "@/components/excel-import"
@@ -440,9 +441,24 @@ export default function ArchiScanPage() {
     roadWidth?: number
     heightLimit?: number
     hasDistrictPlan?: boolean
-    entX?: number   // 경도 (JUSO에서 파싱)
-    entY?: number   // 위도 (JUSO에서 파싱)
+    entX?: number
+    entY?: number
+    sigunguCd?: string   // 공시지가 조회용
+    bjdongCd?: string
+    bun?: string
+    ji?: string
   }>({})
+
+  // 공시지가 state
+  const [landPriceData, setLandPriceData] = useState<{
+    pricePerM2: number
+    totalCost: number
+    source: 'api' | 'district-average'
+    isDemo: boolean
+    stdrYear: number
+    message?: string
+    loading: boolean
+  }>({ pricePerM2: 5000000, totalCost: 0, source: 'district-average', isDemo: true, stdrYear: 0, loading: false })
   
   // Centralized computed results - single source of truth
   const [legalSummary, setLegalSummary] = useState<LegalSummary | null>(null)
@@ -550,6 +566,7 @@ export default function ArchiScanPage() {
       unitCount: layout.units,
       floorCount: layout.floors,
       parkingCount: layout.parking,
+      landPricePerM2: landPriceData.pricePerM2 || 5000000,
     })
     
     setFeasibilityResult(result)
@@ -718,6 +735,35 @@ export default function ArchiScanPage() {
       hasDistrictPlan: hasDistrict,
       entX: data.entX,
       entY: data.entY,
+      sigunguCd: data.sigunguCd,
+      bjdongCd: data.bjdongCd,
+      bun: data.bun,
+      ji: data.ji,
+    })
+
+    // ===== 공시지가 자동 조회 =====
+    const currentAddress = data.roadAddress || address || ''
+    setLandPriceData(prev => ({ ...prev, loading: true }))
+    fetchLandPrice({
+      sigunguCd: data.sigunguCd,
+      bjdongCd: data.bjdongCd,
+      bun: data.bun,
+      ji: data.ji,
+      address: currentAddress,
+      siteArea: data.siteArea || safeNumber(siteArea, 660),
+    }).then(result => {
+      setLandPriceData({
+        pricePerM2: result.landPricePerM2,
+        totalCost: result.totalLandCost,
+        source: result.source,
+        isDemo: result.isDemo,
+        stdrYear: result.stdrYear,
+        message: result.message,
+        loading: false,
+      })
+      console.log('[v0] 공시지가 조회 완료:', result)
+    }).catch(() => {
+      setLandPriceData(prev => ({ ...prev, loading: false }))
     })
 
     // regulation state도 동시 업데이트
@@ -1517,6 +1563,48 @@ export default function ArchiScanPage() {
                 배치안 생성
               </Button>
             </div>
+
+            {/* 공시지가 카드 */}
+            {(landPriceData.pricePerM2 > 0 || landPriceData.loading) && (
+              <div className={`rounded-xl border p-4 ${landPriceData.isDemo ? 'border-amber-500/20 bg-amber-500/5' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${landPriceData.isDemo ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>₩</div>
+                    <h3 className="text-sm font-semibold">공시지가 기반 토지비</h3>
+                    {landPriceData.loading && <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />}
+                    {!landPriceData.loading && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${landPriceData.isDemo ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                        {landPriceData.isDemo ? '지역평균' : `${landPriceData.stdrYear}년 공시`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {!landPriceData.loading && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-secondary/30 p-3">
+                      <p className="text-[10px] text-muted-foreground mb-1">공시지가 단가</p>
+                      <p className="text-lg font-bold text-foreground">{formatLandPricePerM2(landPriceData.pricePerM2)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{landPriceData.pricePerM2.toLocaleString()}원/㎡</p>
+                    </div>
+                    <div className="rounded-lg bg-secondary/30 p-3">
+                      <p className="text-[10px] text-muted-foreground mb-1">예상 토지매입비</p>
+                      <p className="text-lg font-bold text-foreground">{formatLandCost(landPriceData.totalCost || landPriceData.pricePerM2 * siteAreaNum)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{siteAreaNum.toLocaleString()}㎡ × {formatLandPricePerM2(landPriceData.pricePerM2)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {landPriceData.message && (
+                  <p className="text-[10px] text-muted-foreground mt-2">{landPriceData.message}</p>
+                )}
+                {landPriceData.isDemo && (
+                  <p className="text-[10px] text-amber-400/70 mt-1">
+                    💡 data.go.kr에서 LAND_PRICE_API_KEY를 등록하면 실제 개별공시지가를 조회합니다
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* 지적도 섹션 */}
             <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
