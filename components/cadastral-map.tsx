@@ -135,12 +135,15 @@ export function CadastralMap({
     if (!svgData) return
     const svg = document.getElementById('cadastral-svg')
     if (!svg) return
-    const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' })
+    // application/octet-stream으로 모바일에서도 강제 다운로드
+    const blob = new Blob([svg.outerHTML], { type: 'application/octet-stream' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `배치도_${address.replace(/\s/g, '_')}.svg`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }, [svgData, address])
 
