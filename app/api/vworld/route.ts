@@ -26,9 +26,22 @@ function getVworldApiKey(): string {
 export async function GET(req: NextRequest) {
   const apiKey = getVworldApiKey()
   const url = req.nextUrl.searchParams.get('url')
+  const testNominatim = req.nextUrl.searchParams.get('test') === 'nominatim'
   
-  // 직접 URL 테스트 모드
-  if (url) {
+  // Nominatim 테스트
+  if (testNominatim) {
+    try {
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C+%EA%B0%95%EB%82%A8%EA%B5%AC+%ED%85%8C%ED%97%A4%EB%9E%80%EB%A1%9C+152&format=json&countrycodes=kr&limit=1`
+      const res = await fetch(nominatimUrl, { 
+        headers: { 'User-Agent': 'ArchiScan/1.0 (https://v0-archi-scan-layout-generator.vercel.app)' },
+        signal: AbortSignal.timeout(8000)
+      })
+      const text = await res.text()
+      return NextResponse.json({ nominatimStatus: res.status, body: text.substring(0, 500) })
+    } catch (e) {
+      return NextResponse.json({ nominatimError: String(e) })
+    }
+  }
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
       const text = await res.text()
