@@ -255,3 +255,85 @@ export function downloadDXF(dxfContent: string, filename: string): void {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
+
+// ===== SVG 미리보기 생성 (앱 내 뷰어용) =====
+export function generateFloorPlanSVGPreview(config: FloorPlanConfig): string {
+  const { type, floor, totalFloors, strategy = 'profitability', layoutName, siteArea, units, floors: totalFloorCount, parking } = config
+
+  const W = 400, H = 400, PAD = 20
+  const avail = W - PAD * 2
+
+  const siteRatio = Math.sqrt(siteArea)
+  const scaleF = avail / siteRatio
+  const siteW = siteRatio * scaleF
+  const siteH = siteRatio * scaleF
+
+  const bRatio = 0.57
+  const bW = siteW * bRatio
+  const bH = siteH * bRatio
+  const bX = PAD + (siteW - bW) / 2
+  const bY = PAD + (siteH - bH) / 2
+
+  const isGround = floor === 1
+  const isTop = floor === totalFloors
+
+  let rooms = ''
+
+  if (isGround) {
+    // 1층: 상가A / 로비 / 상가B + 하단 관리실·기계실·커뮤니티
+    const shopAW = bW * 0.3; const lobbyW = bW * 0.2; const shopBW = bW - shopAW - lobbyW
+    const topH = bH * 0.28; const botH = bH * 0.22
+    rooms += `<rect x="${bX}" y="${bY}" width="${shopAW}" height="${topH}" fill="#d97706" opacity="0.7" stroke="#f59e0b" strokeWidth="1"/>
+    <text x="${bX + shopAW/2}" y="${bY + topH/2 + 5}" textAnchor="middle" fontSize="10" fill="white">상가 A</text>`
+    rooms += `<rect x="${bX+shopAW}" y="${bY}" width="${lobbyW}" height="${topH}" fill="#0e7490" opacity="0.7" stroke="#22d3ee" strokeWidth="1"/>
+    <text x="${bX+shopAW+lobbyW/2}" y="${bY + topH/2 + 5}" textAnchor="middle" fontSize="9" fill="white">로비</text>`
+    rooms += `<rect x="${bX+shopAW+lobbyW}" y="${bY}" width="${shopBW}" height="${topH}" fill="#d97706" opacity="0.7" stroke="#f59e0b" strokeWidth="1"/>
+    <text x="${bX+shopAW+lobbyW+shopBW/2}" y="${bY + topH/2 + 5}" textAnchor="middle" fontSize="10" fill="white">상가 B</text>`
+    // 중정
+    const courtW = bW * 0.5; const courtH = bH - topH - botH
+    const courtX = bX + (bW - courtW) / 2; const courtY = bY + topH
+    rooms += `<rect x="${bX}" y="${courtY}" width="${bW}" height="${courtH}" fill="#134e4a" opacity="0.6" stroke="#10b981" strokeWidth="1.5" strokeDasharray="4 2"/>`
+    rooms += `<rect x="${courtX}" y="${courtY}" width="${courtW}" height="${courtH}" fill="#10b981" opacity="0.2" stroke="#10b981" strokeWidth="1"/>`
+    rooms += `<text x="${bX+bW/2}" y="${courtY+courtH/2+5}" textAnchor="middle" fontSize="10" fill="#6ee7b7">중정 / 조경</text>`
+    // 하단
+    const mgW = bW * 0.28; const mechW = bW * 0.28; const comW = bW - mgW - mechW
+    rooms += `<rect x="${bX}" y="${bY+bH-botH}" width="${mgW}" height="${botH}" fill="#7c3aed" opacity="0.7" stroke="#a78bfa" strokeWidth="1"/>
+    <text x="${bX+mgW/2}" y="${bY+bH-botH+botH/2+5}" textAnchor="middle" fontSize="9" fill="white">관리실</text>`
+    rooms += `<rect x="${bX+mgW}" y="${bY+bH-botH}" width="${mechW}" height="${botH}" fill="#374151" opacity="0.8" stroke="#6b7280" strokeWidth="1"/>
+    <text x="${bX+mgW+mechW/2}" y="${bY+bH-botH+botH/2+5}" textAnchor="middle" fontSize="9" fill="white">기계실</text>`
+    rooms += `<rect x="${bX+mgW+mechW}" y="${bY+bH-botH}" width="${comW}" height="${botH}" fill="#be185d" opacity="0.7" stroke="#f472b6" strokeWidth="1"/>
+    <text x="${bX+mgW+mechW+comW/2}" y="${bY+bH-botH+botH/2+5}" textAnchor="middle" fontSize="9" fill="white">커뮤니티</text>`
+  } else if (isTop) {
+    // 옥상층
+    rooms += `<rect x="${bX}" y="${bY}" width="${bW}" height="${bH}" fill="#1e293b" opacity="0.5" stroke="#475569" strokeWidth="1" strokeDasharray="6 3"/>`
+    rooms += `<text x="${bX+bW/2}" y="${bY+bH/2+5}" textAnchor="middle" fontSize="13" fill="#94a3b8">옥상 / 기계실층</text>`
+  } else {
+    // 기준층: 세대 배치
+    const cols = type === 'lshape' ? 2 : 3
+    const rows = Math.ceil(units / (cols * totalFloorCount)) + 1
+    const unitW = bW / (cols + 1); const unitH = bH / (rows + 1)
+    const coreW = bW * 0.12; const coreH = bH * 0.15
+    const coreX = bX + bW/2 - coreW/2; const coreY = bY + bH/2 - coreH/2
+    // 세대
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const ux = bX + c * (unitW + 4) + 4; const uy = bY + r * (unitH + 4) + 4
+        if (ux + unitW > coreX - 4 && ux < coreX + coreW + 4 && uy + unitH > coreY - 4 && uy < coreY + coreH + 4) continue
+        rooms += `<rect x="${ux}" y="${uy}" width="${unitW-2}" height="${unitH-2}" fill="#1e3a5f" opacity="0.8" stroke="#3b82f6" strokeWidth="1"/>
+        <text x="${ux+(unitW-2)/2}" y="${uy+(unitH-2)/2+4}" textAnchor="middle" fontSize="8" fill="#93c5fd">${String.fromCharCode(65 + c)}타입</text>`
+      }
+    }
+    // 코어
+    rooms += `<rect x="${coreX}" y="${coreY}" width="${coreW}" height="${coreH}" fill="#7f1d1d" opacity="0.8" stroke="#ef4444" strokeWidth="1.5"/>
+    <text x="${coreX+coreW/2}" y="${coreY+coreH/2+4}" textAnchor="middle" fontSize="8" fill="#fca5a5">코어</text>`
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="background:#0f172a;display:block;width:100%;height:100%">
+  <defs><pattern id="pg" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" strokeWidth="0.5"/></pattern></defs>
+  <rect width="${W}" height="${H}" fill="url(#pg)"/>
+  <rect x="${PAD}" y="${PAD}" width="${siteW}" height="${siteH}" fill="#3b82f610" stroke="#3b82f6" strokeWidth="2"/>
+  ${rooms}
+  <rect x="${bX}" y="${bY}" width="${bW}" height="${bH}" fill="none" stroke="#22d3ee" strokeWidth="1.5" strokeDasharray="4 2"/>
+  <text x="${W/2}" y="${H-6}" textAnchor="middle" fontSize="9" fill="#64748b">${layoutName} · ${floor}층/${totalFloors}층 · ${units}세대</text>
+</svg>`
+}

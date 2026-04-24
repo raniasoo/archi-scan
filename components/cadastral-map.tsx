@@ -165,10 +165,23 @@ export function CadastralMap({
           {loading ? '지적도 조회 중...' : '지적도 불러오기'}
         </Button>
         {parcel && (
-          <Button variant="outline" size="sm" onClick={downloadSVG} className="gap-2">
-            <Download className="h-3.5 w-3.5" />
-            SVG 저장
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={() => {
+              const svg = document.getElementById('cadastral-svg')
+              if (!svg) return
+              const content = `<!DOCTYPE html><html><body style="margin:0;background:#0f172a;display:flex;justify-content:center;align-items:center;min-height:100vh">${svg.outerHTML}</body></html>`
+              const win = window.open('', '_blank')
+              win?.document.write(content)
+              win?.document.close()
+            }} className="gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              보기
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadSVG} className="gap-2">
+              <Download className="h-3.5 w-3.5" />
+              SVG 저장
+            </Button>
+          </>
         )}
         {isDemo && (
           <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">

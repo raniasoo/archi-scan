@@ -21,7 +21,7 @@ import { SiteInputForm } from "@/components/site-input-form"
 import type { SupplementData } from "@/components/manual-supplement-form"
 import { LayoutCard } from "@/components/layout-card"
 import { FloorPlan } from "@/components/floor-plan"
-import { generateFloorPlanDXF, downloadDXF } from "@/lib/dxf-generator"
+import { generateFloorPlanDXF, downloadDXF, generateFloorPlanSVGPreview } from "@/lib/dxf-generator"
 import { FinancialAnalysis } from "@/components/financial-analysis"
 import { ReportSummary } from "@/components/report-summary"
 import { ExcelImport, type ImportedReportData } from "@/components/excel-import"
@@ -419,6 +419,7 @@ export default function ArchiScanPage() {
   const [selectedFloor, setSelectedFloor] = useState(1)
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
+  const [dxfPreviewSVG, setDxfPreviewSVG] = useState<string | null>(null)
   const [regulation, setRegulation] = useState<ZoningRegulation>(getDefaultRegulation())
   const [strategy, setStrategy] = useState<DesignStrategy>("profitability")
   const [supplementData, setSupplementData] = useState<{
@@ -1067,6 +1068,52 @@ export default function ArchiScanPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* DXF 미리보기 모달 */}
+      {dxfPreviewSVG && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+            <span className="text-sm font-semibold text-foreground">DXF 미리보기</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (!selectedLayoutData) return
+                  const dxf = generateFloorPlanDXF({
+                    type: selectedLayoutData.type,
+                    floor: selectedFloor,
+                    totalFloors: selectedLayoutData.floors,
+                    strategy,
+                    layoutName: selectedLayoutData.name,
+                    siteArea,
+                    units: selectedLayoutData.units,
+                    floors: selectedLayoutData.floors,
+                    parking: selectedLayoutData.parking,
+                  })
+                  const addr = address.replace(/\s+/g, '_').replace(/[^\w가-힣]/g, '')
+                  downloadDXF(dxf, `ArchiScan_${addr}_${selectedLayoutData.name}_${selectedFloor}F.dxf`)
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                DXF 저장
+              </button>
+              <button
+                onClick={() => setDxfPreviewSVG(null)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+          <div
+            className="flex-1 overflow-auto p-4 flex items-center justify-center"
+            dangerouslySetInnerHTML={{ __html: dxfPreviewSVG }}
+          />
+          <div className="px-4 py-2 text-center text-[11px] text-muted-foreground border-t border-border/50">
+            미리보기는 앱용 간략 도면입니다. DXF 저장 시 CAD 정밀 도면이 생성됩니다.
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="mx-auto max-w-7xl px-4 md:px-6 py-4 overflow-x-hidden">
@@ -1882,27 +1929,49 @@ export default function ArchiScanPage() {
             {/* Bottom CTA */}
             <div className="flex flex-col gap-2 pt-1 mt-0.5">
               {/* DXF 다운로드 버튼 */}
-              <button
-                onClick={() => {
-                  const dxf = generateFloorPlanDXF({
-                    type: selectedLayoutData.type,
-                    floor: selectedFloor,
-                    totalFloors: selectedLayoutData.floors,
-                    strategy,
-                    layoutName: selectedLayoutData.name,
-                    siteArea,
-                    units: selectedLayoutData.units,
-                    floors: selectedLayoutData.floors,
-                    parking: selectedLayoutData.parking,
-                  })
-                  const addr = address.replace(/\s+/g, '_').replace(/[^\w가-힣]/g, '')
-                  downloadDXF(dxf, `ArchiScan_${addr}_${selectedLayoutData.name}_${selectedFloor}F.dxf`)
-                }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-medium"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                DXF 파일 다운로드 ({selectedFloor}층)
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const svg = generateFloorPlanSVGPreview({
+                      type: selectedLayoutData.type,
+                      floor: selectedFloor,
+                      totalFloors: selectedLayoutData.floors,
+                      strategy,
+                      layoutName: selectedLayoutData.name,
+                      siteArea,
+                      units: selectedLayoutData.units,
+                      floors: selectedLayoutData.floors,
+                      parking: selectedLayoutData.parking,
+                    })
+                    setDxfPreviewSVG(svg)
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-blue-500/30 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10 transition-colors text-sm font-medium"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                  미리보기
+                </button>
+                <button
+                  onClick={() => {
+                    const dxf = generateFloorPlanDXF({
+                      type: selectedLayoutData.type,
+                      floor: selectedFloor,
+                      totalFloors: selectedLayoutData.floors,
+                      strategy,
+                      layoutName: selectedLayoutData.name,
+                      siteArea,
+                      units: selectedLayoutData.units,
+                      floors: selectedLayoutData.floors,
+                      parking: selectedLayoutData.parking,
+                    })
+                    const addr = address.replace(/\s+/g, '_').replace(/[^\w가-힣]/g, '')
+                    downloadDXF(dxf, `ArchiScan_${addr}_${selectedLayoutData.name}_${selectedFloor}F.dxf`)
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-medium"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  DXF 저장 ({selectedFloor}층)
+                </button>
+              </div>
               <Button onClick={() => setCurrentStep("financial")} size="lg" className="gap-2 w-full md:w-auto">
                 이 배치안의 사업성 보기
                 <ChevronRight className="h-5 w-5" />
