@@ -21,6 +21,7 @@ import { SiteInputForm } from "@/components/site-input-form"
 import type { SupplementData } from "@/components/manual-supplement-form"
 import { LayoutCard } from "@/components/layout-card"
 import { FloorPlan } from "@/components/floor-plan"
+import { generateFloorPlanDXF, downloadDXF } from "@/lib/dxf-generator"
 import { FinancialAnalysis } from "@/components/financial-analysis"
 import { ReportSummary } from "@/components/report-summary"
 import { ExcelImport, type ImportedReportData } from "@/components/excel-import"
@@ -1879,7 +1880,29 @@ export default function ArchiScanPage() {
             </div>
 
             {/* Bottom CTA */}
-            <div className="flex justify-center pt-1 mt-0.5">
+            <div className="flex flex-col gap-2 pt-1 mt-0.5">
+              {/* DXF 다운로드 버튼 */}
+              <button
+                onClick={() => {
+                  const dxf = generateFloorPlanDXF({
+                    type: selectedLayoutData.type,
+                    floor: selectedFloor,
+                    totalFloors: selectedLayoutData.floors,
+                    strategy,
+                    layoutName: selectedLayoutData.name,
+                    siteArea,
+                    units: selectedLayoutData.units,
+                    floors: selectedLayoutData.floors,
+                    parking: selectedLayoutData.parking,
+                  })
+                  const addr = address.replace(/\s+/g, '_').replace(/[^\w가-힣]/g, '')
+                  downloadDXF(dxf, `ArchiScan_${addr}_${selectedLayoutData.name}_${selectedFloor}F.dxf`)
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-medium"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                DXF 파일 다운로드 ({selectedFloor}층)
+              </button>
               <Button onClick={() => setCurrentStep("financial")} size="lg" className="gap-2 w-full md:w-auto">
                 이 배치안의 사업성 보기
                 <ChevronRight className="h-5 w-5" />
