@@ -426,6 +426,7 @@ export default function ArchiScanPage() {
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
   const [show3DVolume, setShow3DVolume] = useState(false)
+  const [supplementKey, setSupplementKey] = useState(0)  // 강제 리렌더용
   const [regulation, setRegulation] = useState<ZoningRegulation>(getDefaultRegulation())
   const [strategy, setStrategy] = useState<DesignStrategy>("profitability")
   const [supplementData, setSupplementData] = useState<{
@@ -727,6 +728,7 @@ export default function ArchiScanPage() {
     const heightLimit = heightByZone[zone] ?? 30
 
     setMolitSupplementData(prev => ({ ...prev, zoneCode: zone, roadWidth, heightLimit, hasDistrictPlan: hasDistrict, ...extra }))
+    setSupplementKey(k => k + 1)  // useEffect 강제 재실행
 
     const validZoneTypes = ['residential-1','residential-2','residential-3','semi-residential',
       'commercial-general','commercial-neighborhood','industrial'] as const
@@ -748,7 +750,10 @@ export default function ArchiScanPage() {
     roadAddress?: string; siteArea?: number
     entX?: number; entY?: number
     sigunguCd?: string; bjdongCd?: string; bun?: string; ji?: string
+    buildingCoverage?: number; floorAreaRatio?: number
   }) => {
+    // 조회 시작 시 초기화 → useEffect dependency가 null에서 새값으로 변경되어 항상 재실행
+    setMolitSupplementData({})
     const mappedZone = mapZoneString(data.zoneType || '')
     const roadAddr = data.roadAddress || address || ''
     const hasDistrict = !!((data.area?.includes('지구단위')) || (data.district?.includes('지구단위')))
@@ -1510,7 +1515,7 @@ export default function ArchiScanPage() {
                     buttonText="설계 전략 선택으로"
                     onSupplementDataChange={handleSupplementDataChange}
                     onMolitDataFetched={handleMolitDataFetched}
-                    externalSupplement={molitSupplementData.zoneCode ? molitSupplementData : null}
+                    externalSupplement={molitSupplementData.zoneCode ? { ...molitSupplementData, _key: supplementKey } : null}
                   />
                 </CardContent>
               </Card>

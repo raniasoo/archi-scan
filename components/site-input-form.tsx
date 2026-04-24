@@ -129,7 +129,7 @@ export function SiteInputForm({
       if (onSupplementDataChange) onSupplementDataChange(autoData)
       return autoData
     })
-  }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit])
+  }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit, (externalSupplement as any)?._key])
 
 
   const [envStatus, setEnvStatus] = useState<{
