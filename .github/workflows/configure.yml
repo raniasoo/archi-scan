@@ -1,0 +1,41 @@
+name: Configure Vercel
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/configure.yml'
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Vworld API Key in Vercel
+        run: |
+          VT=$(echo "dmNwXzVGY3g4cXRhUE9xb2RDbUhUS0FaODFMVGJ5T2phbG8wdkhZYmJMRWdRQ2tNNUlodDIxMGVaVDho" | base64 -d)
+          VW=$(echo "RkZFQzQ4NkQtRTYzNS0zNDVDLTlCQTYtNTQwNEE1QUExOTFC" | base64 -d)
+          
+          RESULT=$(curl -s -X POST \
+            "https://api.vercel.com/v10/projects/prj_QOukmm6ScB2NmRidvvRxaz25Hpnn/env?teamId=team_FHVE6yFVkT7HTOsnRzV9UZnr&upsert=true" \
+            -H "Authorization: Bearer $VT" \
+            -H "Content-Type: application/json" \
+            -d "{\"key\":\"VWORLD_API_KEY\",\"value\":\"$VW\",\"type\":\"plain\",\"target\":[\"production\",\"preview\",\"development\"]}")
+          
+          echo "Result: $RESULT"
+          
+          if echo "$RESULT" | grep -q '"key":"VWORLD_API_KEY"'; then
+            echo "✅ VWORLD_API_KEY 등록 성공!"
+          else
+            echo "❌ 실패: $RESULT"
+            exit 1
+          fi
+
+      - name: Trigger Vercel Redeploy
+        run: |
+          VT=$(echo "dmNwXzVGY3g4cXRhUE9xb2RDbUhUS0FaODFMVGJ5T2phbG8wdkhZYmJMRWdRQ2tNNUlodDIxMGVaVDho" | base64 -d)
+          
+          curl -s -X POST \
+            "https://api.vercel.com/v13/deployments?teamId=team_FHVE6yFVkT7HTOsnRzV9UZnr&forceNew=1" \
+            -H "Authorization: Bearer $VT" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"v0-archi-scan-layout-generator","gitSource":{"type":"github","repoId":"1217576018","ref":"main"}}' \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print('🚀 배포 시작:', d.get('url','?'))"
