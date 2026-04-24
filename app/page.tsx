@@ -44,6 +44,7 @@ import { BuildingFootprint } from "@/components/building-footprint"
 import { RegulationInput } from "@/components/regulation-input"
 import { RegulationAnalysisPanel } from "@/components/regulation-analysis"
 import { LegalReviewPanel } from "@/components/legal-review-panel"
+import { CadastralMap } from "@/components/cadastral-map"
 import { StrategySelection } from "@/components/strategy-selection"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
@@ -1205,6 +1206,32 @@ export default function ArchiScanPage() {
                 <Sparkles className="h-4 w-4" />
                 배치안 생성
               </Button>
+            </div>
+
+            {/* 지적도 섹션 */}
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-5 w-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-blue-400">지</span>
+                </div>
+                <h3 className="text-sm font-semibold">실제 지적도 기반 대지 형상</h3>
+                <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
+                  Vworld 국토지리정보원
+                </span>
+              </div>
+              <CadastralMap
+                address={address}
+                siteArea={siteAreaNum}
+                setbackFront={regulation.setbackFront}
+                setbackSide={regulation.setbackSide}
+                setbackRear={regulation.setbackRear}
+                coverageRatio={regulation.maxCoverageRatio}
+                onParcelLoaded={(area) => {
+                  if (area > 0 && Math.abs(area - siteAreaNum) > 10) {
+                    setSiteArea(String(Math.round(area)))
+                  }
+                }}
+              />
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
