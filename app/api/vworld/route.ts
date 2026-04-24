@@ -42,6 +42,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ nominatimError: String(e) })
     }
   }
+
+  // 직접 URL 테스트 모드
+  if (url) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
       const text = await res.text()
