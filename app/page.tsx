@@ -717,8 +717,9 @@ export default function ArchiScanPage() {
       'industrial-general': 400, 'green-natural': 100,
     }
     const roadWidth = roadAddr.includes('대로') ? 25 :
-                      roadAddr.includes('로') ? 12 :
-                      roadAddr.includes('길') ? 6 : 8
+                      roadAddr.includes('길')   ? 6 :   // 길 우선 (평창길 오분류 방지)
+                      roadAddr.includes('로')   ? 12 :
+                      roadAddr.match(/\d+-\d+|\d+번지|동\s*\d/) ? 4 : 8  // 지번주소면 4m
     const roadConditionEnum = roadWidth >= 12 ? '12m-plus' :
                               roadWidth >= 8  ? '8m-plus' :
                               roadWidth >= 6  ? '6m-plus' :

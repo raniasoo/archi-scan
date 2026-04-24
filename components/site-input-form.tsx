@@ -109,22 +109,25 @@ export function SiteInputForm({
   // zone-lookup 완료 후 외부에서 밀어준 데이터로 보완 입력 자동 완성
   useEffect(() => {
     if (!externalSupplement?.zoneCode) return
-    // roadCondition: ManualSupplementForm 코드 형식 사용
     const rw = externalSupplement.roadWidth ?? 8
     const roadCondition = rw >= 12 ? '12m-plus' :
                           rw >= 8  ? '8m-plus' :
                           rw >= 6  ? '6m-plus' :
                           rw >= 4  ? '4m-plus' : 'under-4m'
-    const autoData: SupplementData = {
-      zoneType: externalSupplement.zoneCode,  // ZONE_TYPE_OPTIONS의 코드값 그대로
-      roadCondition,
-      heightLimit: externalSupplement.heightLimit ?? null,
-      hasDistrictPlan: externalSupplement.hasDistrictPlan ?? false,
-      districtPlanNotes: '',
-      additionalNotes: '',
-    }
-    setSupplementData(autoData)
-    if (onSupplementDataChange) onSupplementDataChange(autoData)
+    setSupplementData(prev => {
+      const autoData: SupplementData = {
+        // zoneType은 항상 업데이트
+        zoneType: externalSupplement.zoneCode!,
+        // roadCondition: 이미 사용자가 저장한 값이 있으면 유지, 없으면 새로 설정
+        roadCondition: prev?.roadCondition || roadCondition,
+        heightLimit: externalSupplement.heightLimit ?? prev?.heightLimit ?? null,
+        hasDistrictPlan: externalSupplement.hasDistrictPlan ?? prev?.hasDistrictPlan ?? false,
+        districtPlanNotes: prev?.districtPlanNotes || '',
+        additionalNotes: prev?.additionalNotes || '',
+      }
+      if (onSupplementDataChange) onSupplementDataChange(autoData)
+      return autoData
+    })
   }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit])
 
 
@@ -1103,10 +1106,16 @@ export function SiteInputForm({
                     <span className="font-medium">{fetchedData.householdCount}세대</span>
                   </>
                 )}
-                {fetchedData.zoneType && (
+                {(fetchedData.zoneType || supplementData?.zoneType) && (
                   <>
                     <span className="text-muted-foreground">용도지역</span>
-                    <span className="font-medium">{fetchedData.zoneType}</span>
+                    <span className="font-medium">
+                      {fetchedData.zoneType || (
+                        <span className="text-amber-400 text-[11px]">
+                          {supplementData?.zoneType} <span className="text-muted-foreground">(추론)</span>
+                        </span>
+                      )}
+                    </span>
                   </>
                 )}
                 {fetchedData.buildingCoverage && (
