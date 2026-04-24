@@ -1347,16 +1347,27 @@ export default function ArchiScanPage() {
               {/* Regulation Analysis + Legal Review */}
               <div className="order-1 lg:order-2 space-y-4">
                 {/* 기존 분석 패널 */}
-                <RegulationAnalysisPanel 
-                  siteArea={siteAreaNum} 
-                  regulation={{
-                    ...regulation,
-                    zoneType: (molitSupplementData.zoneCode || regulation.zoneType) as typeof regulation.zoneType,
-                    roadWidth: molitSupplementData.roadWidth || regulation.roadWidth,
-                    maxHeight: molitSupplementData.heightLimit || regulation.maxHeight,
-                    additionalNotes: molitSupplementData.hasDistrictPlan ? '지구단위계획 적용' : regulation.additionalNotes,
-                  }} 
-                />
+                {(() => {
+                  // address에서 직접 계산 (상태 의존 없음)
+                  const rw = address.includes('대로') ? 12 :
+                             address.includes('로') ? 8 :
+                             address.includes('길') ? 4 : 6
+                  const zc = molitSupplementData.zoneCode || regulation.zoneType
+                  const ht = molitSupplementData.heightLimit || regulation.maxHeight
+                  const dp = molitSupplementData.hasDistrictPlan ?? regulation.additionalNotes.includes('지구단위')
+                  return (
+                    <RegulationAnalysisPanel 
+                      siteArea={siteAreaNum} 
+                      regulation={{
+                        ...regulation,
+                        zoneType: zc as typeof regulation.zoneType,
+                        roadWidth: rw,
+                        maxHeight: ht,
+                        additionalNotes: dp ? '지구단위계획 적용' : regulation.additionalNotes,
+                      }} 
+                    />
+                  )
+                })()}
 
                 {/* 신규: 한국 건축법 기반 법규검토 자동계산 */}
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -1372,7 +1383,7 @@ export default function ArchiScanPage() {
                   <LegalReviewPanel
                     zoneCode={molitSupplementData.zoneCode || regulation.zoneType}
                     siteArea={siteAreaNum}
-                    roadWidth={molitSupplementData.roadWidth || regulation.roadWidth}
+                    roadWidth={address.includes('대로') ? 12 : address.includes('로') ? 8 : address.includes('길') ? 4 : 6}
                     heightLimit={molitSupplementData.heightLimit || regulation.maxHeight}
                     hasDistrictPlan={molitSupplementData.hasDistrictPlan ?? regulation.additionalNotes?.includes('지구단위') ?? false}
                   />
