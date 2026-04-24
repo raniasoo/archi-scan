@@ -221,12 +221,14 @@ export function SiteInputForm({
       return
     }
     
-    // For retries (with overrideParcel), don't reset lookupState to 'loading' 
-    // because that would hide the retry buttons
     const isRetry = !!overrideParcel
     console.log('[v0] isRetry:', isRetry)
     
-    // Always increment requestId and clear diagnostics to force UI refresh
+    // 재조회 시 이전 supplement 데이터 리셋 (잘못된 값 복원 방지)
+    if (!isRetry) {
+      setSupplementData(null)
+    }
+
     setRequestId(prev => prev + 1)
     setDiagnostics(null)
     
@@ -391,17 +393,18 @@ export function SiteInputForm({
 
         // 접도 현황 - 가능한 모든 주소 소스에서 추론 (stale closure 방지)
         const roadAddrSources = [
-          result.data.roadAddress,          // MOLIT newPlatAddr
-          addressRef.current,               // 최신 address ref
-          address,                          // address prop
-          result.diagnostics?.jusoResult?.roadAddr,  // JUSO roadAddr (테헤란로 포함)
+          result.data.roadAddress,
+          addressRef.current,
+          address,
+          result.diagnostics?.jusoResult?.roadAddr,
         ].filter(Boolean).join(' ')
-        
+
+        // "길" 우선 판단 (평창길, 골목길 등은 소로)
         const mappedRoadCondition =
           roadAddrSources.includes('대로') ? '12m-plus' :
-          roadAddrSources.includes('로') ? '8m-plus' :
-          roadAddrSources.includes('길') ? '4m-plus' : '6m-plus'
-        
+          roadAddrSources.includes('길')   ? '4m-plus' :   // 길 > 로 (평창길 오분류 방지)
+          roadAddrSources.includes('로')   ? '8m-plus' : '6m-plus'
+
         console.log('[v0] roadAddr sources:', roadAddrSources, '→', mappedRoadCondition)
 
         // 높이 제한 - 용도지역별 법정 기본값 (m)
