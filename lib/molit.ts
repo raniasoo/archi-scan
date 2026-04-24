@@ -916,6 +916,16 @@ function mapBuildingToSiteData(building: MolitBuildingBasicItem): MolitSiteData 
     (building.oudrMechUtcnt || 0) +
     (building.indrAutoUtcnt || 0) +
     (building.oudrAutoUtcnt || 0)
+
+  // 대지면적 역산 로그
+  console.log(`[MOLIT] Area fields - platArea:${building.platArea}, archArea:${building.archArea}, bcRat:${building.bcRat}, totArea:${building.totArea}, vlRat:${building.vlRat}`)
+  const estimatedSiteArea = building.platArea ||
+    (building.archArea && building.bcRat && building.bcRat > 0
+      ? Math.round(building.archArea / (building.bcRat / 100))
+      : building.totArea && building.vlRat && building.vlRat > 0
+        ? Math.round(building.totArea / (building.vlRat / 100))
+        : undefined)
+  console.log(`[MOLIT] siteArea resolved: ${estimatedSiteArea}㎡ (source: ${building.platArea ? 'direct' : building.archArea && building.bcRat ? 'bcRat-calc' : 'vlRat-calc'})`)
   
   return {
     // Address
@@ -933,12 +943,7 @@ function mapBuildingToSiteData(building: MolitBuildingBasicItem): MolitSiteData 
     mainPurpose: building.mainPurpsCdNm || building.etcPurps || undefined,
     
     // Area info - platArea가 없으면 archArea ÷ (bcRat/100) 로 역산
-    siteArea: building.platArea ||
-      (building.archArea && building.bcRat && building.bcRat > 0
-        ? Math.round(building.archArea / (building.bcRat / 100))
-        : building.totArea && building.vlRat && building.vlRat > 0
-          ? Math.round(building.totArea / (building.vlRat / 100))
-          : undefined),
+    siteArea: estimatedSiteArea,
     buildingArea: building.archArea || undefined,
     totalFloorArea: building.totArea || undefined,
     

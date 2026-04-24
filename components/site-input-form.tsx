@@ -890,14 +890,7 @@ export function SiteInputForm({
                 {fetchedData.siteArea && (
                   <>
                     <span className="text-muted-foreground">대지면적</span>
-                    <span className="font-medium">
-                      {fetchedData.siteArea.toLocaleString()}㎡
-                      {!fetchedData.buildingCoverage ? '' : 
-                        fetchedData.siteArea && fetchedData.buildingArea
-                          ? <span className="text-xs text-muted-foreground ml-1">(건폐율 역산)</span>
-                          : null
-                      }
-                    </span>
+                    <span className="font-medium">{fetchedData.siteArea.toLocaleString()}㎡</span>
                   </>
                 )}
                 {fetchedData.totalFloorArea && (
