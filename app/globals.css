@@ -598,9 +598,22 @@
   background: oklch(0.97 0.015 85);
   border: 1px solid oklch(0.88 0.02 80);
   border-radius: 0.5rem;
-  padding: 1rem;
+  padding: 0.75rem;
   text-align: center;
-  margin-top: 1.5rem;
+  margin-top: 0.75rem;
+}
+
+/* 모바일 전용: 5번 카드 크기 축소 */
+@media (max-width: 479px) {
+  .report-summary-card {
+    padding: 0.35rem 0.25rem;
+  }
+  .report-summary-card .value {
+    font-size: 0.8rem;
+  }
+  .report-summary-card .label {
+    font-size: 0.55rem;
+  }
 }
 
 .report-footer p {
@@ -932,5 +945,65 @@
   [class*="bg-rose"] {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* ===========================================
+     5번 섹션: 규모 산정 카드 크기 최적화
+     =========================================== */
+  .report-summary-card {
+    background: #f8f9f0 !important;
+    border: 1px solid #d4d9c0 !important;
+    padding: 6pt 5pt !important;
+    border-radius: 4px !important;
+    text-align: center !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .report-summary-card .label {
+    display: block !important;
+    font-size: 7pt !important;
+    margin-bottom: 2pt !important;
+  }
+
+  .report-summary-card .value {
+    display: block !important;
+    font-size: 10pt !important;
+    font-weight: 700 !important;
+  }
+
+  .report-summary-card .unit {
+    font-size: 7pt !important;
+    font-weight: 400 !important;
+  }
+
+  /* ===========================================
+     8~9번 섹션: 하단 여백 최소화
+     =========================================== */
+  .report-card:last-of-type,
+  .conclusion-box {
+    margin-bottom: 6pt !important;
+    padding-bottom: 0 !important;
+  }
+
+  .report-footer {
+    margin-top: 8pt !important;
+    padding-top: 6pt !important;
+  }
+
+  /* 리스크/결론 섹션 내부 여백 축소 */
+  .report-risk-card {
+    padding: 6pt !important;
+    margin-bottom: 0 !important;
+  }
+
+  .report-conclusion {
+    padding: 8pt !important;
+    margin-top: 6pt !important;
+  }
+
+  /* section 간 space-y 추가 축소 */
+  .space-y-4 > * + * {
+    margin-top: 4pt !important;
   }
 }
