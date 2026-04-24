@@ -245,11 +245,13 @@ export function generateFloorPlanDXF(config: FloorPlanConfig): string {
 
 // DXF 파일 다운로드 (브라우저)
 export function downloadDXF(dxfContent: string, filename: string): void {
-  const blob = new Blob([dxfContent], { type: 'application/dxf' })
+  const blob = new Blob([dxfContent], { type: 'application/octet-stream' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  document.body.appendChild(a)
   a.click()
+  document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
