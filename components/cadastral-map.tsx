@@ -45,96 +45,34 @@ export function CadastralMap({
   const [error, setError] = useState<string | null>(null)
   const [isDemo, setIsDemo] = useState(false)
 
-  const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-
-  // Vworld 필지 폴리곤 클라이언트 직접 조회
-  const fetchAndSetParcel = async (lng: number, lat: number) => {
-    const params = new URLSearchParams({
-      service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
-      key: VWORLD_KEY, geometry: 'true', attribute: 'true',
-      page: '1', size: '1', crs: 'EPSG:4326',
-      geomFilter: `POINT(${lng} ${lat})`, format: 'json',
-    })
-    const res = await fetch(`https://api.vworld.kr/req/data?${params}`)
-    const json = await res.json()
-
-    const features = json?.response?.result?.featureCollection?.features
-    if (!features?.length) throw new Error('필지 폴리곤 없음')
-
-    const feature = features[0]
-    const geometry = feature?.geometry
-    if (geometry?.type !== 'Polygon') throw new Error('폴리곤 형식 오류')
-
-    const coords: [number, number][] = geometry.coordinates[0].map((c: number[]) => [c[0], c[1]] as [number, number])
-    const props = feature?.properties || {}
-    const lngs = coords.map(c => c[0])
-    const lats = coords.map(c => c[1])
-    const area = parseFloat(props.SHAPE_AREA || '0') || siteArea || 660
-
-    setParcel({
-      pnu: props.PNU || '',
-      address: props.JIBUN || address,
-      area: Math.round(area * 10) / 10,
-      landUse: props.JIMOK_CD_NM || '대',
-      isDemo: false,
-      coordinates: coords,
-      centroid: [lngs.reduce((a, b) => a + b, 0) / lngs.length, lats.reduce((a, b) => a + b, 0) / lats.length],
-      bbox: { minLng: Math.min(...lngs), minLat: Math.min(...lats), maxLng: Math.max(...lngs), maxLat: Math.max(...lats) }
-    })
-    setIsDemo(false)
-    onParcelLoaded?.(area)
-  }
-
   const loadParcel = useCallback(async () => {
     if (!address) return
     setLoading(true)
     setError(null)
 
     try {
-      // 클라이언트에서 Vworld 직접 호출 (브라우저 Referer로 도메인 인증)
-      // 도로명 주소로 좌표 변환
-      const geoParams = new URLSearchParams({
-        service: 'address', request: 'getcoord', version: '2.0',
-        crs: 'EPSG:4326', address, type: 'road', format: 'json', key: VWORLD_KEY,
+      // 서버 API로 Vworld 조회 (domain 파라미터로 인증)
+      const res = await fetch('/api/vworld', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, siteArea }),
       })
-      let geoRes = await fetch(`https://api.vworld.kr/req/address?${geoParams}`)
-      let geoJson = await geoRes.json()
+      const data = await res.json()
 
-      // 도로명 실패 시 지번으로 재시도
-      if (geoJson?.response?.status !== 'OK') {
-        const geoParams2 = new URLSearchParams({
-          service: 'address', request: 'getcoord', version: '2.0',
-          crs: 'EPSG:4326', address, type: 'parcel', format: 'json', key: VWORLD_KEY,
-        })
-        const geoRes2 = await fetch(`https://api.vworld.kr/req/address?${geoParams2}`)
-        geoJson = await geoRes2.json()
+      if (data.success && data.parcel) {
+        setParcel(data.parcel)
+        setIsDemo(false)
+        onParcelLoaded?.(data.parcel.area)
+      } else if (data.demoParcel) {
+        setParcel(data.demoParcel)
+        setIsDemo(true)
+        onParcelLoaded?.(data.demoParcel.area)
+        setError(data.error || 'Vworld 연결 중 — 데모 형상으로 표시합니다')
+      } else {
+        setError(data.error || '지적도 조회 실패')
       }
-
-      if (geoJson?.response?.status !== 'OK') {
-        throw new Error(`Vworld 좌표 변환 실패: ${geoJson?.response?.status}`)
-      }
-
-      const point = geoJson.response.result.point
-      await fetchAndSetParcel(parseFloat(point.x), parseFloat(point.y))
-
     } catch (e) {
-      // 클라이언트 실패 시 서버 데모 폴리곤으로 폴백
-      try {
-        const fallbackRes = await fetch('/api/vworld', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, siteArea }),
-        })
-        const fallbackData = await fallbackRes.json()
-        if (fallbackData.demoParcel) {
-          setParcel(fallbackData.demoParcel)
-          setIsDemo(true)
-          onParcelLoaded?.(fallbackData.demoParcel.area)
-          setError('Vworld 연결 중 — 데모 형상으로 표시합니다')
-        }
-      } catch {
-        setError(String(e))
-      }
+      setError(String(e))
     } finally {
       setLoading(false)
     }

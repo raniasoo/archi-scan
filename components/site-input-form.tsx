@@ -374,19 +374,16 @@ export function SiteInputForm({
           (result.data.district && result.data.district.includes('지구단위'))
         )
 
-        // supplement 자동 입력 (기존 값 없을 때만 덮어씌움)
+        // supplement 자동 입력 (MOLIT 조회 완료 시 항상 업데이트)
         if (mappedZone) {
-          setSupplementData(prev => {
-            if (prev && prev.zoneType && prev.zoneType !== 'unknown') return prev
-            return {
-              zoneType: mappedZone,
-              roadCondition: prev?.roadCondition || mappedRoadCondition,
-              heightLimit: prev?.heightLimit ?? mappedHeightLimit,
-              hasDistrictPlan: hasDistrict,   // MOLIT area 필드에서 직접 확인
-              districtPlanNotes: hasDistrict ? '지구단위계획 적용' : '',
-              additionalNotes: prev?.additionalNotes || '',
-            }
-          })
+          setSupplementData(prev => ({
+            zoneType: mappedZone,
+            roadCondition: mappedRoadCondition,  // MOLIT 값 항상 우선
+            heightLimit: mappedHeightLimit ?? prev?.heightLimit,
+            hasDistrictPlan: hasDistrict,
+            districtPlanNotes: hasDistrict ? '지구단위계획 적용' : '',
+            additionalNotes: prev?.additionalNotes || '',
+          }))
         }
         
         // Notify parent component

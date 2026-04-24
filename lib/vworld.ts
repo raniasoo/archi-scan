@@ -43,14 +43,13 @@ export async function fetchParcelPolygon(
       request: 'GetFeature',
       data: 'LP_PA_CBND_BUBUN',
       key: apiKey,
-      domain: '', // 허용 도메인 (빈값=모두허용)
-      attrFilter: '',
+      domain: 'v0-archi-scan-layout-generator.vercel.app',
       geometry: 'true',
       attribute: 'true',
       page: '1',
       size: '1',
-      crs: 'EPSG:4326',  // WGS84 좌표계로 반환
-      geomFilter: `POINT(${lng} ${lat})`,  // 포인트 기반 필지 검색
+      crs: 'EPSG:4326',
+      geomFilter: `POINT(${lng} ${lat})`,
       format: 'json',
     })
 
@@ -146,9 +145,10 @@ export async function geocodeAddress(
       version: '2.0',
       crs: 'EPSG:4326',
       address,
-      type: 'road',  // 도로명주소 우선
+      type: 'road',
       format: 'json',
       key: apiKey,
+      domain: 'v0-archi-scan-layout-generator.vercel.app',
     })
 
     const res = await fetch(`https://api.vworld.kr/req/address?${params}`, {
