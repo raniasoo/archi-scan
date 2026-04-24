@@ -932,8 +932,13 @@ function mapBuildingToSiteData(building: MolitBuildingBasicItem): MolitSiteData 
     buildingName: building.bldNm || undefined,
     mainPurpose: building.mainPurpsCdNm || building.etcPurps || undefined,
     
-    // Area info
-    siteArea: building.platArea || undefined,
+    // Area info - platArea가 없으면 archArea ÷ (bcRat/100) 로 역산
+    siteArea: building.platArea ||
+      (building.archArea && building.bcRat && building.bcRat > 0
+        ? Math.round(building.archArea / (building.bcRat / 100))
+        : building.totArea && building.vlRat && building.vlRat > 0
+          ? Math.round(building.totArea / (building.vlRat / 100))
+          : undefined),
     buildingArea: building.archArea || undefined,
     totalFloorArea: building.totArea || undefined,
     
