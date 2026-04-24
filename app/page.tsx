@@ -21,7 +21,7 @@ import { SiteInputForm } from "@/components/site-input-form"
 import type { SupplementData } from "@/components/manual-supplement-form"
 import { LayoutCard } from "@/components/layout-card"
 import { FloorPlan } from "@/components/floor-plan"
-import { generateFloorPlanDXF, downloadDXF, generateFloorPlanSVGPreview } from "@/lib/dxf-generator"
+import { generateFloorPlanDXF, downloadDXF } from "@/lib/dxf-generator"
 import { FinancialAnalysis } from "@/components/financial-analysis"
 import { ReportSummary } from "@/components/report-summary"
 import { ExcelImport, type ImportedReportData } from "@/components/excel-import"
@@ -419,7 +419,7 @@ export default function ArchiScanPage() {
   const [selectedFloor, setSelectedFloor] = useState(1)
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
-  const [dxfPreviewSVG, setDxfPreviewSVG] = useState<string | null>(null)
+  const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [regulation, setRegulation] = useState<ZoningRegulation>(getDefaultRegulation())
   const [strategy, setStrategy] = useState<DesignStrategy>("profitability")
   const [supplementData, setSupplementData] = useState<{
@@ -1068,15 +1068,17 @@ export default function ArchiScanPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* DXF 미리보기 모달 */}
-      {dxfPreviewSVG && (
+      {/* DXF 미리보기 모달 - 실제 FloorPlan 컴포넌트 사용 */}
+      {showDxfPreview && selectedLayoutData && (
         <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-            <span className="text-sm font-semibold text-foreground">DXF 미리보기</span>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 shrink-0">
+            <div>
+              <span className="text-sm font-semibold text-foreground">DXF 미리보기</span>
+              <span className="text-xs text-muted-foreground ml-2">{selectedLayoutData.name} · {selectedFloor}층/{selectedLayoutData.floors}층</span>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  if (!selectedLayoutData) return
                   const dxf = generateFloorPlanDXF({
                     type: selectedLayoutData.type,
                     floor: selectedFloor,
@@ -1097,19 +1099,45 @@ export default function ArchiScanPage() {
                 DXF 저장
               </button>
               <button
-                onClick={() => setDxfPreviewSVG(null)}
+                onClick={() => setShowDxfPreview(false)}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground"
               >
                 닫기
               </button>
             </div>
           </div>
-          <div
-            className="flex-1 overflow-auto p-4 flex items-center justify-center"
-            dangerouslySetInnerHTML={{ __html: dxfPreviewSVG }}
-          />
-          <div className="px-4 py-2 text-center text-[11px] text-muted-foreground border-t border-border/50">
-            미리보기는 앱용 간략 도면입니다. DXF 저장 시 CAD 정밀 도면이 생성됩니다.
+
+          {/* 층 선택 탭 */}
+          <div className="flex gap-1 px-4 py-2 border-b border-border/30 shrink-0 overflow-x-auto">
+            {Array.from({ length: selectedLayoutData.floors }, (_, i) => i + 1).map(f => (
+              <button
+                key={f}
+                onClick={() => setSelectedFloor(f)}
+                className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+                  selectedFloor === f
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                }`}
+              >
+                {f === 1 ? '1층 로비' : f === selectedLayoutData.floors ? `${f}층 최상` : `${f}층`}
+              </button>
+            ))}
+          </div>
+
+          {/* 실제 FloorPlan 컴포넌트 */}
+          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+            <div className="w-full h-full flex items-center justify-center" style={{ maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 180px)', aspectRatio: '3/2' }}>
+              <FloorPlan
+                type={selectedLayoutData.type}
+                floor={selectedFloor}
+                totalFloors={selectedLayoutData.floors}
+                strategy={strategy}
+              />
+            </div>
+          </div>
+
+          <div className="px-4 py-2 text-center text-[11px] text-muted-foreground border-t border-border/50 shrink-0">
+            DXF 저장 시 위 평면도와 동일한 구성의 CAD 파일이 생성됩니다.
           </div>
         </div>
       )}
@@ -1932,18 +1960,7 @@ export default function ArchiScanPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    const svg = generateFloorPlanSVGPreview({
-                      type: selectedLayoutData.type,
-                      floor: selectedFloor,
-                      totalFloors: selectedLayoutData.floors,
-                      strategy,
-                      layoutName: selectedLayoutData.name,
-                      siteArea,
-                      units: selectedLayoutData.units,
-                      floors: selectedLayoutData.floors,
-                      parking: selectedLayoutData.parking,
-                    })
-                    setDxfPreviewSVG(svg)
+                    setShowDxfPreview(true)
                   }}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-blue-500/30 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10 transition-colors text-sm font-medium"
                 >
