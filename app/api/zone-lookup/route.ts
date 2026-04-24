@@ -55,10 +55,9 @@ function inferZoneFromAddress(address: string): string {
     return '제2종일반주거지역'
   }
 
-  // 기본값: 구별 추정
-  if (address.includes('중구') || address.includes('종로구')) return '일반상업지역'
-  if (address.includes('서울')) return '제2종일반주거지역'
-  if (address.includes('경기')) return '제2종일반주거지역'
+  // 기본값: 구별 추정 (도로명 없는 지번주소 fallback)
+  if (address.includes('중구') || address.includes('명동') || address.includes('을지로')) return '일반상업지역'
+  // 나머지는 주거지역 기본값
   return '제2종일반주거지역'
 }
 

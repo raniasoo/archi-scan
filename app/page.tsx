@@ -756,10 +756,27 @@ export default function ArchiScanPage() {
     if (data.siteArea && data.siteArea > 0) setSiteArea(String(Math.round(data.siteArea)))
 
     if (mappedZone) {
-      // MOLIT 성공: 바로 자동입력
+      // MOLIT 성공 + 용도지역 직접 반환
       applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
+    } else if (data.buildingCoverage != null && data.buildingCoverage > 0) {
+      // MOLIT 성공했지만 용도지역 없음 → 건폐율/용적률로 역추론 (zone-lookup 불필요)
+      const cov = data.buildingCoverage
+      const far = data.floorAreaRatio ?? 0
+      let inferred = ''
+      if      (cov <= 50 && far <= 100)  inferred = 'residential-exclusive-1'
+      else if (cov <= 50 && far <= 150)  inferred = 'residential-exclusive-2'
+      else if (cov <= 60 && far <= 200)  inferred = 'residential-1'
+      else if (cov <= 60 && far <= 250)  inferred = 'residential-2'
+      else if (cov <= 50 && far <= 300)  inferred = 'residential-3'
+      else if (cov <= 70 && far <= 500)  inferred = 'semi-residential'
+      else if (cov <= 70 && far <= 900)  inferred = 'commercial-neighborhood'
+      else if (cov <= 80 && far <= 1300) inferred = 'commercial-general'
+      else if (cov <= 90 && far <= 1500) inferred = 'commercial-central'
+      else                               inferred = 'residential-2'
+      console.log('[v0] 건폐율/용적률 역추론:', cov, far, '→', inferred)
+      applyZoneData(inferred, roadAddr, hasDistrict, coords)
     } else {
-      // MOLIT 실패: 좌표 저장 후 zone-lookup으로 용도지역 보완
+      // MOLIT 실패 또는 건폐율 없음 → zone-lookup으로 보완
       setMolitSupplementData(prev => ({ ...prev, ...coords }))
       console.log('[v0] MOLIT zoneType 없음 — zone-lookup 보완 조회')
       fetch('/api/zone-lookup', {
@@ -769,15 +786,13 @@ export default function ArchiScanPage() {
       })
         .then(r => r.json())
         .then(res => {
-          const inferred = mapZoneString(res.zoneType || '')
-          if (inferred) {
-            applyZoneData(inferred, roadAddr, false, coords)
-            console.log('[v0] zone-lookup 완료:', inferred, '(', res.source, ')')
+          const zoneLookup = mapZoneString(res.zoneType || '')
+          if (zoneLookup) {
+            applyZoneData(zoneLookup, roadAddr, false, coords)
+            console.log('[v0] zone-lookup 완료:', zoneLookup, '(', res.source, ')')
           }
-          // 면적 자동입력 (MOLIT 실패 시 Vworld 필지 면적 사용)
           if (res.siteArea && res.siteArea > 0) {
             setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0) ? String(Math.round(res.siteArea)) : prev)
-            console.log('[v0] zone-lookup 면적 자동입력:', res.siteArea)
           }
         })
         .catch(e => console.warn('[v0] zone-lookup 실패:', e))
