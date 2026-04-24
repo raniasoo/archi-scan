@@ -66,7 +66,12 @@ export function CadastralMap({
         setParcel(data.demoParcel)
         setIsDemo(true)
         onParcelLoaded?.(data.demoParcel.area)
-        setError(data.error || null)
+        // 실제 API 오류 메시지만 표시 (키 미설정 메시지 제거)
+        if (data.error && !data.error.includes('미설정')) {
+          setError(data.error)
+        } else {
+          setError('Vworld API 연결 중 — 데모 형상으로 표시합니다')
+        }
       } else {
         setError(data.error || '지적도 조회 실패')
       }

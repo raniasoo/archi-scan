@@ -427,6 +427,13 @@ export default function ArchiScanPage() {
     districtPlan?: string
     note?: string
   }>({})
+  // MOLIT에서 직접 받은 supplement 값 (법규검토 패널에 우선 사용)
+  const [molitSupplementData, setMolitSupplementData] = useState<{
+    zoneCode?: string
+    roadWidth?: number
+    heightLimit?: number
+    hasDistrictPlan?: boolean
+  }>({})
   
   // Centralized computed results - single source of truth
   const [legalSummary, setLegalSummary] = useState<LegalSummary | null>(null)
@@ -563,6 +570,18 @@ export default function ArchiScanPage() {
     if (data.siteArea && data.siteArea > 0) {
       setSiteArea(String(data.siteArea))
     }
+    
+    // MOLIT supplement 직접 저장 (법규검토 패널 우선 사용)
+    const roadWidthNum = data.roadCondition === '12m-plus' ? 12 :
+                         data.roadCondition === '8m-plus' ? 8 :
+                         data.roadCondition === '6m-plus' ? 6 :
+                         data.roadCondition === '4m-plus' ? 4 : 6
+    setMolitSupplementData({
+      zoneCode: zoneType,
+      roadWidth: roadWidthNum,
+      heightLimit: typeof data.heightLimit === 'number' ? data.heightLimit : 30,
+      hasDistrictPlan: !!data.hasDistrictPlan,
+    })
     
     console.log('[v0] Regulation state updated from supplement data:', {
       zoneType,
@@ -1225,7 +1244,11 @@ export default function ArchiScanPage() {
                 setbackFront={regulation.setbackFront}
                 setbackSide={regulation.setbackSide}
                 setbackRear={regulation.setbackRear}
-                coverageRatio={regulation.maxCoverageRatio}
+                coverageRatio={molitSupplementData.zoneCode ? (
+                  molitSupplementData.zoneCode.includes('commercial') ? 80 :
+                  molitSupplementData.zoneCode.includes('semi-residential') ? 70 :
+                  molitSupplementData.zoneCode.includes('residential') ? 60 : 60
+                ) : regulation.maxCoverageRatio}
                 onParcelLoaded={(area) => {
                   if (area > 0 && Math.abs(area - siteAreaNum) > 10) {
                     setSiteArea(String(Math.round(area)))
@@ -1243,7 +1266,16 @@ export default function ArchiScanPage() {
               {/* Regulation Analysis + Legal Review */}
               <div className="order-1 lg:order-2 space-y-4">
                 {/* 기존 분석 패널 */}
-                <RegulationAnalysisPanel siteArea={siteAreaNum} regulation={regulation} />
+                <RegulationAnalysisPanel 
+                  siteArea={siteAreaNum} 
+                  regulation={{
+                    ...regulation,
+                    zoneType: (molitSupplementData.zoneCode || regulation.zoneType) as typeof regulation.zoneType,
+                    roadWidth: molitSupplementData.roadWidth || regulation.roadWidth,
+                    maxHeight: molitSupplementData.heightLimit || regulation.maxHeight,
+                    additionalNotes: molitSupplementData.hasDistrictPlan ? '지구단위계획 적용' : regulation.additionalNotes,
+                  }} 
+                />
 
                 {/* 신규: 한국 건축법 기반 법규검토 자동계산 */}
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -1257,11 +1289,11 @@ export default function ArchiScanPage() {
                     </span>
                   </div>
                   <LegalReviewPanel
-                    zoneCode={regulation.zoneType}
+                    zoneCode={molitSupplementData.zoneCode || regulation.zoneType}
                     siteArea={siteAreaNum}
-                    roadWidth={regulation.roadWidth}
-                    heightLimit={regulation.maxHeight}
-                    hasDistrictPlan={regulation.additionalNotes?.includes('지구단위') ?? false}
+                    roadWidth={molitSupplementData.roadWidth || regulation.roadWidth}
+                    heightLimit={molitSupplementData.heightLimit || regulation.maxHeight}
+                    hasDistrictPlan={molitSupplementData.hasDistrictPlan ?? regulation.additionalNotes?.includes('지구단위') ?? false}
                   />
                 </div>
               </div>
