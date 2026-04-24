@@ -670,38 +670,30 @@ export default function ArchiScanPage() {
   }
 
   // MOLIT 자동조회 완료 즉시 → molitSupplementData 업데이트 (supplement 저장 불필요)
-  const handleMolitDataFetched = (data: { 
-    zoneType?: string; area?: string; district?: string
-    roadAddress?: string; siteArea?: number 
-  }) => {
-    const molitZone = data.zoneType || ''
-    const mappedZone = 
-      molitZone.includes('제1종전용') ? 'residential-exclusive-1' :
-      molitZone.includes('제2종전용') ? 'residential-exclusive-2' :
-      molitZone.includes('제1종일반') ? 'residential-1' :
-      molitZone.includes('제2종일반') ? 'residential-2' :
-      molitZone.includes('제3종일반') ? 'residential-3' :
-      molitZone.includes('준주거') ? 'semi-residential' :
-      molitZone.includes('근린상업') ? 'commercial-neighborhood' :
-      molitZone.includes('중심상업') ? 'commercial-central' :
-      molitZone.includes('일반상업') ? 'commercial-general' :
-      molitZone.includes('일반공업') ? 'industrial-general' :
-      molitZone.includes('자연녹지') ? 'green-natural' :
-      molitZone.includes('생산녹지') ? 'green-production' :
-      molitZone.includes('계획관리') ? 'management-planned' : ''
+  // 용도지역 코드 매핑 헬퍼
+  const mapZoneString = (raw: string): string => {
+    if (!raw) return ''
+    if (raw.includes('제1종전용')) return 'residential-exclusive-1'
+    if (raw.includes('제2종전용')) return 'residential-exclusive-2'
+    if (raw.includes('제1종일반')) return 'residential-1'
+    if (raw.includes('제2종일반')) return 'residential-2'
+    if (raw.includes('제3종일반')) return 'residential-3'
+    if (raw.includes('준주거')) return 'semi-residential'
+    if (raw.includes('근린상업')) return 'commercial-neighborhood'
+    if (raw.includes('중심상업')) return 'commercial-central'
+    if (raw.includes('일반상업')) return 'commercial-general'
+    if (raw.includes('일반공업')) return 'industrial-general'
+    if (raw.includes('자연녹지')) return 'green-natural'
+    if (raw.includes('생산녹지')) return 'green-production'
+    if (raw.includes('계획관리')) return 'management-planned'
+    return ''
+  }
 
-    // zoneType 없어도 (MOLIT 실패) entX/entY 좌표는 저장 (지적도용)
-    if (!mappedZone) {
-      if (data.entX || data.entY) {
-        setMolitSupplementData(prev => ({
-          ...prev,
-          entX: data.entX,
-          entY: data.entY,
-        }))
-      }
-      return
-    }
-
+  // 용도지역 코드로 regulation + molitSupplement 일괄 업데이트
+  const applyZoneData = (
+    zone: string, roadAddr: string, hasDistrict: boolean,
+    extra: Record<string, any> = {}
+  ) => {
     const heightByZone: Record<string, number> = {
       'residential-exclusive-1': 9, 'residential-exclusive-2': 12,
       'residential-1': 12, 'residential-2': 20, 'residential-3': 30,
@@ -710,68 +702,6 @@ export default function ArchiScanPage() {
       'industrial-general': 30, 'green-natural': 20,
       'green-production': 20, 'management-planned': 20,
     }
-
-    // 도로명 분석: data.roadAddress 없으면 address 상태 직접 사용
-    const roadAddr = data.roadAddress || address || ''
-    const roadWidth = roadAddr.includes('대로') ? 12 :
-                      roadAddr.includes('로') ? 8 :
-                      roadAddr.includes('길') ? 4 : 6
-
-    const roadConditionEnum = roadWidth >= 12 ? '12m' :
-                              roadWidth >= 8  ? '8m' :
-                              roadWidth >= 6  ? '6m' : '4m'
-
-    const hasDistrict = !!(
-      (data.area && data.area.includes('지구단위')) ||
-      (data.district && data.district.includes('지구단위'))
-    )
-
-    const heightLimit = heightByZone[mappedZone] ?? 30
-
-    setMolitSupplementData({
-      zoneCode: mappedZone,
-      roadWidth,
-      heightLimit,
-      hasDistrictPlan: hasDistrict,
-      entX: data.entX,
-      entY: data.entY,
-      sigunguCd: data.sigunguCd,
-      bjdongCd: data.bjdongCd,
-      bun: data.bun,
-      ji: data.ji,
-    })
-
-    // ===== 공시지가 자동 조회 =====
-    const currentAddress = data.roadAddress || address || ''
-    setLandPriceData(prev => ({ ...prev, loading: true }))
-    fetchLandPrice({
-      sigunguCd: data.sigunguCd,
-      bjdongCd: data.bjdongCd,
-      bun: data.bun,
-      ji: data.ji,
-      address: currentAddress,
-      siteArea: data.siteArea || safeNumber(siteArea, 660),
-    }).then(result => {
-      setLandPriceData({
-        pricePerM2: result.landPricePerM2,
-        totalCost: result.totalLandCost,
-        source: result.source,
-        isDemo: result.isDemo,
-        stdrYear: result.stdrYear,
-        message: result.message,
-        loading: false,
-      })
-      console.log('[v0] 공시지가 조회 완료:', result)
-    }).catch(() => {
-      setLandPriceData(prev => ({ ...prev, loading: false }))
-    })
-
-    // regulation state도 동시 업데이트
-    const validZoneTypes = ['residential-1','residential-2','residential-3','semi-residential',
-      'commercial-general','commercial-neighborhood','industrial'] as const
-    type ValidZoneType = typeof validZoneTypes[number]
-    
-    // 용도지역별 건폐율/용적률 (국계법 기준)
     const coverageByZone: Record<string, number> = {
       'residential-exclusive-1': 50, 'residential-exclusive-2': 50,
       'residential-1': 60, 'residential-2': 60, 'residential-3': 50,
@@ -786,27 +716,81 @@ export default function ArchiScanPage() {
       'commercial-general': 1300, 'commercial-central': 1500,
       'industrial-general': 400, 'green-natural': 100,
     }
+    const roadWidth = roadAddr.includes('대로') ? 25 :
+                      roadAddr.includes('로') ? 12 :
+                      roadAddr.includes('길') ? 6 : 8
+    const roadConditionEnum = roadWidth >= 25 ? '25m' :
+                              roadWidth >= 12 ? '12m' :
+                              roadWidth >= 8  ? '8m' :
+                              roadWidth >= 6  ? '6m' : '4m'
+    const heightLimit = heightByZone[zone] ?? 30
 
+    setMolitSupplementData(prev => ({ ...prev, zoneCode: zone, roadWidth, heightLimit, hasDistrictPlan: hasDistrict, ...extra }))
+
+    const validZoneTypes = ['residential-1','residential-2','residential-3','semi-residential',
+      'commercial-general','commercial-neighborhood','industrial'] as const
+    type VZ = typeof validZoneTypes[number]
     setRegulation(prev => ({
       ...prev,
-      zoneType: (validZoneTypes as readonly string[]).includes(mappedZone)
-        ? (mappedZone as ValidZoneType) : prev.zoneType,
-      maxHeight: heightLimit,
-      maxFloors: Math.floor(heightLimit / 3.3),
-      roadWidth,
-      roadCondition: roadConditionEnum as import('@/lib/regulation-types').RoadCondition,
+      zoneType: (validZoneTypes as readonly string[]).includes(zone) ? (zone as VZ) : prev.zoneType,
+      maxHeight: heightLimit, maxFloors: Math.floor(heightLimit / 3.3),
+      roadWidth, roadCondition: roadConditionEnum as import('@/lib/regulation-types').RoadCondition,
       additionalNotes: hasDistrict ? '지구단위계획 적용' : prev.additionalNotes,
-      maxCoverageRatio: coverageByZone[mappedZone] ?? prev.maxCoverageRatio,
-      maxFloorAreaRatio: farByZone[mappedZone] ?? prev.maxFloorAreaRatio,
+      maxCoverageRatio: coverageByZone[zone] ?? prev.maxCoverageRatio,
+      maxFloorAreaRatio: farByZone[zone] ?? prev.maxFloorAreaRatio,
     }))
+    console.log('[v0] applyZoneData:', zone, 'roadWidth:', roadWidth, 'height:', heightLimit)
+  }
 
-    // siteArea도 업데이트 (MOLIT에서 직접 받은 값)
-    if (data.siteArea && data.siteArea > 0) {
-      setSiteArea(String(Math.round(data.siteArea)))
+  const handleMolitDataFetched = (data: {
+    zoneType?: string; area?: string; district?: string
+    roadAddress?: string; siteArea?: number
+    entX?: number; entY?: number
+    sigunguCd?: string; bjdongCd?: string; bun?: string; ji?: string
+  }) => {
+    const mappedZone = mapZoneString(data.zoneType || '')
+    const roadAddr = data.roadAddress || address || ''
+    const hasDistrict = !!((data.area?.includes('지구단위')) || (data.district?.includes('지구단위')))
+    const coords = { entX: data.entX, entY: data.entY, sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji }
+
+    if (data.siteArea && data.siteArea > 0) setSiteArea(String(Math.round(data.siteArea)))
+
+    if (mappedZone) {
+      // MOLIT 성공: 바로 자동입력
+      applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
+    } else {
+      // MOLIT 실패: 좌표 저장 후 zone-lookup으로 용도지역 보완
+      setMolitSupplementData(prev => ({ ...prev, ...coords }))
+      console.log('[v0] MOLIT zoneType 없음 — zone-lookup 보완 조회')
+      fetch('/api/zone-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji, address: roadAddr }),
+      })
+        .then(r => r.json())
+        .then(res => {
+          const inferred = mapZoneString(res.zoneType || '')
+          if (inferred) {
+            applyZoneData(inferred, roadAddr, false, coords)
+            console.log('[v0] zone-lookup 완료:', inferred, '(', res.source, ')')
+          }
+        })
+        .catch(e => console.warn('[v0] zone-lookup 실패:', e))
     }
 
-    console.log('[v0] handleMolitDataFetched 완료:', { mappedZone, roadWidth, roadConditionEnum, heightLimit, hasDistrict })
+    // 공시지가 자동 조회
+    setLandPriceData(prev => ({ ...prev, loading: true }))
+    fetchLandPrice({
+      sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd,
+      bun: data.bun, ji: data.ji, address: roadAddr,
+      siteArea: data.siteArea || safeNumber(siteArea, 660),
+    }).then(result => {
+      setLandPriceData({ pricePerM2: result.landPricePerM2, totalCost: result.totalLandCost,
+        source: result.source, isDemo: result.isDemo, stdrYear: result.stdrYear,
+        message: result.message, loading: false })
+    }).catch(() => setLandPriceData(prev => ({ ...prev, loading: false })))
   }
+
 
   const handleGenerate = async () => {
     setIsGenerating(true)
