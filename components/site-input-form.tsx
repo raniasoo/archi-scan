@@ -345,12 +345,20 @@ export function SiteInputForm({
           : molitZone.includes('계획관리') ? 'management-planned'
           : ''
 
-        // 접도 현황 - 주소 도로명 접미사로 추론 (ref로 stale closure 방지)
-        const roadAddr = result.data.roadAddress || addressRef.current || address
+        // 접도 현황 - 가능한 모든 주소 소스에서 추론 (stale closure 방지)
+        const roadAddrSources = [
+          result.data.roadAddress,          // MOLIT newPlatAddr
+          addressRef.current,               // 최신 address ref
+          address,                          // address prop
+          result.diagnostics?.jusoResult?.roadAddr,  // JUSO roadAddr (테헤란로 포함)
+        ].filter(Boolean).join(' ')
+        
         const mappedRoadCondition =
-          roadAddr.includes('대로') ? '12m-plus' :
-          roadAddr.includes('로') ? '8m-plus' :
-          roadAddr.includes('길') ? '4m-plus' : '6m-plus'
+          roadAddrSources.includes('대로') ? '12m-plus' :
+          roadAddrSources.includes('로') ? '8m-plus' :
+          roadAddrSources.includes('길') ? '4m-plus' : '6m-plus'
+        
+        console.log('[v0] roadAddr sources:', roadAddrSources, '→', mappedRoadCondition)
 
         // 높이 제한 - 용도지역별 법정 기본값 (m)
         const heightByZone: Record<string, number> = {
@@ -958,7 +966,8 @@ export function SiteInputForm({
             {supplementData && !showSupplementForm && (
               <SupplementSummary 
                 data={supplementData} 
-                onEdit={() => setShowSupplementForm(true)} 
+                onEdit={() => setShowSupplementForm(true)}
+                addressOverride={addressRef.current || address}
               />
             )}
           </div>

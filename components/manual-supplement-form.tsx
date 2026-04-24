@@ -705,11 +705,19 @@ export function ManualSupplementForm({
 interface SupplementSummaryProps {
   data: SupplementData
   onEdit: () => void
+  addressOverride?: string  // 주소로 roadCondition 오버라이드
 }
 
-export function SupplementSummary({ data, onEdit }: SupplementSummaryProps) {
-  // Use shared helper functions for consistent display
+export function SupplementSummary({ data, onEdit, addressOverride }: SupplementSummaryProps) {
   const getZoneLabel = (value: string) => formatDisplayValue(value, ZONE_TYPE_OPTIONS)
+  
+  // 주소가 있으면 주소에서 roadCondition 직접 계산 (더 신뢰도 높음)
+  const effectiveRoadCondition = addressOverride
+    ? (addressOverride.includes('대로') ? '12m-plus' :
+       addressOverride.includes('로') ? '8m-plus' :
+       addressOverride.includes('길') ? '4m-plus' :
+       data.roadCondition)
+    : data.roadCondition
   const getRoadLabel = (value: string) => formatDisplayValue(value, ROAD_CONDITION_OPTIONS)
   
   // Format hasDistrictPlan (boolean) to display string
@@ -745,7 +753,7 @@ export function SupplementSummary({ data, onEdit }: SupplementSummaryProps) {
         </div>
         <div className="p-2 rounded bg-background/50 border border-border/50">
           <span className="text-[10px] text-muted-foreground block mb-0.5">접도</span>
-          <span className="text-xs text-foreground font-medium leading-tight block">{getRoadLabel(data.roadCondition)}</span>
+          <span className="text-xs text-foreground font-medium leading-tight block">{getRoadLabel(effectiveRoadCondition)}</span>
         </div>
         <div className="p-2 rounded bg-background/50 border border-border/50">
           <span className="text-[10px] text-muted-foreground block mb-0.5">높이제한</span>
