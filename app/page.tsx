@@ -43,6 +43,7 @@ import { type ProjectApprovalData, isEditingAllowed, getStoredUser } from "@/lib
 import { BuildingFootprint } from "@/components/building-footprint"
 import { RegulationInput } from "@/components/regulation-input"
 import { RegulationAnalysisPanel } from "@/components/regulation-analysis"
+import { LegalReviewPanel } from "@/components/legal-review-panel"
 import { StrategySelection } from "@/components/strategy-selection"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
@@ -1212,9 +1213,30 @@ export default function ArchiScanPage() {
                 <RegulationInput regulation={regulation} onChange={setRegulation} />
               </div>
 
-              {/* Regulation Analysis */}
-              <div className="order-1 lg:order-2">
+              {/* Regulation Analysis + Legal Review */}
+              <div className="order-1 lg:order-2 space-y-4">
+                {/* 기존 분석 패널 */}
                 <RegulationAnalysisPanel siteArea={siteAreaNum} regulation={regulation} />
+
+                {/* 신규: 한국 건축법 기반 법규검토 자동계산 */}
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-primary">법</span>
+                    </div>
+                    <h3 className="text-sm font-semibold">건축법 기반 법규검토 자동계산</h3>
+                    <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
+                      국계법·건축법·주차장법 기준
+                    </span>
+                  </div>
+                  <LegalReviewPanel
+                    zoneCode={regulation.zoneType}
+                    siteArea={siteAreaNum}
+                    roadWidth={regulation.roadWidth}
+                    heightLimit={regulation.maxHeight}
+                    hasDistrictPlan={regulation.additionalNotes?.includes('지구단위') ?? false}
+                  />
+                </div>
               </div>
             </div>
 
