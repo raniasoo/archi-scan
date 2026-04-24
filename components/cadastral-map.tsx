@@ -54,7 +54,7 @@ export function CadastralMap({
       const res = await fetch('/api/vworld', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address }),
+        body: JSON.stringify({ address, siteArea }),
       })
       const data = await res.json()
 

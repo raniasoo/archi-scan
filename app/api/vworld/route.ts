@@ -37,7 +37,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, lng, lat } = await req.json()
+    const { address, lng, lat, siteArea } = await req.json()
 
     const apiKey = getVworldApiKey()
     if (!apiKey) {
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         success: false,
         error: 'VWORLD_API_KEY 환경변수 미설정',
         demo: true,
-        demoParcel: getDemoParcel(address),
+        demoParcel: getDemoParcel(address, siteArea),
       }, { status: 200 })
     }
 
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error: `좌표 변환 실패: ${geoResult.error}`,
           demo: true,
-          demoParcel: getDemoParcel(address),
+          demoParcel: getDemoParcel(address, siteArea),
         })
       }
       coordLng = geoResult.lng!
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
         error: parcelResult.error,
         coordinates: { lng: coordLng, lat: coordLat },
         demo: true,
-        demoParcel: getDemoParcel(address),
+        demoParcel: getDemoParcel(address, siteArea),
       })
     }
 
@@ -97,17 +97,21 @@ export async function POST(req: NextRequest) {
 /**
  * API 키 없을 때 데모 데이터 (직사각형 가상 필지)
  */
-function getDemoParcel(address?: string) {
-  // 서울 강남 기준 가상 폴리곤 (약 660㎡ 직사각형)
+function getDemoParcel(address?: string, siteArea?: number) {
+  const area = siteArea && siteArea > 0 ? siteArea : 660
+  // 면적에 맞는 가상 직사각형 (황금비 1:1.6 근사)
   const centerLng = 127.0276
   const centerLat = 37.4979
-  const w = 0.0002  // 약 18m
-  const h = 0.00035 // 약 39m
+  // 1도 ≈ 111319m 기준, 면적을 m²로 변환해서 위경도 차이 계산
+  const sideM = Math.sqrt(area / 1.6) // 너비 (m)
+  const heightM = area / sideM        // 높이 (m)
+  const w = (sideM / 2) / 111319 * Math.cos(centerLat * Math.PI / 180)
+  const h = (heightM / 2) / 111319
 
   return {
     pnu: 'DEMO',
     address: address || '서울특별시 강남구 테헤란로 152',
-    area: 660,
+    area,
     landUse: '대',
     isDemo: true,
     coordinates: [

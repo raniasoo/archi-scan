@@ -56,7 +56,11 @@ export async function fetchParcelPolygon(
 
     const url = `${VWORLD_BASE}?${params.toString()}`
     const res = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
+      headers: { 
+        'Accept': 'application/json',
+        'Referer': 'https://v0-archi-scan-layout-generator.vercel.app',
+        'Origin': 'https://v0-archi-scan-layout-generator.vercel.app',
+      },
       signal: AbortSignal.timeout(10000),
     })
 
@@ -148,6 +152,10 @@ export async function geocodeAddress(
     })
 
     const res = await fetch(`https://api.vworld.kr/req/address?${params}`, {
+      headers: {
+        'Referer': 'https://v0-archi-scan-layout-generator.vercel.app',
+        'Origin': 'https://v0-archi-scan-layout-generator.vercel.app',
+      },
       signal: AbortSignal.timeout(8000),
     })
 
