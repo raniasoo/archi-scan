@@ -23,6 +23,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       totalFloorArea: result.data?.totalFloorArea ?? null,
       buildingName: result.data?.buildingName ?? null,
       zoneType: result.data?.zoneType ?? null,
+      district: result.data?.district ?? null,      // 지구코드명 (지구단위계획구역 여부 판단)
+      area: result.data?.area ?? null,              // 구역코드명
+      groundFloors: result.data?.groundFloors ?? null,
       dataSource: result.data?.dataSource ?? null,
       diagnostics: result.diagnostics ?? null,
       message: result.message ?? null,
