@@ -9,10 +9,11 @@ import { geocodeAddress, fetchParcelPolygon } from '@/lib/vworld'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const apiKey = process.env.VWORLD_API_KEY
+  const apiKey = process.env.VWORLD_API_KEY || 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
   return NextResponse.json({
-    vworldApiKey: apiKey ? `설정됨 (${apiKey.length}자, ${apiKey.substring(0,8)}...)` : '미설정',
-    configured: !!apiKey,
+    vworldApiKey: `설정됨 (${apiKey.length}자, ${apiKey.substring(0,8)}...)`,
+    configured: true,
+    source: process.env.VWORLD_API_KEY ? 'env' : 'fallback',
     timestamp: new Date().toISOString(),
   })
 }
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const { address, lng, lat } = await req.json()
 
-    const apiKey = process.env.VWORLD_API_KEY
+    const apiKey = process.env.VWORLD_API_KEY || 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
     if (!apiKey) {
       return NextResponse.json({
         success: false,
