@@ -832,7 +832,31 @@ async function fetchBuildingMultiEndpoint(params: BuildingLookupParams, platGbCd
       return { data: null, apiStatus: 'auth-error', message: r1.result.message, totalCount: 0, endpointUsed: 'auth-error', attemptedEndpoints, sentValues, familyUsed: 'none' }
     }
     if (r1.result?.data) {
-      return { data: r1.result.data, apiStatus: r1.result.apiStatus, message: r1.result.message, totalCount: r1.result.totalCount, endpointUsed: r1.endpointUsed || 'unknown', attemptedEndpoints, sentValues, familyUsed: 'current' }
+      const d = r1.result.data
+      const hasArea = !!(d.platArea || d.archArea || d.bcRat || d.totArea || d.vlRat)
+      if (hasArea) {
+        // 면적 있으면 바로 반환
+        return { data: d, apiStatus: r1.result.apiStatus, message: r1.result.message, totalCount: r1.result.totalCount, endpointUsed: r1.endpointUsed || 'unknown', attemptedEndpoints, sentValues, familyUsed: 'current' }
+      }
+      // 면적 없으면 표제부로 보강 시도
+      console.log('[MOLIT] 기본개요 면적 없음 → 표제부 추가 조회')
+      const r2b = await tryEndpointList(params, [titleEndpoint], attemptedEndpoints, pgCd)
+      if (r2b.result?.data) {
+        const d2 = r2b.result.data
+        // 표제부 면적으로 기본개요 데이터 보강
+        const merged = {
+          ...d,
+          platArea: d.platArea || d2.platArea,
+          archArea: d.archArea || d2.archArea,
+          bcRat: d.bcRat || d2.bcRat,
+          totArea: d.totArea || d2.totArea,
+          vlRat: d.vlRat || d2.vlRat,
+        }
+        console.log(`[MOLIT] 표제부 보강 결과 - platArea:${merged.platArea}, archArea:${merged.archArea}, bcRat:${merged.bcRat}`)
+        return { data: merged, apiStatus: r1.result.apiStatus, message: r1.result.message, totalCount: r1.result.totalCount, endpointUsed: `${r1.endpointUsed}+표제부`, attemptedEndpoints, sentValues, familyUsed: 'current' }
+      }
+      // 표제부도 안 되면 기본개요 데이터라도 반환
+      return { data: d, apiStatus: r1.result.apiStatus, message: r1.result.message, totalCount: r1.result.totalCount, endpointUsed: r1.endpointUsed || 'unknown', attemptedEndpoints, sentValues, familyUsed: 'current' }
     }
     
     // 표제부 시도
