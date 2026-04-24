@@ -1,14 +1,21 @@
 /**
  * Vworld 지적도 API 라우트
- * POST /api/vworld
- * 
- * 주소 → 좌표 변환 → 지적 폴리곤 조회
- * API 키는 서버 환경변수로 보호
+ * POST /api/vworld - 지적도 폴리곤 조회
+ * GET  /api/vworld - 키 설정 상태 확인
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { geocodeAddress, fetchParcelPolygon } from '@/lib/vworld'
 
 export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  const apiKey = process.env.VWORLD_API_KEY
+  return NextResponse.json({
+    vworldApiKey: apiKey ? `설정됨 (${apiKey.length}자, ${apiKey.substring(0,8)}...)` : '미설정',
+    configured: !!apiKey,
+    timestamp: new Date().toISOString(),
+  })
+}
 
 export async function POST(req: NextRequest) {
   try {
