@@ -178,11 +178,11 @@ export function CadastralMap({
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">
-              {isDemo ? 'VWORLD_API_KEY 미설정 — 데모 모드로 표시' : error}
+              {isDemo ? 'Vworld 연결 중 — 데모 형상으로 표시합니다' : error}
             </p>
             {isDemo && (
               <p className="text-amber-400/70 mt-0.5">
-                Vercel 환경변수에 VWORLD_API_KEY를 추가하면 실제 지적도를 표시합니다
+                실제 지적도 표시를 위해 Vercel 환경변수 VWORLD_API_KEY를 확인해주세요
               </p>
             )}
           </div>

@@ -594,6 +594,74 @@ export default function ArchiScanPage() {
     setCurrentStep("regulation")
   }
 
+  // MOLIT 자동조회 완료 즉시 → molitSupplementData 업데이트 (supplement 저장 불필요)
+  const handleMolitDataFetched = (data: { 
+    zoneType?: string; area?: string; district?: string
+    roadAddress?: string; siteArea?: number 
+  }) => {
+    const molitZone = data.zoneType || ''
+    const mappedZone = 
+      molitZone.includes('제1종전용') ? 'residential-exclusive-1' :
+      molitZone.includes('제2종전용') ? 'residential-exclusive-2' :
+      molitZone.includes('제1종일반') ? 'residential-1' :
+      molitZone.includes('제2종일반') ? 'residential-2' :
+      molitZone.includes('제3종일반') ? 'residential-3' :
+      molitZone.includes('준주거') ? 'semi-residential' :
+      molitZone.includes('근린상업') ? 'commercial-neighborhood' :
+      molitZone.includes('중심상업') ? 'commercial-central' :
+      molitZone.includes('일반상업') ? 'commercial-general' :
+      molitZone.includes('일반공업') ? 'industrial-general' :
+      molitZone.includes('자연녹지') ? 'green-natural' :
+      molitZone.includes('생산녹지') ? 'green-production' :
+      molitZone.includes('계획관리') ? 'management-planned' : ''
+
+    if (!mappedZone) return
+
+    const heightByZone: Record<string, number> = {
+      'residential-exclusive-1': 9, 'residential-exclusive-2': 12,
+      'residential-1': 12, 'residential-2': 20, 'residential-3': 30,
+      'semi-residential': 45, 'commercial-neighborhood': 45,
+      'commercial-general': 60, 'commercial-central': 200,
+      'industrial-general': 30, 'green-natural': 20,
+      'green-production': 20, 'management-planned': 20,
+    }
+
+    const roadAddr = data.roadAddress || ''
+    const roadWidth = roadAddr.includes('대로') ? 12 :
+                      roadAddr.includes('로') ? 8 :
+                      roadAddr.includes('길') ? 4 : 6
+
+    const hasDistrict = !!(
+      (data.area && data.area.includes('지구단위')) ||
+      (data.district && data.district.includes('지구단위'))
+    )
+
+    const heightLimit = heightByZone[mappedZone] ?? 30
+
+    setMolitSupplementData({
+      zoneCode: mappedZone,
+      roadWidth,
+      heightLimit,
+      hasDistrictPlan: hasDistrict,
+    })
+
+    // regulation state도 동시 업데이트
+    setRegulation(prev => ({
+      ...prev,
+      zoneType: (['residential-1','residential-2','residential-3','semi-residential',
+        'commercial-general','commercial-neighborhood','industrial'] as const)
+        .includes(mappedZone as typeof ['residential-1','residential-2','residential-3',
+          'semi-residential','commercial-general','commercial-neighborhood','industrial'][number])
+        ? mappedZone as typeof prev.zoneType : prev.zoneType,
+      maxHeight: heightLimit,
+      maxFloors: Math.floor(heightLimit / 3.3),
+      roadWidth,
+      additionalNotes: hasDistrict ? '지구단위계획 적용' : '',
+    }))
+
+    console.log('[v0] MOLIT data fetched → molitSupplementData:', { mappedZone, roadWidth, heightLimit, hasDistrict })
+  }
+
   const handleGenerate = async () => {
     setIsGenerating(true)
     setSelectedLayout(null)
@@ -1163,6 +1231,7 @@ export default function ArchiScanPage() {
                     isGenerating={false}
                     buttonText="설계 전략 선택으로"
                     onSupplementDataChange={handleSupplementDataChange}
+                    onMolitDataFetched={handleMolitDataFetched}
                   />
                 </CardContent>
               </Card>
@@ -1195,10 +1264,10 @@ export default function ArchiScanPage() {
   legalSummary={legalSummary}
   siteConditions={{
     siteArea: safeNumber(siteArea, 660),
-    zoneType: regulation.zoneType,
-    roadCondition: `${regulation.roadWidth}m 이상`,
-    heightLimit: String(regulation.maxHeight), // Pass number only, 'm' added in display
-    districtPlan: regulation.additionalNotes.includes('지구단위') ? '적용' : '없음',
+    zoneType: molitSupplementData.zoneCode || regulation.zoneType,
+    roadCondition: `${molitSupplementData.roadWidth || regulation.roadWidth}m 이상`,
+    heightLimit: String(molitSupplementData.heightLimit || regulation.maxHeight),
+    districtPlan: (molitSupplementData.hasDistrictPlan ?? regulation.additionalNotes.includes('지구단위')) ? '적용' : '없음',
   }}
 />
 
