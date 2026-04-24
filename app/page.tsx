@@ -626,7 +626,8 @@ export default function ArchiScanPage() {
       'green-production': 20, 'management-planned': 20,
     }
 
-    const roadAddr = data.roadAddress || ''
+    // 도로명 분석: data.roadAddress 없으면 address 상태 직접 사용
+    const roadAddr = data.roadAddress || address || ''
     const roadWidth = roadAddr.includes('대로') ? 12 :
                       roadAddr.includes('로') ? 8 :
                       roadAddr.includes('길') ? 4 : 6
