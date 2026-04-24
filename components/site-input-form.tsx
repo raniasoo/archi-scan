@@ -932,6 +932,7 @@ export function SiteInputForm({
             {/* Supplement Form */}
             {showSupplementForm && (
               <ManualSupplementForm
+                key={`supplement-${supplementData?.roadCondition}-${supplementData?.zoneType}`}
                 autoFilledItems={autoFilledItems}
                 initialData={supplementData || undefined}
                 onSave={handleSupplementSave}
