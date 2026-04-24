@@ -631,6 +631,10 @@ export default function ArchiScanPage() {
                       roadAddr.includes('로') ? 8 :
                       roadAddr.includes('길') ? 4 : 6
 
+    const roadConditionEnum = roadWidth >= 12 ? '12m' :
+                              roadWidth >= 8  ? '8m' :
+                              roadWidth >= 6  ? '6m' : '4m'
+
     const hasDistrict = !!(
       (data.area && data.area.includes('지구단위')) ||
       (data.district && data.district.includes('지구단위'))
@@ -657,6 +661,7 @@ export default function ArchiScanPage() {
       maxHeight: heightLimit,
       maxFloors: Math.floor(heightLimit / 3.3),
       roadWidth,
+      roadCondition: roadConditionEnum as import('@/lib/regulation-types').RoadCondition,
       additionalNotes: hasDistrict ? '지구단위계획 적용' : '',
     }))
 
