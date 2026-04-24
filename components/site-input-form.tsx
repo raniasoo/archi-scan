@@ -794,16 +794,16 @@ export function SiteInputForm({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    // JUSO 데이터로 supplement 자동입력 후 계속 진행
+                    // JUSO 데이터로 접도만 자동 추론, 용도지역은 사용자가 직접 선택
                     const roadAddr = resolvedJuso.roadAddr || address
                     const mappedRoadCondition =
                       roadAddr.includes('대로') ? '12m-plus' :
                       roadAddr.includes('로') ? '8m-plus' :
                       roadAddr.includes('길') ? '4m-plus' : '6m-plus'
                     setSupplementData(prev => ({
-                      zoneType: prev?.zoneType || 'residential-2',
+                      zoneType: prev?.zoneType && prev.zoneType !== 'residential-2' ? prev.zoneType : '',
                       roadCondition: mappedRoadCondition,
-                      heightLimit: prev?.heightLimit ?? 30,
+                      heightLimit: prev?.heightLimit ?? null,
                       hasDistrictPlan: prev?.hasDistrictPlan ?? false,
                       districtPlanNotes: prev?.districtPlanNotes || '',
                       additionalNotes: prev?.additionalNotes || '',
