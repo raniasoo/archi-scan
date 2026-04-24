@@ -256,6 +256,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   const recommendedLayout = layout
   const isRecommended = layout.id === recommendedLayout.id
 
+  // 섹션 번호 동적 계산 (단일 배치안: 4번 비교 섹션 없어서 5~9→4~8)
+  const sn = (n: number) => layouts.length > 1 ? n : n <= 3 ? n : n - 1
+
   // Generate HTML report for download - properly formatted with Korean support
   const handleDownloadReport = () => {
     console.log("[v0] HTML 보고서 생성 시작")
@@ -2331,7 +2334,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <Building2 className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>5. 규모 산정 및 계획 구성</span>
+              <span>{sn(5)}. 규모 산정 및 계획 구성</span>
             </div>
 
             {/* 핵심 정보 카드 4개 */}
@@ -2392,7 +2395,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <Banknote className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>6. 사업성 검토</span>
+              <span>{sn(6)}. 사업성 검토</span>
             </div>
 
             {/* 사업비 추정 테이블 */}
@@ -2516,7 +2519,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <TrendingUp className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>7. AI 분석</span>
+              <span>{sn(7)}. AI 분석</span>
             </div>
             
             {/* AI 점수 그리드 - 4개 카드 (종합 점수 강조) */}
@@ -2592,7 +2595,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <span>8. 리스크 및 고려사항</span>
+              <span>{sn(8)}. 리스크 및 고려사항</span>
             </div>
             
             <div className="report-risk-grid">
@@ -2620,7 +2623,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <TrendingUp className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>9. 결론 및 제안</span>
+              <span>{sn(9)}. 결론 및 제안</span>
             </div>
             
             {/* 결론 문장 - 핵심 수치만 강조 */}
