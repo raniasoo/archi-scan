@@ -99,9 +99,10 @@ export function CadastralMap({
     const cx = points.reduce((s, p) => s + p[0], 0) / points.length
     const cy = points.reduce((s, p) => s + p[1], 0) / points.length
 
-    // 이격거리 → SVG 픽셀 변환 (평균 이격 사용)
+    // 이격거리 → SVG 픽셀 변환
+    // scale: px/degree, 1degree ≈ 111,319m → insetPx = meters * scale / 111319
     const avgSetback = (setbackFront + setbackSide + setbackRear) / 3
-    const insetPx = avgSetback * scale * 0.00001 * 111319 // m → px (근사)
+    const insetPx = avgSetback * scale / 111319
 
     return points.map(([x, y]) => {
       const dx = x - cx
@@ -222,8 +223,9 @@ export function CadastralMap({
                   d={toSVGPath(innerPoints)}
                   fill="none"
                   stroke="#f59e0b"
-                  strokeWidth="1.5"
-                  strokeDasharray="4 2"
+                  strokeWidth="2"
+                  strokeDasharray="6 3"
+                  opacity="0.9"
                 />
               )}
 
@@ -231,9 +233,10 @@ export function CadastralMap({
               {buildingPoints && (
                 <path
                   d={toSVGPath(buildingPoints)}
-                  fill="#10b98130"
+                  fill="#10b98122"
                   stroke="#10b981"
                   strokeWidth="2"
+                  opacity="0.9"
                 />
               )}
 
