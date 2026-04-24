@@ -138,10 +138,16 @@ export function SiteInputForm({
     fetchedData.buildingName ? '건물명' : '',
     fetchedData.mainPurpose ? '주용도' : '',
     fetchedData.groundFloors ? '층수' : '',
+    fetchedData.zoneType ? '용도지역' : '',
   ].filter(Boolean) : []
 
-  // Items that need manual verification
-  const manualCheckItems = ['용도지역', '접도 조건', '높이 제한', '지구단위계획 여부']
+  // Items that need manual verification (용도지역은 MOLIT에서 자동입력되면 제외)
+  const manualCheckItems = [
+    fetchedData?.zoneType ? '' : '용도지역',
+    '접도 조건',
+    '높이 제한',
+    '지구단위계획 여부',
+  ].filter(Boolean)
 
   /**
    * Handle supplement form save
@@ -314,15 +320,45 @@ export function SiteInputForm({
         if (result.data.siteArea && result.data.siteArea > 0) {
           onSiteAreaChange(String(Math.round(result.data.siteArea)))
         } else {
-          // MOLIT에서 대지면적을 받지 못한 경우 — 기존 값 유지하고 포커스 이동
-          // siteArea 필드에 포커스를 줘서 사용자가 직접 입력하도록 유도
           setTimeout(() => {
             const areaInput = document.getElementById('siteArea') as HTMLInputElement | null
-            if (areaInput) {
-              areaInput.focus()
-              areaInput.select()
-            }
+            if (areaInput) { areaInput.focus(); areaInput.select() }
           }, 300)
+        }
+
+        // MOLIT 용도지역 → supplement form 값으로 자동 매핑
+        const molitZone = result.data.zoneType || ''
+        const mappedZone = molitZone.includes('제1종전용') || molitZone.includes('제1종 전용') ? 'residential-exclusive-1'
+          : molitZone.includes('제2종전용') || molitZone.includes('제2종 전용') ? 'residential-exclusive-2'
+          : molitZone.includes('제1종일반') || molitZone.includes('제1종 일반') ? 'residential-1'
+          : molitZone.includes('제2종일반') || molitZone.includes('제2종 일반') ? 'residential-2'
+          : molitZone.includes('제3종일반') || molitZone.includes('제3종 일반') ? 'residential-3'
+          : molitZone.includes('준주거') ? 'semi-residential'
+          : molitZone.includes('근린상업') ? 'commercial-neighborhood'
+          : molitZone.includes('중심상업') ? 'commercial-central'
+          : molitZone.includes('일반상업') ? 'commercial-general'
+          : molitZone.includes('일반공업') ? 'industrial-general'
+          : molitZone.includes('자연녹지') ? 'green-natural'
+          : molitZone.includes('생산녹지') ? 'green-production'
+          : molitZone.includes('계획관리') ? 'management-planned'
+          : ''
+
+        // 지구단위계획 여부 자동 추정 (district 필드 존재 시)
+        const hasDistrict = !!(result.data.district && result.data.district.trim())
+
+        // supplement 자동 입력 (기존 값 없을 때만 덮어씌움)
+        if (mappedZone) {
+          setSupplementData(prev => {
+            if (prev && prev.zoneType && prev.zoneType !== 'unknown') return prev // 이미 입력된 경우 유지
+            return {
+              zoneType: mappedZone,
+              roadCondition: prev?.roadCondition || '',
+              heightLimit: prev?.heightLimit ?? null,
+              hasDistrictPlan: prev?.hasDistrictPlan ?? hasDistrict,
+              districtPlanNotes: prev?.districtPlanNotes || '',
+              additionalNotes: prev?.additionalNotes || '',
+            }
+          })
         }
         
         // Notify parent component
