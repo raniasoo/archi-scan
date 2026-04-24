@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { SiteInputForm } from "@/components/site-input-form"
 import type { SupplementData } from "@/components/manual-supplement-form"
 import { LayoutCard } from "@/components/layout-card"
+import { LayoutComparison } from "@/components/layout-comparison"
 import { FloorPlan } from "@/components/floor-plan"
 import { generateFloorPlanDXF, downloadDXF } from "@/lib/dxf-generator"
 import { FinancialAnalysis } from "@/components/financial-analysis"
@@ -420,6 +421,7 @@ export default function ArchiScanPage() {
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
   const [showDxfPreview, setShowDxfPreview] = useState(false)
+  const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [regulation, setRegulation] = useState<ZoningRegulation>(getDefaultRegulation())
   const [strategy, setStrategy] = useState<DesignStrategy>("profitability")
   const [supplementData, setSupplementData] = useState<{
@@ -1615,10 +1617,33 @@ export default function ArchiScanPage() {
                 </p>
               </div>
               {selectedLayout && (
-                <Button onClick={() => setCurrentStep("floorplan")} className="gap-2">
-                  평면도 보기
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  {/* 뷰 전환 토글 */}
+                  <div className="flex rounded-lg border border-border overflow-hidden">
+                    <button
+                      onClick={() => setLayoutViewMode("card")}
+                      className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                        layoutViewMode === "card" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"
+                      }`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                      카드
+                    </button>
+                    <button
+                      onClick={() => setLayoutViewMode("compare")}
+                      className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                        layoutViewMode === "compare" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"
+                      }`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M3 21h18"/></svg>
+                      비교
+                    </button>
+                  </div>
+                  <Button onClick={() => setCurrentStep("floorplan")} className="gap-2">
+                    평면도 보기
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -1690,6 +1715,21 @@ export default function ArchiScanPage() {
                   )}
                 </div>
 
+                {/* 비교표 뷰 */}
+                {layoutViewMode === "compare" && layouts.length > 0 && (
+                  <LayoutComparison
+                    layouts={layouts}
+                    siteArea={siteAreaNum}
+                    selectedLayout={selectedLayout}
+                    recommendedLayoutId={recommendedLayout?.id}
+                    onSelect={(id) => {
+                      handleSelectLayout(id)
+                    }}
+                  />
+                )}
+
+                {/* 카드 그리드 뷰 */}
+                {layoutViewMode === "card" && (
                 <div className="grid gap-4 md:gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {layouts.map((layout) => (
                     <div key={layout.id} className="flex flex-col gap-3">
@@ -1704,6 +1744,7 @@ export default function ArchiScanPage() {
                     </div>
                   ))}
                 </div>
+                )} {/* end layoutViewMode === card */}
 
                 {/* AI Reasoning Panel for Selected Layout */}
                 {selectedLayoutData && (
