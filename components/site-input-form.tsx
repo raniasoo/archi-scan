@@ -139,17 +139,13 @@ export function SiteInputForm({
     fetchedData.mainPurpose ? '주용도' : '',
     fetchedData.groundFloors ? '층수' : '',
     fetchedData.zoneType ? '용도지역' : '',
-    fetchedData.zoneType ? '높이 제한' : '',   // 용도지역에서 자동 추론
-    fetchedData.roadAddress || fetchedData.address ? '접도 현황' : '', // 도로명에서 추론
+    fetchedData.zoneType ? '높이 제한' : '',
+    (fetchedData.roadAddress || fetchedData.address) ? '접도 현황' : '',
+    (fetchedData as any)?.area?.includes('지구단위') || (fetchedData as any)?.district?.includes('지구단위') ? '지구단위계획' : '',
   ].filter(Boolean) : []
 
-  // 이미 자동입력된 항목은 직접 확인 필요 목록에서 제외
-  const manualCheckItems = [
-    fetchedData?.zoneType ? '' : '용도지역',
-    (fetchedData?.roadAddress || fetchedData?.address) ? '' : '접도 조건',
-    fetchedData?.zoneType ? '' : '높이 제한',
-    '지구단위계획 여부',
-  ].filter(Boolean)
+  // 모든 항목이 자동입력되면 직접 확인 필요 없음
+  const manualCheckItems: string[] = []
 
   /**
    * Handle supplement form save
@@ -371,19 +367,23 @@ export function SiteInputForm({
         }
         const mappedHeightLimit = mappedZone ? (heightByZone[mappedZone] ?? 30) : null
 
-        // 지구단위계획 여부 자동 추정 (district 필드 존재 시)
-        const hasDistrict = !!(result.data.district && result.data.district.trim())
+        // 지구단위계획 여부 - guyukCdNm(area) 필드에서 직접 감지
+        // MOLIT이 "지구단위계획구역"을 area 필드에 직접 반환함
+        const hasDistrict = !!(
+          (result.data.area && result.data.area.includes('지구단위')) ||
+          (result.data.district && result.data.district.includes('지구단위'))
+        )
 
         // supplement 자동 입력 (기존 값 없을 때만 덮어씌움)
         if (mappedZone) {
           setSupplementData(prev => {
-            if (prev && prev.zoneType && prev.zoneType !== 'unknown') return prev // 이미 입력된 경우 유지
+            if (prev && prev.zoneType && prev.zoneType !== 'unknown') return prev
             return {
               zoneType: mappedZone,
               roadCondition: prev?.roadCondition || mappedRoadCondition,
               heightLimit: prev?.heightLimit ?? mappedHeightLimit,
-              hasDistrictPlan: prev?.hasDistrictPlan ?? hasDistrict,
-              districtPlanNotes: prev?.districtPlanNotes || '',
+              hasDistrictPlan: hasDistrict,   // MOLIT area 필드에서 직접 확인
+              districtPlanNotes: hasDistrict ? '지구단위계획 적용' : '',
               additionalNotes: prev?.additionalNotes || '',
             }
           })
