@@ -1116,6 +1116,7 @@ export default function ArchiScanPage() {
       {show3DVolume && selectedLayoutData && (
         <BuildingVolume3D
           layoutName={selectedLayoutData.name}
+          layoutType={selectedLayoutData.type as any}
           floors={selectedLayoutData.floors}
           siteArea={siteAreaNum}
           coverage={selectedLayoutData.coverage}
