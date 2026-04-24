@@ -65,6 +65,7 @@ export function CadastralMap({
 
       if (data.success && data.parcel) {
         setParcel(data.parcel)
+        // Nominatim 또는 좌표 기반이면 isDemo=false
         setIsDemo(!!data.parcel.isDemo)
         onParcelLoaded?.(data.parcel.area)
       } else if (data.demoParcel) {

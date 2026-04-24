@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
   try {
     const { address, lng, lat, siteArea, entX, entY } = await req.json()
 
-    // JUSO/MOLIT에서 받은 실제 좌표가 있으면 바로 폴리곤 생성 (Vworld 호출 불필요)
+    // 1순위: JUSO/MOLIT에서 받은 실제 좌표가 있으면 사용
     if (entX && entY && entX > 120 && entY > 30) {
       console.log('[vworld] Using provided coordinates:', entX, entY)
       const area = siteArea || 660
@@ -102,6 +102,78 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, parcel, coordinates: { lng: entX, lat: entY } })
     }
 
+    // 2순위: Nominatim으로 실제 건물 boundingbox 조회 (Vercel 서버에서 접근 가능)
+    if (address) {
+      try {
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&countrycodes=kr&limit=1`
+        const nominatimRes = await fetch(nominatimUrl, {
+          headers: { 'User-Agent': 'ArchiScan/1.0 (https://v0-archi-scan-layout-generator.vercel.app)' },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (nominatimRes.ok) {
+          const nominatimData = await nominatimRes.json()
+          if (nominatimData?.length > 0) {
+            const result = nominatimData[0]
+            const centerLng = parseFloat(result.lon)
+            const centerLat = parseFloat(result.lat)
+            const bbox = result.boundingbox // [minLat, maxLat, minLng, maxLng]
+            
+            let coordinates: [number, number][]
+            let area = siteArea || 660
+
+            if (bbox && bbox.length === 4) {
+              // 실제 boundingbox로 폴리곤 생성
+              const minLat = parseFloat(bbox[0])
+              const maxLat = parseFloat(bbox[1])
+              const minLng = parseFloat(bbox[2])
+              const maxLng = parseFloat(bbox[3])
+              
+              // 면적 계산 (m²) - 위도 기반
+              const widthM = (maxLng - minLng) * 111319 * Math.cos(centerLat * Math.PI / 180)
+              const heightM = (maxLat - minLat) * 111319
+              const calcArea = Math.round(widthM * heightM)
+              if (calcArea > 100 && calcArea < 1000000) area = calcArea
+
+              coordinates = [
+                [minLng, minLat],
+                [maxLng, minLat],
+                [maxLng, maxLat],
+                [minLng, maxLat],
+                [minLng, minLat],
+              ]
+            } else {
+              // boundingbox 없으면 면적 기반 폴리곤
+              const parcel = buildParcelFromCoords(centerLng, centerLat, area, address)
+              coordinates = parcel.coordinates
+            }
+
+            const lngs = coordinates.map(c => c[0])
+            const lats = coordinates.map(c => c[1])
+            
+            const parcel = {
+              pnu: `NOM:${centerLng.toFixed(5)},${centerLat.toFixed(5)}`,
+              address: result.display_name || address,
+              area: siteArea || area,  // MOLIT 면적 우선
+              landUse: '대',
+              isDemo: false,
+              coordinates,
+              centroid: [centerLng, centerLat] as [number, number],
+              bbox: {
+                minLng: Math.min(...lngs), minLat: Math.min(...lats),
+                maxLng: Math.max(...lngs), maxLat: Math.max(...lats),
+              }
+            }
+            
+            console.log('[vworld] Nominatim success:', centerLng, centerLat, 'area:', parcel.area)
+            return NextResponse.json({ success: true, parcel, source: 'nominatim' })
+          }
+        }
+      } catch (nominatimErr) {
+        console.log('[vworld] Nominatim failed:', String(nominatimErr))
+      }
+    }
+
+    // 3순위: Vworld (해외 IP 차단 가능성 있음)
     const apiKey = getVworldApiKey()
     if (!apiKey) {
       return NextResponse.json({
