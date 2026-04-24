@@ -5,11 +5,60 @@ const VWORLD_API_KEY = process.env.VWORLD_API_KEY || 'FFEC486D-E635-345C-9BA6-54
 const VWORLD_BASE = 'https://api.vworld.kr/req/data'
 
 function inferZoneFromAddress(address: string): string {
-  if (address.includes('강남대로') || address.includes('테헤란로') || address.includes('영동대로')) return '일반상업지역'
-  if (address.includes('대로')) return '일반상업지역'
-  if (address.includes('강남구') || address.includes('서초구') || address.includes('송파구')) return '제2종일반주거지역'
-  if (address.includes('중구') || address.includes('종로구') || address.includes('용산구')) return '일반상업지역'
-  if (address.includes('로') && !address.includes('대로')) return '제2종일반주거지역'
+  // 도로 유형 먼저 판단 (대로 = 상업축, 길 = 주거지)
+  const hasDaero = address.includes('대로')
+  const hasRo    = address.includes('로') && !hasDaero
+  const hasGil   = address.includes('길')
+
+  // 명확한 상업지역 도로명
+  const commercialRoads = ['강남대로','테헤란로','영동대로','강변북로','올림픽대로',
+    '종로','을지로','세종대로','퇴계로','충무로','남대문로','한강대로',
+    '마포대로','여의대로','서초대로','반포대로','양재대로','언주로',
+    '압구정로','학동로','논현로','선릉로','역삼로']
+  if (commercialRoads.some(r => address.includes(r))) return '일반상업지역'
+
+  // 구별 상업지역 우선 판단 (대로급 도로에 접한 경우)
+  if (hasDaero) {
+    if (address.includes('강남구') || address.includes('서초구') ||
+        address.includes('중구')   || address.includes('종로구') ||
+        address.includes('용산구') || address.includes('송파구') ||
+        address.includes('영등포구') || address.includes('마포구')) {
+      return '일반상업지역'
+    }
+    return '근린상업지역'
+  }
+
+  // "길" 포함 주소 → 주거지역 (골목/이면도로)
+  if (hasGil) {
+    // 고급 주거지역 판단
+    if (address.includes('종로구') || address.includes('성북구') ||
+        address.includes('강북구') || address.includes('도봉구') ||
+        address.includes('노원구') || address.includes('은평구') ||
+        address.includes('서대문구') || address.includes('마포구') ||
+        address.includes('강동구') || address.includes('중랑구')) {
+      return '제2종일반주거지역'
+    }
+    if (address.includes('강남구') || address.includes('서초구') ||
+        address.includes('송파구') || address.includes('용산구')) {
+      return '제2종일반주거지역'
+    }
+    return '제2종일반주거지역'
+  }
+
+  // "로" 포함 → 용도지역은 구별로 판단
+  if (hasRo) {
+    if (address.includes('강남구') || address.includes('서초구') ||
+        address.includes('중구')   || address.includes('종로구') ||
+        address.includes('용산구')) {
+      return '일반상업지역'
+    }
+    return '제2종일반주거지역'
+  }
+
+  // 기본값: 구별 추정
+  if (address.includes('중구') || address.includes('종로구')) return '일반상업지역'
+  if (address.includes('서울')) return '제2종일반주거지역'
+  if (address.includes('경기')) return '제2종일반주거지역'
   return '제2종일반주거지역'
 }
 
