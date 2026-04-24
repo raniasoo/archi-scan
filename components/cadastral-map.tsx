@@ -16,6 +16,7 @@ interface CadastralMapProps {
   setbackRear?: number
   coverageRatio?: number    // 건폐율 (%)
   onParcelLoaded?: (area: number) => void
+  onParcelPolygonLoaded?: (coords: [number, number][], centroid: [number, number]) => void
 }
 
 interface ParcelData {
@@ -43,6 +44,7 @@ export function CadastralMap({
   setbackRear = 1.5,
   coverageRatio = 60,
   onParcelLoaded,
+  onParcelPolygonLoaded,
 }: CadastralMapProps) {
   const [parcel, setParcel] = useState<ParcelData | null>(null)
   const [loading, setLoading] = useState(false)
@@ -65,13 +67,18 @@ export function CadastralMap({
 
       if (data.success && data.parcel) {
         setParcel(data.parcel)
-        // Nominatim 또는 좌표 기반이면 isDemo=false
         setIsDemo(!!data.parcel.isDemo)
         onParcelLoaded?.(data.parcel.area)
+        if (data.parcel.coordinates?.length) {
+          onParcelPolygonLoaded?.(data.parcel.coordinates, data.parcel.centroid)
+        }
       } else if (data.demoParcel) {
         setParcel(data.demoParcel)
         setIsDemo(true)
         onParcelLoaded?.(data.demoParcel.area)
+        if (data.demoParcel.coordinates?.length) {
+          onParcelPolygonLoaded?.(data.demoParcel.coordinates, data.demoParcel.centroid)
+        }
         setError(data.error || 'Vworld 연결 중 — 데모 형상으로 표시합니다')
       } else {
         setError(data.error || '지적도 조회 실패')

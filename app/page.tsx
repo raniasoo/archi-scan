@@ -422,6 +422,7 @@ export default function ArchiScanPage() {
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
+  const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
   const [regulation, setRegulation] = useState<ZoningRegulation>(getDefaultRegulation())
   const [strategy, setStrategy] = useState<DesignStrategy>("profitability")
   const [supplementData, setSupplementData] = useState<{
@@ -1130,6 +1131,7 @@ export default function ArchiScanPage() {
                     units: selectedLayoutData.units,
                     floors: selectedLayoutData.floors,
                     parking: selectedLayoutData.parking,
+                    sitePolygon: sitePolygon ?? undefined,
                   })
                   const addr = address.replace(/\s+/g, '_').replace(/[^\w가-힣]/g, '')
                   downloadDXF(dxf, `ArchiScan_${addr}_${selectedLayoutData.name}_${selectedFloor}F.dxf`)
@@ -1529,6 +1531,9 @@ export default function ArchiScanPage() {
                   if (area > 0 && Math.abs(area - siteAreaNum) > 10) {
                     setSiteArea(String(Math.round(area)))
                   }
+                }}
+                onParcelPolygonLoaded={(coords, centroid) => {
+                  setSitePolygon({ coords, centroid })
                 }}
               />
             </div>
@@ -2093,6 +2098,7 @@ export default function ArchiScanPage() {
                       units: selectedLayoutData.units,
                       floors: selectedLayoutData.floors,
                       parking: selectedLayoutData.parking,
+                      sitePolygon: sitePolygon ?? undefined,
                     })
                     const addr = address.replace(/\s+/g, '_').replace(/[^\w가-힣]/g, '')
                     downloadDXF(dxf, `ArchiScan_${addr}_${selectedLayoutData.name}_${selectedFloor}F.dxf`)

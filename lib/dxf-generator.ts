@@ -18,6 +18,11 @@ interface FloorPlanConfig {
   units: number
   floors: number
   parking: number
+  // 실제 지적도 폴리곤 (WGS84 [lng, lat][])
+  sitePolygon?: {
+    coords: [number, number][]   // [[lng, lat], ...]
+    centroid: [number, number]   // [lng, lat]
+  }
 }
 
 // DXF 숫자 포맷 (소수점 4자리)
@@ -64,27 +69,43 @@ function dxfText(x: number, y: number, text: string, height: number, layer: stri
 export function generateFloorPlanDXF(config: FloorPlanConfig): string {
   const {
     type, floor, totalFloors, strategy = 'profitability',
-    layoutName, siteArea, units, floors: totalFloorCount, parking
+    layoutName, siteArea, units, floors: totalFloorCount, parking, sitePolygon
   } = config
 
-  // mm 단위 사용 (1m = 1000mm)
-  // 기준 건물 크기: 사이트 면적 기반
-  const scale = 1000 // 1:1000 스케일 → mm 단위
+  // mm 단위 사용 (1m = 1000mm), 1:1000 스케일
+  const scale = 1000
 
-  // 대지 규모 추정 (정사각형 대지 기준)
-  const siteW = Math.sqrt(siteArea) * scale  // mm
-  const siteH = siteW
+  let siteW: number, siteH: number, siteX: number, siteY: number
+  let sitePolyPoints: [number, number][] | null = null
 
-  // 건물 크기 (대지의 60% 건폐율 적용)
-  const buildingRatio = 0.57 // 57% 건폐율
-  const buildingW = siteW * buildingRatio
-  const buildingH = siteH * buildingRatio
+  if (sitePolygon && sitePolygon.coords.length >= 3) {
+    // ===== 실제 지적도 폴리곤 기반 =====
+    const { coords, centroid } = sitePolygon
+    const [cLng, cLat] = centroid
+    const LAT_M = 111319
+    const LNG_M = 111319 * Math.cos(cLat * Math.PI / 180)
 
-  // 중심 배치
-  const siteX = 0
-  const siteY = 0
-  const buildingX = siteX + (siteW - buildingW) / 2
-  const buildingY = siteY + (siteH - buildingH) / 2
+    // WGS84 → 미터 → mm (1:1000)
+    const pts = coords.map(([lng, lat]) => [
+      (lng - cLng) * LNG_M * scale,
+      (lat - cLat) * LAT_M * scale,
+    ] as [number, number])
+
+    const minX = Math.min(...pts.map(p => p[0]))
+    const minY = Math.min(...pts.map(p => p[1]))
+    // 원점 이동 (좌하단 기준)
+    sitePolyPoints = pts.map(([x, y]) => [x - minX, y - minY] as [number, number])
+    siteW = Math.max(...sitePolyPoints.map(p => p[0]))
+    siteH = Math.max(...sitePolyPoints.map(p => p[1]))
+    siteX = 0
+    siteY = 0
+  } else {
+    // ===== 면적 기반 정방형 근사 (폴리곤 없을 때) =====
+    siteW = Math.sqrt(siteArea) * scale
+    siteH = siteW
+    siteX = 0
+    siteY = 0
+  }
 
   const isGroundFloor = floor === 1
   const isTopFloor = floor === totalFloors
@@ -104,23 +125,63 @@ export function generateFloorPlanDXF(config: FloorPlanConfig): string {
     { name: 'GRID', color: 9 },               // 회청 - 그리드
   ]
 
+  // 건물 크기 (건폐율 적용)
+  const buildingRatio = 0.57
+  const buildingW = siteW * buildingRatio
+  const buildingH = siteH * buildingRatio
+  const buildingX = siteX + (siteW - buildingW) / 2
+  const buildingY = siteY + (siteH - buildingH) / 2
+
   let entities = ''
 
-  // ===== 대지 경계 =====
-  entities += dxfRect(siteX, siteY, siteW, siteH, 'SITE_BOUNDARY')
+  // ===== 대지 경계 (실제 폴리곤 또는 정방형) =====
+  if (sitePolyPoints && sitePolyPoints.length >= 3) {
+    // 실제 폴리곤 POLYLINE
+    let poly = `  0\nPOLYLINE\n  8\nSITE_BOUNDARY\n 66\n1\n 70\n1\n`
+    for (const [x, y] of sitePolyPoints) {
+      poly += `  0\nVERTEX\n  8\nSITE_BOUNDARY\n 10\n${fmt(x)}\n 20\n${fmt(y)}\n 30\n0.0000\n`
+    }
+    poly += `  0\nSEQEND\n`
+    entities += poly
 
-  // ===== 건물 외곽 =====
-  entities += dxfRect(buildingX, buildingY, buildingW, buildingH, 'BUILDING_OUTLINE')
+    // 이격거리: 각 꼭짓점을 중심점 방향으로 3m(3000mm) inset
+    const cx = sitePolyPoints.reduce((s, p) => s + p[0], 0) / sitePolyPoints.length
+    const cy = sitePolyPoints.reduce((s, p) => s + p[1], 0) / sitePolyPoints.length
+    const inset = 3 * scale
+    const insetPts = sitePolyPoints.map(([x, y]) => {
+      const dx = x - cx, dy = y - cy
+      const dist = Math.sqrt(dx*dx + dy*dy)
+      if (dist < 1) return [x, y] as [number, number]
+      const ratio = Math.max(0, (dist - inset) / dist)
+      return [cx + dx * ratio, cy + dy * ratio] as [number, number]
+    })
+    let setbackPoly = `  0\nPOLYLINE\n  8\nSETBACK_LINE\n 66\n1\n 70\n1\n`
+    for (const [x, y] of insetPts) {
+      setbackPoly += `  0\nVERTEX\n  8\nSETBACK_LINE\n 10\n${fmt(x)}\n 20\n${fmt(y)}\n 30\n0.0000\n`
+    }
+    setbackPoly += `  0\nSEQEND\n`
+    entities += setbackPoly
 
-  // ===== 이격거리 선 (건물 외곽에서 3m 이격) =====
-  const setbackDist = 3 * scale
-  entities += dxfRect(
-    buildingX - setbackDist,
-    buildingY - setbackDist,
-    buildingW + setbackDist * 2,
-    buildingH + setbackDist * 2,
-    'SETBACK_LINE'
-  )
+    // 건물외곽: inset 폴리곤의 bounding box 기준
+    const insetMinX = Math.min(...insetPts.map(p => p[0]))
+    const insetMinY = Math.min(...insetPts.map(p => p[1]))
+    const insetMaxX = Math.max(...insetPts.map(p => p[0]))
+    const insetMaxY = Math.max(...insetPts.map(p => p[1]))
+    const bW = insetMaxX - insetMinX
+    const bH = insetMaxY - insetMinY
+    const bX = insetMinX + bW * (1 - buildingRatio) / 2
+    const bY = insetMinY + bH * (1 - buildingRatio) / 2
+    const bBuildW = bW * buildingRatio
+    const bBuildH = bH * buildingRatio
+    entities += dxfRect(bX, bY, bBuildW, bBuildH, 'BUILDING_OUTLINE')
+    entities += dxfText(bX + bBuildW * 0.05, bY + bBuildH * 0.5, `${layoutName.toUpperCase()} - ${floor}F/${totalFloors}F`, 600, 'TEXT')
+  } else {
+    // 정방형 폴리곤
+    entities += dxfRect(siteX, siteY, siteW, siteH, 'SITE_BOUNDARY')
+    entities += dxfRect(buildingX, buildingY, buildingW, buildingH, 'BUILDING_OUTLINE')
+    const setbackDist = 3 * scale
+    entities += dxfRect(buildingX - setbackDist, buildingY - setbackDist, buildingW + setbackDist * 2, buildingH + setbackDist * 2, 'SETBACK_LINE')
+  }
 
   // ===== 층별 내부 구성 =====
   if (isGroundFloor) {
