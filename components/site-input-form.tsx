@@ -313,6 +313,16 @@ export function SiteInputForm({
         // Auto-fill site area if available
         if (result.data.siteArea && result.data.siteArea > 0) {
           onSiteAreaChange(String(Math.round(result.data.siteArea)))
+        } else {
+          // MOLIT에서 대지면적을 받지 못한 경우 — 기존 값 유지하고 포커스 이동
+          // siteArea 필드에 포커스를 줘서 사용자가 직접 입력하도록 유도
+          setTimeout(() => {
+            const areaInput = document.getElementById('siteArea') as HTMLInputElement | null
+            if (areaInput) {
+              areaInput.focus()
+              areaInput.select()
+            }
+          }, 300)
         }
         
         // Notify parent component
@@ -845,6 +855,11 @@ export function SiteInputForm({
               {fetchedData?.siteArea && (
                 <Badge variant="secondary" className="text-xs font-normal">
                   자동입력
+                </Badge>
+              )}
+              {fetchedData && lookupState === 'success' && !fetchedData.siteArea && (
+                <Badge variant="outline" className="text-xs font-normal text-amber-500 border-amber-500/50">
+                  직접 입력 필요
                 </Badge>
               )}
             </Label>
