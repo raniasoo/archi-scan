@@ -139,13 +139,15 @@ export function SiteInputForm({
     fetchedData.mainPurpose ? '주용도' : '',
     fetchedData.groundFloors ? '층수' : '',
     fetchedData.zoneType ? '용도지역' : '',
+    fetchedData.zoneType ? '높이 제한' : '',   // 용도지역에서 자동 추론
+    fetchedData.roadAddress || fetchedData.address ? '접도 현황' : '', // 도로명에서 추론
   ].filter(Boolean) : []
 
-  // Items that need manual verification (용도지역은 MOLIT에서 자동입력되면 제외)
+  // 이미 자동입력된 항목은 직접 확인 필요 목록에서 제외
   const manualCheckItems = [
     fetchedData?.zoneType ? '' : '용도지역',
-    '접도 조건',
-    '높이 제한',
+    (fetchedData?.roadAddress || fetchedData?.address) ? '' : '접도 조건',
+    fetchedData?.zoneType ? '' : '높이 제한',
     '지구단위계획 여부',
   ].filter(Boolean)
 
@@ -343,6 +345,32 @@ export function SiteInputForm({
           : molitZone.includes('계획관리') ? 'management-planned'
           : ''
 
+        // 접도 현황 - 주소 도로명 접미사로 추론
+        // 대로(boulevard) ≥ 25m / 로(road) ≥ 12m / 길(street) ≥ 4m
+        const roadAddr = result.data.roadAddress || address
+        const mappedRoadCondition =
+          roadAddr.includes('대로') ? '12m-plus' :
+          roadAddr.includes('로') ? '8m-plus' :
+          roadAddr.includes('길') ? '4m-plus' : '6m-plus'
+
+        // 높이 제한 - 용도지역별 법정 기본값 (m)
+        const heightByZone: Record<string, number> = {
+          'residential-exclusive-1': 9,
+          'residential-exclusive-2': 12,
+          'residential-1': 12,
+          'residential-2': 20,
+          'residential-3': 30,
+          'semi-residential': 45,
+          'commercial-neighborhood': 45,
+          'commercial-general': 60,
+          'commercial-central': 200,
+          'industrial-general': 30,
+          'green-natural': 20,
+          'green-production': 20,
+          'management-planned': 20,
+        }
+        const mappedHeightLimit = mappedZone ? (heightByZone[mappedZone] ?? 30) : null
+
         // 지구단위계획 여부 자동 추정 (district 필드 존재 시)
         const hasDistrict = !!(result.data.district && result.data.district.trim())
 
@@ -352,8 +380,8 @@ export function SiteInputForm({
             if (prev && prev.zoneType && prev.zoneType !== 'unknown') return prev // 이미 입력된 경우 유지
             return {
               zoneType: mappedZone,
-              roadCondition: prev?.roadCondition || '',
-              heightLimit: prev?.heightLimit ?? null,
+              roadCondition: prev?.roadCondition || mappedRoadCondition,
+              heightLimit: prev?.heightLimit ?? mappedHeightLimit,
               hasDistrictPlan: prev?.hasDistrictPlan ?? hasDistrict,
               districtPlanNotes: prev?.districtPlanNotes || '',
               additionalNotes: prev?.additionalNotes || '',
