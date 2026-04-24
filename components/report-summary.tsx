@@ -631,45 +631,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="section">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '7' : '6'}</span> 리스크 및 고려사항</div>
-    <div class="risk-grid">
-      <div class="risk-box">
-        <div class="risk-title">토지 관련</div>
-        <ul class="risk-list">
-          <li>감정평가에 따른 매입가 변동</li>
-          <li>소유권 및 권리관계 확인</li>
-          <li>토지거래허가구역 해당 여부</li>
-        </ul>
-      </div>
-      <div class="risk-box">
-        <div class="risk-title">인허가 관련</div>
-        <ul class="risk-list">
-          <li>건축위원회 심의에 따른 규모 조정</li>
-          <li>환경/교통영향평가 대상 여부</li>
-          <li>각종 부담금 발생 가능성</li>
-        </ul>
-      </div>
-      <div class="risk-box">
-        <div class="risk-title">시장 관련</div>
-        <ul class="risk-list">
-          <li>부동산 경기 변동에 따른 분양률 하락</li>
-          <li>인근 경쟁 단지 공급 물량</li>
-          <li>금리 변동에 따른 금융비용</li>
-        </ul>
-      </div>
-      <div class="risk-box">
-        <div class="risk-title">공사 관련</div>
-        <ul class="risk-list">
-          <li>자재비/인건비 상승</li>
-          <li>지반 조건에 따른 추가 비용</li>
-          <li>민원에 따른 공사 지연</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '8' : '7'}</span> AI 분석</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '7' : '6'}</span> AI 분석</div>
     <div class="ai-score-grid">
       <div class="ai-score-card">
         <div class="stat-label">법규 적합성</div>
@@ -744,6 +706,44 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       <div class="stat-value" style="font-size: 14pt; color: ${layout.recommendation.strategyMatch >= 80 ? '#166534' : layout.recommendation.strategyMatch >= 60 ? '#0369a1' : '#92400e'};">${layout.recommendation.strategyMatch}%</div>
     </div>
     ` : ''}
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '8' : '7'}</span> 리스크 및 고려사항</div>
+    <div class="risk-grid">
+      <div class="risk-box">
+        <div class="risk-title">토지 관련</div>
+        <ul class="risk-list">
+          <li>감정평가에 따른 매입가 변동</li>
+          <li>소유권 및 권리관계 확인</li>
+          <li>토지거래허가구역 해당 여부</li>
+        </ul>
+      </div>
+      <div class="risk-box">
+        <div class="risk-title">인허가 관련</div>
+        <ul class="risk-list">
+          <li>건축위원회 심의에 따른 규모 조정</li>
+          <li>환경/교통영향평가 대상 여부</li>
+          <li>각종 부담금 발생 가능성</li>
+        </ul>
+      </div>
+      <div class="risk-box">
+        <div class="risk-title">시장 관련</div>
+        <ul class="risk-list">
+          <li>부동산 경기 변동에 따른 분양률 하락</li>
+          <li>인근 경쟁 단지 공급 물량</li>
+          <li>금리 변동에 따른 금융비용</li>
+        </ul>
+      </div>
+      <div class="risk-box">
+        <div class="risk-title">공사 관련</div>
+        <ul class="risk-list">
+          <li>자재비/인건비 상승</li>
+          <li>지반 조건에 따른 추가 비용</li>
+          <li>민원에 따른 공사 지연</li>
+        </ul>
+      </div>
+    </div>
   </div>
 
   <div class="section">
