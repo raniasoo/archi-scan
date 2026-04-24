@@ -660,6 +660,11 @@ export default function ArchiScanPage() {
       additionalNotes: hasDistrict ? '지구단위계획 적용' : '',
     }))
 
+    // siteArea도 업데이트 (MOLIT에서 직접 받은 값)
+    if (data.siteArea && data.siteArea > 0) {
+      setSiteArea(String(Math.round(data.siteArea)))
+    }
+
     console.log('[v0] MOLIT data fetched → molitSupplementData:', { mappedZone, roadWidth, heightLimit, hasDistrict })
   }
 
