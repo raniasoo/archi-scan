@@ -279,6 +279,9 @@ interface ResolvedAddress {
   ji: string              // 지 (4자리)
   // Lookup path
   lookupPath: 'juso-resolved'
+  // 건물 입구 좌표 (WGS84) - detail=Y 응답에서 파싱
+  entX?: number           // 경도 (longitude)
+  entY?: number           // 위도 (latitude)
 }
 
 /**
@@ -495,6 +498,9 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
       ji,
       lookupPath: 'juso-resolved',
       platGbCdFromBdMgtSn,
+      // 건물 입구 좌표 (WGS84) - detail=Y 응답에 포함
+      entX: juso.entX ? parseFloat(juso.entX) : undefined,
+      entY: juso.entY ? parseFloat(juso.entY) : undefined,
     }
     
     console.log(`[JUSO] Address resolved successfully:`, {
@@ -1598,6 +1604,9 @@ export async function lookupSiteData(
       
       const siteData = mapBuildingToSiteData(result.data)
       siteData.dataSource = 'building'
+      // JUSO에서 받은 건물 입구 좌표 추가
+      if (jusoResult.resolved?.entX) siteData.entX = jusoResult.resolved.entX
+      if (jusoResult.resolved?.entY) siteData.entY = jusoResult.resolved.entY
       
       diagnostics.apiResponse = {
         status: 'success-with-data',

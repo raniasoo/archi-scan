@@ -9,6 +9,8 @@ import { Loader2, MapPin, Download, AlertTriangle, CheckCircle2 } from "lucide-r
 interface CadastralMapProps {
   address: string
   siteArea: number
+  entX?: number          // 경도 (JUSO에서 파싱한 실제 좌표)
+  entY?: number          // 위도 (JUSO에서 파싱한 실제 좌표)
   setbackFront?: number
   setbackSide?: number
   setbackRear?: number
@@ -34,6 +36,8 @@ const PAD = 30
 export function CadastralMap({
   address,
   siteArea,
+  entX,
+  entY,
   setbackFront = 2,
   setbackSide = 1,
   setbackRear = 1.5,
@@ -51,17 +55,17 @@ export function CadastralMap({
     setError(null)
 
     try {
-      // 서버 API로 Vworld 조회 (domain 파라미터로 인증)
+      // 서버 API로 Vworld 조회 (JUSO 좌표 있으면 같이 전달)
       const res = await fetch('/api/vworld', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, siteArea }),
+        body: JSON.stringify({ address, siteArea, entX, entY }),
       })
       const data = await res.json()
 
       if (data.success && data.parcel) {
         setParcel(data.parcel)
-        setIsDemo(false)
+        setIsDemo(!!data.parcel.isDemo)
         onParcelLoaded?.(data.parcel.area)
       } else if (data.demoParcel) {
         setParcel(data.demoParcel)
@@ -76,7 +80,7 @@ export function CadastralMap({
     } finally {
       setLoading(false)
     }
-  }, [address, siteArea, onParcelLoaded])
+  }, [address, siteArea, entX, entY, onParcelLoaded])
 
   // SVG 변환
   const svgData = useMemo(() => {
@@ -174,13 +178,12 @@ export function CadastralMap({
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">
-              {isDemo ? 'Vworld 연결 중 — 데모 형상으로 표시합니다' : error}
+              {isDemo
+                ? (parcel && !parcel.pnu?.startsWith('DEMO')
+                  ? 'JUSO 좌표 기반 위치 표시 (실제 필지 경계와 근사치)'
+                  : 'Vworld 연결 중 — 데모 형상으로 표시합니다')
+                : error}
             </p>
-            {isDemo && (
-              <p className="text-amber-400/70 mt-0.5">
-                실제 지적도 표시를 위해 Vercel 환경변수 VWORLD_API_KEY를 확인해주세요
-              </p>
-            )}
           </div>
         </div>
       )}

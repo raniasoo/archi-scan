@@ -191,6 +191,9 @@ export interface MolitSiteData {
   // Meta
   dataSource?: 'building' | 'land' | 'address'
   fetchedAt?: string
+  // 건물 입구 좌표 (JUSO API detail=Y에서 파싱)
+  entX?: number   // 경도 (longitude, WGS84)
+  entY?: number   // 위도 (latitude, WGS84)
 }
 
 /**

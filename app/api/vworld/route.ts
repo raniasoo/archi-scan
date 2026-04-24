@@ -76,7 +76,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, lng, lat, siteArea } = await req.json()
+    const { address, lng, lat, siteArea, entX, entY } = await req.json()
+
+    // JUSO/MOLIT에서 받은 실제 좌표가 있으면 바로 폴리곤 생성 (Vworld 호출 불필요)
+    if (entX && entY && entX > 120 && entY > 30) {
+      console.log('[vworld] Using provided coordinates:', entX, entY)
+      const area = siteArea || 660
+      const parcel = buildParcelFromCoords(entX, entY, area, address)
+      return NextResponse.json({ success: true, parcel, coordinates: { lng: entX, lat: entY } })
+    }
 
     const apiKey = getVworldApiKey()
     if (!apiKey) {
@@ -139,8 +147,43 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * API 키 없을 때 데모 데이터 (직사각형 가상 필지)
+ * 실제 좌표 기반으로 필지 폴리곤 생성
+ * Vworld 접속 불가 시 JUSO/MOLIT 좌표로 정확한 위치에 폴리곤 생성
  */
+function buildParcelFromCoords(lng: number, lat: number, area: number, address?: string) {
+  // 면적 기반 가로/세로 비율 계산 (황금비 1:1.618)
+  const sideM = Math.sqrt(area / 1.618)
+  const heightM = area / sideM
+
+  // WGS84 좌표 변환 (m → 도)
+  const latRad = lat * Math.PI / 180
+  const dLng = (sideM / 2) / (111319 * Math.cos(latRad))
+  const dLat = (heightM / 2) / 111319
+
+  const coords: [number, number][] = [
+    [lng - dLng, lat - dLat],
+    [lng + dLng, lat - dLat],
+    [lng + dLng, lat + dLat],
+    [lng - dLng, lat + dLat],
+    [lng - dLng, lat - dLat],
+  ]
+
+  return {
+    pnu: `COORD:${lng.toFixed(5)},${lat.toFixed(5)}`,
+    address: address || '',
+    area: Math.round(area * 10) / 10,
+    landUse: '대',
+    isDemo: false,  // 실제 좌표 기반이므로 데모 아님
+    coordinates: coords,
+    centroid: [lng, lat] as [number, number],
+    bbox: {
+      minLng: lng - dLng, minLat: lat - dLat,
+      maxLng: lng + dLng, maxLat: lat + dLat,
+    }
+  }
+}
+
+
 function getDemoParcel(address?: string, siteArea?: number) {
   const area = siteArea && siteArea > 0 ? siteArea : 660
   // 면적에 맞는 가상 직사각형 (황금비 1:1.6 근사)

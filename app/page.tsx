@@ -433,6 +433,8 @@ export default function ArchiScanPage() {
     roadWidth?: number
     heightLimit?: number
     hasDistrictPlan?: boolean
+    entX?: number   // 경도 (JUSO에서 파싱)
+    entY?: number   // 위도 (JUSO에서 파싱)
   }>({})
   
   // Centralized computed results - single source of truth
@@ -648,6 +650,8 @@ export default function ArchiScanPage() {
       roadWidth,
       heightLimit,
       hasDistrictPlan: hasDistrict,
+      entX: data.entX,
+      entY: data.entY,
     })
 
     // regulation state도 동시 업데이트
@@ -1322,6 +1326,8 @@ export default function ArchiScanPage() {
               <CadastralMap
                 address={address}
                 siteArea={siteAreaNum}
+                entX={molitSupplementData.entX}
+                entY={molitSupplementData.entY}
                 setbackFront={regulation.setbackFront}
                 setbackSide={regulation.setbackSide}
                 setbackRear={regulation.setbackRear}
