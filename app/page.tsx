@@ -461,7 +461,46 @@ export default function ArchiScanPage() {
     setMounted(true)
     // Initialize user
     getOrCreateUser().then(setCurrentUser)
+
+    // 저장된 프로젝트 상태 복원
+    try {
+      const saved = localStorage.getItem('archi-scan-session')
+      if (saved) {
+        const s = JSON.parse(saved)
+        if (s.address) setAddress(s.address)
+        if (s.siteArea) setSiteArea(s.siteArea)
+        if (s.strategy) setStrategy(s.strategy)
+        if (s.regulation) setRegulation(s.regulation)
+        if (s.supplementData) setSupplementData(s.supplementData)
+        if (s.molitSupplementData) setMolitSupplementData(s.molitSupplementData)
+        if (s.layouts?.length) {
+          setLayouts(s.layouts)
+          if (s.currentStep && s.currentStep !== 'input') setCurrentStep(s.currentStep)
+          if (s.selectedLayout != null) setSelectedLayout(s.selectedLayout)
+        }
+      }
+    } catch {}
   }, [])
+
+  // 핵심 상태 변경 시 자동 저장
+  useEffect(() => {
+    if (!mounted) return
+    try {
+      localStorage.setItem('archi-scan-session', JSON.stringify({
+        address,
+        siteArea,
+        strategy,
+        regulation,
+        supplementData,
+        molitSupplementData,
+        layouts,
+        currentStep,
+        selectedLayout,
+        savedAt: new Date().toISOString(),
+      }))
+    } catch {}
+  }, [mounted, address, siteArea, strategy, regulation, supplementData, molitSupplementData, layouts, currentStep, selectedLayout])
+
 
   // Auto-calculate legalSummary when regulation or siteArea changes
   useEffect(() => {
@@ -1238,7 +1277,27 @@ export default function ArchiScanPage() {
                 요금제
               </Button>
             )}
+
+            {/* 자동저장 표시 + 새 프로젝트 */}
+            {address && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (confirm('현재 작업을 지우고 새 프로젝트를 시작할까요?')) {
+                    localStorage.removeItem('archi-scan-session')
+                    window.location.reload()
+                  }
+                }}
+                className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                title="새 프로젝트 시작"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                <span className="hidden sm:inline">새 프로젝트</span>
+              </Button>
+            )}
             </div>
+
           </div>
           
           {/* Progress Steps - Desktop */}
@@ -1312,6 +1371,20 @@ export default function ArchiScanPage() {
         {currentStep === "input" && (
           <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh]">
             <div className="w-full max-w-md">
+              {/* 이전 작업 복원 알림 */}
+              {address && mounted && (() => {
+                try {
+                  const saved = localStorage.getItem('archi-scan-session')
+                  const s = saved ? JSON.parse(saved) : null
+                  return s?.savedAt ? (
+                    <div className="mb-3 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-xs text-emerald-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v14a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                      이전 작업이 자동 복원됐습니다 ({new Date(s.savedAt).toLocaleString('ko', {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})})
+                    </div>
+                  ) : null
+                } catch { return null }
+              })()}
+
               {/* Dev Mode Scenario Selector */}
               <ScenarioSelector 
                 className="mb-4"
