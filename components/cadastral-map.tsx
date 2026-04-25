@@ -223,13 +223,33 @@ export function CadastralMap({
               width="100%"
               style={{ display: 'block', background: '#0f172a' }}
             >
-              {/* 격자 배경 */}
-              <defs>
-                <pattern id="cad-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" strokeWidth="0.5" />
-                </pattern>
-              </defs>
-              <rect width={VIEW_W} height={VIEW_H} fill="url(#cad-grid)" />
+              {/* Vworld 지적도 WMS 배경 - 실제 지적도 */}
+              {!isDemo && parcel.bbox && (() => {
+                const { minLng, minLat, maxLng, maxLat } = parcel.bbox
+                const dLng = (maxLng - minLng) * 0.4
+                const dLat = (maxLat - minLat) * 0.4
+                const q = `minx=${minLng - dLng}&miny=${minLat - dLat}&maxx=${maxLng + dLng}&maxy=${maxLat + dLat}`
+                const bgUrl = `/api/map-tile?${q}&w=${VIEW_W}&h=${VIEW_H}&layer=base`
+                const cadUrl = `/api/map-tile?${q}&w=${VIEW_W}&h=${VIEW_H}&layer=lt_c_lhpclnd`
+                return (
+                  <>
+                    <image href={bgUrl} x={0} y={0} width={VIEW_W} height={VIEW_H} />
+                    <image href={cadUrl} x={0} y={0} width={VIEW_W} height={VIEW_H} />
+                  </>
+                )
+              })()}
+
+              {/* 격자 배경 (데모 모드 또는 bbox 없을 때) */}
+              {(isDemo || !parcel.bbox) && (
+                <>
+                  <defs>
+                    <pattern id="cad-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" strokeWidth="0.5" />
+                    </pattern>
+                  </defs>
+                  <rect width={VIEW_W} height={VIEW_H} fill="url(#cad-grid)" />
+                </>
+              )}
 
               {/* 대지 영역 */}
               <path
