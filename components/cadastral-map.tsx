@@ -184,6 +184,15 @@ export function CadastralMap({
               <CheckCircle2 className="h-3.5 w-3.5" />
               보기
             </Button>
+            {parcel && parcel.centroid && (
+              <Button variant="outline" size="sm" onClick={() => {
+                const [lng, lat] = parcel.centroid
+                window.open(`https://map.vworld.kr/map/maps.do?basemap=white&pos_x=${lng}&pos_y=${lat}&zoom=5&legend_layers=lt_c_lhpclnd`, '_blank')
+              }} className="gap-2 text-emerald-400 border-emerald-500/30">
+                <MapPin className="h-3.5 w-3.5" />
+                지도
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={downloadSVG} className="gap-2">
               <Download className="h-3.5 w-3.5" />
               SVG 저장
@@ -223,152 +232,43 @@ export function CadastralMap({
               width="100%"
               style={{ display: 'block', background: '#0f172a' }}
             >
-              {/* OSM 타일 - Web Mercator 좌표계로 정확한 정렬 */}
-              {!isDemo && parcel.centroid && parcel.coordinates && (() => {
-                const Z = 17
-                const N = Math.pow(2, Z)
-                const TILE_PX = 256  // 타일 픽셀 크기
 
-                // Web Mercator: 지리좌표 → 월드픽셀
-                const toWorld = (lng: number, lat: number): [number, number] => {
-                  const latRad = lat * Math.PI / 180
-                  const wx = (lng + 180) / 360 * N * TILE_PX
-                  const wy = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * N * TILE_PX
-                  return [wx, wy]
-                }
-
-                // 파셀 경계를 월드픽셀로 변환
-                const worldPts = parcel.coordinates.map(([lng, lat]: [number, number]) => toWorld(lng, lat))
-                const wxs = worldPts.map(([wx]: [number, number]) => wx)
-                const wys = worldPts.map(([_, wy]: [number, number]) => wy)
-                const wxMin = Math.min(...wxs), wxMax = Math.max(...wxs)
-                const wyMin = Math.min(...wys), wyMax = Math.max(...wys)
-                const wxCenter = (wxMin + wxMax) / 2, wyCenter = (wyMin + wyMax) / 2
-                // 지리 좌표 (setback 계산용)
-                const cLat = parcel.centroid[1]  // 중심 위도
-
-                // SVG 스케일: 파셀이 SVG에 꽉 차도록 (PAD=30)
-                const PAD = 30
-                const scaleX = (VIEW_W - PAD * 2) / Math.max(wxMax - wxMin, 1)
-                const scaleY = (VIEW_H - PAD * 2) / Math.max(wyMax - wyMin, 1)
-                const scale = Math.min(scaleX, scaleY) * 0.85  // 여백 확보
-
-                // 월드픽셀 → SVG 픽셀 변환
-                const toSVG = (wx: number, wy: number): [number, number] => [
-                  VIEW_W / 2 + (wx - wxCenter) * scale,
-                  VIEW_H / 2 + (wy - wyCenter) * scale,
-                ]
-
-                // 필요한 타일 범위 계산 (여백 포함)
-                const MARGIN = 1  // 상하좌우 1타일 여백
-                const txCenter = Math.floor(wxCenter / TILE_PX)
-                const tyCenter = Math.floor(wyCenter / TILE_PX)
-
-                const tiles: Array<{tx: number; ty: number}> = []
-                for (let dy = -MARGIN; dy <= MARGIN; dy++)
-                  for (let dx = -MARGIN; dx <= MARGIN; dx++)
-                    tiles.push({ tx: txCenter + dx, ty: tyCenter + dy })
-
-                // 파셀 폴리곤 SVG 포인트 재계산 (Mercator 기반)
-                const mercatorPoints = parcel.coordinates.map(([lng, lat]: [number, number]) => {
-                  const [wx, wy] = toWorld(lng, lat)
-                  return toSVG(wx, wy)
-                }) as [number, number][]
-
-                return (
-                  <g>
-                    {/* OSM 타일 배경 */}
-                    {tiles.map(({ tx, ty }) => {
-                      const [sx, sy] = toSVG(tx * TILE_PX, ty * TILE_PX)
-                      const [ex, ey] = toSVG((tx + 1) * TILE_PX, (ty + 1) * TILE_PX)
-                      return (
-                        <image
-                          key={`${tx}-${ty}`}
-                          href={`/api/map-tile?type=wmts&z=${Z}&x=${tx}&y=${ty}`}
-                          x={sx} y={sy}
-                          width={ex - sx} height={ey - sy}
-                          preserveAspectRatio="none"
-                          crossOrigin="anonymous"
-                          opacity={0.85}
-                        />
-                      )
-                    })}
-                    {/* 파셀 경계선 */}
-                    <path
-                      d={mercatorPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ') + ' Z'}
-                      fill="#3b82f620"
-                      stroke="#3b82f6"
-                      strokeWidth="2"
-                    />
-                    {/* 이격거리 경계선 (Mercator) */}
-                    {(() => {
-                      if (mercatorPoints.length < 3) return null
-                      const cx = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[0], 0) / mercatorPoints.length
-                      const cy = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[1], 0) / mercatorPoints.length
-                      // 이격거리 → SVG 픽셀 (Z=17: 약 0.94m/worldpx → scale 적용)
-                      const metersPerWorldPx = 156543.034 * Math.cos(cLat * Math.PI / 180) / N
-                      const avgSetback = (setbackFront + setbackSide + setbackRear) / 3
-                      const insetSVGPx = avgSetback / metersPerWorldPx * scale
-                      const insetPts = mercatorPoints.map(([x, y]: [number,number]) => {
-                        const dx = x - cx, dy = y - cy
-                        const dist = Math.sqrt(dx*dx + dy*dy)
-                        if (dist < 1) return [x, y]
-                        const ratio = Math.max(0, (dist - insetSVGPx) / dist)
-                        return [cx + dx * ratio, cy + dy * ratio]
-                      })
-                      return <path
-                        d={insetPts.map((p: number[], i: number) => `${i === 0 ? 'M' : 'L'} ${(p[0] as number).toFixed(1)} ${(p[1] as number).toFixed(1)}`).join(' ') + ' Z'}
-                        fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="6 3" opacity="0.9"
-                      />
-                    })()}
-                    {/* 건축 가능 영역 (Mercator) */}
-                    {(() => {
-                      if (mercatorPoints.length < 3) return null
-                      const cx = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[0], 0) / mercatorPoints.length
-                      const cy = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[1], 0) / mercatorPoints.length
-                      const metersPerWorldPx = 156543.034 * Math.cos(cLat * Math.PI / 180) / N
-                      const avgSetback = (setbackFront + setbackSide + setbackRear) / 3
-                      const insetSVGPx = avgSetback / metersPerWorldPx * scale
-                      const ratio = Math.sqrt(coverageRatio / 100)
-                      const bldPts = mercatorPoints.map(([x, y]: [number,number]) => {
-                        const dx = x - cx, dy = y - cy
-                        const dist = Math.sqrt(dx*dx + dy*dy)
-                        if (dist < 1) return [x, y]
-                        const innerRatio = Math.max(0, (dist - insetSVGPx) / dist)
-                        const ix = cx + dx * innerRatio, iy = cy + dy * innerRatio
-                        return [cx + (ix - cx) * ratio, cy + (iy - cy) * ratio]
-                      })
-                      return <path
-                        d={bldPts.map((p: number[], i: number) => `${i === 0 ? 'M' : 'L'} ${(p[0] as number).toFixed(1)} ${(p[1] as number).toFixed(1)}`).join(' ') + ' Z'}
-                        fill="#10b98122" stroke="#10b981" strokeWidth="2" opacity="0.9"
-                      />
-                    })()}
-                  </g>
-                )
-              })()}
               {/* 격자 배경 (데모 모드 또는 bbox 없을 때) */}
-              {(isDemo || !parcel.bbox) && (
-                <>
-                  <defs>
-                    <pattern id="cad-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" strokeWidth="0.5" />
-                    </pattern>
-                  </defs>
-                  <rect width={VIEW_W} height={VIEW_H} fill="url(#cad-grid)" />
-                </>
-              )}
+              <defs>
+                <pattern id="cad-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" strokeWidth="0.5" />
+                </pattern>
+              </defs>
+              <rect width={VIEW_W} height={VIEW_H} fill="url(#cad-grid)" />
 
-              {/* 대지/이격거리/건축영역 - 데모 또는 OSM 없을 때만 */}
-              {(isDemo || !parcel.centroid) && (
-                <>
-                  <path
-                    d={toSVGPath(svgData.points)}
-                    fill="#3b82f620" stroke="#3b82f6" strokeWidth="2"
-                    strokeDasharray={isDemo ? "6 3" : "none"}
-                  />
-                  {innerPoints && <path d={toSVGPath(innerPoints)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="6 3" opacity="0.9" />}
-                  {buildingPoints && <path d={toSVGPath(buildingPoints)} fill="#10b98122" stroke="#10b981" strokeWidth="2" opacity="0.9" />}
-                </>
+              {/* 대지 영역 */}
+              <path
+                d={toSVGPath(svgData.points)}
+                fill="#3b82f620"
+                stroke="#3b82f6"
+                strokeWidth="2"
+                strokeDasharray={isDemo ? "6 3" : "none"}
+              />
+              {/* 이격거리 경계선 */}
+              {innerPoints && (
+                <path
+                  d={toSVGPath(innerPoints)}
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="2"
+                  strokeDasharray="6 3"
+                  opacity="0.9"
+                />
+              )}
+              {/* 건축 가능 영역 (건폐율) */}
+              {buildingPoints && (
+                <path
+                  d={toSVGPath(buildingPoints)}
+                  fill="#10b98122"
+                  stroke="#10b981"
+                  strokeWidth="2"
+                  opacity="0.9"
+                />
               )}
 
               {/* 범례 */}
