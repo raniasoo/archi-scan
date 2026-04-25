@@ -223,23 +223,59 @@ export function CadastralMap({
               width="100%"
               style={{ display: 'block', background: '#0f172a' }}
             >
-              {/* Vworld 지적도 WMS - 브라우저에서 직접 로드 (한국 IP로 요청) */}
-              {!isDemo && parcel.bbox && (() => {
-                const { minLng, minLat, maxLng, maxLat } = parcel.bbox
-                const dLng = (maxLng - minLng) * 0.5
-                const dLat = (maxLat - minLat) * 0.5
-                const bbox = `${minLng - dLng},${minLat - dLat},${maxLng + dLng},${maxLat + dLat}`
-                const key = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-                const domain = 'v0-archi-scan-layout-generator.vercel.app'
-                const wmsBase = `https://api.vworld.kr/req/wms?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&SRS=EPSG:4326&BBOX=${bbox}&WIDTH=${VIEW_W}&HEIGHT=${VIEW_H}&FORMAT=image/png&key=${key}&domain=${domain}`
-                // 배경지도 + 지적도 레이어 순서
-                const bgUrl = `${wmsBase}&LAYERS=base&TRANSPARENT=false`
-                const cadUrl = `${wmsBase}&LAYERS=lt_c_lhpclnd&TRANSPARENT=true`
+              {/* OSM 타일 배경 - polygonToSVG 좌표계와 정렬 */}
+              {!isDemo && parcel.bbox && svgData && (() => {
+                // parcel의 minLng/minLat (polygonToSVG와 동일 기준점)
+                const lngs = parcel.coordinates.map((c: [number,number]) => c[0])
+                const lats = parcel.coordinates.map((c: [number,number]) => c[1])
+                const minLng = Math.min(...lngs), maxLng = Math.max(...lngs)
+                const minLat = Math.min(...lats), maxLat = Math.max(...lats)
+                const scaledH = (maxLat - minLat) * svgData.scale
+                const latRad = ((minLat + maxLat) / 2) * Math.PI / 180
+                const lngScale = Math.cos(latRad)
+
+                // 지리좌표 → SVG 픽셀 변환 (polygonToSVG와 동일)
+                const geoToSVG = (lng: number, lat: number): [number, number] => [
+                  svgData.offsetX + (lng - minLng) * lngScale * svgData.scale,
+                  svgData.offsetY + scaledH - (lat - minLat) * svgData.scale,
+                ]
+
+                // OSM 타일 계산
+                const z = 17, n = Math.pow(2, z)
+                const tileLng = (tx: number) => tx / n * 360 - 180
+                const tileLat = (ty: number) => Math.atan(Math.sinh(Math.PI * (1 - 2 * ty / n))) * 180 / Math.PI
+
+                // 중심 타일 (parcel 중심 기준)
+                const cLng = (minLng + maxLng) / 2, cLat = (minLat + maxLat) / 2
+                const cLatRad = cLat * Math.PI / 180
+                const ctx = Math.floor((cLng + 180) / 360 * n)
+                const cty = Math.floor((1 - Math.log(Math.tan(cLatRad) + 1/Math.cos(cLatRad)) / Math.PI) / 2 * n)
+
+                // 3x3 타일 그리드
+                const tiles: Array<{ttx: number; tty: number}> = []
+                for (let dy = -1; dy <= 1; dy++)
+                  for (let dx = -1; dx <= 1; dx++)
+                    tiles.push({ ttx: ctx + dx, tty: cty + dy })
+
                 return (
-                  <>
-                    <image href={bgUrl} x={0} y={0} width={VIEW_W} height={VIEW_H} preserveAspectRatio="none" />
-                    <image href={cadUrl} x={0} y={0} width={VIEW_W} height={VIEW_H} preserveAspectRatio="none" />
-                  </>
+                  <g opacity={0.8}>
+                    {tiles.map(({ ttx, tty }) => {
+                      const lngMin = tileLng(ttx), lngMax = tileLng(ttx + 1)
+                      const latMax = tileLat(tty), latMin = tileLat(tty + 1)
+                      const [x1, y1] = geoToSVG(lngMin, latMax)  // top-left
+                      const [x2, y2] = geoToSVG(lngMax, latMin)  // bottom-right
+                      return (
+                        <image
+                          key={`${ttx}-${tty}`}
+                          href={`https://tile.openstreetmap.org/${z}/${ttx}/${tty}.png`}
+                          x={x1} y={y1}
+                          width={x2 - x1} height={y2 - y1}
+                          preserveAspectRatio="none"
+                          crossOrigin="anonymous"
+                        />
+                      )
+                    })}
+                  </g>
                 )
               })()}
 
