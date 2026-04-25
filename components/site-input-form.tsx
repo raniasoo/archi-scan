@@ -493,17 +493,20 @@ export function SiteInputForm({
           // JUSO 좌표 + 필지 코드 전달 (지적도 위치 표시 + zone-lookup용)
           const jusoData = result.diagnostics?.jusoResult
           const reqParams = result.diagnostics?.requestParams
-          if (jusoData?.entX || jusoData?.entY || jusoData?.roadAddr || reqParams?.sigunguCd) {
+          // sigunguCd: requestParams 우선, fallback으로 jusoResult.extractedCodes
+          const extracted = jusoData?.extractedCodes
+          const sigunguCd = reqParams?.sigunguCd || extracted?.sigunguCd
+          if (sigunguCd || jusoData?.rawResponse?.roadAddr) {
             onMolitDataFetched({
-              entX: jusoData?.entX,
-              entY: jusoData?.entY,
-              roadAddress: jusoData?.roadAddr,
+              entX: (jusoData as any)?.entX,
+              entY: (jusoData as any)?.entY,
+              roadAddress: (jusoData as any)?.roadAddr || jusoData?.rawResponse?.roadAddr,
               address: jusoData?.jibunAddr,
-              // zone-lookup에 필요한 필지 코드 포함
-              sigunguCd: reqParams?.sigunguCd || jusoData?.sigunguCd,
-              bjdongCd: reqParams?.bjdongCd || jusoData?.bjdongCd,
-              bun: reqParams?.bun || jusoData?.bun,
-              ji: reqParams?.ji || jusoData?.ji,
+              // zone-lookup에 필요한 필지 코드
+              sigunguCd: sigunguCd,
+              bjdongCd: reqParams?.bjdongCd || extracted?.bjdongCd,
+              bun: reqParams?.bun || extracted?.bun,
+              ji: reqParams?.ji || extracted?.ji,
             } as import('@/types/molit').MolitSiteData)
           }
         }
