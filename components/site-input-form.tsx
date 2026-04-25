@@ -137,7 +137,11 @@ export function SiteInputForm({
 
   // success-empty 시 내부에서 직접 zone-lookup 호출 (page.tsx 체인 우회)
   useEffect(() => {
-    if (lookupState !== 'success-empty' || !resolvedJuso?.sigunguCd) return
+    // success-empty: MOLIT 실패, 또는 success: MOLIT 성공했지만 용도지역 없음
+    const needsZoneLookup = 
+      (lookupState === 'success-empty' && !!resolvedJuso?.sigunguCd) ||
+      (lookupState === 'success' && !fetchedData?.zoneType && !!resolvedJuso?.sigunguCd)
+    if (!needsZoneLookup) return
     if (autoZoneCode) return  // 이미 조회됨
 
     const { sigunguCd, bjdongCd, bun, ji, roadAddr } = resolvedJuso
@@ -187,7 +191,7 @@ export function SiteInputForm({
         }
       })
       .catch(e => console.warn('[site-input] zone-lookup 실패:', e))
-  }, [lookupState, resolvedJuso?.sigunguCd, autoZoneCode])
+  }, [lookupState, resolvedJuso?.sigunguCd, autoZoneCode, fetchedData?.zoneType])
 
 
   const [envStatus, setEnvStatus] = useState<{
@@ -289,6 +293,10 @@ export function SiteInputForm({
     // 재조회 시 이전 supplement 데이터 리셋 (잘못된 값 복원 방지)
     if (!isRetry) {
       setSupplementData(null)
+      setAutoZoneCode(null)
+      setAutoRoadCondition(null)
+      // 이전 대지면적 초기화 (다른 주소 조회 시 잔류값 방지)
+      onSiteAreaChange('')
     }
 
     setRequestId(prev => prev + 1)
