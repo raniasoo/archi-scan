@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const VWORLD_KEY    = process.env.VWORLD_API_KEY || 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-const LURIS_KEY     = process.env.MOLIT_API_KEY || ''   // 토지이용계획 API 키 (동일 키 사용)
+const LURIS_KEY     = process.env.LAND_USE_KEY     // 토지이용계획정보 API 전용 키 (data.go.kr 신청)
+                   || process.env.MOLIT_API_KEY    // fallback: 기존 건축물대장 키
+                   || ''
 const VWORLD_BASE   = 'https://api.vworld.kr/req/data'
-// 국토부 토지이용계획정보 속성조회 엔드포인트
+// 국토부 토지이용계획정보 속성조회 (data.go.kr 국토교통부_토지이용계획정보)
 const LURIS_ATTR    = 'https://apis.data.go.kr/1611000/nsdi/LandUseService/attr/getLandUsePlan'
 
 // 용도지역 한글 → 코드 변환
