@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const runtime = 'edge'  // Vworld /ned/ 접근을 위해 Edge IP 사용
+
 const VWORLD_KEY    = process.env.VWORLD_API_KEY || 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
 const LURIS_KEY     = process.env.LAND_USE_KEY     // 토지이용계획정보 API 전용 키 (data.go.kr 신청)
                    || process.env.MOLIT_API_KEY    // fallback: 기존 건축물대장 키
