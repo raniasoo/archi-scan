@@ -284,7 +284,7 @@ export function CadastralMap({
                       return (
                         <image
                           key={`${tx}-${ty}`}
-                          href={`https://api.vworld.kr/req/wmts/1.0.0/Base/GoogleMapsCompatible/${Z}/${ty}/${tx}.png?key=FFEC486D-E635-345C-9BA6-5404A5AA191B`}
+                          href={`/api/map-tile?type=wmts&z=${Z}&x=${tx}&y=${ty}`}
                           x={sx} y={sy}
                           width={ex - sx} height={ey - sy}
                           preserveAspectRatio="none"
