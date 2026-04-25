@@ -82,6 +82,10 @@ export function SiteInputForm({
   // Resolved JUSO data for display and manual retry
   const [resolvedJuso, setResolvedJuso] = useState<ResolvedJusoData | null>(null)
   
+  // 직접 zone-lookup 결과 (success-empty 시 내부에서 자동 조회)
+  const [autoZoneCode, setAutoZoneCode] = useState<string | null>(null)
+  const [autoRoadCondition, setAutoRoadCondition] = useState<string | null>(null)
+  
   // Manual parcel input mode
   const [showManualInput, setShowManualInput] = useState(false)
   const [manualParcel, setManualParcel] = useState<ManualParcelInput>({
@@ -130,6 +134,46 @@ export function SiteInputForm({
       return autoData
     })
   }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit, (externalSupplement as any)?._key])
+
+  // success-empty 시 내부에서 직접 zone-lookup 호출 (page.tsx 체인 우회)
+  useEffect(() => {
+    if (lookupState !== 'success-empty' || !resolvedJuso?.sigunguCd) return
+    if (autoZoneCode) return  // 이미 조회됨
+
+    const { sigunguCd, bjdongCd, bun, ji, roadAddr } = resolvedJuso
+    console.log('[site-input] success-empty zone-lookup 직접 호출:', { sigunguCd, bjdongCd, bun, ji })
+
+    // 접도현황 즉시 계산 (roadAddr 기반)
+    const addr = roadAddr || address || ''
+    const rw = addr.includes('대로') ? 25 : addr.includes('길') ? 6 : addr.includes('로') ? 12 : 8
+    const rc = rw >= 12 ? '12m-plus' : rw >= 8 ? '8m-plus' : rw >= 6 ? '6m-plus' : rw >= 4 ? '4m-plus' : 'under-4m'
+    setAutoRoadCondition(rc)
+
+    // zone-lookup API 직접 호출
+    fetch('/api/zone-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sigunguCd, bjdongCd, bun, ji, address: addr }),
+    })
+      .then(r => r.json())
+      .then(res => {
+        const zone = res.zoneCode || ''
+        console.log('[site-input] zone-lookup 결과:', zone, '(source:', res.source, ')')
+        if (zone) {
+          setAutoZoneCode(zone)
+          // supplementData 직접 업데이트
+          setSupplementData(prev => ({
+            zoneType: zone,
+            roadCondition: prev?.roadCondition || rc,
+            heightLimit: prev?.heightLimit ?? null,
+            hasDistrictPlan: prev?.hasDistrictPlan ?? false,
+            districtPlanNotes: prev?.districtPlanNotes || '',
+            additionalNotes: prev?.additionalNotes || '',
+          }))
+        }
+      })
+      .catch(e => console.warn('[site-input] zone-lookup 실패:', e))
+  }, [lookupState, resolvedJuso?.sigunguCd, autoZoneCode])
 
 
   const [envStatus, setEnvStatus] = useState<{
@@ -385,7 +429,7 @@ export function SiteInputForm({
           result.data.roadAddress,
           addressRef.current,
           address,
-          result.diagnostics?.jusoResult?.roadAddr,
+          result.diagnostics?.jusoResult?.rawResponse?.roadAddr,
         ].filter(Boolean).join(' ')
 
         // "길" 우선 판단 (평창길, 골목길 등은 소로)
@@ -590,6 +634,8 @@ export function SiteInputForm({
       setLookupError(null)
       setFetchedData(null)
       setResolvedJuso(null)
+      setAutoZoneCode(null)
+      setAutoRoadCondition(null)
       setShowManualInput(false)
       setActivePreset(null)
       setLastRetryParams(null)
