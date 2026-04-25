@@ -765,44 +765,53 @@ export default function ArchiScanPage() {
       // MOLIT 성공 + 용도지역 직접 반환
       applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
     } else {
-      // MOLIT zoneType 없음 → 항상 zone-lookup(LURIS/Vworld)으로 정확한 값 조회
-      // (buildingCoverage 역추론은 sigunguCd 없는 극히 예외적 경우에만 fallback)
+      // MOLIT zoneType 없음 → Vworld ned API 클라이언트 직접 호출 (서버 차단 우회)
       setMolitSupplementData(prev => ({ ...prev, ...coords }))
-      console.log('[v0] MOLIT zoneType 없음 — zone-lookup 조회 시작')
+      console.log('[v0] MOLIT zoneType 없음 — Vworld ned 클라이언트 조회 시작')
 
-      // entX/entY 없을 때만 건폐율 역추론으로 임시 표시 (나중에 zone-lookup이 덮어씀)
+      // 임시: entX/entY/sigunguCd 모두 없으면 역추론
       if (!data.entX && !data.sigunguCd && data.buildingCoverage != null && data.buildingCoverage > 0) {
         const cov = data.buildingCoverage, far = data.floorAreaRatio ?? 0
-        let tempZone = cov <= 50 && far <= 100 ? 'residential-exclusive-1'
+        const tempZone = cov <= 50 && far <= 100 ? 'residential-exclusive-1'
           : cov <= 60 && far <= 200 ? 'residential-1'
           : cov <= 60 && far <= 250 ? 'residential-2'
           : cov <= 70 && far <= 500 ? 'semi-residential'
           : cov <= 80 && far <= 1300 ? 'commercial-general' : 'residential-2'
         applyZoneData(tempZone, roadAddr, hasDistrict, coords)
-        console.log('[v0] 임시 역추론(좌표없음):', tempZone)
       }
-      fetch('/api/zone-lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+
+      // Vworld ned API 클라이언트 직접 호출
+      import('@/lib/zone-client').then(({ fetchZoneFromVworld }) =>
+        fetchZoneFromVworld({
           sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd,
-          bun: data.bun, ji: data.ji, address: roadAddr,
-          entX: data.entX, entY: data.entY,  // 좌표 추가 → 직접 용도지역 조회
-        }),
-      })
-        .then(r => r.json())
-        .then(res => {
-          // zoneCode(코드값) 우선, 없으면 zoneType(한글) → mapZoneString 변환
-          const zoneLookup = res.zoneCode || mapZoneString(res.zoneType || '')
-          if (zoneLookup) {
-            applyZoneData(zoneLookup, roadAddr, false, coords)
-            console.log('[v0] zone-lookup 완료:', zoneLookup, '(', res.source, ')')
-          }
-          if (res.siteArea && res.siteArea > 0) {
-            setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0) ? String(Math.round(res.siteArea)) : prev)
-          }
+          bun: data.bun, ji: data.ji, entX: data.entX, entY: data.entY,
         })
-        .catch(e => console.warn('[v0] zone-lookup 실패:', e))
+      ).then(result => {
+        if (result?.zoneCode) {
+          applyZoneData(result.zoneCode, roadAddr, false, coords)
+          console.log('[v0] Vworld ned 완료:', result.zoneType, '(', result.source, ')')
+        } else {
+          // fallback: 서버 zone-lookup (LURIS)
+          fetch('/api/zone-lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd,
+              bun: data.bun, ji: data.ji, address: roadAddr,
+              entX: data.entX, entY: data.entY,
+            }),
+          }).then(r => r.json()).then(res => {
+            const zoneLookup = res.zoneCode || mapZoneString(res.zoneType || '')
+            if (zoneLookup) {
+              applyZoneData(zoneLookup, roadAddr, false, coords)
+              console.log('[v0] zone-lookup fallback 완료:', zoneLookup)
+            }
+            if (res.siteArea && res.siteArea > 0) {
+              setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0) ? String(Math.round(res.siteArea)) : prev)
+            }
+          }).catch(e => console.warn('[v0] zone-lookup 실패:', e))
+        }
+      }).catch(e => console.warn('[v0] Vworld ned 클라이언트 실패:', e))
     }
 
     // 공시지가 자동 조회
