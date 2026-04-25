@@ -78,6 +78,10 @@ async function fetchByVworldAttr(pnu: string): Promise<string | null> {
   try {
     const res  = await fetch(url, { signal: AbortSignal.timeout(7000) })
     const text = await res.text()
+    if (res.status !== 200) {
+      console.error(`[Vworld-attr] ERROR status=${res.status} url=${url.slice(0,200)} response=${text.slice(0,800)}`)
+      return null
+    }
     console.log(`[Vworld-attr] status=${res.status} pnu=${pnu} text=${text.slice(0,500)}`)
     if (!text.startsWith('{') && !text.startsWith('[')) return null
     const json = JSON.parse(text)
