@@ -223,18 +223,22 @@ export function CadastralMap({
               width="100%"
               style={{ display: 'block', background: '#0f172a' }}
             >
-              {/* Vworld 지적도 WMS 배경 - 실제 지적도 */}
+              {/* Vworld 지적도 WMS - 브라우저에서 직접 로드 (한국 IP로 요청) */}
               {!isDemo && parcel.bbox && (() => {
                 const { minLng, minLat, maxLng, maxLat } = parcel.bbox
-                const dLng = (maxLng - minLng) * 0.4
-                const dLat = (maxLat - minLat) * 0.4
-                const q = `minx=${minLng - dLng}&miny=${minLat - dLat}&maxx=${maxLng + dLng}&maxy=${maxLat + dLat}`
-                const bgUrl = `/api/map-tile?${q}&w=${VIEW_W}&h=${VIEW_H}&layer=base`
-                const cadUrl = `/api/map-tile?${q}&w=${VIEW_W}&h=${VIEW_H}&layer=lt_c_lhpclnd`
+                const dLng = (maxLng - minLng) * 0.5
+                const dLat = (maxLat - minLat) * 0.5
+                const bbox = `${minLng - dLng},${minLat - dLat},${maxLng + dLng},${maxLat + dLat}`
+                const key = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
+                const domain = 'v0-archi-scan-layout-generator.vercel.app'
+                const wmsBase = `https://api.vworld.kr/req/wms?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&SRS=EPSG:4326&BBOX=${bbox}&WIDTH=${VIEW_W}&HEIGHT=${VIEW_H}&FORMAT=image/png&key=${key}&domain=${domain}`
+                // 배경지도 + 지적도 레이어 순서
+                const bgUrl = `${wmsBase}&LAYERS=base&TRANSPARENT=false`
+                const cadUrl = `${wmsBase}&LAYERS=lt_c_lhpclnd&TRANSPARENT=true`
                 return (
                   <>
-                    <image href={bgUrl} x={0} y={0} width={VIEW_W} height={VIEW_H} />
-                    <image href={cadUrl} x={0} y={0} width={VIEW_W} height={VIEW_H} />
+                    <image href={bgUrl} x={0} y={0} width={VIEW_W} height={VIEW_H} preserveAspectRatio="none" />
+                    <image href={cadUrl} x={0} y={0} width={VIEW_W} height={VIEW_H} preserveAspectRatio="none" />
                   </>
                 )
               })()}
