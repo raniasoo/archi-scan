@@ -378,22 +378,7 @@ export function SiteInputForm({
           : molitZone.includes('계획관리') ? 'management-planned'
           : ''
 
-        // MOLIT 성공했지만 용도지역이 비어있을 때 → 건폐율/용적률로 역추론
-        if (!mappedZone && result.data.buildingCoverage != null && result.data.floorAreaRatio != null) {
-          const cov = result.data.buildingCoverage  // %
-          const far = result.data.floorAreaRatio    // %
-          if      (cov <= 50 && far <= 100)  mappedZone = 'residential-exclusive-1'
-          else if (cov <= 50 && far <= 150)  mappedZone = 'residential-exclusive-2'
-          else if (cov <= 60 && far <= 200)  mappedZone = 'residential-1'
-          else if (cov <= 60 && far <= 250)  mappedZone = 'residential-2'
-          else if (cov <= 50 && far <= 300)  mappedZone = 'residential-3'
-          else if (cov <= 70 && far <= 500)  mappedZone = 'semi-residential'
-          else if (cov <= 70 && far <= 900)  mappedZone = 'commercial-neighborhood'
-          else if (cov <= 80 && far <= 1300) mappedZone = 'commercial-general'
-          else if (cov <= 90 && far <= 1500) mappedZone = 'commercial-central'
-          else if (cov <= 70 && far <= 400)  mappedZone = 'industrial-general'
-          console.log('[v0] 건폐율/용적률 역추론:', cov, far, '→', mappedZone)
-        }
+        // 역추론은 page.tsx의 zone-lookup/LURIS에 위임 (이중 처리 방지)
 
         // 접도 현황 - 가능한 모든 주소 소스에서 추론 (stale closure 방지)
         const roadAddrSources = [
