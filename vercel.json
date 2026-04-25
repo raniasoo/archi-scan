@@ -15,10 +15,6 @@
     },
     "app/api/map-tile/route.ts": {
       "maxDuration": 10
-    },
-    "app/api/zone-lookup/route.ts": {
-      "maxDuration": 30
     }
-  },
-  "regions": ["icn1"]
+  }
 }
