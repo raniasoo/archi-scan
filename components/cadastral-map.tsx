@@ -223,62 +223,84 @@ export function CadastralMap({
               width="100%"
               style={{ display: 'block', background: '#0f172a' }}
             >
-              {/* OSM 타일 배경 - polygonToSVG 좌표계와 정렬 */}
-              {!isDemo && parcel.bbox && svgData && (() => {
-                // parcel의 minLng/minLat (polygonToSVG와 동일 기준점)
-                const lngs = parcel.coordinates.map((c: [number,number]) => c[0])
-                const lats = parcel.coordinates.map((c: [number,number]) => c[1])
-                const minLng = Math.min(...lngs), maxLng = Math.max(...lngs)
-                const minLat = Math.min(...lats), maxLat = Math.max(...lats)
-                const scaledH = (maxLat - minLat) * svgData.scale
-                const latRad = ((minLat + maxLat) / 2) * Math.PI / 180
-                const lngScale = Math.cos(latRad)
+              {/* OSM 타일 - Web Mercator 좌표계로 정확한 정렬 */}
+              {!isDemo && parcel.centroid && parcel.coordinates && (() => {
+                const Z = 17
+                const N = Math.pow(2, Z)
+                const TILE_PX = 256  // 타일 픽셀 크기
 
-                // 지리좌표 → SVG 픽셀 변환 (polygonToSVG와 동일)
-                const geoToSVG = (lng: number, lat: number): [number, number] => [
-                  svgData.offsetX + (lng - minLng) * lngScale * svgData.scale,
-                  svgData.offsetY + scaledH - (lat - minLat) * svgData.scale,
+                // Web Mercator: 지리좌표 → 월드픽셀
+                const toWorld = (lng: number, lat: number): [number, number] => {
+                  const latRad = lat * Math.PI / 180
+                  const wx = (lng + 180) / 360 * N * TILE_PX
+                  const wy = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * N * TILE_PX
+                  return [wx, wy]
+                }
+
+                // 파셀 경계를 월드픽셀로 변환
+                const worldPts = parcel.coordinates.map(([lng, lat]: [number, number]) => toWorld(lng, lat))
+                const wxs = worldPts.map(([wx]: [number, number]) => wx)
+                const wys = worldPts.map(([_, wy]: [number, number]) => wy)
+                const wxMin = Math.min(...wxs), wxMax = Math.max(...wxs)
+                const wyMin = Math.min(...wys), wyMax = Math.max(...wys)
+                const wxCenter = (wxMin + wxMax) / 2, wyCenter = (wyMin + wyMax) / 2
+
+                // SVG 스케일: 파셀이 SVG에 꽉 차도록 (PAD=30)
+                const PAD = 30
+                const scaleX = (VIEW_W - PAD * 2) / Math.max(wxMax - wxMin, 1)
+                const scaleY = (VIEW_H - PAD * 2) / Math.max(wyMax - wyMin, 1)
+                const scale = Math.min(scaleX, scaleY) * 0.85  // 여백 확보
+
+                // 월드픽셀 → SVG 픽셀 변환
+                const toSVG = (wx: number, wy: number): [number, number] => [
+                  VIEW_W / 2 + (wx - wxCenter) * scale,
+                  VIEW_H / 2 + (wy - wyCenter) * scale,
                 ]
 
-                // OSM 타일 계산
-                const z = 17, n = Math.pow(2, z)
-                const tileLng = (tx: number) => tx / n * 360 - 180
-                const tileLat = (ty: number) => Math.atan(Math.sinh(Math.PI * (1 - 2 * ty / n))) * 180 / Math.PI
+                // 필요한 타일 범위 계산 (여백 포함)
+                const MARGIN = 1  // 상하좌우 1타일 여백
+                const txCenter = Math.floor(wxCenter / TILE_PX)
+                const tyCenter = Math.floor(wyCenter / TILE_PX)
 
-                // 중심 타일 (parcel 중심 기준)
-                const cLng = (minLng + maxLng) / 2, cLat = (minLat + maxLat) / 2
-                const cLatRad = cLat * Math.PI / 180
-                const ctx = Math.floor((cLng + 180) / 360 * n)
-                const cty = Math.floor((1 - Math.log(Math.tan(cLatRad) + 1/Math.cos(cLatRad)) / Math.PI) / 2 * n)
+                const tiles: Array<{tx: number; ty: number}> = []
+                for (let dy = -MARGIN; dy <= MARGIN; dy++)
+                  for (let dx = -MARGIN; dx <= MARGIN; dx++)
+                    tiles.push({ tx: txCenter + dx, ty: tyCenter + dy })
 
-                // 3x3 타일 그리드
-                const tiles: Array<{ttx: number; tty: number}> = []
-                for (let dy = -1; dy <= 1; dy++)
-                  for (let dx = -1; dx <= 1; dx++)
-                    tiles.push({ ttx: ctx + dx, tty: cty + dy })
+                // 파셀 폴리곤 SVG 포인트 재계산 (Mercator 기반)
+                const mercatorPoints = parcel.coordinates.map(([lng, lat]: [number, number]) => {
+                  const [wx, wy] = toWorld(lng, lat)
+                  return toSVG(wx, wy)
+                }) as [number, number][]
 
                 return (
-                  <g opacity={0.8}>
-                    {tiles.map(({ ttx, tty }) => {
-                      const lngMin = tileLng(ttx), lngMax = tileLng(ttx + 1)
-                      const latMax = tileLat(tty), latMin = tileLat(tty + 1)
-                      const [x1, y1] = geoToSVG(lngMin, latMax)  // top-left
-                      const [x2, y2] = geoToSVG(lngMax, latMin)  // bottom-right
+                  <g>
+                    {/* OSM 타일 배경 */}
+                    {tiles.map(({ tx, ty }) => {
+                      const [sx, sy] = toSVG(tx * TILE_PX, ty * TILE_PX)
+                      const [ex, ey] = toSVG((tx + 1) * TILE_PX, (ty + 1) * TILE_PX)
                       return (
                         <image
-                          key={`${ttx}-${tty}`}
-                          href={`https://tile.openstreetmap.org/${z}/${ttx}/${tty}.png`}
-                          x={x1} y={y1}
-                          width={x2 - x1} height={y2 - y1}
+                          key={`${tx}-${ty}`}
+                          href={`https://tile.openstreetmap.org/${Z}/${tx}/${ty}.png`}
+                          x={sx} y={sy}
+                          width={ex - sx} height={ey - sy}
                           preserveAspectRatio="none"
                           crossOrigin="anonymous"
+                          opacity={0.85}
                         />
                       )
                     })}
+                    {/* Mercator 기반 파셀 경계선 (정확한 정렬) */}
+                    <path
+                      d={mercatorPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ') + ' Z'}
+                      fill="#3b82f620"
+                      stroke="#3b82f6"
+                      strokeWidth="2"
+                    />
                   </g>
                 )
               })()}
-
               {/* 격자 배경 (데모 모드 또는 bbox 없을 때) */}
               {(isDemo || !parcel.bbox) && (
                 <>
