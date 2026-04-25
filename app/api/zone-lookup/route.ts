@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 export const runtime = 'edge'  // Vworld /ned/ 접근을 위해 Edge IP 사용
 
 const VWORLD_KEY    = process.env.VWORLD_API_KEY || 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
+// AWS Lambda 서울 리전 프록시 (한국 정부 API 차단 우회)
+const LAMBDA_URL    = process.env.LAMBDA_ZONE_URL || 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
 const LURIS_KEY     = process.env.LAND_USE_KEY     // 토지이용계획정보 API 전용 키 (data.go.kr 신청)
                    || process.env.MOLIT_API_KEY    // fallback: 기존 건축물대장 키
                    || ''
@@ -103,6 +105,23 @@ async function fetchByVworldAttr(pnu: string): Promise<string | null> {
       if (zone) { console.log('[Vworld-attr]', zone); return zone }
     }
   } catch (e: any) { console.warn('[Vworld-attr] 실패:', e?.message, e?.stack?.slice(0,200)) }
+  return null
+}
+
+// ① Lambda 서울 프록시 (가장 확실 — 한국 IP로 호출)
+async function fetchByLambda(pnu: string): Promise<string | null> {
+  if (!LAMBDA_URL) return null
+  try {
+    const res  = await fetch(LAMBDA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pnu }),
+      signal: AbortSignal.timeout(10000),
+    })
+    const json = await res.json() as any
+    console.log(`[lambda] status=${res.status} zone=${json.zoneType} source=${json.source}`)
+    return json.zoneType || null
+  } catch (e: any) { console.warn('[lambda] 실패:', e.message) }
   return null
 }
 
@@ -219,7 +238,9 @@ export async function GET(req: NextRequest) {
   let siteArea: number | null = null
   const pnu = (sigunguCd && bjdongCd) ? buildPNU(sigunguCd, bjdongCd, bun, ji) : null
 
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByLambda(pnu); if (zoneRaw) source = 'lambda' }  // 0순위: Lambda 서울 프록시
   if (!zoneRaw && pnu) { zoneRaw = await fetchByEum(pnu); if (zoneRaw) source = 'eum' }  // 1순위: 토지이음
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByLambda(pnu); if (zoneRaw) source = 'lambda' }  // Lambda 프록시 추가
   if (!zoneRaw && pnu) { zoneRaw = await fetchByVworldAttr(pnu); if (zoneRaw) source = 'vworld-attr' }  // 2순위: Vworld 속성조회
   if (!zoneRaw && pnu) { zoneRaw = await fetchByLURIS(pnu); if (zoneRaw) source = 'luris' }  // 2순위: LURIS
   if (!zoneRaw && entX && entY) { zoneRaw = await fetchByCoord(Number(entX), Number(entY)); if (zoneRaw) source = 'vworld-coord' }
@@ -241,6 +262,12 @@ export async function POST(req: NextRequest) {
   const pnu = (sigunguCd && bjdongCd)
     ? buildPNU(sigunguCd, bjdongCd, bun||'0000', ji||'0000')
     : null
+
+  // 0순위: Lambda 서울 프록시 (한국 IP, 차단 없음)
+  if (!zoneRaw && pnu) {
+    zoneRaw = await fetchByLambda(pnu)
+    if (zoneRaw) source = 'lambda'
+  }
 
   // ① LURIS — PNU 기반, 가장 정확 (MOLIT_API_KEY 등록 시)
   if (!zoneRaw && pnu) {
