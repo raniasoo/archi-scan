@@ -764,27 +764,23 @@ export default function ArchiScanPage() {
     if (mappedZone) {
       // MOLIT 성공 + 용도지역 직접 반환
       applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
-    } else if (data.buildingCoverage != null && data.buildingCoverage > 0 && !data.sigunguCd) {
-      // MOLIT 성공 + 건폐율 있음 + PNU 없어서 zone-lookup 불가 → 역추론 (최후 수단)
-      const cov = data.buildingCoverage
-      const far = data.floorAreaRatio ?? 0
-      let inferred = ''
-      if      (cov <= 50 && far <= 100)  inferred = 'residential-exclusive-1'
-      else if (cov <= 50 && far <= 150)  inferred = 'residential-exclusive-2'
-      else if (cov <= 60 && far <= 200)  inferred = 'residential-1'
-      else if (cov <= 60 && far <= 250)  inferred = 'residential-2'
-      else if (cov <= 50 && far <= 300)  inferred = 'residential-3'
-      else if (cov <= 70 && far <= 500)  inferred = 'semi-residential'
-      else if (cov <= 70 && far <= 900)  inferred = 'commercial-neighborhood'
-      else if (cov <= 80 && far <= 1300) inferred = 'commercial-general'
-      else if (cov <= 90 && far <= 1500) inferred = 'commercial-central'
-      else                               inferred = 'residential-2'
-      console.log('[v0] 역추론(PNU없음):', cov, far, '→', inferred)
-      applyZoneData(inferred, roadAddr, hasDistrict, coords)
     } else {
-      // MOLIT 실패 또는 건폐율 없음 → zone-lookup으로 보완
+      // MOLIT zoneType 없음 → 항상 zone-lookup(LURIS/Vworld)으로 정확한 값 조회
+      // (buildingCoverage 역추론은 sigunguCd 없는 극히 예외적 경우에만 fallback)
       setMolitSupplementData(prev => ({ ...prev, ...coords }))
-      console.log('[v0] MOLIT zoneType 없음 — zone-lookup 보완 조회')
+      console.log('[v0] MOLIT zoneType 없음 — zone-lookup 조회 시작')
+
+      // entX/entY 없을 때만 건폐율 역추론으로 임시 표시 (나중에 zone-lookup이 덮어씀)
+      if (!data.entX && !data.sigunguCd && data.buildingCoverage != null && data.buildingCoverage > 0) {
+        const cov = data.buildingCoverage, far = data.floorAreaRatio ?? 0
+        let tempZone = cov <= 50 && far <= 100 ? 'residential-exclusive-1'
+          : cov <= 60 && far <= 200 ? 'residential-1'
+          : cov <= 60 && far <= 250 ? 'residential-2'
+          : cov <= 70 && far <= 500 ? 'semi-residential'
+          : cov <= 80 && far <= 1300 ? 'commercial-general' : 'residential-2'
+        applyZoneData(tempZone, roadAddr, hasDistrict, coords)
+        console.log('[v0] 임시 역추론(좌표없음):', tempZone)
+      }
       fetch('/api/zone-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
