@@ -200,6 +200,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const { sigunguCd, bjdongCd, bun, ji, address, entX, entY } = await req.json()
+  console.log(`[zone-lookup/POST] sigunguCd=${sigunguCd} bjdongCd=${bjdongCd} bun=${bun} ji=${ji} entX=${entX} entY=${entY}`)
 
   let zoneRaw: string | null = null
   let source = 'none'
