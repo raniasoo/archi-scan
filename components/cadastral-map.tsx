@@ -236,8 +236,8 @@ export function CadastralMap({
                   return [(lng+180)/360*N*TP, (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*N*TP]
                 }
                 const wp = parcel.coordinates.map(([lng,lat]:[number,number]) => tw(lng,lat))
-                const wxA = wp.map(([x]:[number,number]) => x)
-                const wyA = wp.map(([,y]:[number,number]) => y)
+                const wxA = wp.map((p:[number,number]) => p[0])
+                const wyA = wp.map((p:[number,number]) => p[1])
                 const wxMin=Math.min(...wxA),wxMax=Math.max(...wxA),wyMin=Math.min(...wyA),wyMax=Math.max(...wyA)
                 const wxC=(wxMin+wxMax)/2, wyC=(wyMin+wyMax)/2
                 const sc = Math.min((VIEW_W-60)/Math.max(wxMax-wxMin,1),(VIEW_H-60)/Math.max(wyMax-wyMin,1))*0.85
