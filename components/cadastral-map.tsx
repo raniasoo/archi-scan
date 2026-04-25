@@ -291,13 +291,56 @@ export function CadastralMap({
                         />
                       )
                     })}
-                    {/* Mercator 기반 파셀 경계선 (정확한 정렬) */}
+                    {/* 파셀 경계선 */}
                     <path
                       d={mercatorPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ') + ' Z'}
                       fill="#3b82f620"
                       stroke="#3b82f6"
                       strokeWidth="2"
                     />
+                    {/* 이격거리 경계선 (Mercator) */}
+                    {(() => {
+                      if (mercatorPoints.length < 3) return null
+                      const cx = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[0], 0) / mercatorPoints.length
+                      const cy = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[1], 0) / mercatorPoints.length
+                      // 이격거리 → SVG 픽셀 (Z=17: 약 0.94m/worldpx → scale 적용)
+                      const metersPerWorldPx = 156543.034 * Math.cos((minLat + maxLat) / 2 * Math.PI / 180) / N
+                      const avgSetback = (setbackFront + setbackSide + setbackRear) / 3
+                      const insetSVGPx = avgSetback / metersPerWorldPx * scale
+                      const insetPts = mercatorPoints.map(([x, y]: [number,number]) => {
+                        const dx = x - cx, dy = y - cy
+                        const dist = Math.sqrt(dx*dx + dy*dy)
+                        if (dist < 1) return [x, y]
+                        const ratio = Math.max(0, (dist - insetSVGPx) / dist)
+                        return [cx + dx * ratio, cy + dy * ratio]
+                      })
+                      return <path
+                        d={insetPts.map((p: number[], i: number) => `${i === 0 ? 'M' : 'L'} ${(p[0] as number).toFixed(1)} ${(p[1] as number).toFixed(1)}`).join(' ') + ' Z'}
+                        fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="6 3" opacity="0.9"
+                      />
+                    })()}
+                    {/* 건축 가능 영역 (Mercator) */}
+                    {(() => {
+                      if (mercatorPoints.length < 3) return null
+                      const cx = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[0], 0) / mercatorPoints.length
+                      const cy = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[1], 0) / mercatorPoints.length
+                      const metersPerWorldPx = 156543.034 * Math.cos((minLat + maxLat) / 2 * Math.PI / 180) / N
+                      const avgSetback = (setbackFront + setbackSide + setbackRear) / 3
+                      const insetSVGPx = avgSetback / metersPerWorldPx * scale
+                      const ratio = Math.sqrt(coverageRatio / 100)
+                      const bldPts = mercatorPoints.map(([x, y]: [number,number]) => {
+                        const dx = x - cx, dy = y - cy
+                        const dist = Math.sqrt(dx*dx + dy*dy)
+                        if (dist < 1) return [x, y]
+                        const innerRatio = Math.max(0, (dist - insetSVGPx) / dist)
+                        const ix = cx + dx * innerRatio, iy = cy + dy * innerRatio
+                        return [cx + (ix - cx) * ratio, cy + (iy - cy) * ratio]
+                      })
+                      return <path
+                        d={bldPts.map((p: number[], i: number) => `${i === 0 ? 'M' : 'L'} ${(p[0] as number).toFixed(1)} ${(p[1] as number).toFixed(1)}`).join(' ') + ' Z'}
+                        fill="#10b98122" stroke="#10b981" strokeWidth="2" opacity="0.9"
+                      />
+                    })()}
                   </g>
                 )
               })()}
@@ -313,36 +356,17 @@ export function CadastralMap({
                 </>
               )}
 
-              {/* 대지 영역 */}
-              <path
-                d={toSVGPath(svgData.points)}
-                fill="#3b82f620"
-                stroke="#3b82f6"
-                strokeWidth="2"
-                strokeDasharray={isDemo ? "6 3" : "none"}
-              />
-
-              {/* 이격거리 경계선 */}
-              {innerPoints && (
-                <path
-                  d={toSVGPath(innerPoints)}
-                  fill="none"
-                  stroke="#f59e0b"
-                  strokeWidth="2"
-                  strokeDasharray="6 3"
-                  opacity="0.9"
-                />
-              )}
-
-              {/* 건축 가능 영역 (건폐율) */}
-              {buildingPoints && (
-                <path
-                  d={toSVGPath(buildingPoints)}
-                  fill="#10b98122"
-                  stroke="#10b981"
-                  strokeWidth="2"
-                  opacity="0.9"
-                />
+              {/* 대지/이격거리/건축영역 - 데모 또는 OSM 없을 때만 */}
+              {(isDemo || !parcel.centroid) && (
+                <>
+                  <path
+                    d={toSVGPath(svgData.points)}
+                    fill="#3b82f620" stroke="#3b82f6" strokeWidth="2"
+                    strokeDasharray={isDemo ? "6 3" : "none"}
+                  />
+                  {innerPoints && <path d={toSVGPath(innerPoints)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="6 3" opacity="0.9" />}
+                  {buildingPoints && <path d={toSVGPath(buildingPoints)} fill="#10b98122" stroke="#10b981" strokeWidth="2" opacity="0.9" />}
+                </>
               )}
 
               {/* 범례 */}
