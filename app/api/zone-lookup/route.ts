@@ -95,7 +95,7 @@ async function fetchByVworldAttr(pnu: string): Promise<string | null> {
       const zone = zoneItem?.prposAreaDstrcCodeNm ?? zoneItem?.prposAreaNm
       if (zone) { console.log('[Vworld-attr]', zone); return zone }
     }
-  } catch (e) { console.warn('[Vworld-attr] 실패:', e) }
+  } catch (e: any) { console.warn('[Vworld-attr] 실패:', e?.message, e?.stack?.slice(0,200)) }
   return null
 }
 
