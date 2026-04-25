@@ -250,7 +250,7 @@ export function CadastralMap({
                     {tiles.map(({tx,ty}) => {
                       const [sx,sy]=ts(tx*TP,ty*TP), [ex,ey]=ts((tx+1)*TP,(ty+1)*TP)
                       return <img key={`${tx}-${ty}`}
-                        src={`https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/?tile=1&z=${Z}&x=${tx}&y=${ty}`}
+                        src={`https://basemaps.cartocdn.com/dark_all/${Z}/${tx}/${ty}.png`}
                         style={{position:'absolute',left:`${sx/VIEW_W*100}%`,top:`${sy/VIEW_H*100}%`,
                           width:`${(ex-sx)/VIEW_W*100}%`,height:`${(ey-sy)/VIEW_H*100}%`,display:'block'}}
                         alt="" onError={(e)=>{(e.target as HTMLImageElement).style.opacity='0'}}
