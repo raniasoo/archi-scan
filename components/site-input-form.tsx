@@ -490,14 +490,20 @@ export function SiteInputForm({
         if (result.data && onMolitDataFetched) {
           onMolitDataFetched(result.data)
         } else if (classifiedStatus === 'success-empty' && onMolitDataFetched) {
-          // JUSO 좌표만이라도 전달 (지적도 위치 표시용)
+          // JUSO 좌표 + 필지 코드 전달 (지적도 위치 표시 + zone-lookup용)
           const jusoData = result.diagnostics?.jusoResult
-          if (jusoData?.entX || jusoData?.entY || jusoData?.roadAddr) {
+          const reqParams = result.diagnostics?.requestParams
+          if (jusoData?.entX || jusoData?.entY || jusoData?.roadAddr || reqParams?.sigunguCd) {
             onMolitDataFetched({
-              entX: jusoData.entX,
-              entY: jusoData.entY,
-              roadAddress: jusoData.roadAddr,
-              address: jusoData.jibunAddr,
+              entX: jusoData?.entX,
+              entY: jusoData?.entY,
+              roadAddress: jusoData?.roadAddr,
+              address: jusoData?.jibunAddr,
+              // zone-lookup에 필요한 필지 코드 포함
+              sigunguCd: reqParams?.sigunguCd || jusoData?.sigunguCd,
+              bjdongCd: reqParams?.bjdongCd || jusoData?.bjdongCd,
+              bun: reqParams?.bun || jusoData?.bun,
+              ji: reqParams?.ji || jusoData?.ji,
             } as import('@/types/molit').MolitSiteData)
           }
         }
