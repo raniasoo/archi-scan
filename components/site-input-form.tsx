@@ -158,18 +158,32 @@ export function SiteInputForm({
       .then(r => r.json())
       .then(res => {
         const zone = res.zoneCode || ''
-        console.log('[site-input] zone-lookup 결과:', zone, '(source:', res.source, ')')
+        const hl = typeof res.heightLimit === 'number' ? res.heightLimit : null
+        const cr = typeof res.coverageRatio === 'number' ? res.coverageRatio : null
+        const far = typeof res.floorAreaRatio === 'number' ? res.floorAreaRatio : null
+        console.log('[site-input] zone-lookup 결과:', zone, '높이:', hl, 'source:', res.source)
         if (zone) {
           setAutoZoneCode(zone)
-          // supplementData 직접 업데이트
+          // supplementData 직접 업데이트 (높이제한 포함)
           setSupplementData(prev => ({
             zoneType: zone,
             roadCondition: prev?.roadCondition || rc,
-            heightLimit: prev?.heightLimit ?? null,
+            heightLimit: hl,
             hasDistrictPlan: prev?.hasDistrictPlan ?? false,
             districtPlanNotes: prev?.districtPlanNotes || '',
             additionalNotes: prev?.additionalNotes || '',
           }))
+          // page.tsx에도 전달 (규제 분석용)
+          if (onMolitDataFetched) {
+            onMolitDataFetched({
+              sigunguCd: resolvedJuso?.sigunguCd,
+              bjdongCd: resolvedJuso?.bjdongCd,
+              bun: resolvedJuso?.bun,
+              ji: resolvedJuso?.ji,
+              buildingCoverage: cr ?? undefined,
+              floorAreaRatio: far ?? undefined,
+            } as any)
+          }
         }
       })
       .catch(e => console.warn('[site-input] zone-lookup 실패:', e))

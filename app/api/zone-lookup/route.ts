@@ -31,6 +31,40 @@ function toCode(raw: string): string {
   return ''
 }
 
+
+// 용도지역별 법정 높이 기본값 (m) - 건축법 시행령 기준
+const HEIGHT_BY_ZONE: Record<string, number> = {
+  'residential-exclusive-1': 9,  'residential-exclusive-2': 12,
+  'residential-1': 12,           'residential-2': 20,
+  'residential-3': 30,           'semi-residential': 45,
+  'commercial-neighborhood': 45, 'commercial-central': 200,
+  'commercial-general': 60,      'industrial-exclusive': 30,
+  'industrial-general': 30,      'industrial-semi': 30,
+  'green-natural': 20,           'green-production': 20,
+  'green-conservation': 20,      'management-planned': 20,
+  'management-production': 20,   'management-conservation': 20,
+}
+
+// 건폐율 기본값 (%)
+const COVERAGE_BY_ZONE: Record<string, number> = {
+  'residential-exclusive-1': 50, 'residential-exclusive-2': 50,
+  'residential-1': 60,           'residential-2': 60,
+  'residential-3': 50,           'semi-residential': 70,
+  'commercial-neighborhood': 70, 'commercial-central': 90,
+  'commercial-general': 80,      'industrial-general': 70,
+  'green-natural': 20,
+}
+
+// 용적률 기본값 (%)
+const FAR_BY_ZONE: Record<string, number> = {
+  'residential-exclusive-1': 100, 'residential-exclusive-2': 150,
+  'residential-1': 200,           'residential-2': 250,
+  'residential-3': 300,           'semi-residential': 500,
+  'commercial-neighborhood': 900, 'commercial-central': 1500,
+  'commercial-general': 1300,     'industrial-general': 400,
+  'green-natural': 100,
+}
+
 function buildPNU(sigunguCd: string, bjdongCd: string, bun: string, ji: string): string {
   const platGb   = (bun.startsWith('산') || ji.startsWith('산')) ? '2' : '1'
   const cleanBun = bun.replace('산','').replace(/\D/g,'').padStart(4,'0')
@@ -249,7 +283,8 @@ export async function GET(req: NextRequest) {
 
   const zoneCode = toCode(zoneRaw || '')
   console.log(`[zone-lookup/GET] "${zoneRaw}" → ${zoneCode} (${source}) PNU=${pnu}`)
-  return NextResponse.json({ success: true, zoneType: zoneRaw||'', zoneCode, source, siteArea, pnu })
+  const heightLimitG = HEIGHT_BY_ZONE[zoneCode] ?? null
+  return NextResponse.json({ success: true, zoneType: zoneRaw||'', zoneCode, source, siteArea, pnu, heightLimit: heightLimitG, coverageRatio: COVERAGE_BY_ZONE[zoneCode]??null, floorAreaRatio: FAR_BY_ZONE[zoneCode]??null })
 }
 
 export async function POST(req: NextRequest) {
@@ -293,12 +328,19 @@ export async function POST(req: NextRequest) {
   const zoneCode = toCode(zoneRaw || '')
   console.log(`[zone-lookup] "${zoneRaw}" → ${zoneCode} (${source})`)
 
+  const heightLimit = HEIGHT_BY_ZONE[zoneCode] ?? null
+  const coverageRatio = COVERAGE_BY_ZONE[zoneCode] ?? null
+  const floorAreaRatio = FAR_BY_ZONE[zoneCode] ?? null
+
   return NextResponse.json({
     success: true,
     zoneType: zoneRaw || '',
     zoneCode,
     source,
     siteArea,
-    lurisAvailable: !!LURIS_KEY,   // UI에서 키 미등록 안내에 활용 가능
+    heightLimit,
+    coverageRatio,
+    floorAreaRatio,
+    lurisAvailable: !!LURIS_KEY,
   })
 }
