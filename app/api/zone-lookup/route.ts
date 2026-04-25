@@ -77,7 +77,7 @@ async function fetchByVworldAttr(pnu: string): Promise<string | null> {
   try {
     const res  = await fetch(url, { signal: AbortSignal.timeout(7000) })
     const text = await res.text()
-    console.log(`[Vworld-attr] status=${res.status} pnu=${pnu} text=${text.slice(0,300)}`)
+    console.log(`[Vworld-attr] status=${res.status} pnu=${pnu} text=${text.slice(0,500)}`)
     if (!text.startsWith('{') && !text.startsWith('[')) return null
     const json = JSON.parse(text)
     // 응답 구조: { result: { prposAreaList: [{ prposAreaDstrcCodeNm, ... }] } }
@@ -103,8 +103,8 @@ async function fetchByVworldAttr(pnu: string): Promise<string | null> {
 
 // ③ Vworld 토지이용계획 WFS 레이어 — 좌표 기반
 async function fetchByCoord(lng: number, lat: number): Promise<string | null> {
-  // 토지이용계획 레이어 목록 (우선순위 순)
-  const layers = ['LT_C_UQ111', 'LT_C_UD801']
+  // dt_d154: Vworld WMS 레퍼런스에서 확인된 토지이용계획 레이어명
+  const layers = ['dt_d154', 'LT_C_UQ111', 'LT_C_UD801']
   const d = 0.0002
   const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`
 
