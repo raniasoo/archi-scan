@@ -228,7 +228,7 @@ export function CadastralMap({
         <div className="space-y-2">
           <div className="rounded-xl overflow-hidden border border-border/50 bg-slate-950">
             {/* 지도 배경 div (img 태그 - 브라우저 직접 로드, CORS 불필요) */}
-            <div style={{ position: 'relative', width: '100%', aspectRatio: `${VIEW_W} / ${VIEW_H}`, background: '#0f172a' }}>
+            <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: '#0f172a' }}>
               {parcel.centroid && (() => {
                 const Z = 17, N = Math.pow(2, Z), TP = 256
                 const tw = (lng: number, lat: number): [number,number] => {
@@ -245,13 +245,12 @@ export function CadastralMap({
                 const txC=Math.floor(wxC/TP), tyC=Math.floor(wyC/TP)
                 const tiles: {tx:number;ty:number}[] = []
                 for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++) tiles.push({tx:txC+dx,ty:tyC+dy})
-                const KEY='FFEC486D-E635-345C-9BA6-5404A5AA191B'
                 return (
                   <div style={{position:'absolute',inset:0,overflow:'hidden'}}>
                     {tiles.map(({tx,ty}) => {
                       const [sx,sy]=ts(tx*TP,ty*TP), [ex,ey]=ts((tx+1)*TP,(ty+1)*TP)
                       return <img key={`${tx}-${ty}`}
-                        src={`https://api.vworld.kr/req/wmts/1.0.0/Base/GoogleMapsCompatible/${Z}/${ty}/${tx}.png?key=${KEY}`}
+                        src={`https://tile.openstreetmap.org/${Z}/${tx}/${ty}.png`}
                         style={{position:'absolute',left:`${sx/VIEW_W*100}%`,top:`${sy/VIEW_H*100}%`,
                           width:`${(ex-sx)/VIEW_W*100}%`,height:`${(ey-sy)/VIEW_H*100}%`,display:'block'}}
                         alt="" onError={(e)=>{(e.target as HTMLImageElement).style.opacity='0'}}
@@ -263,9 +262,7 @@ export function CadastralMap({
               <svg
                 id="cadastral-svg"
                 viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-                width="100%"
-                height="100%"
-                style={{ position: 'absolute', inset: 0, display: 'block' }}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
               >
               {/* 격자 배경 fallback */}
               <defs>
