@@ -106,6 +106,31 @@ async function fetchByVworldAttr(pnu: string): Promise<string | null> {
   return null
 }
 
+// ② 토지이음 HTML 파싱 — PNU 기반 (서버 호출 가능)
+async function fetchByEum(pnu: string): Promise<string | null> {
+  try {
+    const url = `https://www.eum.go.kr/web/ar/lu/luLandDet.jsp?pnu=${pnu}&isNoScr=script&mode=search`
+    const res  = await fetch(url, {
+      signal: AbortSignal.timeout(8000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ArchiScan/1.0)' }
+    })
+    const html = await res.text()
+    console.log(`[eum] status=${res.status} pnu=${pnu} html(200)=${html.slice(0,200)}`)
+
+    // 용도지역 파싱: "제2종일반주거지역" 등 패턴 추출
+    const patterns = [
+      /제1종전용주거지역|제2종전용주거지역|제1종일반주거지역|제2종일반주거지역|제3종일반주거지역/,
+      /준주거지역|근린상업지역|중심상업지역|일반상업지역|일반공업지역/,
+      /자연녹지지역|생산녹지지역|보전녹지지역|계획관리지역|생산관리지역|보전관리지역/,
+    ]
+    for (const pattern of patterns) {
+      const m = html.match(pattern)
+      if (m) { console.log('[eum] 용도지역:', m[0]); return m[0] }
+    }
+  } catch (e) { console.warn('[eum] 실패:', e) }
+  return null
+}
+
 // ③ Vworld 토지이용계획 WFS 레이어 — 좌표 기반
 async function fetchByCoord(lng: number, lat: number): Promise<string | null> {
   // dt_d154: Vworld WMS 레퍼런스에서 확인된 토지이용계획 레이어명
@@ -194,7 +219,8 @@ export async function GET(req: NextRequest) {
   let siteArea: number | null = null
   const pnu = (sigunguCd && bjdongCd) ? buildPNU(sigunguCd, bjdongCd, bun, ji) : null
 
-  if (!zoneRaw && pnu) { zoneRaw = await fetchByVworldAttr(pnu); if (zoneRaw) source = 'vworld-attr' }  // 1순위: Vworld 속성조회
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByEum(pnu); if (zoneRaw) source = 'eum' }  // 1순위: 토지이음
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByVworldAttr(pnu); if (zoneRaw) source = 'vworld-attr' }  // 2순위: Vworld 속성조회
   if (!zoneRaw && pnu) { zoneRaw = await fetchByLURIS(pnu); if (zoneRaw) source = 'luris' }  // 2순위: LURIS
   if (!zoneRaw && entX && entY) { zoneRaw = await fetchByCoord(Number(entX), Number(entY)); if (zoneRaw) source = 'vworld-coord' }
   if (!zoneRaw && pnu) { zoneRaw = await fetchByPNU(pnu); if (zoneRaw) source = 'vworld-pnu' }
