@@ -134,12 +134,33 @@ async function fetchArea(pnu: string): Promise<number | null> {
   return null
 }
 
-export async function GET() {
-  return NextResponse.json({
-    status: 'ok',
-    luris: !!LURIS_KEY,    // MOLIT_API_KEY 등록 여부
-    vworld: !!VWORLD_KEY,
-  })
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
+  const sigunguCd = searchParams.get('sigunguCd')
+  const bjdongCd  = searchParams.get('bjdongCd')
+  const bun       = searchParams.get('bun') || '0000'
+  const ji        = searchParams.get('ji') || '0000'
+  const address   = searchParams.get('address') || ''
+  const entX      = searchParams.get('entX')
+  const entY      = searchParams.get('entY')
+
+  if (!sigunguCd && !entX) {
+    return NextResponse.json({ status: 'ok', luris: !!LURIS_KEY, vworld: !!VWORLD_KEY })
+  }
+
+  let zoneRaw: string | null = null
+  let source = 'none'
+  let siteArea: number | null = null
+  const pnu = (sigunguCd && bjdongCd) ? buildPNU(sigunguCd, bjdongCd, bun, ji) : null
+
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByLURIS(pnu); if (zoneRaw) source = 'luris' }
+  if (!zoneRaw && entX && entY) { zoneRaw = await fetchByCoord(Number(entX), Number(entY)); if (zoneRaw) source = 'vworld-coord' }
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByPNU(pnu); if (zoneRaw) source = 'vworld-pnu' }
+  if (pnu) siteArea = await fetchArea(pnu)
+
+  const zoneCode = toCode(zoneRaw || '')
+  console.log(`[zone-lookup/GET] "${zoneRaw}" → ${zoneCode} (${source}) PNU=${pnu}`)
+  return NextResponse.json({ success: true, zoneType: zoneRaw||'', zoneCode, source, siteArea, pnu })
 }
 
 export async function POST(req: NextRequest) {
