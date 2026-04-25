@@ -68,7 +68,38 @@ async function fetchByLURIS(pnu: string): Promise<string | null> {
   return null
 }
 
-// ② Vworld 토지이용계획 WFS 레이어 — 좌표 기반
+// ① Vworld 토지이용계획속성조회 (ned API) - PNU 기반 정식 엔드포인트
+async function fetchByVworldAttr(pnu: string): Promise<string | null> {
+  // ned/data/getLandUseAttr: 계획구역 내 토지 이용계획 속성정보 조회
+  const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${VWORLD_KEY}&pnu=${pnu}&cnflcAt=1&format=json`
+  try {
+    const res  = await fetch(url, { signal: AbortSignal.timeout(7000) })
+    const text = await res.text()
+    console.log(`[Vworld-attr] status=${res.status} pnu=${pnu} text=${text.slice(0,300)}`)
+    if (!text.startsWith('{') && !text.startsWith('[')) return null
+    const json = JSON.parse(text)
+    // 응답 구조: { result: { prposAreaList: [{ prposAreaDstrcCodeNm, ... }] } }
+    const list = json?.result?.prposAreaList
+              || json?.landUseAttr?.prposAreaList
+              || json?.prposAreaList
+              || []
+    if (Array.isArray(list) && list.length > 0) {
+      // 용도지역 (prposAreaDstrcCodeNm이 용도지역지구명)
+      const zoneItem = list.find((item: any) => 
+        item?.prposAreaDstrcCodeNm?.includes('주거') || 
+        item?.prposAreaDstrcCodeNm?.includes('상업') || 
+        item?.prposAreaDstrcCodeNm?.includes('공업') || 
+        item?.prposAreaDstrcCodeNm?.includes('녹지') ||
+        item?.prposAreaDstrcCodeNm?.includes('관리')
+      ) || list[0]
+      const zone = zoneItem?.prposAreaDstrcCodeNm ?? zoneItem?.prposAreaNm
+      if (zone) { console.log('[Vworld-attr]', zone); return zone }
+    }
+  } catch (e) { console.warn('[Vworld-attr] 실패:', e) }
+  return null
+}
+
+// ③ Vworld 토지이용계획 WFS 레이어 — 좌표 기반
 async function fetchByCoord(lng: number, lat: number): Promise<string | null> {
   // 토지이용계획 레이어 목록 (우선순위 순)
   const layers = ['LT_C_UQ111', 'LT_C_UD801']
@@ -156,7 +187,8 @@ export async function GET(req: NextRequest) {
   let siteArea: number | null = null
   const pnu = (sigunguCd && bjdongCd) ? buildPNU(sigunguCd, bjdongCd, bun, ji) : null
 
-  if (!zoneRaw && pnu) { zoneRaw = await fetchByLURIS(pnu); if (zoneRaw) source = 'luris' }
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByVworldAttr(pnu); if (zoneRaw) source = 'vworld-attr' }  // 1순위: Vworld 속성조회
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByLURIS(pnu); if (zoneRaw) source = 'luris' }  // 2순위: LURIS
   if (!zoneRaw && entX && entY) { zoneRaw = await fetchByCoord(Number(entX), Number(entY)); if (zoneRaw) source = 'vworld-coord' }
   if (!zoneRaw && pnu) { zoneRaw = await fetchByPNU(pnu); if (zoneRaw) source = 'vworld-pnu' }
   if (pnu) siteArea = await fetchArea(pnu)
