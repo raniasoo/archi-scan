@@ -244,6 +244,8 @@ export function CadastralMap({
                 const wxMin = Math.min(...wxs), wxMax = Math.max(...wxs)
                 const wyMin = Math.min(...wys), wyMax = Math.max(...wys)
                 const wxCenter = (wxMin + wxMax) / 2, wyCenter = (wyMin + wyMax) / 2
+                // 지리 좌표 (setback 계산용)
+                const cLat = parcel.centroid[1]  // 중심 위도
 
                 // SVG 스케일: 파셀이 SVG에 꽉 차도록 (PAD=30)
                 const PAD = 30
@@ -304,7 +306,7 @@ export function CadastralMap({
                       const cx = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[0], 0) / mercatorPoints.length
                       const cy = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[1], 0) / mercatorPoints.length
                       // 이격거리 → SVG 픽셀 (Z=17: 약 0.94m/worldpx → scale 적용)
-                      const metersPerWorldPx = 156543.034 * Math.cos((minLat + maxLat) / 2 * Math.PI / 180) / N
+                      const metersPerWorldPx = 156543.034 * Math.cos(cLat * Math.PI / 180) / N
                       const avgSetback = (setbackFront + setbackSide + setbackRear) / 3
                       const insetSVGPx = avgSetback / metersPerWorldPx * scale
                       const insetPts = mercatorPoints.map(([x, y]: [number,number]) => {
@@ -324,7 +326,7 @@ export function CadastralMap({
                       if (mercatorPoints.length < 3) return null
                       const cx = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[0], 0) / mercatorPoints.length
                       const cy = mercatorPoints.reduce((s: number, p: [number,number]) => s + p[1], 0) / mercatorPoints.length
-                      const metersPerWorldPx = 156543.034 * Math.cos((minLat + maxLat) / 2 * Math.PI / 180) / N
+                      const metersPerWorldPx = 156543.034 * Math.cos(cLat * Math.PI / 180) / N
                       const avgSetback = (setbackFront + setbackSide + setbackRear) / 3
                       const insetSVGPx = avgSetback / metersPerWorldPx * scale
                       const ratio = Math.sqrt(coverageRatio / 100)
