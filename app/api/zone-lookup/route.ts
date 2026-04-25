@@ -39,6 +39,7 @@ async function fetchByLURIS(pnu: string): Promise<string | null> {
     const url = `${LURIS_ATTR}?serviceKey=${encodeURIComponent(LURIS_KEY)}&pnu=${pnu}&returnType=json`
     const res  = await fetch(url, { signal: AbortSignal.timeout(7000) })
     const text = await res.text()
+    console.log(`[LURIS] status=${res.status} text(200)=${text.slice(0,200)}`)
 
     // XML 응답 처리
     if (text.trim().startsWith('<')) {
