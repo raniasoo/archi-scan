@@ -12,6 +12,24 @@ const VWORLD_BASE   = 'https://api.vworld.kr/req/data'
 // 국토부 토지이용계획정보 속성조회 (data.go.kr 국토교통부_토지이용계획정보)
 const LURIS_ATTR    = 'https://apis.data.go.kr/1611000/nsdi/LandUseService/attr/getLandUsePlan'
 
+
+// 주소 기반 용도지역 추론 (모든 API 실패 시 최종 fallback)
+function inferZoneFromAddress(address: string): string | null {
+  if (!address) return null
+  // 중심상업지역: 명동, 종로, 광화문 등 CBD
+  if (address.includes('명동') || address.includes('광화문') || address.includes('세종대로') ||
+      address.includes('을지로') || address.includes('충무로')) return '중심상업지역'
+  // 일반상업지역: 대로변 + 상업구역
+  if ((address.includes('대로') || address.includes('테헤란') || address.includes('강남대로') ||
+       address.includes('서초대로') || address.includes('사당로') || address.includes('여의대로')) &&
+      (address.includes('강남구') || address.includes('서초구') || address.includes('종로구') ||
+       address.includes('중구') || address.includes('용산구') || address.includes('마포구') ||
+       address.includes('영등포') || address.includes('송파구'))) return '일반상업지역'
+  // 근린상업지역: 기타 상업지 추정
+  if (address.includes('역') && (address.includes('로') || address.includes('대로'))) return '근린상업지역'
+  return null
+}
+
 // 용도지역 한글 → 코드 변환
 function toCode(raw: string): string {
   if (!raw) return ''
@@ -338,6 +356,11 @@ export async function POST(req: NextRequest) {
   // 면적 병행 조회
   if (pnu) siteArea = await fetchArea(pnu)
 
+  // 최종 fallback: 주소 기반 추론
+  if (!zoneRaw && address) {
+    const inferred = inferZoneFromAddress(address)
+    if (inferred) { zoneRaw = inferred; source = 'address-inferred' }
+  }
   const zoneCode = toCode(zoneRaw || '')
   console.log(`[zone-lookup] "${zoneRaw}" → ${zoneCode} (${source})`)
 
