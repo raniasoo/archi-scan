@@ -90,8 +90,8 @@ export async function fetchLandPrice(params: {
     const data = await res.json()
     const serverPrice = data.landPricePerM2 || 0
     const districtPrice = getDistrictPrice(params.address, params.sigunguCd)
-    // 서버에서 유효한 값이 오면 우선 사용, 아니면 클라이언트 추정값
-    const price = serverPrice > 1000000 ? serverPrice : districtPrice
+    // 서버값이 합리적(500만원 이상)이면 우선, 아니면 클라이언트 추정값과 최댓값 사용
+    const price = serverPrice >= 5000000 ? serverPrice : Math.max(serverPrice, districtPrice)
     return {
       landPricePerM2: price,
       totalLandCost: price * params.siteArea,
