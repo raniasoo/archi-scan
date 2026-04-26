@@ -68,25 +68,27 @@ async function fetchFromVworld(pnu: string): Promise<number | null> {
   // reqLv2: 9자리 (산/일반1+본번4+부번4) = PNU 뒤 9자리
   const reqLv1 = pnu.slice(0, 10)
   const reqLv2 = pnu.slice(10)  // 산/일반(1)+본번(4)+부번(4) = 9자리
-  const year = new Date().getFullYear() - 1
-  for (const stdrYear of [year, year - 1]) {
+  // 2023년부터 역순으로 시도 (2024/2025는 데이터 없음 확인)
+  for (const stdrYear of [2023, 2022, 2021]) {
     const url = `https://api.vworld.kr/ned/data/getIndvdLandPrice?key=${VWORLD_API_KEY}&domain=v0-archi-scan-layout-generator.vercel.app&reqLvl=${reqLv1}&reqLvl2=${reqLv2}&stdrYear=${stdrYear}&format=json`
     console.log(`[LandPrice/NED] reqLvl=${reqLv1} reqLvl2=${reqLv2} year=${stdrYear}`)
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
     const text = await res.text()
-    console.log(`[LandPrice/NED] status=${res.status} body[:400]=${text.slice(0, 400)}`)
+    console.log(`[LandPrice/NED] status=${res.status} body[:600]=${text.slice(0, 600)}`)
     if (!res.ok || !text.startsWith('{')) continue
     const data = JSON.parse(text)
-    // 응답 구조 탐색
-    const fields = data?.indvdLandPrices?.field
-                || data?.statelndvdLandPrices?.field
-                || data?.field || []
-    const list = Array.isArray(fields) ? fields : [fields]
+    // 응답 구조: statelndvdLandPrices.field (단일 객체 또는 배열)
+    const raw_field = data?.statelndvdLandPrices?.field
+                   ?? data?.indvdLandPrices?.field
+                   ?? data?.field
+    if (!raw_field) continue
+    const list = Array.isArray(raw_field) ? raw_field : [raw_field]
     for (const item of list) {
       if (!item) continue
-      const raw = item?.pblntfPclnd ?? item?.indvdLandPc ?? item?.landPrice ?? ''
-      const price = parseInt(raw.toString().replace(/,/g, ''))
-      console.log(`[LandPrice/NED] item raw=${raw} price=${price}`)
+      // 가격 필드 탐색: pblntfPclnd(공시지가), indvdLandPc
+      const raw = item?.pblntfPclnd ?? item?.indvdLandPc ?? item?.landPc ?? ''
+      const price = parseInt(raw.toString().replace(/[^0-9]/g, ''))
+      console.log(`[LandPrice/NED] year=${stdrYear} pblntfPclnd=${item?.pblntfPclnd} raw=${raw} price=${price}`)
       if (price > 0) return price
     }
   }
