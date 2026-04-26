@@ -62,36 +62,8 @@ function buildPNU(sigunguCd: string, bjdongCd: string, bun: string, ji: string):
   return `${sigunguCd.slice(0,5).padEnd(5,'0')}${bjdongCd.slice(0,5).padEnd(5,'0')}${platGb}${cleanBun}${cleanJi}`
 }
 
-async function fetchFromVworld(pnu: string): Promise<number | null> {
-  // Vworld NED API - 개별공시지가
-  // reqLv1: 10자리 (시도2+시군구3+읍면동3+리2) = PNU 앞 10자리
-  // reqLv2: 9자리 (산/일반1+본번4+부번4) = PNU 뒤 9자리
-  const reqLv1 = pnu.slice(0, 10)
-  const reqLv2 = pnu.slice(10)  // 산/일반(1)+본번(4)+부번(4) = 9자리
-  // 2023년부터 역순으로 시도 (2024/2025는 데이터 없음 확인)
-  for (const stdrYear of [2023, 2022, 2021]) {
-    const url = `https://api.vworld.kr/ned/data/getIndvdLandPrice?key=${VWORLD_API_KEY}&domain=v0-archi-scan-layout-generator.vercel.app&reqLvl=${reqLv1}&reqLvl2=${reqLv2}&stdrYear=${stdrYear}&format=json`
-    console.log(`[LandPrice/NED] reqLvl=${reqLv1} reqLvl2=${reqLv2} year=${stdrYear}`)
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    const text = await res.text()
-    console.log(`[LandPrice/NED] status=${res.status} body[:600]=${text.slice(0, 600)}`)
-    if (!res.ok || !text.startsWith('{')) continue
-    const data = JSON.parse(text)
-    // 응답 구조: statelndvdLandPrices.field (단일 객체 또는 배열)
-    const raw_field = data?.statelndvdLandPrices?.field
-                   ?? data?.indvdLandPrices?.field
-                   ?? data?.field
-    if (!raw_field) continue
-    const list = Array.isArray(raw_field) ? raw_field : [raw_field]
-    for (const item of list) {
-      if (!item) continue
-      // 가격 필드 탐색: pblntfPclnd(공시지가), indvdLandPc
-      const raw = item?.pblntfPclnd ?? item?.indvdLandPc ?? item?.landPc ?? ''
-      const price = parseInt(raw.toString().replace(/[^0-9]/g, ''))
-      console.log(`[LandPrice/NED] year=${stdrYear} pblntfPclnd=${item?.pblntfPclnd} raw=${raw} price=${price}`)
-      if (price > 0) return price
-    }
-  }
+async function fetchFromVworld(_pnu: string): Promise<number | null> {
+  // Vworld ned API는 Vercel icn1에서 직접 접근 불가 (AWS Lambda 필요)
   return null
 }
 
