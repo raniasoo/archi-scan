@@ -280,11 +280,11 @@ export async function GET(req: NextRequest) {
   let siteArea: number | null = null
   const pnu = (sigunguCd && bjdongCd) ? buildPNU(sigunguCd, bjdongCd, bun, ji) : null
 
-  if (!zoneRaw && pnu) { zoneRaw = await fetchByLambda(pnu); if (zoneRaw) source = 'lambda' }  // 0순위: Lambda 서울 프록시
-  if (!zoneRaw && pnu) { zoneRaw = await fetchByEum(pnu); if (zoneRaw) source = 'eum' }  // 1순위: 토지이음
-  if (!zoneRaw && pnu) { zoneRaw = await fetchByLambda(pnu); if (zoneRaw) source = 'lambda' }  // Lambda 프록시 추가
-  if (!zoneRaw && pnu) { zoneRaw = await fetchByVworldAttr(pnu); if (zoneRaw) source = 'vworld-attr' }  // 2순위: Vworld 속성조회
-  if (!zoneRaw && pnu) { zoneRaw = await fetchByLURIS(pnu); if (zoneRaw) source = 'luris' }  // 2순위: LURIS
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByLambda(pnu); if (zoneRaw) source = 'lambda' }
+  if (!zoneRaw && entX && entY) { zoneRaw = await fetchByLambdaCoord(Number(entX), Number(entY)); if (zoneRaw) source = 'lambda-coord' }
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByEum(pnu); if (zoneRaw) source = 'eum' }
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByVworldAttr(pnu); if (zoneRaw) source = 'vworld-attr' }
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByLURIS(pnu); if (zoneRaw) source = 'luris' }
   if (!zoneRaw && entX && entY) { zoneRaw = await fetchByCoord(Number(entX), Number(entY)); if (zoneRaw) source = 'vworld-coord' }
   if (!zoneRaw && pnu) { zoneRaw = await fetchByPNU(pnu); if (zoneRaw) source = 'vworld-pnu' }
   if (pnu) siteArea = await fetchArea(pnu)
