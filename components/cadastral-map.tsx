@@ -218,7 +218,6 @@ export function CadastralMap({
                   : 'Vworld 연결 중 — 데모 형상으로 표시합니다')
                 : error}
             </p>
-            </div>
           </div>
         </div>
       )}
@@ -227,51 +226,20 @@ export function CadastralMap({
       {parcel && svgData && (
         <div className="space-y-2">
           <div className="rounded-xl overflow-hidden border border-border/50 bg-slate-950">
-            {/* 지도 배경 div (img 태그 - 브라우저 직접 로드, CORS 불필요) */}
-            <div style={{ position: 'relative', background: '#111827' }}>
-              {parcel.centroid && (() => {
-                const Z = 17, N = Math.pow(2, Z), TP = 256
-                const tw = (lng: number, lat: number): number[] => {
-                  const r = lat * Math.PI / 180
-                  return [(lng+180)/360*N*TP, (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*N*TP] as number[]
-                }
-                const wp = parcel.coordinates.map((c: number[]) => tw(c[0], c[1]))
-                const wxA = wp.map((p: number[]) => p[0])
-                const wyA = wp.map((p: number[]) => p[1])
-                const wxMin=Math.min(...wxA),wxMax=Math.max(...wxA),wyMin=Math.min(...wyA),wyMax=Math.max(...wyA)
-                const wxC=(wxMin+wxMax)/2, wyC=(wyMin+wyMax)/2
-                const sc = Math.min((VIEW_W-60)/Math.max(wxMax-wxMin,1),(VIEW_H-60)/Math.max(wyMax-wyMin,1))*0.85
-                const ts = (wx: number, wy: number): number[] => [VIEW_W/2+(wx-wxC)*sc, VIEW_H/2+(wy-wyC)*sc]
-                const txC=Math.floor(wxC/TP), tyC=Math.floor(wyC/TP)
-                const tiles: {tx:number;ty:number}[] = []
-                for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++) tiles.push({tx:txC+dx,ty:tyC+dy})
-                return (
-                  <div style={{position:'absolute',inset:0,overflow:'hidden'}}>
-                    {tiles.map(({tx,ty}) => {
-                      const [sx,sy]=ts(tx*TP,ty*TP), [ex,ey]=ts((tx+1)*TP,(ty+1)*TP)
-                      return <img key={`${tx}-${ty}`}
-                        src={`https://basemaps.cartocdn.com/dark_all/${Z}/${tx}/${ty}.png`}
-                        style={{position:'absolute',left:`${sx/VIEW_W*100}%`,top:`${sy/VIEW_H*100}%`,
-                          width:`${(ex-sx)/VIEW_W*100}%`,height:`${(ey-sy)/VIEW_H*100}%`,display:'block'}}
-                        alt="" onError={(e)=>{(e.target as HTMLImageElement).style.opacity='0'}}
-                      />
-                    })}
-                  </div>
-                )
-              })()}
-              <svg
-                id="cadastral-svg"
-                viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-                width="100%"
-                style={{ display: 'block', position: 'relative', zIndex: 1, background: 'transparent' }}
-              >
-              {/* 격자 배경 fallback */}
+            <svg
+              id="cadastral-svg"
+              viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+              width="100%"
+              style={{ display: 'block', background: '#0f172a' }}
+            >
+
+              {/* 격자 배경 (데모 모드 또는 bbox 없을 때) */}
               <defs>
                 <pattern id="cad-grid" width="20" height="20" patternUnits="userSpaceOnUse">
                   <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" strokeWidth="0.5" />
                 </pattern>
               </defs>
-              {!parcel.centroid && <rect width={VIEW_W} height={VIEW_H} fill="url(#cad-grid)" />}
+              <rect width={VIEW_W} height={VIEW_H} fill="url(#cad-grid)" />
 
               {/* 대지 영역 */}
               <path
@@ -339,7 +307,6 @@ export function CadastralMap({
                 </g>
               )}
             </svg>
-            </div>
           </div>
 
           {/* 필지 정보 */}
