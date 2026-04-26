@@ -1612,6 +1612,7 @@ export async function lookupSiteData(
       const diagJuso = diagnostics.jusoResult as Record<string, unknown> | undefined
       if (diagJuso?.entX) siteData.entX = diagJuso.entX as number
       if (diagJuso?.entY) siteData.entY = diagJuso.entY as number
+      if (diagJuso?.bdMgtSn) siteData.bdMgtSn = diagJuso.bdMgtSn as string
       
       diagnostics.apiResponse = {
         status: 'success-with-data',
