@@ -752,6 +752,7 @@ export default function ArchiScanPage() {
     entX?: number; entY?: number
     sigunguCd?: string; bjdongCd?: string; bun?: string; ji?: string
     buildingCoverage?: number; floorAreaRatio?: number
+    bdMgtSn?: string
   }) => {
     // 조회 시작 시 초기화 → useEffect dependency가 null에서 새값으로 변경되어 항상 재실행
     setMolitSupplementData({})
