@@ -187,11 +187,11 @@ function calcParking(
     standard = '업무·상업시설 150㎡당 1대 (주차장법 시행령 별표1)'
     requiredPerArea = 150
   } else {
-    standard = '공동주택 세대당 1대 기준 (85㎡이하 기준)'
-    requiredPerArea = 85 // 세대당 85㎡ 가정
+    standard = '공동주택 세대당 0.7대 기준 (85㎡이하 소형주택 서울시 기준)'
+    requiredPerArea = 85 / 0.7  // 세대당 85㎡, 주차 0.7대 → 약 121m²당 1대
   }
 
-  const estimatedRequired = Math.ceil(maxGFA / requiredPerArea)
+  const estimatedRequired = Math.ceil(maxGFA / (requiredPerArea))
   // 주차 1대당 약 25㎡, 지하 1층 약 대지면적 × 0.7
   const parkingAreaPerFloor = input.siteArea * 0.7
   const parkingPerFloor = Math.floor(parkingAreaPerFloor / 27)
@@ -284,12 +284,16 @@ function calcEnvelope(
   // 최대 건축면적 (건폐율)
   const maxBuildingFootprint = Math.floor(effectiveSiteArea * legal.maxCoverageRatio / 100)
 
-  // 최대 연면적 (용적률은 대지면적 기준)
-  const maxGrossFloorArea = Math.floor(siteArea * legal.maxFloorAreaRatio / 100)
-
-  // 최대 층수
+  // 최대 층수 (높이 제한 기준)
   const floorHeight = 3.3 // 층고 3.3m
   const maxFloorsByHeight = Math.floor(heightLimit / floorHeight)
+
+  // 최대 연면적: 용적률 기준과 층수 제한 기준 중 작은 값
+  const maxGFAByFAR = Math.floor(siteArea * legal.maxFloorAreaRatio / 100)
+  const maxGFAByFloors = maxBuildingFootprint * maxFloorsByHeight
+  const maxGrossFloorArea = Math.min(maxGFAByFAR, maxGFAByFloors)
+
+  // 최대 층수
   const maxFloorsByFAR = Math.ceil(maxGrossFloorArea / maxBuildingFootprint)
   const maxFloors = Math.min(maxFloorsByHeight, maxFloorsByFAR)
 
