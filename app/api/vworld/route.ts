@@ -94,9 +94,83 @@ export async function POST(req: NextRequest) {
   try {
     const { address, lng, lat, siteArea, entX, entY } = await req.json()
 
-    // 1순위: JUSO/MOLIT에서 받은 실제 좌표가 있으면 사용
+    // 1순위: JUSO/MOLIT 좌표 → Lambda parcel → Overpass 실제 폴리곤
     if (entX && entY && entX > 120 && entY > 30) {
-      console.log('[vworld] Using provided coordinates:', entX, entY)
+      // 1-1: Lambda(서울)에서 Vworld LP_PA_CBND_BUBUN 실제 필지 조회
+      try {
+        const lambdaUrl = 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
+        const lRes = await fetch(`${lambdaUrl}?parcel=1&lng=${entX}&lat=${entY}`, { signal: AbortSignal.timeout(8000) })
+        const lData = await lRes.json()
+        console.log('[vworld] Lambda parcel:', lData.success, 'area:', lData.area)
+        if (lData.success && lData.area > 0) {
+          let coords: [number,number][]
+          if (lData.coordinates && lData.coordinates.length >= 3) {
+            coords = lData.coordinates.map((c: number[]) => [c[0], c[1]] as [number,number])
+          } else {
+            const side = Math.sqrt(lData.area) / 111319
+            coords = [
+              [entX-side/2, entY-side/2], [entX+side/2, entY-side/2],
+              [entX+side/2, entY+side/2], [entX-side/2, entY+side/2],
+              [entX-side/2, entY-side/2]
+            ] as [number,number][]
+          }
+          const centroid: [number,number] = [entX, entY]
+          const bbox = { minLng: Math.min(...coords.map(c=>c[0])), minLat: Math.min(...coords.map(c=>c[1])), maxLng: Math.max(...coords.map(c=>c[0])), maxLat: Math.max(...coords.map(c=>c[1])) }
+          return NextResponse.json({ success: true, parcel: { pnu: lData.pnu||null, address, area: lData.area, coordinates: coords, centroid, bbox, isDemo: false } })
+        }
+      } catch(e) { console.warn('[vworld] Lambda parcel 실패:', String(e)) }
+
+      // 1-2: Overpass API로 실제 건물 footprint 조회 (OpenStreetMap)
+      try {
+        const d = 0.0003  // 약 30m 반경
+        const overpassQuery = `[out:json][timeout:10];(way(around:60,${entY},${entX})[building];relation(around:60,${entY},${entX})[building];);out geom;`
+        const overpassRes = await fetch('https://overpass-api.de/api/interpreter', {
+          method: 'POST',
+          body: overpassQuery,
+          headers: { 'Content-Type': 'text/plain', 'User-Agent': 'ArchiScan/1.0' },
+          signal: AbortSignal.timeout(10000),
+        })
+        const overpassData = await overpassRes.json()
+        const elements = overpassData?.elements || []
+        console.log(`[vworld] Overpass elements: ${elements.length}`)
+        
+        if (elements.length > 0) {
+          // 가장 큰 건물 footprint 선택
+          let bestGeom: {lat:number,lon:number}[] = []
+          let bestArea = 0
+          for (const el of elements) {
+            const geom = el.geometry || []
+            if (geom.length >= 3) {
+              // 간단한 폴리곤 면적 추정
+              const lngs = geom.map((g:{lon:number})=>g.lon)
+              const lats = geom.map((g:{lat:number})=>g.lat)
+              const w = (Math.max(...lngs)-Math.min(...lngs)) * 111319 * Math.cos(entY*Math.PI/180)
+              const h = (Math.max(...lats)-Math.min(...lats)) * 111319
+              const estArea = w * h
+              if (estArea > bestArea) { bestArea = estArea; bestGeom = geom }
+            }
+          }
+          if (bestGeom.length >= 3) {
+            const coords = bestGeom.map(g => [g.lon, g.lat] as [number,number])
+            if (coords[0][0] !== coords[coords.length-1][0]) coords.push(coords[0])
+            const lngs = coords.map(c=>c[0]), lats = coords.map(c=>c[1])
+            const cLng = (Math.min(...lngs)+Math.max(...lngs))/2
+            const cLat = (Math.min(...lats)+Math.max(...lats))/2
+            // 실제 폴리곤 면적 계산 (Shoelace 공식)
+            let polyArea = 0
+            for (let i=0; i<coords.length-1; i++) {
+              polyArea += (coords[i][0]-coords[i+1][0]) * (coords[i][1]+coords[i+1][1])
+            }
+            const areaM2 = Math.abs(polyArea/2) * 111319 * 111319 * Math.cos(cLat*Math.PI/180)
+            const finalArea = siteArea && siteArea > 0 ? siteArea : Math.round(areaM2)
+            const bbox = { minLng: Math.min(...lngs), minLat: Math.min(...lats), maxLng: Math.max(...lngs), maxLat: Math.max(...lats) }
+            console.log(`[vworld] Overpass 성공: ${coords.length}점, 추정면적 ${Math.round(areaM2)}㎡`)
+            return NextResponse.json({ success: true, parcel: { pnu: null, address, area: finalArea, coordinates: coords, centroid: [cLng, cLat] as [number,number], bbox, isDemo: false, source: 'overpass' } })
+          }
+        }
+      } catch(e) { console.warn('[vworld] Overpass 실패:', String(e)) }
+
+      // 1-3: 좌표만 있을 때 면적 기반 정사각형
       const area = siteArea || 0
       const parcel = buildParcelFromCoords(entX, entY, area, address)
       return NextResponse.json({ success: true, parcel, coordinates: { lng: entX, lat: entY } })
