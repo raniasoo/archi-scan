@@ -180,6 +180,23 @@ export function SiteInputForm({
             onSiteAreaChange(String(Math.round(res.siteArea)))
           }
         }
+        // siteArea 없으면 /api/vworld로 지적도 면적 자동 조회
+        if ((!res.siteArea || res.siteArea === 0) && resolvedJuso && onSiteAreaChange) {
+          const addr = resolvedJuso.roadAddr || address || ''
+          fetch('/api/vworld', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: addr, siteArea: 0, entX: resolvedJuso.entX, entY: resolvedJuso.entY }),
+          }).then(r => r.json()).then(vd => {
+            if (vd.parcel?.area && vd.parcel.area > 0 && onSiteAreaChange) {
+              const cur = siteArea?.trim()
+              if (!cur || cur === '' || Number(cur) === 0) {
+                onSiteAreaChange(String(Math.round(vd.parcel.area)))
+                console.log('[site-input] /api/vworld 면적 자동입력:', vd.parcel.area)
+              }
+            }
+          }).catch(() => {})
+        }
         if (zone) {
           setAutoZoneCode(zone)
           // supplementData 직접 업데이트 (높이제한 포함)
