@@ -52,7 +52,12 @@ export async function fetchLandPrice(params: {
     })
 
     const data = await res.json()
-    const price = data.landPricePerM2 || getDistrictPrice(params.address)
+    // 서버 반환값이 너무 낮거나(≤300만) 실패 메시지면 클라이언트 district 값 사용
+    const serverPrice = data.landPricePerM2 || 0
+    const districtPrice = getDistrictPrice(params.address)
+    const price = (serverPrice > 3000000 && !data.message?.includes('실패'))
+      ? serverPrice
+      : Math.max(serverPrice, districtPrice)
     return {
       landPricePerM2: price,
       totalLandCost: price * params.siteArea,
