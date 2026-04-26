@@ -96,8 +96,8 @@ export async function POST(req: NextRequest) {
     const LAMBDA_URL = process.env.LAMBDA_ZONE_URL || 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
 
     // 0순위: Lambda(서울)에서 실제 지적도 폴리곤+면적 조회
-    const coordLng = entX || lng
-    const coordLat = entY || lat
+    let coordLng = entX || lng
+    let coordLat = entY || lat
     if (coordLng && coordLat && coordLng > 120 && coordLat > 30) {
       try {
         const lambdaRes = await fetch(`${LAMBDA_URL}?parcel=1&lng=${coordLng}&lat=${coordLat}`, { signal: AbortSignal.timeout(8000) })
