@@ -217,6 +217,7 @@ export function SiteInputForm({
               ji: resolvedJuso?.ji,
               buildingCoverage: cr ?? undefined,
               floorAreaRatio: far ?? undefined,
+              bdMgtSn: resolvedJuso?.bdMgtSn,
             } as any)
           }
         }
@@ -606,6 +607,7 @@ export function SiteInputForm({
               bjdongCd: reqParams?.bjdongCd || extracted?.bjdongCd,
               bun: reqParams?.bun || extracted?.bun,
               ji: reqParams?.ji || extracted?.ji,
+              bdMgtSn: (jusoData as any)?.bdMgtSn,
             } as import('@/types/molit').MolitSiteData)
           }
         }
