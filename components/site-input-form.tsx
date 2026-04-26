@@ -28,6 +28,8 @@ interface ResolvedJusoData {
   bjdongCd: string
   bun: string
   ji: string
+  entX?: number
+  entY?: number
 }
 
 /** Manual parcel input for retry - v3 with rawMode and platGbCd support */
@@ -157,11 +159,12 @@ export function SiteInputForm({
     const rc = rw >= 12 ? '12m-plus' : rw >= 8 ? '8m-plus' : rw >= 6 ? '6m-plus' : rw >= 4 ? '4m-plus' : 'under-4m'
     setAutoRoadCondition(rc)
 
-    // zone-lookup API 직접 호출
+    // zone-lookup API 직접 호출 (entX/entY 좌표도 함께 전달)
     fetch('/api/zone-lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sigunguCd, bjdongCd, bun, ji, address: addr }),
+      body: JSON.stringify({ sigunguCd, bjdongCd, bun, ji, address: addr,
+        entX: resolvedJuso.entX, entY: resolvedJuso.entY }),
     })
       .then(r => r.json())
       .then(res => {
@@ -386,6 +389,8 @@ export function SiteInputForm({
               bjdongCd: codes.bjdongCd,
               bun: codes.bun,
               ji: codes.ji,
+              entX: (juso as any).entX,
+              entY: (juso as any).entY,
             }
             setResolvedJuso(resolvedData)
             
