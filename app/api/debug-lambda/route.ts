@@ -1,43 +1,36 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
+const LAMBDA = 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
 const KEY    = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
 const DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
-const LAMBDA = 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
+
+// 강남파이낸스센터: JUSO→역삼동 737, admCd=1168010100
+// PNU = 11680(강남구) + 10800(역삼동법정동) + 1 + 0737 + 0000
+const PNU_737 = '1168010800107370000'
+// 이전 좌표 기반 PNU
+const PNU_158 = '1168010800101580022'
 
 export async function GET() {
   const results: Record<string, unknown> = {}
-  const JUSO_KEY = process.env.JUSO_API_KEY || ''
-  results.jusoKeySet = !!JUSO_KEY
 
-  // 1. JUSO API로 실제 좌표 조회
-  let entX = 0, entY = 0
+  // 1. 역삼동 737 PNU로 Lambda 공시지가
   try {
-    const jusoUrl = `https://business.juso.go.kr/addrlink/addrLinkApi.do?confmKey=${JUSO_KEY}&keyword=${encodeURIComponent('서울특별시 강남구 테헤란로 152')}&resultType=json&countPerPage=5&currentPage=1&detail=Y`
-    const jRes = await fetch(jusoUrl, { signal: AbortSignal.timeout(8000) })
-    const jData = await jRes.json()
-    const juso = jData?.results?.juso?.[0]
-    results.juso_raw = juso  // 전체 필드 반환
-    entX = parseFloat(juso?.entX || '0')
-    entY = parseFloat(juso?.entY || '0')
-    results.coords = { entX, entY }
-  } catch(e: unknown) { results.juso = { error: String(e) } }
+    const r = await fetch(`${LAMBDA}?landprice=1&pnu=${PNU_737}`, { signal: AbortSignal.timeout(12000) })
+    results.price_737 = await r.json()
+  } catch(e: unknown) { results.price_737 = { error: String(e) } }
 
-  if (entX && entY) {
-    // 2. 실제 좌표로 PNU 조회
-    try {
-      const url = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN&geomFilter=POINT(${entX}%20${entY})&columns=pnu&format=json&key=${KEY}&domain=${DOMAIN}`
-      const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
-      const json = await res.json()
-      const pnu = json?.response?.result?.featureCollection?.features?.[0]?.properties?.pnu
-      results.realPnu = pnu
+  // 2. 역삼동 158-22 PNU로 Lambda 공시지가
+  try {
+    const r = await fetch(`${LAMBDA}?landprice=1&pnu=${PNU_158}`, { signal: AbortSignal.timeout(12000) })
+    results.price_158 = await r.json()
+  } catch(e: unknown) { results.price_158 = { error: String(e) } }
 
-      // 3. 실제 PNU로 Lambda 공시지가 조회
-      if (pnu) {
-        const lRes = await fetch(`${LAMBDA}?landprice=1&pnu=${pnu}&lng=${entX}&lat=${entY}`, { signal: AbortSignal.timeout(12000) })
-        results.lambdaPrice = await lRes.json()
-      }
-    } catch(e: unknown) { results.pnuLookup = { error: String(e) } }
-  }
+  // 3. getLandUseAttr으로 역삼동 737 PNU 직접 확인 (Vercel에서 작동)
+  try {
+    const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${KEY}&domain=${DOMAIN}&pnu=${PNU_737}&cnflcAt=1&numOfRows=10&format=json`
+    const r = await fetch(url, { signal: AbortSignal.timeout(10000) })
+    results.landUse_737 = { status: r.status, body: (await r.text()).slice(0, 600) }
+  } catch(e: unknown) { results.landUse_737 = { error: String(e) } }
 
   return NextResponse.json(results)
 }
