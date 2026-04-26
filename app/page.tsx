@@ -817,7 +817,8 @@ export default function ArchiScanPage() {
     // 공시지가 자동 조회
     setLandPriceData(prev => ({ ...prev, loading: true }))
     fetchLandPrice({
-      sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd,
+      sigunguCd: data.sigunguCd || (data as any).sigunguCode,
+      bjdongCd: data.bjdongCd || (data as any).bjdongCode,
       bun: data.bun, ji: data.ji, address: roadAddr,
       siteArea: data.siteArea || safeNumber(siteArea, 660),
     }).then(result => {
