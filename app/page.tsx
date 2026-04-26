@@ -839,6 +839,7 @@ export default function ArchiScanPage() {
       bjdongCd: data.bjdongCd || (data as any).bjdongCode,
       bun: data.bun, ji: data.ji, address: roadAddr,
       siteArea: data.siteArea || safeNumber(siteArea, 660),
+      entX: data.entX, entY: data.entY,
     }).then(result => {
       setLandPriceData({ pricePerM2: result.landPricePerM2, totalCost: result.totalLandCost,
         source: result.source, isDemo: result.isDemo, stdrYear: result.stdrYear,

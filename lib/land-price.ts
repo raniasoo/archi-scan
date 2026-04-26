@@ -73,6 +73,8 @@ export async function fetchLandPrice(params: {
   ji?: string
   address: string
   siteArea: number
+  entX?: number
+  entY?: number
 }): Promise<LandPriceResult> {
   try {
     const res = await fetch('/api/land-price', {
@@ -84,6 +86,8 @@ export async function fetchLandPrice(params: {
         bun: params.bun,
         ji: params.ji,
         address: params.address,
+        entX: params.entX,
+        entY: params.entY,
       }),
     })
 
