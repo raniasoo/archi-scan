@@ -143,6 +143,14 @@ async function fetchByVworldAttr(pnu: string): Promise<string | null> {
 }
 
 // ① Lambda 서울 프록시 (가장 확실 — 한국 IP로 호출)
+async function fetchByLambdaCoord(lng: number, lat: number): Promise<string | null> {
+  try {
+    const res = await fetch(`${LAMBDA_URL}?coord=1&lng=${lng}&lat=${lat}`, { signal: AbortSignal.timeout(7000) })
+    const data = await res.json()
+    return data?.zoneType || null
+  } catch { return null }
+}
+
 async function fetchByLambda(pnu: string): Promise<string | null> {
   if (!LAMBDA_URL) return null
   try {
@@ -310,7 +318,12 @@ export async function POST(req: NextRequest) {
     if (zoneRaw) source = 'luris'
   }
 
-  // ② Vworld 좌표 기반 (entX/entY 있을 때)
+  // ② Lambda 좌표 기반 (서울 서버 → Vworld 차단 없음)
+  if (!zoneRaw && entX && entY) {
+    zoneRaw = await fetchByLambdaCoord(Number(entX), Number(entY))
+    if (zoneRaw) source = 'lambda-coord'
+  }
+  // ③ Vworld 좌표 기반 직접 (fallback)
   if (!zoneRaw && entX && entY) {
     zoneRaw = await fetchByCoord(Number(entX), Number(entY))
     if (zoneRaw) source = 'vworld-coord'
