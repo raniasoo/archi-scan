@@ -70,8 +70,8 @@ async function fetchFromVworld(pnu: string): Promise<number | null> {
   const reqLv2 = pnu.slice(10)  // 산/일반(1)+본번(4)+부번(4) = 9자리
   const year = new Date().getFullYear() - 1
   for (const stdrYear of [year, year - 1]) {
-    const url = `https://api.vworld.kr/ned/data/getIndvdLandPrice?key=${VWORLD_API_KEY}&domain=v0-archi-scan-layout-generator.vercel.app&reqLv1=${reqLv1}&reqLv2=${reqLv2}&stdrYear=${stdrYear}&format=json`
-    console.log(`[LandPrice/NED] reqLv1=${reqLv1} reqLv2=${reqLv2} year=${stdrYear}`)
+    const url = `https://api.vworld.kr/ned/data/getIndvdLandPrice?key=${VWORLD_API_KEY}&domain=v0-archi-scan-layout-generator.vercel.app&reqLvl=${reqLv1}&reqLvl2=${reqLv2}&stdrYear=${stdrYear}&format=json`
+    console.log(`[LandPrice/NED] reqLvl=${reqLv1} reqLvl2=${reqLv2} year=${stdrYear}`)
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
     const text = await res.text()
     console.log(`[LandPrice/NED] status=${res.status} body[:400]=${text.slice(0, 400)}`)
@@ -79,7 +79,7 @@ async function fetchFromVworld(pnu: string): Promise<number | null> {
     const data = JSON.parse(text)
     // 응답 구조 탐색
     const fields = data?.indvdLandPrices?.field
-                || data?.stateIndvdLandPrices?.field
+                || data?.statelndvdLandPrices?.field
                 || data?.field || []
     const list = Array.isArray(fields) ? fields : [fields]
     for (const item of list) {
