@@ -1,30 +1,29 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
+// LP_PA_CBND_BUBUN 폴리곤 중심좌표 (평창동 530-15)
+const LAT = 37.61269, LNG = 126.96799
+
 export async function GET() {
-  const results: Record<string,unknown> = {}
-
-  // Nominatim 지번 주소 검색
-  const addrs = [
-    '서울특별시 종로구 평창동 530-15',
-    '서울 평창동 530-15',
-    '서울 종로구 평창동 530',
-  ]
-  for (const q of addrs) {
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&countrycodes=kr&limit=3&polygon_geojson=1`
-      const r = await fetch(url, { headers:{'User-Agent':'ArchiScan/1.0'}, signal:AbortSignal.timeout(8000) })
-      const d = await r.json()
-      results[q] = d.map((x:Record<string,unknown>) => ({
-        display_name: x.display_name,
-        type: x.type,
-        osm_type: x.osm_type,
-        lat: x.lat, lon: x.lon,
-        geojson_type: (x.geojson as Record<string,unknown>)?.type,
-        coords_len: ((x.geojson as Record<string,unknown>)?.coordinates as unknown[])?.length,
+  // Overpass: 반경 30m 내 landuse/building/parcel
+  const q = `[out:json][timeout:10];(
+    way(around:50,${LAT},${LNG})[landuse];
+    way(around:30,${LAT},${LNG})[building];
+    relation(around:30,${LAT},${LNG})[building];
+  );out geom;`
+  try {
+    const r = await fetch('https://overpass-api.de/api/interpreter', {
+      method:'POST', body:q, headers:{'Content-Type':'text/plain','User-Agent':'ArchiScan/1.0'},
+      signal:AbortSignal.timeout(12000),
+    })
+    const d = await r.json()
+    const els = d?.elements||[]
+    return NextResponse.json({
+      total: els.length,
+      items: els.slice(0,5).map((e:Record<string,unknown>)=>({
+        id:e.id, type:e.type, tags:e.tags,
+        geom_len:(e.geometry as unknown[])?.length,
       }))
-    } catch(e:unknown) { results[q] = { error:String(e) } }
-  }
-
-  return NextResponse.json(results)
+    })
+  } catch(e:unknown) { return NextResponse.json({error:String(e)}) }
 }
