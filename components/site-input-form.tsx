@@ -172,7 +172,14 @@ export function SiteInputForm({
         const hl = typeof res.heightLimit === 'number' ? res.heightLimit : null
         const cr = typeof res.coverageRatio === 'number' ? res.coverageRatio : null
         const far = typeof res.floorAreaRatio === 'number' ? res.floorAreaRatio : null
-        console.log('[site-input] zone-lookup 결과:', zone, '높이:', hl, 'source:', res.source)
+        console.log('[site-input] zone-lookup 결과:', zone, '높이:', hl, 'siteArea:', res.siteArea, 'source:', res.source)
+        // 대지면적 자동입력 (zone-lookup에서 반환 시)
+        if (res.siteArea && res.siteArea > 0 && onSiteAreaChange) {
+          const currentArea = siteArea?.trim()
+          if (!currentArea || currentArea === '' || Number(currentArea) === 0) {
+            onSiteAreaChange(String(Math.round(res.siteArea)))
+          }
+        }
         if (zone) {
           setAutoZoneCode(zone)
           // supplementData 직접 업데이트 (높이제한 포함)

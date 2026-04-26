@@ -262,10 +262,17 @@ async function fetchByPNU(pnu: string): Promise<string | null> {
 
 // 필지 면적 조회
 async function fetchArea(pnu: string): Promise<number | null> {
+  // Lambda(서울)를 통해 Vworld WFS 필지 면적 조회
+  try {
+    const res = await fetch(`${LAMBDA_URL}?area=1&pnu=${pnu}`, { signal: AbortSignal.timeout(7000) })
+    const data = await res.json()
+    if (data.siteArea && data.siteArea > 0) return data.siteArea
+  } catch {}
+  // fallback: Vworld 직접 (미국서버 차단될 수 있음)
   try {
     const params = new URLSearchParams({
-      service:'data', request:'GetFeature', data:'LT_C_LHPCLND',
-      key: VWORLD_KEY, attrFilter:`pnu:=:${pnu}`,
+      service:'data', request:'GetFeature', data:'LP_PA_CBND_BUBUN',
+      key: VWORLD_KEY, attrFilter:`pnu:LIKE:${pnu.slice(0,15)}`,
       geometry:'false', attribute:'true', format:'json', size:'5',
     })
     const res  = await fetch(`${VWORLD_BASE}?${params}`, { signal: AbortSignal.timeout(6000) })
@@ -273,7 +280,7 @@ async function fetchArea(pnu: string): Promise<number | null> {
     const features = json?.response?.result?.featureCollection?.features || json?.features || []
     if (!features.length) return null
     const p    = features[0]?.properties ?? {}
-    const area = parseFloat(p?.pblntfArea ?? p?.lndpclAr ?? p?.area ?? '0')
+    const area = parseFloat(p?.pblntfArea ?? p?.lndpclAr ?? p?.area ?? p?.AREA ?? '0')
     return area > 0 ? area : null
   } catch {}
   return null
