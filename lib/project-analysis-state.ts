@@ -287,7 +287,9 @@ export function calculateLegalSummary(
   
   // 최대 면적 계산
   const maxBuildingAreaM2 = (siteArea * bcrLimit) / 100
-  const maxGrossFloorAreaM2 = (siteArea * farLimit) / 100
+  const maxGFAByFARM2 = (siteArea * farLimit) / 100
+  const maxGFAByFloors2 = maxBuildingAreaM2 * floorLimit  // 층수 제한 기준
+  const maxGrossFloorAreaM2 = Math.min(maxGFAByFARM2, maxGFAByFloors2)
   
   // 권장 층수 계산 (높이제한 / 층고 3.3m)
   const floorsByHeight = Math.floor(heightLimitM / 3.3)

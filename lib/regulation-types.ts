@@ -200,8 +200,10 @@ export function analyzeRegulations(
   // 최대 건축면적 (건폐율 적용)
   const maxBuildingArea = (effectiveSiteArea * regulation.maxCoverageRatio) / 100
   
-  // 최대 연면적 (용적률 적용)
-  const maxGrossFloorArea = (siteArea * regulation.maxFloorAreaRatio) / 100
+  // 최대 연면적: 용적률 기준과 층수 제한 기준 중 작은 값
+  const maxGFAByFAR = (siteArea * regulation.maxFloorAreaRatio) / 100
+  const maxGFAByFloors = maxBuildingArea * regulation.maxFloors  // 층수 제한 기준
+  const maxGrossFloorArea = Math.min(maxGFAByFAR, maxGFAByFloors)
   
   // 층당 평균 면적을 80%로 가정 (공용면적 제외)
   const avgFloorArea = maxBuildingArea * 0.8
