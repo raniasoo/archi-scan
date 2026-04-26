@@ -96,7 +96,18 @@ export async function POST(req: NextRequest) {
   const pnu = buildPNU(sigunguCd, bjdongCd, bun || '0000', ji || '0000')
   console.log(`[LandPrice] PNU=${pnu}, year=${year}`)
 
-  // 1순위: Vworld
+  // 0순위: Lambda 서울 프록시 (Vworld 차단 우회)
+  const LAMBDA_URL = process.env.LAMBDA_ZONE_URL || 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
+  try {
+    const res = await fetch(`${LAMBDA_URL}?landprice=1&pnu=${pnu}`, { signal: AbortSignal.timeout(9000) })
+    const data = await res.json()
+    if (data.success && data.landPricePerM2 > 0) {
+      console.log(`[LandPrice/Lambda] price=${data.landPricePerM2}`)
+      return NextResponse.json({ success: true, landPricePerM2: data.landPricePerM2, pnu, source: 'api', stdrYear: data.stdrYear || year, via: 'lambda-vworld' })
+    }
+  } catch (e: any) { console.warn('[LandPrice/Lambda]', e.message) }
+
+  // 1순위: Vworld 직접 (Lambda 실패 시)
   try {
     const price = await fetchFromVworld(pnu)
     if (price) return NextResponse.json({ success: true, landPricePerM2: price, pnu, source: 'api', stdrYear: year, via: 'vworld' })
