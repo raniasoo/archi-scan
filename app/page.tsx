@@ -787,16 +787,9 @@ export default function ArchiScanPage() {
       setMolitSupplementData(prev => ({ ...prev, ...coords }))
       console.log('[v0] MOLIT zoneType 없음 — Vworld ned 클라이언트 조회 시작')
 
-      // 임시: entX/entY/sigunguCd 모두 없으면 역추론
-      if (!data.entX && !data.sigunguCd && data.buildingCoverage != null && data.buildingCoverage > 0) {
-        const cov = data.buildingCoverage, far = data.floorAreaRatio ?? 0
-        const tempZone = cov <= 50 && far <= 100 ? 'residential-exclusive-1'
-          : cov <= 60 && far <= 200 ? 'residential-1'
-          : cov <= 60 && far <= 250 ? 'residential-2'
-          : cov <= 70 && far <= 500 ? 'semi-residential'
-          : cov <= 80 && far <= 1300 ? 'commercial-general' : 'residential-2'
-        applyZoneData(tempZone, roadAddr, hasDistrict, coords)
-      }
+      // NOTE: buildingCoverage/floorAreaRatio는 기존 건물의 '현황값'이므로
+      // 용도지역 역추론에 사용하면 안 됨 (예: 25%/43%인 건물도 제2종일반주거지역일 수 있음)
+      // → 실제 zone은 Vworld 조회 결과로만 설정
 
       // Vworld ned API 클라이언트 직접 호출
       import('@/lib/zone-client').then(({ fetchZoneFromVworld }) =>

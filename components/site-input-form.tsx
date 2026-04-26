@@ -1216,9 +1216,10 @@ export function SiteInputForm({
                 )}
                 {fetchedData.buildingCoverage && (
                   <>
-                    <span className="text-muted-foreground">건폐율/용적률</span>
-                    <span className="font-medium">
+                    <span className="text-muted-foreground text-amber-400/70">현황 건폐율/용적률</span>
+                    <span className="font-medium text-amber-400/80">
                       {fetchedData.buildingCoverage}% / {fetchedData.floorAreaRatio || '-'}%
+                      <span className="text-[10px] text-muted-foreground ml-1">(기존건물 현황)</span>
                     </span>
                   </>
                 )}
