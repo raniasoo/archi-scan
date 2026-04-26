@@ -90,7 +90,7 @@ export function CadastralMap({
     } finally {
       setLoading(false)
     }
-  }, [address, siteArea, entX, entY, onParcelLoaded])
+  }, [address, siteArea, entX, entY, bdMgtSn, onParcelLoaded])
 
   // SVG 변환
   const svgData = useMemo(() => {
