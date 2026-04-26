@@ -228,7 +228,7 @@ export function CadastralMap({
         <div className="space-y-2">
           <div className="rounded-xl overflow-hidden border border-border/50 bg-slate-950">
             {/* 지도 배경 div (img 태그 - 브라우저 직접 로드, CORS 불필요) */}
-            <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: '#0f172a' }}>
+            <div style={{ position: 'relative', background: '#111827' }}>
               {parcel.centroid && (() => {
                 const Z = 17, N = Math.pow(2, Z), TP = 256
                 const tw = (lng: number, lat: number): [number,number] => {
@@ -262,7 +262,8 @@ export function CadastralMap({
               <svg
                 id="cadastral-svg"
                 viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
+                width="100%"
+                style={{ display: 'block', position: 'relative', zIndex: 1, background: 'transparent' }}
               >
               {/* 격자 배경 fallback */}
               <defs>
