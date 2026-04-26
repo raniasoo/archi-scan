@@ -33,6 +33,8 @@ function inferZoneFromAddress(address: string): string | null {
 // 용도지역 한글 → 코드 변환
 function toCode(raw: string): string {
   if (!raw) return ''
+  // "도시지역"은 용도구역(상위개념)이므로 용도지역으로 처리 불가 → 빈값 반환
+  if (raw.trim() === '도시지역' || raw.trim() === '관리지역' || raw.trim() === '농림지역' || raw.trim() === '자연환경보전지역') return ''
   if (raw.includes('제1종전용') || raw.includes('제1종 전용')) return 'residential-exclusive-1'
   if (raw.includes('제2종전용') || raw.includes('제2종 전용')) return 'residential-exclusive-2'
   if (raw.includes('제1종일반') || raw.includes('제1종 일반')) return 'residential-1'
@@ -42,10 +44,16 @@ function toCode(raw: string): string {
   if (raw.includes('근린상업')) return 'commercial-neighborhood'
   if (raw.includes('중심상업')) return 'commercial-central'
   if (raw.includes('일반상업')) return 'commercial-general'
+  if (raw.includes('유통상업')) return 'commercial-distribution'
+  if (raw.includes('전용공업')) return 'industrial-exclusive'
   if (raw.includes('일반공업')) return 'industrial-general'
+  if (raw.includes('준공업'))   return 'industrial-semi'
   if (raw.includes('자연녹지')) return 'green-natural'
   if (raw.includes('생산녹지')) return 'green-production'
+  if (raw.includes('보전녹지')) return 'green-conservation'
   if (raw.includes('계획관리')) return 'management-planned'
+  if (raw.includes('생산관리')) return 'management-production'
+  if (raw.includes('보전관리')) return 'management-conservation'
   return ''
 }
 
@@ -363,6 +371,13 @@ export async function POST(req: NextRequest) {
   // 면적 병행 조회
   if (pnu) siteArea = await fetchArea(pnu)
 
+  // "도시지역" 등 상위개념 용도구역이면 더 정확한 값 재시도
+  if (zoneRaw && toCode(zoneRaw) === '') {
+    console.log(`[zone-lookup] "${zoneRaw}" → 용도구역(상위개념), 재조회 시도`)
+    const retry = await fetchByLambdaCoord(Number(entX), Number(entY))
+    if (retry && toCode(retry) !== '') { zoneRaw = retry; source = 'lambda-coord-retry' }
+    else zoneRaw = null  // 빈값으로 초기화해서 주소 추론으로 fallback
+  }
   // 최종 fallback: 주소 기반 추론
   if (!zoneRaw && address) {
     const inferred = inferZoneFromAddress(address)
