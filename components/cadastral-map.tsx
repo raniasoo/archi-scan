@@ -187,13 +187,28 @@ export function CadastralMap({
               보기
             </Button>
             {parcel && parcel.centroid && (
-              <Button variant="outline" size="sm" onClick={() => {
-                const [lng, lat] = parcel.centroid
-                window.open(`https://map.vworld.kr/map/maps.do?basemap=white&pos_x=${lng}&pos_y=${lat}&zoom=5&legend_layers=lt_c_lhpclnd`, '_blank')
-              }} className="gap-2 text-emerald-400 border-emerald-500/30">
-                <MapPin className="h-3.5 w-3.5" />
-                지도
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={() => {
+                  const [lng, lat] = parcel.centroid
+                  // Vworld: 지적도(LP_PA_CBND_BUBUN) 레이어 + 좌표 중심
+                  window.open(`https://map.vworld.kr/map/maps.do?basemap=white&pos_x=${lng}&pos_y=${lat}&zoom=6&legend_layers=lp_pa_cbnd_bubun,lt_c_lhpclnd`, '_blank')
+                }} className="gap-2 text-emerald-400 border-emerald-500/30">
+                  <MapPin className="h-3.5 w-3.5" />
+                  지도
+                </Button>
+                {(parcel.pnu || bdMgtSn) && (
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const pnu = parcel.pnu || (bdMgtSn && bdMgtSn.length >= 19 ? bdMgtSn.slice(0,19) : null)
+                    if (pnu) {
+                      // 국토이음: 토지이용계획 확인 (지적도 + 용도지역 포함)
+                      window.open(`https://eum.go.kr/web/ar/eu/eulMapCrtrInfoR.do?pnu=${pnu}&isType=true`, '_blank')
+                    }
+                  }} className="gap-2 text-cyan-400 border-cyan-500/30">
+                    <MapPin className="h-3.5 w-3.5" />
+                    지적도
+                  </Button>
+                )}
+              </>
             )}
             <Button variant="outline" size="sm" onClick={downloadSVG} className="gap-2">
               <Download className="h-3.5 w-3.5" />
