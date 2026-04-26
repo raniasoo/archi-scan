@@ -11,6 +11,7 @@ interface CadastralMapProps {
   siteArea: number
   entX?: number          // 경도 (JUSO에서 파싱한 실제 좌표)
   entY?: number          // 위도 (JUSO에서 파싱한 실제 좌표)
+  bdMgtSn?: string       // 건물관리번호 (PNU 추출용)
   setbackFront?: number
   setbackSide?: number
   setbackRear?: number
@@ -39,6 +40,7 @@ export function CadastralMap({
   siteArea,
   entX,
   entY,
+  bdMgtSn,
   setbackFront = 2,
   setbackSide = 1,
   setbackRear = 1.5,
@@ -61,7 +63,7 @@ export function CadastralMap({
       const res = await fetch('/api/vworld', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, siteArea, entX, entY }),
+        body: JSON.stringify({ address, siteArea, entX, entY, bdMgtSn }),
       })
       const data = await res.json()
 

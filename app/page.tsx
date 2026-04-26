@@ -448,6 +448,7 @@ export default function ArchiScanPage() {
     bjdongCd?: string
     bun?: string
     ji?: string
+    bdMgtSn?: string  // 건물관리번호 (지적도 PNU 조회용)
   }>({})
 
   // 공시지가 state
@@ -757,7 +758,7 @@ export default function ArchiScanPage() {
     const mappedZone = mapZoneString(data.zoneType || '')
     const roadAddr = data.roadAddress || address || ''
     const hasDistrict = !!((data.area?.includes('지구단위')) || (data.district?.includes('지구단위')))
-    const coords = { entX: data.entX, entY: data.entY, sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji }
+    const coords = { entX: data.entX, entY: data.entY, sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji, bdMgtSn: data.bdMgtSn }
 
     if (data.siteArea && data.siteArea > 0) {
       setSiteArea(String(Math.round(data.siteArea)))
@@ -1661,6 +1662,7 @@ export default function ArchiScanPage() {
                 siteArea={siteAreaNum}
                 entX={molitSupplementData.entX}
                 entY={molitSupplementData.entY}
+                bdMgtSn={molitSupplementData.bdMgtSn}
                 setbackFront={regulation.setbackFront}
                 setbackSide={regulation.setbackSide}
                 setbackRear={regulation.setbackRear}

@@ -92,7 +92,45 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, lng, lat, siteArea, entX, entY } = await req.json()
+    const { address, lng, lat, siteArea, entX, entY, bdMgtSn } = await req.json()
+    const pnuFromBdMgtSn = (bdMgtSn && bdMgtSn.length >= 19) ? bdMgtSn.slice(0, 19) : null
+
+    // 0순위: bdMgtSn → PNU → LP_PA_CBND_BUBUN 직접 폴리곤 (좌표 없어도 정확)
+    if (pnuFromBdMgtSn) {
+      try {
+        const vwKey = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
+        const vwDomain = 'v0-archi-scan-layout-generator.vercel.app'
+        const params = new URLSearchParams({
+          service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
+          key: vwKey, domain: vwDomain, geometry: 'true', attribute: 'true',
+          page: '1', size: '1', crs: 'EPSG:4326', format: 'json',
+          attrFilter: `pnu:=:${pnuFromBdMgtSn}`,
+        })
+        const vwRes = await fetch(`https://api.vworld.kr/req/data?${params}`, { signal: AbortSignal.timeout(10000) })
+        const vwData = await vwRes.json()
+        const features = vwData?.response?.result?.featureCollection?.features || []
+        console.log(`[vworld] PNU ${pnuFromBdMgtSn} → features: ${features.length}`)
+        if (features.length > 0) {
+          const f = features[0], geom = f?.geometry, props = f?.properties || {}
+          if (geom && (geom.type === 'Polygon' || geom.type === 'MultiPolygon')) {
+            const rawCoords = geom.type === 'Polygon' ? geom.coordinates[0] : geom.coordinates[0][0]
+            if (rawCoords && rawCoords.length >= 3) {
+              const coords = rawCoords.map((c: number[]) => [c[0], c[1]] as [number,number])
+              const lngs = coords.map((c:[number,number])=>c[0]), lats = coords.map((c:[number,number])=>c[1])
+              const cLng = (Math.min(...lngs)+Math.max(...lngs))/2
+              const cLat = (Math.min(...lats)+Math.max(...lats))/2
+              let pa = 0
+              for (let i=0;i<coords.length-1;i++) pa+=(coords[i][0]-coords[i+1][0])*(coords[i][1]+coords[i+1][1])
+              const aM2 = Math.abs(pa/2)*111319*111319*Math.cos(cLat*Math.PI/180)
+              const finalArea = siteArea && siteArea > 0 ? siteArea : Math.round(aM2)
+              const bbox = { minLng:Math.min(...lngs), minLat:Math.min(...lats), maxLng:Math.max(...lngs), maxLat:Math.max(...lats) }
+              console.log(`[vworld] PNU 조회 성공: ${coords.length}점, pnu=${props.pnu}, area=${Math.round(aM2)}㎡`)
+              return NextResponse.json({ success: true, parcel: { pnu: props.pnu||pnuFromBdMgtSn, address, area: finalArea, coordinates: coords, centroid: [cLng,cLat] as [number,number], bbox, isDemo: false, source: 'vworld-pnu' } })
+            }
+          }
+        }
+      } catch(e) { console.warn('[vworld] PNU 기반 조회 실패:', String(e)) }
+    }
 
     // 1순위: JUSO/MOLIT 좌표 → Lambda parcel → Overpass 실제 폴리곤
     if (entX && entY && entX > 120 && entY > 30) {

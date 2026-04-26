@@ -96,8 +96,11 @@ export async function fetchLandPrice(params: {
     const data = await res.json()
     const serverPrice = data.landPricePerM2 || 0
     const districtPrice = getDistrictPrice(params.address, params.sigunguCd)
-    // 서버값이 합리적(500만원 이상)이면 우선, 아니면 클라이언트 추정값과 최댓값 사용
-    const price = serverPrice >= 5000000 ? serverPrice : Math.max(serverPrice, districtPrice)
+    // 실측값(isDemo:false)이면 신뢰 → 그대로 사용 (아무리 낮아도 LP_PA_CBND_BUBUN 실데이터)
+    // 추정값(isDemo:true)이면 지역 평균과 비교해서 더 합리적인 값 사용
+    const price = (!data.isDemo && serverPrice > 0)
+      ? serverPrice
+      : (serverPrice >= 5000000 ? serverPrice : Math.max(serverPrice, districtPrice))
     return {
       landPricePerM2: price,
       totalLandCost: price * params.siteArea,
