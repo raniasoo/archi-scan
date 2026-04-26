@@ -7,6 +7,7 @@ export interface LandPriceResult {
   isDemo: boolean
   stdrYear: number
   message?: string
+  siteArea?: number        // 필지 면적 (㎡) - API에서 반환 시
 }
 
 // 시군구코드 → 공시지가 매핑 (더 정확)
@@ -100,6 +101,7 @@ export async function fetchLandPrice(params: {
       isDemo: data.isDemo ?? true,
       stdrYear: data.stdrYear || new Date().getFullYear() - 1,
       message: data.message,
+      siteArea: data.siteArea,
     }
   } catch {
     // API 실패 시 클라이언트 district-average 적용

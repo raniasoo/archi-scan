@@ -825,6 +825,10 @@ export default function ArchiScanPage() {
       setLandPriceData({ pricePerM2: result.landPricePerM2, totalCost: result.totalLandCost,
         source: result.source, isDemo: result.isDemo, stdrYear: result.stdrYear,
         message: result.message, loading: false })
+      // 공시지가 API에서 필지면적이 오면 대지면적 자동입력
+      if (result.siteArea && result.siteArea > 0) {
+        setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0) ? String(Math.round(result.siteArea!)) : prev)
+      }
     }).catch(() => setLandPriceData(prev => ({ ...prev, loading: false })))
   }
 

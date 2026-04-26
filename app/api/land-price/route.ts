@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     const data = await res.json()
     if (data.success && data.landPricePerM2 > 0) {
       console.log(`[LandPrice/Lambda] price=${data.landPricePerM2}`)
-      return NextResponse.json({ success: true, landPricePerM2: data.landPricePerM2, pnu, source: 'api', stdrYear: data.stdrYear || year, via: 'lambda-vworld' })
+      return NextResponse.json({ success: true, landPricePerM2: data.landPricePerM2, pnu, source: 'api', stdrYear: data.stdrYear || year, via: 'lambda-vworld', siteArea: data.siteArea })
     }
   } catch (e: any) { console.warn('[LandPrice/Lambda]', e.message) }
 
