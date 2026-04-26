@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     // 1순위: JUSO/MOLIT에서 받은 실제 좌표가 있으면 사용
     if (entX && entY && entX > 120 && entY > 30) {
       console.log('[vworld] Using provided coordinates:', entX, entY)
-      const area = siteArea || 660
+      const area = siteArea || 0
       const parcel = buildParcelFromCoords(entX, entY, area, address)
       return NextResponse.json({ success: true, parcel, coordinates: { lng: entX, lat: entY } })
     }
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
             const bbox = result.boundingbox // [minLat, maxLat, minLng, maxLng]
             
             let coordinates: [number, number][]
-            let area = siteArea || 660
+            let area = siteArea || 0
 
             if (bbox && bbox.length === 4) {
               // 실제 boundingbox로 폴리곤 생성
@@ -273,7 +273,7 @@ function buildParcelFromCoords(lng: number, lat: number, area: number, address?:
 
 
 function getDemoParcel(address?: string, siteArea?: number) {
-  const area = siteArea && siteArea > 0 ? siteArea : 660
+  const area = siteArea && siteArea > 0 ? siteArea : 0
   // 면적에 맞는 가상 직사각형 (황금비 1:1.6 근사)
   const centerLng = 127.0276
   const centerLat = 37.4979

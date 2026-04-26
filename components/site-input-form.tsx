@@ -135,8 +135,8 @@ export function SiteInputForm({
       if (onSupplementDataChange) onSupplementDataChange(autoData)
       return autoData
     })
-    // success-empty 상태에서 zone-lookup 완료 시 자동으로 다음 단계로 진행
-    if (lookupState === 'success-empty') {
+    // success-empty 또는 success(zoneType 없는 경우) 모두 자동으로 다음 단계로 진행
+    if (lookupState === 'success-empty' || lookupState === 'success') {
       setShowSupplementForm(true)
     }
   }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit, (externalSupplement as any)?._key])
