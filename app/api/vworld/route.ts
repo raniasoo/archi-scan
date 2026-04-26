@@ -105,9 +105,9 @@ export async function POST(req: NextRequest) {
         console.log('[vworld] Lambda parcel:', lambdaData.success, 'area:', lambdaData.area)
         if (lambdaData.success && lambdaData.area > 0) {
           // 실제 폴리곤 좌표가 있으면 사용, 없으면 면적 기반 근사 폴리곤
-          let coordinates: [number, number][]
+          let coordinates: number[][]
           if (lambdaData.coordinates && lambdaData.coordinates.length >= 3) {
-            coordinates = lambdaData.coordinates.map((c: number[]) => [c[0], c[1]] as [number, number])
+            coordinates = lambdaData.coordinates.map((c: number[]) => [c[0], c[1]])
           } else {
             // 면적 기반 정사각형 근사 (실제 면적은 정확)
             const side = Math.sqrt(lambdaData.area) / 111319
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
             ]
           }
           const parcel = {
-            coordinates, centroid: [coordLng, coordLat] as [number, number],
+            coordinates, centroid: [coordLng, coordLat],
             area: lambdaData.area, pnu: lambdaData.properties?.pnu || null,
             jibun: lambdaData.properties?.jibun || address || '',
             jimok: lambdaData.properties?.jimok || '대', isDemo: false,
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
             const centerLat = parseFloat(result.lat)
             const bbox = result.boundingbox // [minLat, maxLat, minLng, maxLng]
             
-            let coordinates: [number, number][]
+            let coordinates: number[][]
             let area = siteArea || 660
 
             if (bbox && bbox.length === 4) {
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
               landUse: '대',
               isDemo: false,
               coordinates,
-              centroid: [centerLng, centerLat] as [number, number],
+              centroid: [centerLng, centerLat],
               bbox: {
                 minLng: Math.min(...lngs), minLat: Math.min(...lats),
                 maxLng: Math.max(...lngs), maxLat: Math.max(...lats),
@@ -281,7 +281,7 @@ function buildParcelFromCoords(lng: number, lat: number, area: number, address?:
   const dLng = (sideM / 2) / (111319 * Math.cos(latRad))
   const dLat = (heightM / 2) / 111319
 
-  const coords: [number, number][] = [
+  const coords: number[][] = [
     [lng - dLng, lat - dLat],
     [lng + dLng, lat - dLat],
     [lng + dLng, lat + dLat],
@@ -296,7 +296,7 @@ function buildParcelFromCoords(lng: number, lat: number, area: number, address?:
     landUse: '대',
     isDemo: false,  // 실제 좌표 기반이므로 데모 아님
     coordinates: coords,
-    centroid: [lng, lat] as [number, number],
+    centroid: [lng, lat],
     bbox: {
       minLng: lng - dLng, minLat: lat - dLat,
       maxLng: lng + dLng, maxLat: lat + dLat,
@@ -328,8 +328,8 @@ function getDemoParcel(address?: string, siteArea?: number) {
       [centerLng + w, centerLat + h],
       [centerLng - w, centerLat + h],
       [centerLng - w, centerLat - h],
-    ] as [number, number][],
-    centroid: [centerLng, centerLat] as [number, number],
+    ][],
+    centroid: [centerLng, centerLat],
     bbox: {
       minLng: centerLng - w, minLat: centerLat - h,
       maxLng: centerLng + w, maxLat: centerLat + h,
