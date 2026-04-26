@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
       } catch(e) { console.warn('[vworld] Lambda parcel 실패:', String(e)) }
 
       // Lambda 실패 시 기존 좌표 기반 폴리곤 (면적은 siteArea 사용)
-      const area = siteArea || 660
+      const area = siteArea || 0
       const parcel = buildParcelFromCoords(coordLng, coordLat, area, address)
       return NextResponse.json({ success: true, parcel, coordinates: { lng: coordLng, lat: coordLat } })
     }
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
             const bbox = result.boundingbox // [minLat, maxLat, minLng, maxLng]
             
             let coordinates: number[][]
-            let area = siteArea || 660
+            let area = siteArea || 0
 
             if (bbox && bbox.length === 4) {
               // 실제 boundingbox로 폴리곤 생성
@@ -306,7 +306,7 @@ function buildParcelFromCoords(lng: number, lat: number, area: number, address?:
 
 
 function getDemoParcel(address?: string, siteArea?: number) {
-  const area = siteArea && siteArea > 0 ? siteArea : 660
+  const area = siteArea && siteArea > 0 ? siteArea : 0
   // 면적에 맞는 가상 직사각형 (황금비 1:1.6 근사)
   const centerLng = 127.0276
   const centerLat = 37.4979
