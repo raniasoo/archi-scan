@@ -1642,9 +1642,9 @@ export default function ArchiScanPage() {
                 {landPriceData.message && (
                   <p className="text-[10px] text-muted-foreground mt-2">{landPriceData.message}</p>
                 )}
-                {landPriceData.isDemo && (
+                {landPriceData.source === 'district-average' && (
                   <p className="text-[10px] text-amber-400/70 mt-1">
-                    💡 data.go.kr에서 LAND_PRICE_API_KEY를 등록하면 실제 개별공시지가를 조회합니다
+                    💡 법정동 추정값 — 실제 공시지가와 다를 수 있습니다
                   </p>
                 )}
               </div>
