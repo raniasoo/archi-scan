@@ -63,24 +63,32 @@ function buildPNU(sigunguCd: string, bjdongCd: string, bun: string, ji: string):
 }
 
 async function fetchFromVworld(pnu: string): Promise<number | null> {
-  // Vworld NED API - 개별공시지가 (2024년부터 data.go.kr 대체)
+  // Vworld NED API - 개별공시지가
+  // reqLv1: 10자리 (시도2+시군구3+읍면동3+리2) = PNU 앞 10자리
+  // reqLv2: 9자리 (산/일반1+본번4+부번4) = PNU 뒤 9자리
+  const reqLv1 = pnu.slice(0, 10)
+  const reqLv2 = pnu.slice(10)  // 산/일반(1)+본번(4)+부번(4) = 9자리
   const year = new Date().getFullYear() - 1
   for (const stdrYear of [year, year - 1]) {
-    const url = `https://api.vworld.kr/ned/data/getIndvdLandPrice?key=${VWORLD_API_KEY}&domain=v0-archi-scan-layout-generator.vercel.app&pnu=${pnu}&stdrYear=${stdrYear}&format=json`
-    console.log(`[LandPrice/NED] pnu=${pnu} year=${stdrYear}`)
+    const url = `https://api.vworld.kr/ned/data/getIndvdLandPrice?key=${VWORLD_API_KEY}&domain=v0-archi-scan-layout-generator.vercel.app&reqLv1=${reqLv1}&reqLv2=${reqLv2}&stdrYear=${stdrYear}&format=json`
+    console.log(`[LandPrice/NED] reqLv1=${reqLv1} reqLv2=${reqLv2} year=${stdrYear}`)
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
     const text = await res.text()
-    console.log(`[LandPrice/NED] status=${res.status} body[:300]=${text.slice(0, 300)}`)
+    console.log(`[LandPrice/NED] status=${res.status} body[:400]=${text.slice(0, 400)}`)
     if (!res.ok || !text.startsWith('{')) continue
     const data = JSON.parse(text)
-    // 응답 구조: {indvdLandPrices: {field: [{pblntfPclnd, stdrYear, ...}]}}
-    const fields = data?.indvdLandPrices?.field || data?.field || []
+    // 응답 구조 탐색
+    const fields = data?.indvdLandPrices?.field
+                || data?.stateIndvdLandPrices?.field
+                || data?.field || []
     const list = Array.isArray(fields) ? fields : [fields]
-    if (!list.length || !list[0]) continue
-    const raw = list[0]?.pblntfPclnd ?? list[0]?.indvdLandPc ?? '0'
-    const price = parseInt(raw.toString().replace(/,/g, ''))
-    console.log(`[LandPrice/NED] raw=${raw} price=${price}`)
-    if (price > 0) return price
+    for (const item of list) {
+      if (!item) continue
+      const raw = item?.pblntfPclnd ?? item?.indvdLandPc ?? item?.landPrice ?? ''
+      const price = parseInt(raw.toString().replace(/,/g, ''))
+      console.log(`[LandPrice/NED] item raw=${raw} price=${price}`)
+      if (price > 0) return price
+    }
   }
   return null
 }
