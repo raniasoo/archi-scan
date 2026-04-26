@@ -452,6 +452,9 @@ export default function ArchiScanPage() {
   }>({})
 
   // 공시지가 state
+  // 건물관리번호 - 지적도 PNU 조회용 독립 state (molitSupplementData chain 우회)
+  const [siteBdMgtSn, setSiteBdMgtSn] = useState<string>('')
+
   const [landPriceData, setLandPriceData] = useState<{
     pricePerM2: number
     totalCost: number
@@ -756,6 +759,7 @@ export default function ArchiScanPage() {
   }) => {
     // 조회 시작 시 초기화 → useEffect dependency가 null에서 새값으로 변경되어 항상 재실행
     setMolitSupplementData({})
+    if (data.bdMgtSn) setSiteBdMgtSn(data.bdMgtSn)
     const mappedZone = mapZoneString(data.zoneType || '')
     const roadAddr = data.roadAddress || address || ''
     const hasDistrict = !!((data.area?.includes('지구단위')) || (data.district?.includes('지구단위')))
@@ -1663,7 +1667,7 @@ export default function ArchiScanPage() {
                 siteArea={siteAreaNum}
                 entX={molitSupplementData.entX}
                 entY={molitSupplementData.entY}
-                bdMgtSn={molitSupplementData.bdMgtSn}
+                bdMgtSn={siteBdMgtSn || molitSupplementData.bdMgtSn}
                 setbackFront={regulation.setbackFront}
                 setbackSide={regulation.setbackSide}
                 setbackRear={regulation.setbackRear}
