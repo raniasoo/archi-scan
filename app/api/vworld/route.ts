@@ -352,7 +352,7 @@ function getDemoParcel(address?: string, siteArea?: number) {
       [centerLng + w, centerLat + h],
       [centerLng - w, centerLat + h],
       [centerLng - w, centerLat - h],
-    ][],
+    ],
     centroid: [centerLng, centerLat],
     bbox: {
       minLng: centerLng - w, minLat: centerLat - h,
