@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
   // 0순위: Lambda 서울 프록시 (Vworld 차단 우회)
   const LAMBDA_URL = process.env.LAMBDA_ZONE_URL || 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
   try {
-    const res = await fetch(`${LAMBDA_URL}?landprice=1&pnu=${pnu}`, { signal: AbortSignal.timeout(9000) })
+    const res = await fetch(`${LAMBDA_URL}?landprice=1&pnu=${pnu}`, { signal: AbortSignal.timeout(6000) })
     const data = await res.json()
     if (data.success && data.landPricePerM2 > 0) {
       console.log(`[LandPrice/Lambda] price=${data.landPricePerM2}`)
