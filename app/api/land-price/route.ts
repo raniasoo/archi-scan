@@ -63,15 +63,50 @@ function buildPNU(sigunguCd: string, bjdongCd: string, bun: string, ji: string):
 }
 
 async function fetchFromVworld(pnu: string, entX?: number, entY?: number): Promise<number | null> {
-  // Lambda v11 경유 → 좌표로 정확한 PNU → getLandCharacter → 공시지가
-  const LAMBDA_URL = process.env.LAMBDA_ZONE_URL || 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
-  try {
-    const coordParam = (entX && entY) ? `&lng=${entX}&lat=${entY}` : ''
-    const res = await fetch(`${LAMBDA_URL}?landprice=1&pnu=${pnu}${coordParam}`, { signal: AbortSignal.timeout(10000) })
-    const data = await res.json()
-    console.log(`[LandPrice/Lambda] success=${data.success} price=${data.landPricePerM2} source=${data.source}`)
-    if (data.success && data.landPricePerM2 > 0) return data.landPricePerM2
-  } catch (e: any) { console.warn('[LandPrice/Lambda]', e.message) }
+  // LP_PA_CBND_BUBUN에 jiga(공시지가) 필드 직접 조회 (Vercel icn1에서 작동)
+  const VWORLD_KEY = process.env.VWORLD_API_KEY || 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
+  const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
+  
+  // PNU로 직접 조회
+  if (pnu && pnu.length >= 19) {
+    try {
+      const params = new URLSearchParams({
+        service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
+        key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+        attrFilter: `pnu:=:${pnu}`,
+        geometry: 'false', attribute: 'true', format: 'json', size: '1',
+      })
+      const res = await fetch(`https://api.vworld.kr/req/data?${params}`, { signal: AbortSignal.timeout(10000) })
+      const data = await res.json()
+      const props = data?.response?.result?.featureCollection?.features?.[0]?.properties
+      console.log(`[LandPrice/LP_PA] pnu=${pnu} jiga=${props?.jiga} gosi_year=${props?.gosi_year}`)
+      if (props?.jiga) {
+        const price = parseInt(props.jiga.toString().replace(/[^0-9]/g, ''))
+        if (price > 0) return price
+      }
+    } catch (e: any) { console.warn('[LandPrice/LP_PA]', e.message) }
+  }
+  
+  // 좌표로 주변 필지 검색 후 jiga 조회
+  if (entX && entY) {
+    try {
+      const params = new URLSearchParams({
+        service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
+        key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+        geomFilter: `POINT(${entX} ${entY})`,
+        geometry: 'false', attribute: 'true', format: 'json', size: '1',
+      })
+      const res = await fetch(`https://api.vworld.kr/req/data?${params}`, { signal: AbortSignal.timeout(10000) })
+      const data = await res.json()
+      const props = data?.response?.result?.featureCollection?.features?.[0]?.properties
+      console.log(`[LandPrice/LP_PA/coord] jiga=${props?.jiga}`)
+      if (props?.jiga) {
+        const price = parseInt(props.jiga.toString().replace(/[^0-9]/g, ''))
+        if (price > 0) return price
+      }
+    } catch (e: any) { console.warn('[LandPrice/LP_PA/coord]', e.message) }
+  }
+  
   return null
 }
 
@@ -98,7 +133,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { sigunguCd, bjdongCd, bun, ji, address, stdrYear, entX, entY } = body
+  const { sigunguCd, bjdongCd, bun, ji, address, stdrYear, entX, entY, bdMgtSn } = body
   const year = stdrYear || (new Date().getFullYear() - 1)
 
   if (!sigunguCd || !bjdongCd) {
@@ -109,7 +144,11 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const pnu = buildPNU(sigunguCd, bjdongCd, bun || '0000', ji || '0000')
+  // bdMgtSn이 있으면 직접 사용 (가장 정확한 PNU)
+  const pnu = (bdMgtSn && bdMgtSn.length >= 19)
+    ? bdMgtSn.slice(0, 19)
+    : buildPNU(sigunguCd, bjdongCd, bun || '0000', ji || '0000')
+  console.log(`[LandPrice] pnu=${pnu} (from ${bdMgtSn ? 'bdMgtSn' : 'sigunguCd/bjdongCd'})`)
   console.log(`[LandPrice] PNU=${pnu}, year=${year}`)
 
   // 0순위: Vworld 직접 호출 (Seoul 리전 - 한국 IP)

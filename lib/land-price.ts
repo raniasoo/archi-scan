@@ -75,6 +75,7 @@ export async function fetchLandPrice(params: {
   siteArea: number
   entX?: number
   entY?: number
+  bdMgtSn?: string
 }): Promise<LandPriceResult> {
   try {
     const res = await fetch('/api/land-price', {
@@ -88,6 +89,7 @@ export async function fetchLandPrice(params: {
         address: params.address,
         entX: params.entX,
         entY: params.entY,
+        bdMgtSn: params.bdMgtSn,
       }),
     })
 
