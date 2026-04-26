@@ -1620,7 +1620,7 @@ export default function ArchiScanPage() {
                     {landPriceData.loading && <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />}
                     {!landPriceData.loading && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded ${landPriceData.isDemo ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                        {landPriceData.isDemo ? '지역평균' : `${landPriceData.stdrYear}년 공시`}
+                        {landPriceData.isDemo ? '지역평균' : (landPriceData.stdrYear ? `${landPriceData.stdrYear}년 실측` : 'Vworld 실측')}
                       </span>
                     )}
                   </div>

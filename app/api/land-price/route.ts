@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
     const price = await fetchFromVworld(pnu, entX, entY)
     if (price) {
       console.log(`[LandPrice/Vworld] price=${price}`)
-      return NextResponse.json({ success: true, landPricePerM2: price, pnu, source: 'api', stdrYear: year, via: 'vworld' })
+      return NextResponse.json({ success: true, isDemo: false, landPricePerM2: price, pnu, source: 'api', stdrYear: year, via: 'vworld-lp' })
     }
   } catch (e: any) { console.warn('[LandPrice/Vworld]', e.message) }
 
