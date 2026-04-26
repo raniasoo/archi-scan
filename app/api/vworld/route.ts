@@ -93,66 +93,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { address, lng, lat, siteArea, entX, entY } = await req.json()
-    const LAMBDA_URL = process.env.LAMBDA_ZONE_URL || 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
 
-    // 0순위: Lambda(서울)에서 실제 지적도 폴리곤+면적 조회
-    let coordLng = entX || lng
-    let coordLat = entY || lat
-    if (coordLng && coordLat && coordLng > 120 && coordLat > 30) {
-      try {
-        const lambdaRes = await fetch(`${LAMBDA_URL}?parcel=1&lng=${coordLng}&lat=${coordLat}`, { signal: AbortSignal.timeout(8000) })
-        const lambdaData = await lambdaRes.json()
-        console.log('[vworld] Lambda parcel:', lambdaData.success, 'area:', lambdaData.area)
-        if (lambdaData.success && lambdaData.area > 0) {
-          // 실제 폴리곤 좌표가 있으면 사용, 없으면 면적 기반 근사 폴리곤
-          let coordinates: number[][]
-          if (lambdaData.coordinates && lambdaData.coordinates.length >= 3) {
-            coordinates = lambdaData.coordinates.map((c: number[]) => [c[0], c[1]])
-          } else {
-            // 면적 기반 정사각형 근사 (실제 면적은 정확)
-            const side = Math.sqrt(lambdaData.area) / 111319
-            coordinates = [
-              [coordLng - side/2, coordLat - side/2],
-              [coordLng + side/2, coordLat - side/2],
-              [coordLng + side/2, coordLat + side/2],
-              [coordLng - side/2, coordLat + side/2],
-              [coordLng - side/2, coordLat - side/2],
-            ]
-          }
-          const parcel = {
-            coordinates, centroid: [coordLng, coordLat],
-            area: lambdaData.area, pnu: lambdaData.properties?.pnu || null,
-            jibun: lambdaData.properties?.jibun || address || '',
-            jimok: lambdaData.properties?.jimok || '대', isDemo: false,
-          }
-          return NextResponse.json({ success: true, parcel })
-        }
-      } catch(e) { console.warn('[vworld] Lambda parcel 실패:', String(e)) }
-
-      // Lambda 실패 시 Claude AI로 면적 조회
-      let aiArea = 0
-      if (address) {
-        try {
-          const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
-            body: JSON.stringify({
-              model: 'claude-haiku-4-5-20251001', max_tokens: 150,
-              system: '건축 전문가. 주소의 대지면적(㎡)만 숫자로 답변. 모르면 0.',
-              messages: [{ role: 'user', content: `${address} 대지면적㎡` }],
-              tools: [{ type: 'web_search_20250305', name: 'web_search' }]
-            })
-          })
-          const aiData = await aiRes.json()
-          const aiText = ((aiData?.content || []) as {type:string,text?:string}[])
-            .filter(c => c.type === 'text').map(c => c.text || '').join('')
-          const numMatch = aiText.match(/([0-9][0-9,]+)/)
-          if (numMatch) { aiArea = parseInt(numMatch[1].replace(/,/g, '')); console.log('[vworld] Claude AI area:', aiArea) }
-        } catch(e) { console.warn('[vworld] Claude AI 실패:', String(e)) }
-      }
-      const area = aiArea || siteArea || 0
-      const parcel = buildParcelFromCoords(coordLng, coordLat, area, address)
-      return NextResponse.json({ success: true, parcel, coordinates: { lng: coordLng, lat: coordLat } })
+    // 1순위: JUSO/MOLIT에서 받은 실제 좌표가 있으면 사용
+    if (entX && entY && entX > 120 && entY > 30) {
+      console.log('[vworld] Using provided coordinates:', entX, entY)
+      const area = siteArea || 660
+      const parcel = buildParcelFromCoords(entX, entY, area, address)
+      return NextResponse.json({ success: true, parcel, coordinates: { lng: entX, lat: entY } })
     }
 
     // 2순위: Nominatim으로 실제 건물 boundingbox 조회 (Vercel 서버에서 접근 가능)
@@ -171,7 +118,7 @@ export async function POST(req: NextRequest) {
             const centerLat = parseFloat(result.lat)
             const bbox = result.boundingbox // [minLat, maxLat, minLng, maxLng]
             
-            let coordinates: number[][]
+            let coordinates: [number, number][]
             let area = siteArea || 660
 
             if (bbox && bbox.length === 4) {
@@ -210,7 +157,7 @@ export async function POST(req: NextRequest) {
               landUse: '대',
               isDemo: false,
               coordinates,
-              centroid: [centerLng, centerLat],
+              centroid: [centerLng, centerLat] as [number, number],
               bbox: {
                 minLng: Math.min(...lngs), minLat: Math.min(...lats),
                 maxLng: Math.max(...lngs), maxLat: Math.max(...lats),
@@ -301,7 +248,7 @@ function buildParcelFromCoords(lng: number, lat: number, area: number, address?:
   const dLng = (sideM / 2) / (111319 * Math.cos(latRad))
   const dLat = (heightM / 2) / 111319
 
-  const coords: number[][] = [
+  const coords: [number, number][] = [
     [lng - dLng, lat - dLat],
     [lng + dLng, lat - dLat],
     [lng + dLng, lat + dLat],
@@ -316,7 +263,7 @@ function buildParcelFromCoords(lng: number, lat: number, area: number, address?:
     landUse: '대',
     isDemo: false,  // 실제 좌표 기반이므로 데모 아님
     coordinates: coords,
-    centroid: [lng, lat],
+    centroid: [lng, lat] as [number, number],
     bbox: {
       minLng: lng - dLng, minLat: lat - dLat,
       maxLng: lng + dLng, maxLat: lat + dLat,
@@ -348,8 +295,8 @@ function getDemoParcel(address?: string, siteArea?: number) {
       [centerLng + w, centerLat + h],
       [centerLng - w, centerLat + h],
       [centerLng - w, centerLat - h],
-    ][],
-    centroid: [centerLng, centerLat],
+    ] as [number, number][],
+    centroid: [centerLng, centerLat] as [number, number],
     bbox: {
       minLng: centerLng - w, minLat: centerLat - h,
       maxLng: centerLng + w, maxLat: centerLat + h,
