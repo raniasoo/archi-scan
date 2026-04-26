@@ -189,25 +189,25 @@ export function CadastralMap({
             {parcel && parcel.centroid && (
               <>
                 <Button variant="outline" size="sm" onClick={() => {
-                  const [lng, lat] = parcel.centroid
-                  // Vworld: 지적도(LP_PA_CBND_BUBUN) 레이어 + 좌표 중심
-                  window.open(`https://map.vworld.kr/map/maps.do?basemap=white&pos_x=${lng}&pos_y=${lat}&zoom=6&legend_layers=lp_pa_cbnd_bubun,lt_c_lhpclnd`, '_blank')
+                  // 네이버 지도: 주소 검색으로 정확한 위치 표시
+                  window.open(`https://map.naver.com/v5/search/${encodeURIComponent(address)}`, '_blank')
                 }} className="gap-2 text-emerald-400 border-emerald-500/30">
                   <MapPin className="h-3.5 w-3.5" />
                   지도
                 </Button>
-                {(parcel.pnu || bdMgtSn) && (
-                  <Button variant="outline" size="sm" onClick={() => {
-                    const pnu = parcel.pnu || (bdMgtSn && bdMgtSn.length >= 19 ? bdMgtSn.slice(0,19) : null)
-                    if (pnu) {
-                      // 국토이음: 토지이용계획 확인 (지적도 + 용도지역 포함)
-                      window.open(`https://eum.go.kr/web/ar/eu/eulMapCrtrInfoR.do?pnu=${pnu}&isType=true`, '_blank')
-                    }
-                  }} className="gap-2 text-cyan-400 border-cyan-500/30">
-                    <MapPin className="h-3.5 w-3.5" />
-                    지적도
-                  </Button>
-                )}
+                <Button variant="outline" size="sm" onClick={() => {
+                  // 국토이음: 실제 지적도 확인 (주소 검색)
+                  // pnu 기반 직접링크 대신 검색 기반으로 변경 (PNU 직접링크 에러 발생)
+                  const pnu = parcel.pnu || (bdMgtSn && bdMgtSn.length >= 19 ? bdMgtSn.slice(0,19) : null)
+                  if (pnu) {
+                    window.open(`https://www.eum.go.kr/web/ar/eu/eulMapCrtrInfoR.do?pnu=${pnu}`, '_blank')
+                  } else {
+                    window.open('https://www.eum.go.kr', '_blank')
+                  }
+                }} className="gap-2 text-cyan-400 border-cyan-500/30">
+                  <MapPin className="h-3.5 w-3.5" />
+                  지적도
+                </Button>
               </>
             )}
             <Button variant="outline" size="sm" onClick={downloadSVG} className="gap-2">
