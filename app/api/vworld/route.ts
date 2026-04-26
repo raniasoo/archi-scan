@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
         }
       } catch(e) { console.warn('[vworld] Lambda parcel 실패:', String(e)) }
 
-      // Lambda 실패 시 Claude AI로 대지면적 조회
+      // Lambda 실패 시 Claude AI로 면적 조회
       let aiArea = 0
       if (address) {
         try {
@@ -137,23 +137,19 @@ export async function POST(req: NextRequest) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
             body: JSON.stringify({
-              model: 'claude-haiku-4-5-20251001',
-              max_tokens: 100,
-              system: '건축 전문가. 주소를 받으면 해당 부지의 대지면적(㎡)을 숫자만 답변. 모르면 0. 예: 35264',
-              messages: [{ role: 'user', content: `${address} 대지면적(㎡)` }],
+              model: 'claude-haiku-4-5-20251001', max_tokens: 150,
+              system: '건축 전문가. 주소의 대지면적(㎡)만 숫자로 답변. 모르면 0.',
+              messages: [{ role: 'user', content: `${address} 대지면적㎡` }],
               tools: [{ type: 'web_search_20250305', name: 'web_search' }]
             })
           })
           const aiData = await aiRes.json()
-          const aiText = aiData?.content?.find((c: any) => c.type === 'text')?.text || ''
-          const match = aiText.match(/(\d[\d,]+)/)
-          if (match) {
-            aiArea = parseInt(match[1].replace(/,/g, ''))
-            console.log(`[vworld] Claude AI 대지면적: ${aiArea}㎡ (${address})`)
-          }
-        } catch(e2) { console.warn('[vworld] Claude AI 조회 실패:', String(e2)) }
+          const aiText = ((aiData?.content || []) as {type:string,text?:string}[])
+            .filter(c => c.type === 'text').map(c => c.text || '').join('')
+          const numMatch = aiText.match(/([0-9][0-9,]+)/)
+          if (numMatch) { aiArea = parseInt(numMatch[1].replace(/,/g, '')); console.log('[vworld] Claude AI area:', aiArea) }
+        } catch(e) { console.warn('[vworld] Claude AI 실패:', String(e)) }
       }
-
       const area = aiArea || siteArea || 0
       const parcel = buildParcelFromCoords(coordLng, coordLat, area, address)
       return NextResponse.json({ success: true, parcel, coordinates: { lng: coordLng, lat: coordLat } })
@@ -176,7 +172,7 @@ export async function POST(req: NextRequest) {
             const bbox = result.boundingbox // [minLat, maxLat, minLng, maxLng]
             
             let coordinates: number[][]
-            let area = siteArea || 0
+            let area = siteArea || 660
 
             if (bbox && bbox.length === 4) {
               // 실제 boundingbox로 폴리곤 생성
@@ -330,7 +326,7 @@ function buildParcelFromCoords(lng: number, lat: number, area: number, address?:
 
 
 function getDemoParcel(address?: string, siteArea?: number) {
-  const area = siteArea && siteArea > 0 ? siteArea : 0
+  const area = siteArea && siteArea > 0 ? siteArea : 660
   // 면적에 맞는 가상 직사각형 (황금비 1:1.6 근사)
   const centerLng = 127.0276
   const centerLat = 37.4979
@@ -352,7 +348,7 @@ function getDemoParcel(address?: string, siteArea?: number) {
       [centerLng + w, centerLat + h],
       [centerLng - w, centerLat + h],
       [centerLng - w, centerLat - h],
-    ],
+    ][],
     centroid: [centerLng, centerLat],
     bbox: {
       minLng: centerLng - w, minLat: centerLat - h,
