@@ -133,6 +133,10 @@ export function SiteInputForm({
       if (onSupplementDataChange) onSupplementDataChange(autoData)
       return autoData
     })
+    // success-empty 상태에서 zone-lookup 완료 시 자동으로 다음 단계로 진행
+    if (lookupState === 'success-empty') {
+      setShowSupplementForm(true)
+    }
   }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit, (externalSupplement as any)?._key])
 
   // success-empty 시 내부에서 직접 zone-lookup 호출 (page.tsx 체인 우회)
