@@ -759,7 +759,25 @@ export default function ArchiScanPage() {
     const hasDistrict = !!((data.area?.includes('지구단위')) || (data.district?.includes('지구단위')))
     const coords = { entX: data.entX, entY: data.entY, sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji }
 
-    if (data.siteArea && data.siteArea > 0) setSiteArea(String(Math.round(data.siteArea)))
+    if (data.siteArea && data.siteArea > 0) {
+      setSiteArea(String(Math.round(data.siteArea)))
+    } else {
+      // siteArea 없으면 /api/vworld(지적도)에서 면적 자동 조회
+      const vworldAddr = roadAddr || address
+      if (vworldAddr) {
+        fetch('/api/vworld', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: vworldAddr, siteArea: 0, entX: data.entX, entY: data.entY }),
+        }).then(r => r.json()).then(vd => {
+          if (vd.parcel?.area && vd.parcel.area > 0) {
+            setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0)
+              ? String(Math.round(vd.parcel.area)) : prev)
+            console.log('[v0] /api/vworld 대지면적 자동입력:', vd.parcel.area)
+          }
+        }).catch(() => {})
+      }
+    }
 
     if (mappedZone) {
       // MOLIT 성공 + 용도지역 직접 반환
