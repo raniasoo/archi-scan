@@ -235,13 +235,13 @@ export function CadastralMap({
                   const r = lat * Math.PI / 180
                   return [(lng+180)/360*N*TP, (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*N*TP]
                 }
-                const wp = parcel.coordinates.map(([lng,lat]:[number,number]) => tw(lng,lat))
-                const wxA = wp.map((p:[number,number]) => p[0])
-                const wyA = wp.map((p:[number,number]) => p[1])
+                const wp = parcel.coordinates.map((c: number[]) => tw(c[0], c[1]))
+                const wxA = wp.map((p: number[]) => p[0])
+                const wyA = wp.map((p: number[]) => p[1])
                 const wxMin=Math.min(...wxA),wxMax=Math.max(...wxA),wyMin=Math.min(...wyA),wyMax=Math.max(...wyA)
                 const wxC=(wxMin+wxMax)/2, wyC=(wyMin+wyMax)/2
                 const sc = Math.min((VIEW_W-60)/Math.max(wxMax-wxMin,1),(VIEW_H-60)/Math.max(wyMax-wyMin,1))*0.85
-                const ts = (wx:number,wy:number) => [VIEW_W/2+(wx-wxC)*sc, VIEW_H/2+(wy-wyC)*sc]
+                const ts = (wx: number, wy: number): number[] => [VIEW_W/2+(wx-wxC)*sc, VIEW_H/2+(wy-wyC)*sc]
                 const txC=Math.floor(wxC/TP), tyC=Math.floor(wyC/TP)
                 const tiles: {tx:number;ty:number}[] = []
                 for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++) tiles.push({tx:txC+dx,ty:tyC+dy})
