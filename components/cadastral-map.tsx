@@ -196,14 +196,8 @@ export function CadastralMap({
                   지도
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => {
-                  // 국토이음: 실제 지적도 확인 (주소 검색)
-                  // pnu 기반 직접링크 대신 검색 기반으로 변경 (PNU 직접링크 에러 발생)
-                  const pnu = parcel.pnu || (bdMgtSn && bdMgtSn.length >= 19 ? bdMgtSn.slice(0,19) : null)
-                  if (pnu) {
-                    window.open(`https://www.eum.go.kr/web/ar/eu/eulMapCrtrInfoR.do?pnu=${pnu}`, '_blank')
-                  } else {
-                    window.open('https://www.eum.go.kr', '_blank')
-                  }
+                  // 카카오맵: 주소 검색 후 지도 레이어에서 지적도 선택 가능
+                  window.open(`https://map.kakao.com/?q=${encodeURIComponent(address)}`, '_blank')
                 }} className="gap-2 text-cyan-400 border-cyan-500/30">
                   <MapPin className="h-3.5 w-3.5" />
                   지적도
