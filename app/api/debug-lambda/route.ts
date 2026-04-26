@@ -11,7 +11,7 @@ export async function GET() {
   // 1. JUSO API로 테헤란로 152 실제 좌표 조회
   let entX = 0, entY = 0
   try {
-    const jusoUrl = `https://business.juso.go.kr/addrlink/addrLinkApi.do?confmKey=${JUSO_KEY}&currentPage=1&countPerPage=1&keyword=${encodeURIComponent('서울특별시 강남구 테헤란로 152')}&resultType=json&hstryYn=N`
+    const jusoUrl = `https://business.juso.go.kr/addrlink/addrLinkApi.do?confmKey=${JUSO_KEY}&currentPage=1&countPerPage=1&keyword=${encodeURIComponent('서울특별시 강남구 테헤란로 152')}&resultType=json&detail=Y&countPerPage=5`
     const jRes = await fetch(jusoUrl, { signal: AbortSignal.timeout(8000) })
     const jData = await jRes.json()
     const juso = jData?.results?.juso?.[0]
