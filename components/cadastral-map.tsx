@@ -231,9 +231,9 @@ export function CadastralMap({
             <div style={{ position: 'relative', background: '#111827' }}>
               {parcel.centroid && (() => {
                 const Z = 17, N = Math.pow(2, Z), TP = 256
-                const tw = (lng: number, lat: number): [number,number] => {
+                const tw = (lng: number, lat: number): number[] => {
                   const r = lat * Math.PI / 180
-                  return [(lng+180)/360*N*TP, (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*N*TP]
+                  return [(lng+180)/360*N*TP, (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*N*TP] as number[]
                 }
                 const wp = parcel.coordinates.map((c: number[]) => tw(c[0], c[1]))
                 const wxA = wp.map((p: number[]) => p[0])
