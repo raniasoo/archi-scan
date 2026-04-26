@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true, isDemo: true, source: 'district-average', stdrYear: year,
       landPricePerM2: extractDistrictPrice(address || ''),
-      message: '필지 코드 없음 — 법정동 추정값 적용',
+      message: '필지 코드 없음 — 지역 추정값 적용',
     })
   }
 
@@ -152,6 +152,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true, isDemo: true, pnu, source: 'district-average', stdrYear: year,
     landPricePerM2: extractDistrictPrice(address || ''),
-    message: '공시지가 API 미연동 — 법정동 추정값 적용 (data.go.kr에서 IndvdLandPriceService 키 등록 후 LAND_PRICE_API_KEY 설정 시 실제값 조회)',
+    message: '공시지가 API 조회 실패 — 지역 추정값 적용',
   })
 }
