@@ -15,9 +15,10 @@ export async function GET() {
     const jRes = await fetch(jusoUrl, { signal: AbortSignal.timeout(8000) })
     const jData = await jRes.json()
     const juso = jData?.results?.juso?.[0]
-    entX = parseFloat(juso?.entX || '0')
-    entY = parseFloat(juso?.entY || '0')
-    results.juso = { entX, entY, bdNm: juso?.bdNm, admCd: juso?.admCd }
+    results.juso_raw = jData?.results?.juso?.slice(0,1)
+    entX = parseFloat(juso?.entX || juso?.lnbrMnnm || '0')
+    entY = parseFloat(juso?.entY || juso?.lnbrSlno || '0')
+    results.juso = { entX, entY, keys: juso ? Object.keys(juso) : [] }
   } catch(e: unknown) { results.juso = { error: String(e) } }
 
   if (entX && entY) {
