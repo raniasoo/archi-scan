@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   // Nominatim 테스트
   if (testNominatim) {
     try {
-      const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C+%EA%B0%95%EB%82%A8%EA%B5%AC+%ED%85%8C%ED%97%A4%EB%9E%80%EB%A1%9C+152&format=json&countrycodes=kr&limit=1`
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C+%EA%B0%95%EB%82%A8%EA%B5%AC+%ED%85%8C%ED%97%A4%EB%9E%80%EB%A1%9C+152&format=json&countrycodes=kr&limit=3&polygon_geojson=1`
       const res = await fetch(nominatimUrl, { 
         headers: { 'User-Agent': 'ArchiScan/1.0 (https://v0-archi-scan-layout-generator.vercel.app)' },
         signal: AbortSignal.timeout(8000)
@@ -169,10 +169,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, parcel, coordinates: { lng: entX, lat: entY } })
     }
 
-    // 2순위: Nominatim으로 실제 건물 boundingbox 조회 (Vercel 서버에서 접근 가능)
+    // 1-4: Nominatim 좌표 역지오코딩으로 실제 건물 폴리곤 (entX/entY 있을 때)
+    if (entX && entY) {
+      try {
+        const revUrl = `https://nominatim.openstreetmap.org/reverse?lat=${entY}&lon=${entX}&format=json&polygon_geojson=1&zoom=18`
+        const revRes = await fetch(revUrl, {
+          headers: { 'User-Agent': 'ArchiScan/1.0 (https://v0-archi-scan-layout-generator.vercel.app)' },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (revRes.ok) {
+          const revData = await revRes.json()
+          const geojson = revData?.geojson
+          console.log('[vworld] Nominatim reverse geojson type:', geojson?.type, 'osm_type:', revData?.osm_type)
+          if (geojson && (geojson.type === 'Polygon' || geojson.type === 'MultiPolygon')) {
+            const rawCoords = geojson.type === 'Polygon' ? geojson.coordinates[0] : geojson.coordinates[0][0]
+            if (rawCoords && rawCoords.length >= 3) {
+              const coords = rawCoords.map((c: number[]) => [c[0], c[1]] as [number, number])
+              const lngs = coords.map((c: [number,number]) => c[0])
+              const lats = coords.map((c: [number,number]) => c[1])
+              const cLng = (Math.min(...lngs)+Math.max(...lngs))/2
+              const cLat = (Math.min(...lats)+Math.max(...lats))/2
+              let polyArea = 0
+              for (let i = 0; i < coords.length - 1; i++) {
+                polyArea += (coords[i][0]-coords[i+1][0]) * (coords[i][1]+coords[i+1][1])
+              }
+              const areaM2 = Math.abs(polyArea/2) * 111319 * 111319 * Math.cos(cLat*Math.PI/180)
+              const finalArea = siteArea && siteArea > 0 ? siteArea : Math.round(areaM2)
+              const bbox = { minLng: Math.min(...lngs), minLat: Math.min(...lats), maxLng: Math.max(...lngs), maxLat: Math.max(...lats) }
+              console.log(`[vworld] Nominatim reverse 성공: ${coords.length}점, 면적 ${Math.round(areaM2)}㎡`)
+              return NextResponse.json({ success: true, parcel: { pnu: null, address, area: finalArea, coordinates: coords, centroid: [cLng, cLat] as [number,number], bbox, isDemo: false, source: 'nominatim-reverse' } })
+            }
+          }
+        }
+      } catch(e) { console.warn('[vworld] Nominatim reverse 실패:', String(e)) }
+    }
+
+    // 2순위: Nominatim 주소 검색으로 실제 건물 폴리곤
     if (address) {
       try {
-        const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&countrycodes=kr&limit=1`
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&countrycodes=kr&limit=3&polygon_geojson=1`
         const nominatimRes = await fetch(nominatimUrl, {
           headers: { 'User-Agent': 'ArchiScan/1.0 (https://v0-archi-scan-layout-generator.vercel.app)' },
           signal: AbortSignal.timeout(8000),
@@ -183,6 +218,27 @@ export async function POST(req: NextRequest) {
             const result = nominatimData[0]
             const centerLng = parseFloat(result.lon)
             const centerLat = parseFloat(result.lat)
+
+            // polygon_geojson이 있으면 실제 폴리곤 우선 사용
+            const geojson = result.geojson
+            if (geojson && (geojson.type === 'Polygon' || geojson.type === 'MultiPolygon')) {
+              const rawCoords = geojson.type === 'Polygon' ? geojson.coordinates[0] : geojson.coordinates[0][0]
+              if (rawCoords && rawCoords.length >= 3) {
+                const coords = rawCoords.map((c: number[]) => [c[0], c[1]] as [number,number])
+                const lngs = coords.map((c: [number,number]) => c[0])
+                const lats = coords.map((c: [number,number]) => c[1])
+                const cLng2 = (Math.min(...lngs)+Math.max(...lngs))/2
+                const cLat2 = (Math.min(...lats)+Math.max(...lats))/2
+                let pa = 0
+                for (let i = 0; i < coords.length - 1; i++) pa += (coords[i][0]-coords[i+1][0])*(coords[i][1]+coords[i+1][1])
+                const aM2 = Math.abs(pa/2)*111319*111319*Math.cos(cLat2*Math.PI/180)
+                const fArea = siteArea && siteArea > 0 ? siteArea : Math.round(aM2)
+                const bbox2 = { minLng: Math.min(...lngs), minLat: Math.min(...lats), maxLng: Math.max(...lngs), maxLat: Math.max(...lats) }
+                console.log(`[vworld] Nominatim polygon 성공: ${coords.length}점, 면적 ${Math.round(aM2)}㎡`)
+                return NextResponse.json({ success: true, parcel: { pnu: null, address, area: fArea, coordinates: coords, centroid: [cLng2, cLat2] as [number,number], bbox: bbox2, isDemo: false, source: 'nominatim-polygon' }, source: 'nominatim' })
+              }
+            }
+
             const bbox = result.boundingbox // [minLat, maxLat, minLng, maxLng]
             
             let coordinates: [number, number][]
