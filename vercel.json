@@ -1,4 +1,5 @@
 {
+  "regions": ["icn1"],
   "installCommand": "pnpm install --no-frozen-lockfile",
   "headers": [
     {
@@ -10,11 +11,10 @@
     }
   ],
   "functions": {
-    "app/api/molit/route.ts": {
-      "maxDuration": 60
-    },
-    "app/api/map-tile/route.ts": {
-      "maxDuration": 10
-    }
+    "app/api/molit/route.ts": { "maxDuration": 60 },
+    "app/api/vworld/route.ts": { "maxDuration": 30 },
+    "app/api/zone-lookup/route.ts": { "maxDuration": 30 },
+    "app/api/land-price/route.ts": { "maxDuration": 30 },
+    "app/api/map-tile/route.ts": { "maxDuration": 10 }
   }
 }

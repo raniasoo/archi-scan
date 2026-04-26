@@ -96,21 +96,45 @@ export async function POST(req: NextRequest) {
 
     // 1순위: JUSO/MOLIT 좌표 → Lambda parcel → Overpass 실제 폴리곤
     if (entX && entY && entX > 120 && entY > 30) {
-      // 1-1: Lambda(서울)에서 Vworld LP_PA_CBND_BUBUN 실제 필지 조회 (좌표 있을 때만 반환)
+      // 1-1: Vworld LP_PA_CBND_BUBUN 직접 조회 (Seoul 리전 - 한국 IP)
       try {
-        const lambdaUrl = 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
-        const lRes = await fetch(`${lambdaUrl}?parcel=1&lng=${entX}&lat=${entY}`, { signal: AbortSignal.timeout(8000) })
-        const lData = await lRes.json()
-        console.log('[vworld] Lambda parcel:', lData.success, 'area:', lData.area, 'coords:', lData.coordinates?.length)
-        // 실제 폴리곤 좌표가 있을 때만 반환 (없으면 Overpass로 fall-through)
-        if (lData.success && lData.coordinates && lData.coordinates.length >= 3) {
-          const coords = lData.coordinates.map((c: number[]) => [c[0], c[1]] as [number,number])
-          const centroid: [number,number] = [entX, entY]
-          const bbox = { minLng: Math.min(...coords.map((c:[number,number])=>c[0])), minLat: Math.min(...coords.map((c:[number,number])=>c[1])), maxLng: Math.max(...coords.map((c:[number,number])=>c[0])), maxLat: Math.max(...coords.map((c:[number,number])=>c[1])) }
-          return NextResponse.json({ success: true, parcel: { pnu: lData.pnu||null, address, area: lData.area || siteArea, coordinates: coords, centroid, bbox, isDemo: false, source: 'lambda-vworld' } })
+        const vwKey = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
+        const vwDomain = 'v0-archi-scan-layout-generator.vercel.app'
+        const vwUrl = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN&key=${vwKey}&domain=${vwDomain}&geometry=true&attribute=true&page=1&size=1&crs=EPSG:4326&geomFilter=POINT(${entX}%20${entY})&format=json`
+        console.log('[vworld] Vworld 직접 LP_PA_CBND_BUBUN 조회')
+        const vwRes = await fetch(vwUrl, {
+          headers: { 'Referer': `https://${vwDomain}`, 'Origin': `https://${vwDomain}` },
+          signal: AbortSignal.timeout(10000)
+        })
+        const vwText = await vwRes.text()
+        console.log('[vworld] LP_PA_CBND_BUBUN status:', vwRes.status, 'body[:300]:', vwText.slice(0,300))
+        if (vwRes.ok && vwText.startsWith('{')) {
+          const vwData = JSON.parse(vwText)
+          const features = vwData?.response?.result?.featureCollection?.features || []
+          console.log('[vworld] LP_PA_CBND_BUBUN features:', features.length)
+          if (features.length > 0) {
+            const f = features[0]
+            const geom = f?.geometry
+            const props = f?.properties || {}
+            if (geom && (geom.type === 'Polygon' || geom.type === 'MultiPolygon')) {
+              const rawCoords = geom.type === 'Polygon' ? geom.coordinates[0] : geom.coordinates[0][0]
+              if (rawCoords && rawCoords.length >= 3) {
+                const coords = rawCoords.map((c: number[]) => [c[0], c[1]] as [number,number])
+                const lngs = coords.map((c:[number,number])=>c[0]), lats = coords.map((c:[number,number])=>c[1])
+                const cLng = (Math.min(...lngs)+Math.max(...lngs))/2
+                const cLat = (Math.min(...lats)+Math.max(...lats))/2
+                let pa = 0
+                for (let i=0;i<coords.length-1;i++) pa+=(coords[i][0]-coords[i+1][0])*(coords[i][1]+coords[i+1][1])
+                const aM2 = Math.abs(pa/2)*111319*111319*Math.cos(cLat*Math.PI/180)
+                const finalArea = siteArea && siteArea > 0 ? siteArea : Math.round(aM2)
+                const bbox = { minLng:Math.min(...lngs), minLat:Math.min(...lats), maxLng:Math.max(...lngs), maxLat:Math.max(...lats) }
+                console.log(`[vworld] LP_PA_CBND_BUBUN 성공: ${coords.length}점, pnu=${props.pnu}, area=${Math.round(aM2)}㎡`)
+                return NextResponse.json({ success: true, parcel: { pnu: props.pnu||null, address, area: finalArea, coordinates: coords, centroid: [cLng,cLat] as [number,number], bbox, isDemo: false, source: 'vworld-direct' } })
+              }
+            }
+          }
         }
-        console.log('[vworld] Lambda: 면적만 있고 폴리곤 좌표 없음 → Overpass 시도')
-      } catch(e) { console.warn('[vworld] Lambda parcel 실패:', String(e)) }
+      } catch(e) { console.warn('[vworld] Vworld 직접 조회 실패:', String(e)) }
 
       // 1-2: Overpass API로 실제 건물 footprint 조회 (OpenStreetMap) - 반경 200m
       try {
