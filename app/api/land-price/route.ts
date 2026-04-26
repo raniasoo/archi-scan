@@ -63,23 +63,26 @@ function buildPNU(sigunguCd: string, bjdongCd: string, bun: string, ji: string):
 }
 
 async function fetchFromVworld(pnu: string): Promise<number | null> {
-  const params = new URLSearchParams({
-    service: 'data', request: 'GetFeature', data: 'LT_C_LHPCLND',
-    key: VWORLD_API_KEY, attrFilter: `pnu:=:${pnu}`,
-    geometry: 'false', attribute: 'true', format: 'json', size: '10',
-  })
-  const res = await fetch(`${VWORLD_BASE}?${params}`, { signal: AbortSignal.timeout(8000) })
-  const data = await res.json()
-  const features = data?.response?.result?.featureCollection?.features || data?.features || []
-  if (!features.length) return null
-  const sorted = features
-    .map((f: any) => f?.properties ?? f)
-    .filter((p: any) => p?.pblntfPclnd || p?.indvdLandPc)
-    .sort((a: any, b: any) => Number(b?.stdrYear ?? 0) - Number(a?.stdrYear ?? 0))
-  if (!sorted.length) return null
-  const raw = sorted[0]?.pblntfPclnd ?? sorted[0]?.indvdLandPc ?? '0'
-  const price = parseInt(raw.toString().replace(/,/g, ''))
-  return price > 0 ? price : null
+  // Vworld NED API - 개별공시지가 (2024년부터 data.go.kr 대체)
+  const year = new Date().getFullYear() - 1
+  for (const stdrYear of [year, year - 1]) {
+    const url = `https://api.vworld.kr/ned/data/getIndvdLandPrice?key=${VWORLD_API_KEY}&domain=v0-archi-scan-layout-generator.vercel.app&pnu=${pnu}&stdrYear=${stdrYear}&format=json`
+    console.log(`[LandPrice/NED] pnu=${pnu} year=${stdrYear}`)
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    const text = await res.text()
+    console.log(`[LandPrice/NED] status=${res.status} body[:300]=${text.slice(0, 300)}`)
+    if (!res.ok || !text.startsWith('{')) continue
+    const data = JSON.parse(text)
+    // 응답 구조: {indvdLandPrices: {field: [{pblntfPclnd, stdrYear, ...}]}}
+    const fields = data?.indvdLandPrices?.field || data?.field || []
+    const list = Array.isArray(fields) ? fields : [fields]
+    if (!list.length || !list[0]) continue
+    const raw = list[0]?.pblntfPclnd ?? list[0]?.indvdLandPc ?? '0'
+    const price = parseInt(raw.toString().replace(/,/g, ''))
+    console.log(`[LandPrice/NED] raw=${raw} price=${price}`)
+    if (price > 0) return price
+  }
+  return null
 }
 
 async function fetchFromNsdi(pnu: string, year: number, apiKey: string): Promise<number | null> {
