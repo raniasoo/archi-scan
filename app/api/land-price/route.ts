@@ -62,8 +62,15 @@ function buildPNU(sigunguCd: string, bjdongCd: string, bun: string, ji: string):
   return `${sigunguCd.slice(0,5).padEnd(5,'0')}${bjdongCd.slice(0,5).padEnd(5,'0')}${platGb}${cleanBun}${cleanJi}`
 }
 
-async function fetchFromVworld(_pnu: string): Promise<number | null> {
-  // Vworld ned API는 Vercel icn1에서 직접 접근 불가 (AWS Lambda 필요)
+async function fetchFromVworld(pnu: string): Promise<number | null> {
+  // Lambda v9 경유 → ned/getLandCharacter → pblntfPclnd(공시지가)
+  const LAMBDA_URL = process.env.LAMBDA_ZONE_URL || 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
+  try {
+    const res = await fetch(`${LAMBDA_URL}?landprice=1&pnu=${pnu}`, { signal: AbortSignal.timeout(10000) })
+    const data = await res.json()
+    console.log(`[LandPrice/Lambda] success=${data.success} price=${data.landPricePerM2} source=${data.source}`)
+    if (data.success && data.landPricePerM2 > 0) return data.landPricePerM2
+  } catch (e: any) { console.warn('[LandPrice/Lambda]', e.message) }
   return null
 }
 
