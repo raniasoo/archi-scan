@@ -93,13 +93,46 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { address, lng, lat, siteArea, entX, entY } = await req.json()
+    const LAMBDA_URL = process.env.LAMBDA_ZONE_URL || 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
 
-    // 1순위: JUSO/MOLIT에서 받은 실제 좌표가 있으면 사용
-    if (entX && entY && entX > 120 && entY > 30) {
-      console.log('[vworld] Using provided coordinates:', entX, entY)
+    // 0순위: Lambda(서울)에서 실제 지적도 폴리곤+면적 조회
+    const coordLng = entX || lng
+    const coordLat = entY || lat
+    if (coordLng && coordLat && coordLng > 120 && coordLat > 30) {
+      try {
+        const lambdaRes = await fetch(`${LAMBDA_URL}?parcel=1&lng=${coordLng}&lat=${coordLat}`, { signal: AbortSignal.timeout(8000) })
+        const lambdaData = await lambdaRes.json()
+        console.log('[vworld] Lambda parcel:', lambdaData.success, 'area:', lambdaData.area)
+        if (lambdaData.success && lambdaData.area > 0) {
+          // 실제 폴리곤 좌표가 있으면 사용, 없으면 면적 기반 근사 폴리곤
+          let coordinates: [number, number][]
+          if (lambdaData.coordinates && lambdaData.coordinates.length >= 3) {
+            coordinates = lambdaData.coordinates.map((c: number[]) => [c[0], c[1]] as [number, number])
+          } else {
+            // 면적 기반 정사각형 근사 (실제 면적은 정확)
+            const side = Math.sqrt(lambdaData.area) / 111319
+            coordinates = [
+              [coordLng - side/2, coordLat - side/2],
+              [coordLng + side/2, coordLat - side/2],
+              [coordLng + side/2, coordLat + side/2],
+              [coordLng - side/2, coordLat + side/2],
+              [coordLng - side/2, coordLat - side/2],
+            ]
+          }
+          const parcel = {
+            coordinates, centroid: [coordLng, coordLat] as [number, number],
+            area: lambdaData.area, pnu: lambdaData.properties?.pnu || null,
+            jibun: lambdaData.properties?.jibun || address || '',
+            jimok: lambdaData.properties?.jimok || '대', isDemo: false,
+          }
+          return NextResponse.json({ success: true, parcel })
+        }
+      } catch(e) { console.warn('[vworld] Lambda parcel 실패:', String(e)) }
+
+      // Lambda 실패 시 기존 좌표 기반 폴리곤 (면적은 siteArea 사용)
       const area = siteArea || 660
-      const parcel = buildParcelFromCoords(entX, entY, area, address)
-      return NextResponse.json({ success: true, parcel, coordinates: { lng: entX, lat: entY } })
+      const parcel = buildParcelFromCoords(coordLng, coordLat, area, address)
+      return NextResponse.json({ success: true, parcel, coordinates: { lng: coordLng, lat: coordLat } })
     }
 
     // 2순위: Nominatim으로 실제 건물 boundingbox 조회 (Vercel 서버에서 접근 가능)
