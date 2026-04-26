@@ -137,11 +137,14 @@ export async function POST(req: NextRequest) {
   const year = stdrYear || (new Date().getFullYear() - 1)
 
   if (!sigunguCd || !bjdongCd) {
-    return NextResponse.json({
-      success: true, isDemo: true, source: 'district-average', stdrYear: year,
-      landPricePerM2: extractDistrictPrice(address || ''),
-      message: '필지 코드 없음 — 지역 추정값 적용',
-    })
+    // bdMgtSn이 있으면 PNU 직접 구성 가능 → 조기 리턴 건너뜀
+    if (!bdMgtSn || bdMgtSn.length < 19) {
+      return NextResponse.json({
+        success: true, isDemo: true, source: 'district-average', stdrYear: year,
+        landPricePerM2: extractDistrictPrice(address || ''),
+        message: '필지 코드 없음 — 지역 추정값 적용',
+      })
+    }
   }
 
   // bdMgtSn이 있으면 직접 사용 (가장 정확한 PNU)
