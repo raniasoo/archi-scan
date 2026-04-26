@@ -216,12 +216,15 @@ export function analyzeRegulations(
   )
   const recommendedMinFloors = Math.max(3, Math.ceil(recommendedMaxFloors * 0.6))
   
-  // 예상 세대수 (세대당 85㎡ 기준)
+  // 예상 세대수 (세대당 85㎡ 기준 - 공용 포함 약 110㎡ 공급면적 기준으로 보수적 계산)
   const avgUnitSize = 85
   const estimatedUnits = Math.floor(maxGrossFloorArea / avgUnitSize)
   
-  // 필요 주차대수
-  const requiredParking = Math.ceil(estimatedUnits * regulation.parkingRatio)
+  // 법정 주차대수 (서울시 조례 기준)
+  // 전용 60m² 이하: 0.5대/세대, 60~85m²: 1.0대/세대
+  // 85m² 기준 세대는 소형(60m²이하) 위주로 가정 → 0.7대/세대 (혼합 기준)
+  const parkingPerUnit = avgUnitSize <= 60 ? 0.5 : avgUnitSize <= 85 ? 0.7 : 1.0
+  const requiredParking = Math.ceil(estimatedUnits * parkingPerUnit)
   
   // 경고 및 유의사항 생성
   const warnings: RegulationWarning[] = []

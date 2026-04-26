@@ -300,9 +300,9 @@ export function calculateLegalSummary(
   const avgUnitSize = 85
   const estimatedUnits = Math.floor(maxGrossFloorAreaM2 / avgUnitSize)
   
-  // 필요 주차대수
-  const parkingRatio = regulation.parkingRatio || 1.0
-  const requiredParkingCount = Math.ceil(estimatedUnits * parkingRatio)
+  // 법정 주차대수 (서울시 조례: 전용 85m² 이하 소형주택은 0.7대/세대)
+  const parkingPerUnitRate = avgUnitSize <= 60 ? 0.5 : avgUnitSize <= 85 ? 0.7 : 1.0
+  const requiredParkingCount = Math.ceil(estimatedUnits * parkingPerUnitRate)
   
   // 사선 제한 규칙
   const setbackRule = regulation.setbackType === 'none' 
