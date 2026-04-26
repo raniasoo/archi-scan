@@ -9,6 +9,35 @@ export interface LandPriceResult {
   message?: string
 }
 
+// 시군구코드 → 공시지가 매핑 (더 정확)
+const SIGUNGU_PRICE: Record<string, number> = {
+  '11110': 12000000, // 종로구
+  '11140': 14000000, // 중구
+  '11170': 16000000, // 용산구
+  '11200': 8000000,  // 성동구
+  '11215': 7500000,  // 광진구
+  '11230': 6000000,  // 동대문구
+  '11260': 5000000,  // 중랑구
+  '11290': 5500000,  // 성북구
+  '11305': 4500000,  // 강북구
+  '11320': 4500000,  // 도봉구
+  '11350': 5000000,  // 노원구
+  '11380': 6000000,  // 은평구
+  '11410': 6500000,  // 서대문구
+  '11440': 9000000,  // 마포구
+  '11470': 6000000,  // 양천구
+  '11500': 8000000,  // 강서구
+  '11530': 5500000,  // 구로구
+  '11545': 5000000,  // 금천구
+  '11560': 8000000,  // 영등포구
+  '11590': 7000000,  // 동작구
+  '11620': 5000000,  // 관악구
+  '11650': 14000000, // 서초구
+  '11680': 24000000, // 강남구 ★
+  '11710': 14000000, // 송파구
+  '11740': 9000000,  // 강동구
+}
+
 const DISTRICT_FALLBACK: Record<string, number> = {
   '강남구': 24000000, '서초구': 20000000, '송파구': 14000000,
   '용산구': 16000000, '중구': 14000000, '종로구': 12000000,
@@ -21,7 +50,13 @@ const DISTRICT_FALLBACK: Record<string, number> = {
   '분당구': 11000000, '과천시': 12000000, '성남시': 9000000,
 }
 
-function getDistrictPrice(address: string): number {
+function getDistrictPrice(address: string, sigunguCd?: string): number {
+  // 1순위: sigunguCd 코드로 정확 매핑
+  if (sigunguCd) {
+    const code5 = sigunguCd.slice(0, 5)
+    if (SIGUNGU_PRICE[code5]) return SIGUNGU_PRICE[code5]
+  }
+  // 2순위: 주소 텍스트 매칭
   for (const [district, price] of Object.entries(DISTRICT_FALLBACK)) {
     if (address.includes(district)) return price
   }
@@ -54,7 +89,7 @@ export async function fetchLandPrice(params: {
     const data = await res.json()
     // 서버 반환값이 너무 낮거나(≤300만) 실패 메시지면 클라이언트 district 값 사용
     const serverPrice = data.landPricePerM2 || 0
-    const districtPrice = getDistrictPrice(params.address)
+    const districtPrice = getDistrictPrice(params.address, params.sigunguCd)
     const price = (serverPrice > 3000000 && !data.message?.includes('실패'))
       ? serverPrice
       : Math.max(serverPrice, districtPrice)
@@ -68,7 +103,7 @@ export async function fetchLandPrice(params: {
     }
   } catch {
     // API 실패 시 클라이언트 district-average 적용
-    const price = getDistrictPrice(params.address)
+    const price = getDistrictPrice(params.address, params.sigunguCd)
     return {
       landPricePerM2: price,
       totalLandCost: price * params.siteArea,
