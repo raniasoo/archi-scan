@@ -279,20 +279,20 @@ export function ManualSupplementForm({
   const [heightLimit, setHeightLimit] = useState<string>(initialHeightStr)
   const [districtPlan, setDistrictPlan] = useState<string | undefined>(initialDistrictPlanValue)
   const [additionalNotes, setAdditionalNotes] = useState<string>(initialData?.additionalNotes || '')
-
-  // initialData가 나중에 도착해도 form 업데이트 (zone-lookup 비동기 완료 시)
-  useEffect(() => {
-    if (initialData?.zoneType && !zoneType) setZoneType(initialData.zoneType)
-    if (initialData?.roadCondition && !roadCondition) setRoadCondition(initialData.roadCondition)
-    if (initialData?.heightLimit && (!heightLimit || heightLimit === '')) setHeightLimit(String(initialData.heightLimit))
-    if (initialData?.hasDistrictPlan !== undefined && !districtPlan) setDistrictPlan(initialData.hasDistrictPlan ? 'yes' : 'no')
-  }, [initialData?.zoneType, initialData?.roadCondition, initialData?.heightLimit, initialData?.hasDistrictPlan])
   
   // UI state
   const [showAutoFilled, setShowAutoFilled] = useState(false)
   const [showSkipWarning, setShowSkipWarning] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [hasError, setHasError] = useState(false)
+
+  // initialData가 나중에 도착해도 form 업데이트 (모든 useState 선언 후 배치)
+  useEffect(() => {
+    if (initialData?.zoneType && !zoneType) setZoneType(initialData.zoneType)
+    if (initialData?.roadCondition && !roadCondition) setRoadCondition(initialData.roadCondition)
+    if (initialData?.heightLimit && (!heightLimit || heightLimit === '')) setHeightLimit(String(initialData.heightLimit))
+    if (initialData?.hasDistrictPlan !== undefined && !districtPlan) setDistrictPlan(initialData.hasDistrictPlan ? 'yes' : 'no')
+  }, [initialData?.zoneType, initialData?.roadCondition, initialData?.heightLimit, initialData?.hasDistrictPlan])
   
   // Calculate completion stats using helper functions
   const completedCount = useMemo(() => {
