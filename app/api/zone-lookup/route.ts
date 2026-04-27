@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'  // nodejs runtime (edge는 Vworld ned 파싱 불안정)
 
-const VWORLD_KEY    = process.env.VWORLD_API_KEY || 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
+const VWORLD_KEY    = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'  // env var 오염됨, 하드코딩 강제
 // AWS Lambda 서울 리전 프록시 (한국 정부 API 차단 우회)
 const LAMBDA_URL    = process.env.LAMBDA_ZONE_URL || 'https://m4wofqr3gdz5xkk4puw3gluzja0upsve.lambda-url.ap-northeast-2.on.aws/'
 const LURIS_KEY     = process.env.LAND_USE_KEY     // 토지이용계획정보 API 전용 키 (data.go.kr 신청)
