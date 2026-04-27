@@ -786,31 +786,27 @@ export default function ArchiScanPage() {
       }
     }
 
-    if (mappedZone) {
-      // MOLIT 성공 + 용도지역 직접 반환
-      applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
-    } else {
-      // MOLIT zoneType 없음 → Vworld ned API 클라이언트 직접 호출 (서버 차단 우회)
-      setMolitSupplementData(prev => ({ ...prev, ...coords }))
-      console.log('[v0] MOLIT zoneType 없음 — Vworld ned 클라이언트 조회 시작')
-
-      // NOTE: buildingCoverage/floorAreaRatio는 기존 건물의 '현황값'이므로
-      // 용도지역 역추론에 사용하면 안 됨 (예: 25%/43%인 건물도 제2종일반주거지역일 수 있음)
-      // → 실제 zone은 Vworld 조회 결과로만 설정
-
-      // /api/vworld-zone 서버 프록시 호출 (CORS 우회)
-      fetch('/api/vworld-zone', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji }),
-      }).then(r => r.json()).then(result => {
-        if (result?.zoneCode) {
-          const hasDistrict = result.hasDistrictPlan || false
-          applyZoneData(result.zoneCode, roadAddr, hasDistrict, coords)
-          console.log('[v0] vworld-zone 완료:', result.zoneType, result.zoneCode)
-        }
-      }).catch(e => console.warn('[v0] vworld-zone 실패:', e))
-    }
+    // 항상 vworld-zone (LURIS+Vworld)으로 용도지역 조회 (MOLIT 건축물대장보다 정확)
+    setMolitSupplementData(prev => ({ ...prev, ...coords }))
+    fetch('/api/vworld-zone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji }),
+    }).then(r => r.json()).then(result => {
+      if (result?.zoneCode) {
+        const hasDistrict = result.hasDistrictPlan || false
+        applyZoneData(result.zoneCode, roadAddr, hasDistrict, coords)
+        console.log('[v0] vworld-zone 완료:', result.zoneType, result.zoneCode, 'source:', result.source)
+      } else if (mappedZone) {
+        // vworld-zone 실패 시 MOLIT fallback
+        applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
+        console.log('[v0] vworld-zone 실패, MOLIT fallback:', mappedZone)
+      }
+    }).catch(e => {
+      // vworld-zone 에러 시 MOLIT fallback
+      if (mappedZone) applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
+      console.warn('[v0] vworld-zone 에러, MOLIT fallback:', e)
+    })
 
     // 공시지가 자동 조회
     setLandPriceData(prev => ({ ...prev, loading: true }))
