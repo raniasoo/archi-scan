@@ -77,49 +77,35 @@ export async function POST(req: NextRequest) {
   let zoneType = ''
   let hasDistrict = false
 
-  // 1순위: getLandCharacter - lndcgrCodeNm 필드가 직접 용도지역을 반환
   try {
-    const charUrl = `https://api.vworld.kr/ned/data/getLandCharacter?key=${KEY}&domain=${DOM}&pnu=${pnu}&format=json`
-    console.log(`[vworld-zone] 1) getLandCharacter PNU=${pnu}`)
-    const charRes = await fetch(charUrl, { signal: AbortSignal.timeout(5000) })
-    if (charRes.ok) {
-      const charJson = await charRes.json()
-      const charList = charJson?.landCharacteristics?.field || charJson?.landCharacter?.field || charJson?.field || []
-      if (charList.length > 0) {
-        const item = charList[0]
-        zoneType = item?.lndcgrCodeNm || item?.prposArea1Nm || ''
-        console.log(`[vworld-zone] getLandCharacter result: "${zoneType}"`)
-      }
+    const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${KEY}&domain=${DOM}&pnu=${pnu}&cnflcAt=1&numOfRows=100&format=json`
+    console.log(`[vworld-zone] PNU=${pnu}`)
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    if (res.ok) {
+      const j = await res.json()
+      const list: Record<string,string>[] = j?.landUses?.field || []
+      console.log(`[vworld-zone] items=${JSON.stringify(list.map(i=>({code:i.prposAreaDstrcCode,name:i.prposAreaDstrcCodeNm})).slice(0,10))}`)
+      
+      // 용도지역 코드 정밀 매칭 (UQA1xx만 = 주거지역)
+      // UQA111=제1종전용, UQA112=제2종전용, UQA113=제1종일반, UQA114=제2종일반, UQA115=제3종일반, UQA116=준주거
+      // UQA2xx=상업, UQA3xx=공업, UQA4xx=녹지
+      const zoneItem = list.find(item => {
+        const code = item?.prposAreaDstrcCode || ''
+        // 용도지역 코드(UQA1~4)만 정확히 매칭
+        return /^UQA[1-4]\d{2}$/.test(code)
+      })
+      
+      hasDistrict = list.some(item => 
+        (item?.prposAreaDstrcCode||'').startsWith('UQQ3') || 
+        (item?.prposAreaDstrcCodeNm||'').includes('지구단위계획')
+      )
+      zoneType = zoneItem?.prposAreaDstrcCodeNm || ''
+      console.log(`[vworld-zone] SELECTED code="${zoneItem?.prposAreaDstrcCode}" zone="${zoneType}"`)
     }
   } catch (e) {
-    console.log(`[vworld-zone] getLandCharacter failed: ${e}`)
-  }
-
-  // 2순위: getLandUseAttr (getLandCharacter 실패 시)
-  if (!zoneType) {
-    try {
-      const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${KEY}&domain=${DOM}&pnu=${pnu}&cnflcAt=1&numOfRows=100&format=json`
-      console.log(`[vworld-zone] 2) getLandUseAttr fallback PNU=${pnu}`)
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
-      if (res.ok) {
-        const j = await res.json()
-        const list: Record<string,string>[] = j?.landUses?.field || []
-        console.log(`[vworld-zone] getLandUseAttr items=${JSON.stringify(list.map(i=>({code:i.prposAreaDstrcCode,name:i.prposAreaDstrcCodeNm})))}`)
-        const zoneItem = list.find(item => {
-          const code = item?.prposAreaDstrcCode || ''
-          if (code.startsWith('UQA1')||code.startsWith('UQA2')||code.startsWith('UQA3')||code.startsWith('UQA4')) return true
-          const name = item?.prposAreaDstrcCodeNm || ''
-          return name.includes('주거')||name.includes('상업')||name.includes('공업')||name.includes('녹지')
-        })
-        hasDistrict = list.some(item => (item?.prposAreaDstrcCode||'').startsWith('UQQ3') || (item?.prposAreaDstrcCodeNm||'').includes('지구단위계획'))
-        zoneType = zoneItem?.prposAreaDstrcCodeNm || ''
-      }
-    } catch (e) {
-      console.log(`[vworld-zone] getLandUseAttr failed: ${e}`)
-    }
+    console.log(`[vworld-zone] error: ${e}`)
   }
 
   const zoneCode = toCode(zoneType)
-  console.log(`[vworld-zone] FINAL zone="${zoneType}" code="${zoneCode}"`)
   return NextResponse.json({ success: true, pnu, zoneType, zoneCode, heightLimit: HEIGHT[zoneCode]||null, coverageRatio: BCR[zoneCode]||null, floorAreaRatio: FAR[zoneCode]||null, hasDistrictPlan: hasDistrict, source: zoneType ? 'vworld-ned' : 'none' })
 }
