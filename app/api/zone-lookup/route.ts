@@ -322,10 +322,12 @@ export async function GET(req: NextRequest) {
   let siteArea: number | null = null
   const pnu = (sigunguCd && bjdongCd) ? buildPNU(sigunguCd, bjdongCd, bun, ji) : null
 
+  // 0순위: Vworld ned (가장 빠르고 정확 - landUses.field 파싱)
+  if (!zoneRaw && pnu) { zoneRaw = await fetchByVworldAttr(pnu); if (zoneRaw) source = 'vworld-attr' }
+  // 1순위: Lambda (Vworld ned 실패 시 fallback)
   if (!zoneRaw && pnu) { zoneRaw = await fetchByLambda(pnu); if (zoneRaw) source = 'lambda' }
   if (!zoneRaw && entX && entY) { zoneRaw = await fetchByLambdaCoord(Number(entX), Number(entY)); if (zoneRaw) source = 'lambda-coord' }
   if (!zoneRaw && pnu) { zoneRaw = await fetchByEum(pnu); if (zoneRaw) source = 'eum' }
-  if (!zoneRaw && pnu) { zoneRaw = await fetchByVworldAttr(pnu); if (zoneRaw) source = 'vworld-attr' }
   if (!zoneRaw && pnu) { zoneRaw = await fetchByLURIS(pnu); if (zoneRaw) source = 'luris' }
   if (!zoneRaw && entX && entY) { zoneRaw = await fetchByCoord(Number(entX), Number(entY)); if (zoneRaw) source = 'vworld-coord' }
   if (!zoneRaw && pnu) { zoneRaw = await fetchByPNU(pnu); if (zoneRaw) source = 'vworld-pnu' }
