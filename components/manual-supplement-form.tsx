@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, Component, type ReactNode } from "react"
+import { useState, useMemo, Component, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -286,13 +286,7 @@ export function ManualSupplementForm({
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [hasError, setHasError] = useState(false)
 
-  // initialData가 나중에 도착해도 form 업데이트 (모든 useState 선언 후 배치)
-  useEffect(() => {
-    if (initialData?.zoneType && !zoneType) setZoneType(initialData.zoneType)
-    if (initialData?.roadCondition && !roadCondition) setRoadCondition(initialData.roadCondition)
-    if (initialData?.heightLimit && (!heightLimit || heightLimit === '')) setHeightLimit(String(initialData.heightLimit))
-    if (initialData?.hasDistrictPlan !== undefined && !districtPlan) setDistrictPlan(initialData.hasDistrictPlan ? 'yes' : 'no')
-  }, [initialData?.zoneType, initialData?.roadCondition, initialData?.heightLimit, initialData?.hasDistrictPlan])
+
   
   // Calculate completion stats using helper functions
   const completedCount = useMemo(() => {
