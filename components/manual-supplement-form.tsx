@@ -713,11 +713,13 @@ interface SupplementSummaryProps {
 export function SupplementSummary({ data, onEdit, addressOverride }: SupplementSummaryProps) {
   const getZoneLabel = (value: string) => formatDisplayValue(value, ZONE_TYPE_OPTIONS)
   
-  // 주소가 있으면 주소에서 roadCondition 직접 계산 (더 신뢰도 높음)
+  // 주소가 있으면 도로명 부분에서 roadCondition 직접 계산
+  // "종로구"의 "로"가 매칭되지 않도록 구/군/시 이후 부분만 사용
+  const roadPart = addressOverride ? addressOverride.replace(/.*[구군시]\s*/,'') : ''
   const effectiveRoadCondition = addressOverride
-    ? (addressOverride.includes('대로') ? '12m-plus' :
-       addressOverride.includes('로') ? '8m-plus' :
-       addressOverride.includes('길') ? '4m-plus' :
+    ? (roadPart.includes('대로') ? '12m-plus' :
+       roadPart.includes('길') ? '4m-plus' :
+       roadPart.includes('로') ? '8m-plus' :
        data.roadCondition)
     : data.roadCondition
   const getRoadLabel = (value: string) => formatDisplayValue(value, ROAD_CONDITION_OPTIONS)

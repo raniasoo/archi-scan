@@ -722,9 +722,10 @@ export default function ArchiScanPage() {
       'commercial-general': 1300, 'commercial-central': 1500,
       'industrial-general': 400, 'green-natural': 100,
     }
-    const roadWidth = roadAddr.includes('대로') ? 25 :
-                      roadAddr.includes('길')   ? 6 :   // 길 우선 (평창길 오분류 방지)
-                      roadAddr.includes('로')   ? 12 :
+    const roadNameOnly = roadAddr.replace(/.*[구군시]\s*/,'')
+    const roadWidth = roadNameOnly.includes('대로') ? 25 :
+                      roadNameOnly.includes('길')   ? 6 :
+                      roadNameOnly.includes('로')   ? 12 :
                       roadAddr.match(/\d+-\d+|\d+번지|동\s*\d/) ? 4 : 8  // 지번주소면 4m
     const roadConditionEnum = roadWidth >= 12 ? '12m-plus' :
                               roadWidth >= 8  ? '8m-plus' :
@@ -1701,7 +1702,7 @@ export default function ArchiScanPage() {
                   <LegalReviewPanel
                     zoneCode={molitSupplementData.zoneCode || regulation.zoneType}
                     siteArea={siteAreaNum}
-                    roadWidth={address.includes('대로') ? 12 : address.includes('로') ? 8 : address.includes('길') ? 4 : 6}
+                    roadWidth={(() => { const r = address.replace(/.*[구군시]\s*/,''); return r.includes('대로') ? 12 : r.includes('길') ? 4 : r.includes('로') ? 8 : 6 })()}
                     heightLimit={molitSupplementData.heightLimit || regulation.maxHeight}
                     hasDistrictPlan={molitSupplementData.hasDistrictPlan ?? regulation.additionalNotes?.includes('지구단위') ?? false}
                   />

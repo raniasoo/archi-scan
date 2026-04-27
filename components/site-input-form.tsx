@@ -153,9 +153,10 @@ export function SiteInputForm({
     const { sigunguCd, bjdongCd, bun, ji, roadAddr } = resolvedJuso
     console.log('[site-input] success-empty zone-lookup 직접 호출:', { sigunguCd, bjdongCd, bun, ji })
 
-    // 접도현황 즉시 계산 (roadAddr 기반)
+    // 접도현황 즉시 계산 (도로명 부분만 사용 - "종로구"의 "로" 오매칭 방지)
     const addr = roadAddr || address || ''
-    const rw = addr.includes('대로') ? 25 : addr.includes('길') ? 6 : addr.includes('로') ? 12 : 8
+    const roadName = addr.replace(/.*[구군시]\s*/,'')
+    const rw = roadName.includes('대로') ? 25 : roadName.includes('길') ? 6 : roadName.includes('로') ? 12 : 8
     const rc = rw >= 12 ? '12m-plus' : rw >= 8 ? '8m-plus' : rw >= 6 ? '6m-plus' : rw >= 4 ? '4m-plus' : 'under-4m'
     setAutoRoadCondition(rc)
 
@@ -482,10 +483,12 @@ export function SiteInputForm({
         ].filter(Boolean).join(' ')
 
         // "길" 우선 판단 (평창길, 골목길 등은 소로)
+        // 도로명 부분만 추출 (종로구의 "로" 오매칭 방지)
+        const roadNamePart = roadAddrSources.replace(/.*[구군시]\s*/,'')
         const mappedRoadCondition =
-          roadAddrSources.includes('대로') ? '12m-plus' :
-          roadAddrSources.includes('길')   ? '4m-plus' :   // 길 > 로 (평창길 오분류 방지)
-          roadAddrSources.includes('로')   ? '8m-plus' : '6m-plus'
+          roadNamePart.includes('대로') ? '12m-plus' :
+          roadNamePart.includes('길')   ? '4m-plus' :
+          roadNamePart.includes('로')   ? '8m-plus' : '6m-plus'
 
         console.log('[v0] roadAddr sources:', roadAddrSources, '→', mappedRoadCondition)
 
@@ -968,10 +971,11 @@ export function SiteInputForm({
                     // externalSupplement(zone-lookup)가 있으면 이미 채워진 상태
                     if (!externalSupplement?.zoneCode) {
                       const roadAddr = resolvedJuso.roadAddr || address
+                      const rn = roadAddr.replace(/.*[구군시]\s*/,'')
                       const mappedRoadCondition =
-                        roadAddr.includes('대로') ? '12m-plus' :
-                        roadAddr.includes('로') ? '8m-plus' :
-                        roadAddr.includes('길') ? '4m-plus' : '6m-plus'
+                        rn.includes('대로') ? '12m-plus' :
+                        rn.includes('길') ? '4m-plus' :
+                        rn.includes('로') ? '8m-plus' : '6m-plus'
                       setSupplementData(prev => ({
                         zoneType: prev?.zoneType && prev.zoneType !== 'residential-2' ? prev.zoneType : '',
                         roadCondition: mappedRoadCondition,
