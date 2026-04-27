@@ -522,17 +522,16 @@ export function SiteInputForm({
           (result.data.district && result.data.district.includes('지구단위'))
         )
 
-        // supplement 자동 입력 (MOLIT 조회 완료 시 항상 업데이트)
-        if (mappedZone) {
-          setSupplementData(prev => ({
-            zoneType: mappedZone,
-            roadCondition: mappedRoadCondition,  // MOLIT 값 항상 우선
-            heightLimit: mappedHeightLimit ?? prev?.heightLimit,
-            hasDistrictPlan: hasDistrict,
-            districtPlanNotes: hasDistrict ? '지구단위계획 적용' : '',
-            additionalNotes: prev?.additionalNotes || '',
-          }))
-        }
+        // supplement 자동 입력 (MOLIT 조회 완료 시)
+        // zoneType은 vworld-zone(LURIS/Vworld)에서만 설정 — MOLIT 건축물대장은 부정확할 수 있음
+        setSupplementData(prev => ({
+          zoneType: prev?.zoneType || '',  // zone은 vworld-zone 결과 대기
+          roadCondition: mappedRoadCondition,
+          heightLimit: prev?.heightLimit ?? mappedHeightLimit,
+          hasDistrictPlan: hasDistrict,
+          districtPlanNotes: hasDistrict ? '지구단위계획 적용' : '',
+          additionalNotes: prev?.additionalNotes || '',
+        }))
         
         // Notify parent component
         if (onMolitDataFetched) {
