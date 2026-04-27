@@ -209,7 +209,8 @@ export function SiteInputForm({
             districtPlanNotes: prev?.districtPlanNotes || '',
             additionalNotes: prev?.additionalNotes || '',
           }))
-          setShowSupplementForm(true)  // zone 조회 완료 후 자동으로 form 오픈
+          // supplementData 업데이트 후 React commit 완료 기다렸다가 form 오픈
+          setTimeout(() => setShowSupplementForm(true), 50)
           // page.tsx에도 전달 (규제 분석용)
           if (onMolitDataFetched) {
             onMolitDataFetched({
