@@ -43,6 +43,30 @@ const FAR: Record<string,number> = {
   'industrial-general':400,'green-natural':100,
 }
 
+// GET: 테스트용 - ?pnu=xxx 로 직접 조회
+export async function GET(req: NextRequest) {
+  const pnu = req.nextUrl.searchParams.get('pnu') || '1111018300101800004'
+  try {
+    // getLandCharacter
+    const charUrl = `https://api.vworld.kr/ned/data/getLandCharacter?key=${KEY}&domain=${DOM}&pnu=${pnu}&format=json`
+    const charRes = await fetch(charUrl, { signal: AbortSignal.timeout(5000) })
+    const charText = await charRes.text()
+    
+    // getLandUseAttr 
+    const useUrl = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${KEY}&domain=${DOM}&pnu=${pnu}&cnflcAt=1&numOfRows=100&format=json`
+    const useRes = await fetch(useUrl, { signal: AbortSignal.timeout(5000) })
+    const useText = await useRes.text()
+    
+    return NextResponse.json({
+      pnu,
+      getLandCharacter: JSON.parse(charText),
+      getLandUseAttr: JSON.parse(useText),
+    })
+  } catch(e) {
+    return NextResponse.json({ error: String(e) })
+  }
+}
+
 export async function POST(req: NextRequest) {
   const { sigunguCd, bjdongCd, bun, ji } = await req.json()
   if (!sigunguCd || !bjdongCd) return NextResponse.json({ success: false, zoneCode: '' })
