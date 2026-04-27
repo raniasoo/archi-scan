@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, Component, type ReactNode } from "react"
+import { useState, useEffect, useMemo, Component, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -279,6 +279,14 @@ export function ManualSupplementForm({
   const [heightLimit, setHeightLimit] = useState<string>(initialHeightStr)
   const [districtPlan, setDistrictPlan] = useState<string | undefined>(initialDistrictPlanValue)
   const [additionalNotes, setAdditionalNotes] = useState<string>(initialData?.additionalNotes || '')
+
+  // initialData가 나중에 도착해도 form 업데이트 (zone-lookup 비동기 완료 시)
+  useEffect(() => {
+    if (initialData?.zoneType && !zoneType) setZoneType(initialData.zoneType)
+    if (initialData?.roadCondition && !roadCondition) setRoadCondition(initialData.roadCondition)
+    if (initialData?.heightLimit && (!heightLimit || heightLimit === '')) setHeightLimit(String(initialData.heightLimit))
+    if (initialData?.hasDistrictPlan !== undefined && !districtPlan) setDistrictPlan(initialData.hasDistrictPlan ? 'yes' : 'no')
+  }, [initialData?.zoneType, initialData?.roadCondition, initialData?.heightLimit, initialData?.hasDistrictPlan])
   
   // UI state
   const [showAutoFilled, setShowAutoFilled] = useState(false)
