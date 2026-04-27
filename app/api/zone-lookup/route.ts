@@ -350,7 +350,13 @@ export async function POST(req: NextRequest) {
     ? buildPNU(sigunguCd, bjdongCd, bun||'0000', ji||'0000')
     : null
 
-  // 0순위: Lambda 서울 프록시 (한국 IP, 차단 없음)
+  // 0순위: Vworld ned (landUses.field 파싱 - 가장 빠르고 정확)
+  if (!zoneRaw && pnu) {
+    zoneRaw = await fetchByVworldAttr(pnu)
+    if (zoneRaw) source = 'vworld-attr'
+  }
+
+  // 1순위: Lambda 서울 프록시 (Vworld ned 실패 시)
   if (!zoneRaw && pnu) {
     zoneRaw = await fetchByLambda(pnu)
     if (zoneRaw) source = 'lambda'
