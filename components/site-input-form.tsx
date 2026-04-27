@@ -161,11 +161,10 @@ export function SiteInputForm({
     setAutoRoadCondition(rc)
 
     // zone-lookup API 직접 호출 (entX/entY 좌표도 함께 전달)
-    fetch('/api/zone-lookup', {
+    fetch('/api/vworld-zone', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sigunguCd, bjdongCd, bun, ji, address: addr,
-        entX: resolvedJuso.entX, entY: resolvedJuso.entY }),
+      body: JSON.stringify({ sigunguCd, bjdongCd, bun, ji }),
     })
       .then(r => r.json())
       .then(res => {
