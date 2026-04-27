@@ -797,38 +797,18 @@ export default function ArchiScanPage() {
       // 용도지역 역추론에 사용하면 안 됨 (예: 25%/43%인 건물도 제2종일반주거지역일 수 있음)
       // → 실제 zone은 Vworld 조회 결과로만 설정
 
-      // Vworld ned API 클라이언트 직접 호출
-      import('@/lib/zone-client').then(({ fetchZoneFromVworld }) =>
-        fetchZoneFromVworld({
-          sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd,
-          bun: data.bun, ji: data.ji, entX: data.entX, entY: data.entY,
-        })
-      ).then(result => {
+      // /api/vworld-zone 서버 프록시 호출 (CORS 우회)
+      fetch('/api/vworld-zone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji }),
+      }).then(r => r.json()).then(result => {
         if (result?.zoneCode) {
-          applyZoneData(result.zoneCode, roadAddr, false, coords)
-          console.log('[v0] Vworld ned 완료:', result.zoneType, '(', result.source, ')')
-        } else {
-          // fallback: 서버 zone-lookup (LURIS)
-          fetch('/api/zone-lookup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd,
-              bun: data.bun, ji: data.ji, address: roadAddr,
-              entX: data.entX, entY: data.entY,
-            }),
-          }).then(r => r.json()).then(res => {
-            const zoneLookup = res.zoneCode || mapZoneString(res.zoneType || '')
-            if (zoneLookup) {
-              applyZoneData(zoneLookup, roadAddr, false, coords)
-              console.log('[v0] zone-lookup fallback 완료:', zoneLookup)
-            }
-            if (res.siteArea && res.siteArea > 0) {
-              setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0) ? String(Math.round(res.siteArea)) : prev)
-            }
-          }).catch(e => console.warn('[v0] zone-lookup 실패:', e))
+          const hasDistrict = result.hasDistrictPlan || false
+          applyZoneData(result.zoneCode, roadAddr, hasDistrict, coords)
+          console.log('[v0] vworld-zone 완료:', result.zoneType, result.zoneCode)
         }
-      }).catch(e => console.warn('[v0] Vworld ned 클라이언트 실패:', e))
+      }).catch(e => console.warn('[v0] vworld-zone 실패:', e))
     }
 
     // 공시지가 자동 조회
