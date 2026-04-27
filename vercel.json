@@ -3,6 +3,7 @@
     "icn1"
   ],
   "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "next build --no-turbopack",
   "headers": [
     {
       "source": "/(.*)",
