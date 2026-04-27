@@ -404,7 +404,7 @@ function generateLayouts(
 type AppStep = "input" | "strategy" | "regulation" | "layouts" | "floorplan" | "financial" | "report"
 
 export default function ArchiScanPage() {
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false) // v2
   
   const { 
     isProUser, 
