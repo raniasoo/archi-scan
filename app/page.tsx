@@ -78,6 +78,7 @@ import {
   Printer
 } from "lucide-react"
 import { useSubscription } from "@/components/subscription-provider"
+import { ErrorBoundary } from "@/components/error-boundary"
 import { UserBadge } from "@/components/user-badge"
 import { UpgradeModal } from "@/components/upgrade-modal"
 import { PricingModal } from "@/components/pricing-modal"
@@ -1181,6 +1182,7 @@ export default function ArchiScanPage() {
   }
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen bg-background">
       {/* 3D 볼륨 모델 모달 */}
       {show3DVolume && selectedLayoutData && (
@@ -2944,5 +2946,6 @@ export default function ArchiScanPage() {
         onOpenChange={setShowPricingModal} 
       />
     </div>
+    </ErrorBoundary>
   )
 }
