@@ -35,5 +35,9 @@
       "maxDuration": 10
     }
   },
-  "buildCommand": "next build"
+  "buildCommand": "npx next build",
+  "env": {
+    "NEXT_PRIVATE_SKIP_TURBOPACK": "1",
+    "TURBOPACK": "0"
+  }
 }
