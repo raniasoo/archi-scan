@@ -758,7 +758,17 @@ export default function ArchiScanPage() {
     buildingCoverage?: number; floorAreaRatio?: number
     bdMgtSn?: string
   }) => {
-    // 조회 시작 시 초기화 → useEffect dependency가 null에서 새값으로 변경되어 항상 재실행
+    const vwZone = (data as any)?._vworldZoneCode
+    // vworld-zone 결과 전달인 경우: zone만 적용하고 나머지는 건드리지 않음
+    if (vwZone) {
+      const roadAddr = data.roadAddress || address || ''
+      const vwDistrict = (data as any)?._vworldHasDistrict ?? false
+      const coords = { entX: data.entX, entY: data.entY, sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji, bdMgtSn: data.bdMgtSn }
+      applyZoneData(vwZone, roadAddr, vwDistrict, coords)
+      console.log('[v0] site-input-form에서 전달된 zone:', vwZone)
+      return
+    }
+    // MOLIT 조회 결과 처리
     setMolitSupplementData({})
     if (data.bdMgtSn) setSiteBdMgtSn(data.bdMgtSn)
     const mappedZone = mapZoneString(data.zoneType || '')
@@ -786,16 +796,8 @@ export default function ArchiScanPage() {
       }
     }
 
-    // 용도지역: site-input-form에서 vworld-zone 결과를 직접 전달
-    // page.tsx에서는 vworld-zone을 호출하지 않음 (MOLIT의 params가 JUSO와 달라 잘못된 PNU 생성 가능)
+    // 용도지역: vwZone 처리는 상단 early return에서 완료
     setMolitSupplementData(prev => ({ ...prev, ...coords }))
-    const vwZone = (data as any)?._vworldZoneCode
-    const vwHeight = (data as any)?._vworldHeightLimit
-    const vwDistrict = (data as any)?._vworldHasDistrict
-    if (vwZone) {
-      applyZoneData(vwZone, roadAddr, vwDistrict ?? hasDistrict, coords)
-      console.log('[v0] site-input-form에서 전달된 zone:', vwZone)
-    }
 
     // 공시지가 자동 조회
     setLandPriceData(prev => ({ ...prev, loading: true }))
