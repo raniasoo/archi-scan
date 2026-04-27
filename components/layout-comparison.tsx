@@ -42,7 +42,7 @@ export function LayoutComparison({
     { label: "층수", key: "floors", unit: "층", getValue: (i: number) => `지상 ${layouts[i].floors}층`, best: (i: number) => layouts[i].floors === Math.max(...layouts.map(l => l.floors)) },
     { label: "세대수", key: "units", unit: "세대", getValue: (i: number) => `${layouts[i].units.toLocaleString()}세대`, best: (i: number) => layouts[i].units === maxUnits },
     { label: "건폐율", key: "coverage", unit: "%", getValue: (i: number) => `${layouts[i].coverage.toFixed(1)}%`, best: () => false },
-    { label: "연면적", key: "gfa", unit: "㎡", getValue: (i: number) => `${(layouts[i].gfa / 10000).toFixed(1)}만㎡`, best: (i: number) => layouts[i].gfa === Math.max(...layouts.map(l => l.gfa)) },
+    { label: "연면적", key: "gfa", unit: "㎡", getValue: (i: number) => layouts[i].gfa >= 10000 ? `${(layouts[i].gfa / 10000).toFixed(1)}만㎡` : `${Math.round(layouts[i].gfa)}㎡`, best: (i: number) => layouts[i].gfa === Math.max(...layouts.map(l => l.gfa)) },
     { label: "주차대수", key: "parking", unit: "대", getValue: (i: number) => `${layouts[i].parking.toLocaleString()}대`, best: () => false },
     { label: "총사업비", key: "totalCost", unit: "억원", getValue: (i: number) => `${(financials[i].totalCost / 1e8).toFixed(1)}억`, best: (i: number) => financials[i].totalCost === minCost },
     { label: "예상수익", key: "profit", unit: "억원", getValue: (i: number) => `${(financials[i].profit / 1e8).toFixed(1)}억`, best: (i: number) => financials[i].profit === maxProfit },
