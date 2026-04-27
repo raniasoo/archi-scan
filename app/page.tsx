@@ -724,7 +724,7 @@ export default function ArchiScanPage() {
     }
     const roadNameOnly = roadAddr.replace(/.*[구군시]\s*/,'')
     const roadWidth = roadNameOnly.includes('대로') ? 25 :
-                      roadNameOnly.includes('길')   ? 6 :
+                      roadNameOnly.includes('길')   ? 4 :
                       roadNameOnly.includes('로')   ? 12 :
                       roadAddr.match(/\d+-\d+|\d+번지|동\s*\d/) ? 4 : 8  // 지번주소면 4m
     const roadConditionEnum = roadWidth >= 12 ? '12m-plus' :
@@ -803,7 +803,7 @@ export default function ArchiScanPage() {
     // regulation의 접도/지구단위는 즉시 업데이트 (zone은 vworld-zone 결과 대기)
     const roadNameOnly = roadAddr.replace(/.*[구군시]\s*/,'')
     const earlyRoadWidth = roadNameOnly.includes('대로') ? 25 :
-                           roadNameOnly.includes('길') ? 6 :
+                           roadNameOnly.includes('길') ? 4 :
                            roadNameOnly.includes('로') ? 12 : 8
     setRegulation(prev => ({
       ...prev,

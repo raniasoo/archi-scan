@@ -156,7 +156,7 @@ export function SiteInputForm({
     // 접도현황 즉시 계산 (도로명 부분만 사용 - "종로구"의 "로" 오매칭 방지)
     const addr = roadAddr || address || ''
     const roadName = addr.replace(/.*[구군시]\s*/,'')
-    const rw = roadName.includes('대로') ? 25 : roadName.includes('길') ? 6 : roadName.includes('로') ? 12 : 8
+    const rw = roadName.includes('대로') ? 25 : roadName.includes('길') ? 4 : roadName.includes('로') ? 12 : 8
     const rc = rw >= 12 ? '12m-plus' : rw >= 8 ? '8m-plus' : rw >= 6 ? '6m-plus' : rw >= 4 ? '4m-plus' : 'under-4m'
     setAutoRoadCondition(rc)
 
