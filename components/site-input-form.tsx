@@ -142,12 +142,11 @@ export function SiteInputForm({
     }
   }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit, (externalSupplement as any)?._key])
 
-  // success-empty 시 내부에서 직접 zone-lookup 호출 (page.tsx 체인 우회)
+  // MOLIT 성공 여부와 관계없이 항상 vworld-zone(LURIS+Vworld)으로 정확한 용도지역 조회
   useEffect(() => {
-    // success-empty: MOLIT 실패, 또는 success: MOLIT 성공했지만 용도지역 없음
     const needsZoneLookup = 
       (lookupState === 'success-empty' && !!resolvedJuso?.sigunguCd) ||
-      (lookupState === 'success' && !fetchedData?.zoneType && !!resolvedJuso?.sigunguCd)
+      (lookupState === 'success' && !!resolvedJuso?.sigunguCd)
     if (!needsZoneLookup) return
     if (autoZoneCode) return  // 이미 조회됨
 
