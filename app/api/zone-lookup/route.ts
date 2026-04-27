@@ -138,7 +138,7 @@ async function fetchByVworldAttr(pnu: string): Promise<string | null> {
   const domain = 'v0-archi-scan-layout-generator.vercel.app'
   const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${VWORLD_KEY}&domain=${domain}&pnu=${pnu}&cnflcAt=1&numOfRows=100&format=json`
   try {
-    const res  = await fetch(url, { signal: AbortSignal.timeout(7000) })
+    const res  = await fetch(url, { signal: AbortSignal.timeout(5000) })
     const text = await res.text()
     if (res.status !== 200) {
       console.error(`[Vworld-attr] ERROR status=${res.status} url=${url.slice(0,200)} response=${text.slice(0,800)}`)
@@ -350,39 +350,10 @@ export async function POST(req: NextRequest) {
     ? buildPNU(sigunguCd, bjdongCd, bun||'0000', ji||'0000')
     : null
 
-  // 0순위: Vworld ned (landUses.field 파싱 - 가장 빠르고 정확)
+  // Vworld ned (유일한 안정적 소스 - landUses.field 파싱)
   if (!zoneRaw && pnu) {
     zoneRaw = await fetchByVworldAttr(pnu)
     if (zoneRaw) source = 'vworld-attr'
-  }
-
-  // 1순위: Lambda 서울 프록시 (Vworld ned 실패 시)
-  if (!zoneRaw && pnu) {
-    zoneRaw = await fetchByLambda(pnu)
-    if (zoneRaw) source = 'lambda'
-  }
-
-  // ① LURIS — PNU 기반, 가장 정확 (MOLIT_API_KEY 등록 시)
-  if (!zoneRaw && pnu) {
-    zoneRaw = await fetchByLURIS(pnu)
-    if (zoneRaw) source = 'luris'
-  }
-
-  // ② Lambda 좌표 기반 (서울 서버 → Vworld 차단 없음)
-  if (!zoneRaw && entX && entY) {
-    zoneRaw = await fetchByLambdaCoord(Number(entX), Number(entY))
-    if (zoneRaw) source = 'lambda-coord'
-  }
-  // ③ Vworld 좌표 기반 직접 (fallback)
-  if (!zoneRaw && entX && entY) {
-    zoneRaw = await fetchByCoord(Number(entX), Number(entY))
-    if (zoneRaw) source = 'vworld-coord'
-  }
-
-  // ③ Vworld PNU 기반
-  if (!zoneRaw && pnu) {
-    zoneRaw = await fetchByPNU(pnu)
-    if (zoneRaw) source = 'vworld-pnu'
   }
 
   // 면적 병행 조회
