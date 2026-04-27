@@ -1,6 +1,6 @@
 // Vworld ned API 클라이언트 직접 호출 (브라우저에서 도메인 등록 필요)
 const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-const VWORLD_DOMAIN = 'https://v0-archi-scan-layout-generator.vercel.app'  // https:// 포함 (getLandUseAttr용)
+const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'  // https:// 없이 도메인만
 
 const ZONE_CODE_MAP: Record<string, string> = {
   '제1종전용주거지역': 'residential-exclusive-1', '제2종전용주거지역': 'residential-exclusive-2',
