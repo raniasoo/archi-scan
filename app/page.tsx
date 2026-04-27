@@ -592,10 +592,10 @@ export default function ArchiScanPage() {
     console.log('[v0] Syncing supplement data to regulation:', data)
     
     // Validate and extract zone type (filter out sentinel values)
-    const validZoneTypes = ['residential-1', 'residential-2', 'residential-3', 'semi-residential', 'commercial-general', 'commercial-neighborhood', 'industrial'] as const
+    const validZoneTypes = ['residential-exclusive-1', 'residential-exclusive-2', 'residential-1', 'residential-2', 'residential-3', 'semi-residential', 'commercial-general', 'commercial-neighborhood', 'commercial-central', 'industrial', 'industrial-general', 'green-natural', 'green-production', 'green-conservation'] as const
     const zoneType = validZoneTypes.includes(data.zoneType as typeof validZoneTypes[number]) 
       ? data.zoneType as typeof validZoneTypes[number]
-      : 'residential-2' // default fallback
+      : (data.zoneType || 'residential-2') as typeof validZoneTypes[number] // 알 수 없는 타입도 그대로 사용
     
     // Extract height limit (now number or null)
     const heightLimit = typeof data.heightLimit === 'number' ? data.heightLimit : 30
@@ -735,8 +735,8 @@ export default function ArchiScanPage() {
     setMolitSupplementData(prev => ({ ...prev, zoneCode: zone, roadWidth, heightLimit, hasDistrictPlan: hasDistrict, ...extra }))
     setSupplementKey(k => k + 1)  // useEffect 강제 재실행
 
-    const validZoneTypes = ['residential-1','residential-2','residential-3','semi-residential',
-      'commercial-general','commercial-neighborhood','industrial'] as const
+    const validZoneTypes = ['residential-exclusive-1','residential-exclusive-2','residential-1','residential-2','residential-3','semi-residential',
+      'commercial-general','commercial-neighborhood','commercial-central','industrial','industrial-general','green-natural','green-production','green-conservation'] as const
     type VZ = typeof validZoneTypes[number]
     setRegulation(prev => ({
       ...prev,
