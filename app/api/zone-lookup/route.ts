@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export const runtime = 'edge'  // Vworld /ned/ 접근을 위해 Edge IP 사용
+export const dynamic = 'force-dynamic'  // nodejs runtime (edge는 Vworld ned 파싱 불안정)
 
 const VWORLD_KEY    = process.env.VWORLD_API_KEY || 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
 // AWS Lambda 서울 리전 프록시 (한국 정부 API 차단 우회)
