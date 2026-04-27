@@ -51,10 +51,12 @@ export async function POST(req: NextRequest) {
   const pnu = `${sigunguCd.slice(0,5)}${bjdongCd.slice(0,5)}1${cleanBun}${cleanJi}`
   try {
     const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${KEY}&domain=${DOM}&pnu=${pnu}&cnflcAt=1&numOfRows=100&format=json`
+    console.log(`[vworld-zone] PNU=${pnu} url=${url}`)
     const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
     if (res.status !== 200) throw new Error(`HTTP ${res.status}`)
     const j = await res.json()
     const list: Record<string,string>[] = j?.landUses?.field || []
+    console.log(`[vworld-zone] list count=${list.length} items=${JSON.stringify(list.map(i=>({code:i.prposAreaDstrcCode,name:i.prposAreaDstrcCodeNm})))}`)
     const zoneItem = list.find(item => {
       const code = item?.prposAreaDstrcCode || ''
       if (code.startsWith('UQA1')||code.startsWith('UQA2')||code.startsWith('UQA3')||code.startsWith('UQA4')) return true
@@ -64,6 +66,7 @@ export async function POST(req: NextRequest) {
     const hasDistrict = list.some(item => (item?.prposAreaDstrcCode||'').startsWith('UQQ3') || (item?.prposAreaDstrcCodeNm||'').includes('지구단위계획'))
     const zoneType = zoneItem?.prposAreaDstrcCodeNm || ''
     const zoneCode = toCode(zoneType)
+    console.log(`[vworld-zone] SELECTED zone="${zoneType}" code="${zoneCode}" itemCode="${zoneItem?.prposAreaDstrcCode}"`)
     return NextResponse.json({ success: true, pnu, zoneType, zoneCode, heightLimit: HEIGHT[zoneCode]||null, coverageRatio: BCR[zoneCode]||null, floorAreaRatio: FAR[zoneCode]||null, hasDistrictPlan: hasDistrict, source: 'vworld-ned' })
   } catch(e: unknown) {
     return NextResponse.json({ success: false, zoneCode: '', zoneType: '', error: String(e) })
