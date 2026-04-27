@@ -1204,15 +1204,11 @@ export function SiteInputForm({
                     <span className="font-medium">{fetchedData.householdCount}세대</span>
                   </>
                 )}
-                {(fetchedData.zoneType || supplementData?.zoneType) && (
+                {(supplementData?.zoneType || fetchedData.zoneType) && (
                   <>
                     <span className="text-muted-foreground">용도지역</span>
                     <span className="font-medium">
-                      {fetchedData.zoneType || (
-                        <span className="text-amber-400 text-[11px]">
-                          {supplementData?.zoneType} <span className="text-muted-foreground">(추론)</span>
-                        </span>
-                      )}
+                      {supplementData?.zoneType ? '' : fetchedData.zoneType}
                     </span>
                   </>
                 )}

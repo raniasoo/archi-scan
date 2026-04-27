@@ -787,6 +787,8 @@ export default function ArchiScanPage() {
     }
 
     // 항상 vworld-zone (LURIS+Vworld)으로 용도지역 조회 (MOLIT 건축물대장보다 정확)
+    // site-input-form에서도 동일한 호출을 하므로, 여기서는 결과 있을 때만 적용
+    // MOLIT fallback은 절대 사용하지 않음 (부정확)
     setMolitSupplementData(prev => ({ ...prev, ...coords }))
     fetch('/api/vworld-zone', {
       method: 'POST',
@@ -797,15 +799,11 @@ export default function ArchiScanPage() {
         const hasDistrict = result.hasDistrictPlan || false
         applyZoneData(result.zoneCode, roadAddr, hasDistrict, coords)
         console.log('[v0] vworld-zone 완료:', result.zoneType, result.zoneCode, 'source:', result.source)
-      } else if (mappedZone) {
-        // vworld-zone 실패 시 MOLIT fallback
-        applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
-        console.log('[v0] vworld-zone 실패, MOLIT fallback:', mappedZone)
+      } else {
+        console.log('[v0] vworld-zone 빈 결과 — site-input-form의 결과 대기')
       }
     }).catch(e => {
-      // vworld-zone 에러 시 MOLIT fallback
-      if (mappedZone) applyZoneData(mappedZone, roadAddr, hasDistrict, coords)
-      console.warn('[v0] vworld-zone 에러, MOLIT fallback:', e)
+      console.warn('[v0] vworld-zone 에러:', e)
     })
 
     // 공시지가 자동 조회
