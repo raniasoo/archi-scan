@@ -209,7 +209,7 @@ export function SiteInputForm({
           }))
           // supplementData 업데이트 후 React commit 완료 기다렸다가 form 오픈
           setTimeout(() => setShowSupplementForm(true), 50)
-          // page.tsx에도 전달 (규제 분석용)
+          // page.tsx에도 전달 (규제 분석용) - zone 정보 포함
           if (onMolitDataFetched) {
             onMolitDataFetched({
               sigunguCd: resolvedJuso?.sigunguCd,
@@ -219,6 +219,10 @@ export function SiteInputForm({
               buildingCoverage: cr ?? undefined,
               floorAreaRatio: far ?? undefined,
               bdMgtSn: resolvedJuso?.bdMgtSn,
+              // vworld-zone 결과를 직접 전달 (page.tsx에서 재조회 안 함)
+              _vworldZoneCode: zone,
+              _vworldHeightLimit: hl,
+              _vworldHasDistrict: res.hasDistrictPlan || false,
             } as any)
           }
         }

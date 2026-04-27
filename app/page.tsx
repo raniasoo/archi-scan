@@ -786,25 +786,16 @@ export default function ArchiScanPage() {
       }
     }
 
-    // 항상 vworld-zone (LURIS+Vworld)으로 용도지역 조회 (MOLIT 건축물대장보다 정확)
-    // site-input-form에서도 동일한 호출을 하므로, 여기서는 결과 있을 때만 적용
-    // MOLIT fallback은 절대 사용하지 않음 (부정확)
+    // 용도지역: site-input-form에서 vworld-zone 결과를 직접 전달
+    // page.tsx에서는 vworld-zone을 호출하지 않음 (MOLIT의 params가 JUSO와 달라 잘못된 PNU 생성 가능)
     setMolitSupplementData(prev => ({ ...prev, ...coords }))
-    fetch('/api/vworld-zone', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji }),
-    }).then(r => r.json()).then(result => {
-      if (result?.zoneCode) {
-        const hasDistrict = result.hasDistrictPlan || false
-        applyZoneData(result.zoneCode, roadAddr, hasDistrict, coords)
-        console.log('[v0] vworld-zone 완료:', result.zoneType, result.zoneCode, 'source:', result.source)
-      } else {
-        console.log('[v0] vworld-zone 빈 결과 — site-input-form의 결과 대기')
-      }
-    }).catch(e => {
-      console.warn('[v0] vworld-zone 에러:', e)
-    })
+    const vwZone = (data as any)?._vworldZoneCode
+    const vwHeight = (data as any)?._vworldHeightLimit
+    const vwDistrict = (data as any)?._vworldHasDistrict
+    if (vwZone) {
+      applyZoneData(vwZone, roadAddr, vwDistrict ?? hasDistrict, coords)
+      console.log('[v0] site-input-form에서 전달된 zone:', vwZone)
+    }
 
     // 공시지가 자동 조회
     setLandPriceData(prev => ({ ...prev, loading: true }))
