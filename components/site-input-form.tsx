@@ -137,7 +137,7 @@ export function SiteInputForm({
     })
     // zone-lookup 결과가 있으면 form을 열지만, 없으면 zone-lookup 완료 후에 열림
     // (zone-lookup 완료 후 setShowSupplementForm(true) 호출됨)
-    if (autoData.zoneType) {
+    if (externalSupplement?.zoneCode) {
       setShowSupplementForm(true)
     }
   }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit, (externalSupplement as any)?._key])
