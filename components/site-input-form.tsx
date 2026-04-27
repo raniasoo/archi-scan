@@ -220,6 +220,7 @@ export function SiteInputForm({
               buildingCoverage: cr ?? undefined,
               floorAreaRatio: far ?? undefined,
               bdMgtSn: resolvedJuso?.bdMgtSn,
+              roadAddress: resolvedJuso?.roadAddr || address,
               // vworld-zone 결과를 직접 전달 (page.tsx에서 재조회 안 함)
               _vworldZoneCode: zone,
               _vworldHeightLimit: hl,

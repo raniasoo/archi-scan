@@ -799,6 +799,18 @@ export default function ArchiScanPage() {
 
     // 용도지역: vwZone 처리는 상단 early return에서 완료
     setMolitSupplementData(prev => ({ ...prev, ...coords }))
+    
+    // regulation의 접도/지구단위는 즉시 업데이트 (zone은 vworld-zone 결과 대기)
+    const roadNameOnly = roadAddr.replace(/.*[구군시]\s*/,'')
+    const earlyRoadWidth = roadNameOnly.includes('대로') ? 25 :
+                           roadNameOnly.includes('길') ? 6 :
+                           roadNameOnly.includes('로') ? 12 : 8
+    setRegulation(prev => ({
+      ...prev,
+      roadWidth: earlyRoadWidth,
+      roadCondition: (earlyRoadWidth >= 12 ? 'both' : earlyRoadWidth >= 8 ? 'corner' : 'single') as any,
+      additionalNotes: hasDistrict ? '지구단위계획 적용' : prev.additionalNotes,
+    }))
 
     // 공시지가 자동 조회
     setLandPriceData(prev => ({ ...prev, loading: true }))
