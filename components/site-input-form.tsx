@@ -462,22 +462,10 @@ export function SiteInputForm({
           }, 300)
         }
 
-        // MOLIT 용도지역 → supplement form 값으로 자동 매핑
+        // MOLIT 용도지역은 무시 - vworld-zone(LURIS/Vworld)만 사용
+        // MOLIT 건축물대장의 용도지역이 부정확한 사례가 많음 (예: 제1종전용 → 제2종일반)
         const molitZone = result.data.zoneType || ''
-        let mappedZone = molitZone.includes('제1종전용') || molitZone.includes('제1종 전용') ? 'residential-exclusive-1'
-          : molitZone.includes('제2종전용') || molitZone.includes('제2종 전용') ? 'residential-exclusive-2'
-          : molitZone.includes('제1종일반') || molitZone.includes('제1종 일반') ? 'residential-1'
-          : molitZone.includes('제2종일반') || molitZone.includes('제2종 일반') ? 'residential-2'
-          : molitZone.includes('제3종일반') || molitZone.includes('제3종 일반') ? 'residential-3'
-          : molitZone.includes('준주거') ? 'semi-residential'
-          : molitZone.includes('근린상업') ? 'commercial-neighborhood'
-          : molitZone.includes('중심상업') ? 'commercial-central'
-          : molitZone.includes('일반상업') ? 'commercial-general'
-          : molitZone.includes('일반공업') ? 'industrial-general'
-          : molitZone.includes('자연녹지') ? 'green-natural'
-          : molitZone.includes('생산녹지') ? 'green-production'
-          : molitZone.includes('계획관리') ? 'management-planned'
-          : ''
+        let mappedZone = '' // MOLIT zone 사용하지 않음
 
         // 역추론은 page.tsx의 zone-lookup/LURIS에 위임 (이중 처리 방지)
 
