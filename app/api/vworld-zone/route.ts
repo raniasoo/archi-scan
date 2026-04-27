@@ -43,27 +43,24 @@ const FAR: Record<string,number> = {
   'industrial-general':400,'green-natural':100,
 }
 
-// GET: 테스트용 - ?pnu=xxx 로 직접 조회
+// GET: 디버그 - ?pnu=xxx 또는 ?sigunguCd=&bjdongCd=&bun=&ji= 로 조회
 export async function GET(req: NextRequest) {
-  const pnu = req.nextUrl.searchParams.get('pnu') || '1111018300101800004'
+  const sp = req.nextUrl.searchParams
+  let pnu = sp.get('pnu') || ''
+  if (!pnu) {
+    const s = sp.get('sigunguCd')||'11110'
+    const b = sp.get('bjdongCd')||'18300'
+    const bn = (sp.get('bun')||'0180').padStart(4,'0')
+    const ji = (sp.get('ji')||'0004').padStart(4,'0')
+    pnu = `${s.slice(0,5)}${b.slice(0,5)}1${bn}${ji}`
+  }
   try {
-    // getLandCharacter
-    const charUrl = `https://api.vworld.kr/ned/data/getLandCharacter?key=${KEY}&domain=${DOM}&pnu=${pnu}&format=json`
-    const charRes = await fetch(charUrl, { signal: AbortSignal.timeout(5000) })
-    const charText = await charRes.text()
-    
-    // getLandUseAttr 
     const useUrl = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${KEY}&domain=${DOM}&pnu=${pnu}&cnflcAt=1&numOfRows=100&format=json`
     const useRes = await fetch(useUrl, { signal: AbortSignal.timeout(5000) })
-    const useText = await useRes.text()
-    
-    return NextResponse.json({
-      pnu,
-      getLandCharacter: JSON.parse(charText),
-      getLandUseAttr: JSON.parse(useText),
-    })
+    const useJson = await useRes.json()
+    return NextResponse.json({ pnu, domain: DOM, getLandUseAttr: useJson })
   } catch(e) {
-    return NextResponse.json({ error: String(e) })
+    return NextResponse.json({ pnu, error: String(e) })
   }
 }
 
@@ -76,6 +73,7 @@ export async function POST(req: NextRequest) {
   
   let zoneType = ''
   let hasDistrict = false
+  let allItems: {code:string,name:string}[] = []
 
   try {
     const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${KEY}&domain=${DOM}&pnu=${pnu}&cnflcAt=1&numOfRows=100&format=json`
@@ -84,8 +82,7 @@ export async function POST(req: NextRequest) {
     if (res.ok) {
       const j = await res.json()
       const list: Record<string,string>[] = j?.landUses?.field || []
-      console.log(`[vworld-zone] items=${JSON.stringify(list.map(i=>({code:i.prposAreaDstrcCode,name:i.prposAreaDstrcCodeNm})).slice(0,10))}`)
-      
+      allItems = list.map(i=>({code:i.prposAreaDstrcCode||'',name:i.prposAreaDstrcCodeNm||''}))
       // 용도지역 코드 정밀 매칭 (UQA1xx만 = 주거지역)
       // UQA111=제1종전용, UQA112=제2종전용, UQA113=제1종일반, UQA114=제2종일반, UQA115=제3종일반, UQA116=준주거
       // UQA2xx=상업, UQA3xx=공업, UQA4xx=녹지
@@ -107,5 +104,5 @@ export async function POST(req: NextRequest) {
   }
 
   const zoneCode = toCode(zoneType)
-  return NextResponse.json({ success: true, pnu, zoneType, zoneCode, heightLimit: HEIGHT[zoneCode]||null, coverageRatio: BCR[zoneCode]||null, floorAreaRatio: FAR[zoneCode]||null, hasDistrictPlan: hasDistrict, source: zoneType ? 'vworld-ned' : 'none' })
+  return NextResponse.json({ success: true, pnu, zoneType, zoneCode, heightLimit: HEIGHT[zoneCode]||null, coverageRatio: BCR[zoneCode]||null, floorAreaRatio: FAR[zoneCode]||null, hasDistrictPlan: hasDistrict, source: zoneType ? 'vworld-ned' : 'none', _debug: { input: { sigunguCd, bjdongCd, bun, ji }, allItems } })
 }
