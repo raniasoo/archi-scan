@@ -147,21 +147,30 @@ async function fetchByVworldAttr(pnu: string): Promise<string | null> {
     console.log(`[Vworld-attr] status=${res.status} pnu=${pnu} text=${text.slice(0,500)}`)
     if (!text.startsWith('{') && !text.startsWith('[')) return null
     const json = JSON.parse(text)
-    // 응답 구조: { result: { prposAreaList: [{ prposAreaDstrcCodeNm, ... }] } }
-    const list = json?.result?.prposAreaList
+    // 실제 응답 구조: { landUses: { field: [{ prposAreaDstrcCodeNm, prposAreaDstrcCode, ... }] } }
+    const list = json?.landUses?.field
+              || json?.result?.prposAreaList
               || json?.landUseAttr?.prposAreaList
               || json?.prposAreaList
               || []
     if (Array.isArray(list) && list.length > 0) {
-      // 용도지역 (prposAreaDstrcCodeNm이 용도지역지구명)
-      const zoneItem = list.find((item: any) => 
-        item?.prposAreaDstrcCodeNm?.includes('주거') || 
-        item?.prposAreaDstrcCodeNm?.includes('상업') || 
-        item?.prposAreaDstrcCodeNm?.includes('공업') || 
-        item?.prposAreaDstrcCodeNm?.includes('녹지') ||
-        item?.prposAreaDstrcCodeNm?.includes('관리')
-      ) || list[0]
-      const zone = zoneItem?.prposAreaDstrcCodeNm ?? zoneItem?.prposAreaNm
+      // 용도지역 코드 우선 (UQA = 용도지역, UQB = 용도지구, UQC = 용도구역)
+      const zoneItem = list.find((item: Record<string,unknown>) => {
+        const code = item?.prposAreaDstrcCode as string || ''
+        // UQA 코드 = 용도지역 (주거/상업/공업/녹지)
+        if (code.startsWith('UQA1') || code.startsWith('UQA2') || 
+            code.startsWith('UQA3') || code.startsWith('UQA4')) return true
+        const name = item?.prposAreaDstrcCodeNm as string || ''
+        return name.includes('주거') || name.includes('상업') || 
+               name.includes('공업') || name.includes('녹지') || name.includes('관리')
+      })
+      // 지구단위계획구역 여부도 확인
+      const hasDistrictPlan = list.some((item: Record<string,unknown>) => 
+        (item?.prposAreaDstrcCode as string || '').startsWith('UQQ3') ||
+        (item?.prposAreaDstrcCodeNm as string || '').includes('지구단위계획')
+      )
+      console.log('[Vworld-attr] hasDistrictPlan:', hasDistrictPlan)
+      const zone = zoneItem?.prposAreaDstrcCodeNm as string ?? zoneItem?.prposAreaNm as string
       if (zone) { console.log('[Vworld-attr]', zone); return zone }
     }
   } catch (e: any) { console.warn('[Vworld-attr] 실패:', e?.message, e?.stack?.slice(0,200)) }
