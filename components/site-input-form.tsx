@@ -135,8 +135,9 @@ export function SiteInputForm({
       if (onSupplementDataChange) onSupplementDataChange(autoData)
       return autoData
     })
-    // success-empty 또는 success(zoneType 없는 경우) 모두 자동으로 다음 단계로 진행
-    if (lookupState === 'success-empty' || lookupState === 'success') {
+    // zone-lookup 결과가 있으면 form을 열지만, 없으면 zone-lookup 완료 후에 열림
+    // (zone-lookup 완료 후 setShowSupplementForm(true) 호출됨)
+    if (autoData.zoneType) {
       setShowSupplementForm(true)
     }
   }, [externalSupplement?.zoneCode, externalSupplement?.roadWidth, externalSupplement?.heightLimit, (externalSupplement as any)?._key])
@@ -199,7 +200,7 @@ export function SiteInputForm({
         }
         if (zone) {
           setAutoZoneCode(zone)
-          // supplementData 직접 업데이트 (높이제한 포함)
+          // supplementData 직접 업데이트 (높이제한 포함) + form 자동 오픈
           setSupplementData(prev => ({
             zoneType: zone,
             roadCondition: prev?.roadCondition || rc,
@@ -208,6 +209,7 @@ export function SiteInputForm({
             districtPlanNotes: prev?.districtPlanNotes || '',
             additionalNotes: prev?.additionalNotes || '',
           }))
+          setShowSupplementForm(true)  // zone 조회 완료 후 자동으로 form 오픈
           // page.tsx에도 전달 (규제 분석용)
           if (onMolitDataFetched) {
             onMolitDataFetched({
