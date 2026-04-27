@@ -1613,6 +1613,11 @@ export async function lookupSiteData(
       if (diagJuso?.entX) siteData.entX = diagJuso.entX as number
       if (diagJuso?.entY) siteData.entY = diagJuso.entY as number
       if (diagJuso?.bdMgtSn) siteData.bdMgtSn = diagJuso.bdMgtSn as string
+      // 필지 코드 추가 (zone-lookup용) - siteData에 없으면 vworld-zone 호출 불가
+      if (!siteData.sigunguCd) siteData.sigunguCd = sigunguCd
+      if (!siteData.bjdongCd) siteData.bjdongCd = bjdongCd
+      if (!siteData.bun) siteData.bun = bun
+      if (!siteData.ji) siteData.ji = ji
       
       diagnostics.apiResponse = {
         status: 'success-with-data',
