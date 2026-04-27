@@ -497,7 +497,11 @@ export default function ArchiScanPage() {
         if (s.address) setAddress(s.address)
         if (s.siteArea) setSiteArea(s.siteArea)
         if (s.strategy) setStrategy(s.strategy)
-        if (s.regulation) setRegulation(s.regulation)
+        if (s.regulation) {
+          // zoneType, roadWidth는 자동조회 시 항상 새로 추론 (캐시 오염 방지)
+          const { zoneType: _z, roadWidth: _r, roadCondition: _rc, ...safeRegulation } = s.regulation
+          setRegulation(prev => ({ ...prev, ...safeRegulation }))
+        }
         // supplementData, molitSupplementData는 복원 안 함
         // → 자동조회 시 항상 새로 추론 (캐시 오염 방지)
         if (s.layouts?.length) {
@@ -800,7 +804,7 @@ export default function ArchiScanPage() {
     // 용도지역: vwZone 처리는 상단 early return에서 완료
     setMolitSupplementData(prev => ({ ...prev, ...coords }))
     
-    // regulation의 접도/지구단위는 즉시 업데이트 (zone은 vworld-zone 결과 대기)
+    // regulation의 접도/지구단위 즉시 업데이트 (zoneType은 applyZoneData에서 설정)
     const roadNameOnly = roadAddr.replace(/.*[구군시]\s*/,'')
     const earlyRoadWidth = roadNameOnly.includes('대로') ? 25 :
                            roadNameOnly.includes('길') ? 4 :
@@ -1679,10 +1683,11 @@ export default function ArchiScanPage() {
               <div className="order-1 lg:order-2 space-y-4">
                 {/* 기존 분석 패널 */}
                 {(() => {
-                  // address에서 직접 계산 (상태 의존 없음)
-                  const rw = address.includes('대로') ? 12 :
-                             address.includes('로') ? 8 :
-                             address.includes('길') ? 4 : 6
+                  // address에서 도로명만 추출 (종로구의 "로" 오매칭 방지)
+                  const roadPart = address.replace(/.*[구군시]\s*/,'')
+                  const rw = roadPart.includes('대로') ? 12 :
+                             roadPart.includes('길') ? 4 :
+                             roadPart.includes('로') ? 8 : 6
                   const zc = molitSupplementData.zoneCode || regulation.zoneType
                   const ht = molitSupplementData.heightLimit || regulation.maxHeight
                   const dp = molitSupplementData.hasDistrictPlan ?? regulation.additionalNotes.includes('지구단위')
