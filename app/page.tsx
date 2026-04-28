@@ -657,7 +657,7 @@ export default function ArchiScanPage() {
     // Also update siteArea if provided
     if (data.siteArea && data.siteArea > 0) {
       setSiteArea(String(data.siteArea))
-    } else if (data.entX && data.entY) {
+    } else if ((data.entX && data.entY) || data.bdMgtSn) {
       // MOLIT에서 면적 없으면 Vworld 지적도에서 자동 조회
       fetch('/api/vworld', {
         method: 'POST',
@@ -788,8 +788,8 @@ export default function ArchiScanPage() {
       const coords = { entX: data.entX, entY: data.entY, sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji, bdMgtSn: data.bdMgtSn }
       applyZoneData(vwZone, roadAddr, vwDistrict, coords)
       console.log('[v0] site-input-form에서 전달된 zone:', vwZone)
-      // siteArea가 아직 비어있으면 Vworld에서 면적 자동 조회
-      if (data.entX && data.entY) {
+      // siteArea가 아직 비어있으면 Vworld에서 면적 자동 조회 (좌표 또는 PNU)
+      if ((data.entX && data.entY) || data.bdMgtSn) {
         fetch('/api/vworld', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -817,11 +817,11 @@ export default function ArchiScanPage() {
     } else {
       // siteArea 없으면 /api/vworld(지적도)에서 면적 자동 조회
       const vworldAddr = roadAddr || address
-      if (vworldAddr) {
+      if (vworldAddr || data.bdMgtSn) {
         fetch('/api/vworld', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: vworldAddr, siteArea: 0, entX: data.entX, entY: data.entY }),
+          body: JSON.stringify({ address: vworldAddr, siteArea: 0, entX: data.entX, entY: data.entY, bdMgtSn: data.bdMgtSn }),
         }).then(r => r.json()).then(vd => {
           if (vd.parcel?.area && vd.parcel.area > 0) {
             setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0)

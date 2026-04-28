@@ -192,7 +192,7 @@ export function SiteInputForm({
           fetch('/api/vworld', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ address: addr, siteArea: 0, entX: resolvedJuso.entX, entY: resolvedJuso.entY }),
+            body: JSON.stringify({ address: addr, siteArea: 0, entX: resolvedJuso.entX, entY: resolvedJuso.entY, bdMgtSn: resolvedJuso.bdMgtSn }),
           }).then(r => r.json()).then(vd => {
             if (vd.parcel?.area && vd.parcel.area > 0 && onSiteAreaChange) {
               const cur = siteArea?.trim()
