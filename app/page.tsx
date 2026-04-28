@@ -426,7 +426,7 @@ export default function ArchiScanPage() {
   const [selectedFloor, setSelectedFloor] = useState(1)
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
-  const [drawingTab, setDrawingTab] = useState<"floor" | "site" | "iso" | "section">("floor")
+  const [drawingTab, setDrawingTab] = useState<"floor" | "site" | "iso" | "section">("site")
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
