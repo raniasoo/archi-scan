@@ -52,6 +52,8 @@ import { CadastralMap } from "@/components/cadastral-map"
 import { SitePlan } from "@/components/site-plan"
 import { IsometricView } from "@/components/isometric-view"
 import { SectionView } from "@/components/section-view"
+import { ElevationView } from "@/components/elevation-view"
+import { ScenarioSlider } from "@/components/scenario-slider"
 import { StrategySelection } from "@/components/strategy-selection"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
@@ -426,7 +428,7 @@ export default function ArchiScanPage() {
   const [selectedFloor, setSelectedFloor] = useState(1)
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
-  const [drawingTab, setDrawingTab] = useState<"floor" | "site" | "iso" | "section">("site")
+  const [drawingTab, setDrawingTab] = useState<"floor" | "site" | "iso" | "section" | "elevation">("site")
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
@@ -2297,6 +2299,7 @@ export default function ArchiScanPage() {
                     { id: "site" as const, label: "배치도" },
                     { id: "iso" as const, label: "아이소메트릭" },
                     { id: "section" as const, label: "단면도" },
+                    { id: "elevation" as const, label: "입면도" },
                   ]).map(tab => (
                     <button key={tab.id} onClick={() => setDrawingTab(tab.id)}
                       className={`px-4 py-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
@@ -2350,6 +2353,18 @@ export default function ArchiScanPage() {
                       layoutName={selectedLayoutData.name}
                       roadWidth={molitSupplementData.roadWidth || regulation.roadWidth || 8}
                       hasDistrictPlan={molitSupplementData.hasDistrictPlan ?? false}
+                    />
+                  )}
+                  {drawingTab === "elevation" && (
+                    <ElevationView
+                      siteArea={siteAreaNum}
+                      buildingCoverage={selectedLayoutData.coverage}
+                      floors={selectedLayoutData.floors}
+                      units={selectedLayoutData.units}
+                      type={selectedLayoutData.type}
+                      layoutName={selectedLayoutData.name}
+                      roadWidth={molitSupplementData.roadWidth || regulation.roadWidth || 8}
+                      heightLimit={molitSupplementData.heightLimit || regulation.maxHeight}
                     />
                   )}
                 </div>
@@ -2417,6 +2432,19 @@ export default function ArchiScanPage() {
               floors={selectedLayoutData.floors}
               feasibilityResult={feasibilityResult}
               landPricePerM2={landPriceData.pricePerM2 || 5000000}
+            />
+
+            {/* 사업성 시나리오 슬라이더 */}
+            <ScenarioSlider
+              siteArea={siteAreaNum}
+              gfa={gfa}
+              units={selectedLayoutData.units}
+              floors={selectedLayoutData.floors}
+              parking={selectedLayoutData.parking}
+              landPricePerM2={landPriceData.pricePerM2 || 5000000}
+              baseROI={feasibilityResult?.roi ?? 0}
+              baseTotalCost={feasibilityResult?.totalCost ?? 0}
+              baseProfit={feasibilityResult?.profit ?? 0}
             />
 
             <div className="flex flex-col items-center gap-2 pt-4">
