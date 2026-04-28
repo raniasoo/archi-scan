@@ -107,6 +107,12 @@ export function SiteInputForm({
   const [showSupplementForm, setShowSupplementForm] = useState(false)
   const [supplementData, setSupplementData] = useState<SupplementData | null>(null)
   const [isSavingSupplement, setIsSavingSupplement] = useState(false)
+  
+  // 주소 자동완성
+  const [suggestions, setSuggestions] = useState<Array<{roadAddr: string; jibunAddr: string; bdNm: string}>>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suggestRef = useRef<HTMLDivElement>(null)
 
   // address stale closure 방지용 ref
   const addressRef = useRef(address)
@@ -701,6 +707,30 @@ export function SiteInputForm({
       setLastRetryParams(null)
       setRetryCount(0)
     }
+    // 자동완성 트리거 (2글자 이상, 300ms 디바운스)
+    if (suggestTimer.current) clearTimeout(suggestTimer.current)
+    if (value.length >= 2) {
+      suggestTimer.current = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/juso-suggest?q=${encodeURIComponent(value)}`)
+          const data = await res.json()
+          if (data.results?.length > 0) {
+            setSuggestions(data.results)
+            setShowSuggestions(true)
+          } else {
+            setShowSuggestions(false)
+          }
+        } catch { setShowSuggestions(false) }
+      }, 300)
+    } else {
+      setShowSuggestions(false)
+    }
+  }
+  
+  const handleSelectSuggestion = (addr: string) => {
+    onAddressChange(addr)
+    setShowSuggestions(false)
+    setSuggestions([])
   }
 
   return (
@@ -766,13 +796,35 @@ export function SiteInputForm({
             </Label>
             {/* Mobile: stacked layout, Desktop: side-by-side */}
             <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                id="address"
-                placeholder="예: 서울 강남구 역삼동 123-45"
-                value={address}
-                onChange={(e) => handleAddressChange(e.target.value)}
-                className="bg-secondary/50 w-full sm:flex-1"
-              />
+              <div className="relative w-full sm:flex-1" ref={suggestRef}>
+                <Input
+                  id="address"
+                  placeholder="예: 서울 강남구 역삼동 123-45"
+                  value={address}
+                  onChange={(e) => handleAddressChange(e.target.value)}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  className="bg-secondary/50 w-full"
+                  autoComplete="off"
+                />
+                {/* 주소 자동완성 드롭다운 */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent/50 border-b border-border/30 last:border-0 flex flex-col gap-0.5"
+                        onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s.roadAddr) }}
+                      >
+                        <span className="font-medium text-foreground">{s.roadAddr}</span>
+                        {s.bdNm && <span className="text-xs text-muted-foreground">{s.bdNm}</span>}
+                        {s.jibunAddr && <span className="text-xs text-muted-foreground/70">{s.jibunAddr}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {/* Auto-lookup button - subtle when supplement is completed */}
               {supplementData ? (
                 <button
