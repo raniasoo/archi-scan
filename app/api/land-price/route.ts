@@ -23,6 +23,11 @@ const DONG_FALLBACK: Record<string, number> = {
   '명동': 90000000, '을지로': 45000000, '충무로': 40000000, '소공동': 80000000,
   // 종로구
   '종로': 45000000, '광화문': 50000000, '인사동': 35000000,
+  '평창동': 2800000, '부암동': 3500000, '삼청동': 8000000, '혜화동': 12000000,
+  // 마포구
+  '합정동': 20000000, '상수동': 18000000, '연남동': 16000000, '망원동': 15000000,
+  // 성동구
+  '성수동': 22000000, '왕십리': 14000000, '금호동': 12000000,
 }
 
 const DISTRICT_FALLBACK: Record<string, number> = {
@@ -90,6 +95,7 @@ async function fetchFromVworld(pnu: string, entX?: number, entY?: number): Promi
   
   // 좌표로 주변 필지 검색 후 jiga 조회
   if (entX && entY) {
+    // POINT 검색
     try {
       const params = new URLSearchParams({
         service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
@@ -106,6 +112,24 @@ async function fetchFromVworld(pnu: string, entX?: number, entY?: number): Promi
         if (price > 0) return price
       }
     } catch (e: any) { console.warn('[LandPrice/LP_PA/coord]', e.message) }
+    
+    // BBOX fallback (POINT 실패 시 30m 버퍼)
+    try {
+      const buf = 0.0003
+      const params = new URLSearchParams({
+        service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
+        key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+        geomFilter: `BOX(${entX-buf},${entY-buf},${entX+buf},${entY+buf})`,
+        geometry: 'false', attribute: 'true', format: 'json', size: '3',
+      })
+      const res = await fetch(`https://api.vworld.kr/req/data?${params}`, { signal: AbortSignal.timeout(10000) })
+      const data = await res.json()
+      const features = data?.response?.result?.featureCollection?.features || []
+      for (const f of features) {
+        const p = f?.properties?.jiga
+        if (p) { const price = parseInt(p.toString().replace(/[^0-9]/g, '')); if (price > 0) { console.log(`[LandPrice/LP_PA/bbox] jiga=${price}`); return price } }
+      }
+    } catch (e: any) { console.warn('[LandPrice/LP_PA/bbox]', e.message) }
   }
   
   return null
