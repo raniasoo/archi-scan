@@ -1271,6 +1271,8 @@ export default function ArchiScanPage() {
                 totalFloors={selectedLayoutData.floors}
                 strategy={strategy}
                 zoneType={molitSupplementData.zoneCode || regulation.zoneType}
+                units={selectedLayoutData.units}
+                gfa={selectedLayoutData.gfa || gfa}
               />
             </div>
           </div>
@@ -2076,6 +2078,8 @@ export default function ArchiScanPage() {
                           totalFloors={selectedLayoutData.floors}
                           strategy={strategy}
                           zoneType={molitSupplementData.zoneCode || regulation.zoneType}
+                          units={selectedLayoutData.units}
+                          gfa={selectedLayoutData.gfa || gfa}
                         />
                       </div>
                     </div>
@@ -2098,6 +2102,8 @@ export default function ArchiScanPage() {
                           totalFloors={selectedLayoutData.floors}
                           strategy={strategy}
                           zoneType={molitSupplementData.zoneCode || regulation.zoneType}
+                          units={selectedLayoutData.units}
+                          gfa={selectedLayoutData.gfa || gfa}
                         />
                       </div>
                     </div>
@@ -2120,6 +2126,8 @@ export default function ArchiScanPage() {
                           totalFloors={selectedLayoutData.floors}
                           strategy={strategy}
                           zoneType={molitSupplementData.zoneCode || regulation.zoneType}
+                          units={selectedLayoutData.units}
+                          gfa={selectedLayoutData.gfa || gfa}
                         />
                       </div>
                     </div>

@@ -8,9 +8,11 @@ interface FloorPlanProps {
   totalFloors: number
   strategy?: DesignStrategy
   zoneType?: string
+  units?: number
+  gfa?: number
 }
 
-export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType }: FloorPlanProps) {
+export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType, units = 0, gfa = 0 }: FloorPlanProps) {
   const isGroundFloor = floor === 1
   const isBasementOrParking = floor <= 0
   const isTopFloor = floor === totalFloors
@@ -29,6 +31,15 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
   const gfLabel = allowCommercial ? '상가' : '세대'
   const gfColor = allowCommercial ? '#f59e0b' : '#22c55e'
   const gfFill = allowCommercial ? '#f59e0b20' : '#22c55e20'
+
+  // 동적 세대수 배분
+  const totalUnits = units || 10
+  const upperFloors = Math.max(totalFloors - 1, 1)
+  const upperFloorUnits = totalFloors > 1 ? Math.ceil(totalUnits * 0.6 / upperFloors) : totalUnits
+  const groundFloorUnits = totalFloors > 1 ? Math.max(totalUnits - (upperFloorUnits * upperFloors), 2) : totalUnits
+  const currentFloorUnits = isGroundFloor ? groundFloorUnits : upperFloorUnits
+  const totalGFA = gfa || (totalUnits * 59)
+  const unitArea = Math.round(totalGFA / Math.max(totalUnits, 1))
 
   // 전략에 따른 색상 테마
   const getStrategyColors = () => {
@@ -54,9 +65,9 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
 
   // 층별 설명 텍스트
   const getFloorDescription = () => {
-    if (isGroundFloor) return allowCommercial ? "1층 (로비/상가/주차)" : "1층 (로비/세대/주차)"
-    if (floor === 2) return "2층 (저층 세대)"
-    if (isTopFloor) return `${floor}층 (최상층/펜트하우스)`
+    if (isGroundFloor) return allowCommercial ? `1층 (로비/${gfLabel}/주차)` : `1층 (로비/세대/주차)`
+    if (floor === 2) return `2층 (${currentFloorUnits}세대)`
+    if (isTopFloor) return `${floor}층 (최상층 ${currentFloorUnits}세대)`
     if (isHighFloor) return `${floor}층 (고층 세대)`
     if (isMidFloor) return `${floor}층 (기준층)`
     return `${floor}층`
@@ -156,76 +167,43 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
         <g transform="translate(50, 20)">
           <rect x="0" y="0" width="200" height="160" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
           
-          {/* Units based on strategy */}
-          {strategy === "view-priority" || strategy === "privacy-priority" ? (
-            // 대형 세대 2-3개
-            <>
-              <rect x="5" y="5" width="90" height="70" fill={colors.secondary} stroke={colors.primary} strokeWidth="1.5" />
-              <text x="50" y="32" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">A호</text>
-              <text x="50" y="47" fontSize="8" textAnchor="middle" fill={colors.primary}>115㎡ (대형)</text>
-              {/* Interior rooms */}
-              <rect x="10" y="10" width="35" height="25" fill="#22c55e20" stroke="#22c55e" strokeWidth="0.5" />
-              <text x="27" y="25" fontSize="6" textAnchor="middle" fill="#22c55e">주침실</text>
-              <rect x="50" y="10" width="40" height="30" fill={gfFill} stroke={gfColor} strokeWidth="0.5" />
-              <text x="70" y="28" fontSize="6" textAnchor="middle" fill={gfColor}>거실</text>
-              {unitConfig.hasBalcony && (
-                <rect x="5" y="60" width="85" height="12" fill="#0ea5e920" stroke="#0ea5e9" strokeWidth="0.5" strokeDasharray="2" />
-              )}
-              
-              <rect x="105" y="5" width="90" height="70" fill={colors.secondary} stroke={colors.primary} strokeWidth="1.5" />
-              <text x="150" y="32" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">B호</text>
-              <text x="150" y="47" fontSize="8" textAnchor="middle" fill={colors.primary}>115㎡ (대형)</text>
-              {unitConfig.hasBalcony && (
-                <rect x="110" y="60" width="80" height="12" fill="#0ea5e920" stroke="#0ea5e9" strokeWidth="0.5" strokeDasharray="2" />
-              )}
-            </>
-          ) : strategy === "area-maximize" || strategy === "profitability" ? (
-            // 소형 세대 많이
-            <>
-              <rect x="5" y="5" width="60" height="50" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="35" y="25" fontSize="9" textAnchor="middle" fill={colors.primary}>A호</text>
-              <text x="35" y="38" fontSize="7" textAnchor="middle" fill={colors.primary}>59㎡</text>
-              
-              <rect x="70" y="5" width="60" height="50" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="100" y="25" fontSize="9" textAnchor="middle" fill={colors.primary}>B호</text>
-              <text x="100" y="38" fontSize="7" textAnchor="middle" fill={colors.primary}>59㎡</text>
-              
-              <rect x="135" y="5" width="60" height="50" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="165" y="25" fontSize="9" textAnchor="middle" fill={colors.primary}>C호</text>
-              <text x="165" y="38" fontSize="7" textAnchor="middle" fill={colors.primary}>59㎡</text>
-              
-              <rect x="5" y="95" width="60" height="50" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="35" y="115" fontSize="9" textAnchor="middle" fill={colors.primary}>D호</text>
-              <text x="35" y="128" fontSize="7" textAnchor="middle" fill={colors.primary}>59㎡</text>
-              
-              <rect x="70" y="95" width="60" height="50" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="100" y="115" fontSize="9" textAnchor="middle" fill={colors.primary}>E호</text>
-              <text x="100" y="128" fontSize="7" textAnchor="middle" fill={colors.primary}>59㎡</text>
-              
-              <rect x="135" y="95" width="60" height="50" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="165" y="115" fontSize="9" textAnchor="middle" fill={colors.primary}>F호</text>
-              <text x="165" y="128" fontSize="7" textAnchor="middle" fill={colors.primary}>59㎡</text>
-            </>
-          ) : (
-            // 중형 세대 4개 (기본)
-            <>
-              <rect x="5" y="5" width="90" height="70" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="50" y="32" fontSize="10" textAnchor="middle" fill={colors.primary}>A호</text>
-              <text x="50" y="47" fontSize="8" textAnchor="middle" fill={colors.primary}>84㎡</text>
-              
-              <rect x="105" y="5" width="90" height="70" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="150" y="32" fontSize="10" textAnchor="middle" fill={colors.primary}>B호</text>
-              <text x="150" y="47" fontSize="8" textAnchor="middle" fill={colors.primary}>84㎡</text>
-              
-              <rect x="5" y="85" width="90" height="70" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="50" y="115" fontSize="10" textAnchor="middle" fill={colors.primary}>C호</text>
-              <text x="50" y="130" fontSize="8" textAnchor="middle" fill={colors.primary}>84㎡</text>
-              
-              <rect x="105" y="85" width="90" height="70" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="150" y="115" fontSize="10" textAnchor="middle" fill={colors.primary}>D호</text>
-              <text x="150" y="130" fontSize="8" textAnchor="middle" fill={colors.primary}>84㎡</text>
-            </>
-          )}
+          {/* Dynamic units based on actual count */}
+          {(() => {
+            const n = currentFloorUnits
+            const topRow = Math.ceil(n / 2)
+            const bottomRow = n - topRow
+            const unitNames = ['A','B','C','D','E','F','G','H','I','J']
+            const elements: React.ReactElement[] = []
+            // Top row units
+            const tw = Math.floor((195) / Math.max(topRow, 1))
+            for (let i = 0; i < topRow; i++) {
+              const x = 5 + i * tw
+              const w = tw - 5
+              elements.push(
+                <g key={`t${i}`}>
+                  <rect x={x} y={5} width={w} height={50} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+                  <text x={x + w/2} y={25} fontSize="9" textAnchor="middle" fill={colors.primary}>{unitNames[i]}호</text>
+                  <text x={x + w/2} y={38} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
+                </g>
+              )
+            }
+            // Bottom row units
+            if (bottomRow > 0) {
+              const bw = Math.floor((195) / Math.max(bottomRow, 1))
+              for (let i = 0; i < bottomRow; i++) {
+                const x = 5 + i * bw
+                const w = bw - 5
+                elements.push(
+                  <g key={`b${i}`}>
+                    <rect x={x} y={95} width={w} height={50} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+                    <text x={x + w/2} y={115} fontSize="9" textAnchor="middle" fill={colors.primary}>{unitNames[topRow + i]}호</text>
+                    <text x={x + w/2} y={128} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
+                  </g>
+                )
+              }
+            }
+            return elements
+          })()}
           
           {/* Core */}
           <rect x="75" y="60" width="50" height="30" fill="#64748b40" stroke="#64748b" strokeWidth="2" />
@@ -418,14 +396,17 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
         <g transform="translate(15, 40)">
           <rect x="0" y="0" width="270" height="120" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
           
-          {/* Units in a row */}
-          {[0, 1, 2, 3, 4].map((i) => (
-            <g key={i}>
-              <rect x={5 + i * 52} y="5" width="50" height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x={30 + i * 52} y="35" fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text>
-              <text x={30 + i * 52} y="50" fontSize="7" textAnchor="middle" fill={colors.primary}>{unitConfig.unitSize === "대형" ? "115㎡" : unitConfig.unitSize === "소형" ? "59㎡" : "84㎡"}</text>
-            </g>
-          ))}
+          {/* Dynamic units in a row */}
+          {Array.from({ length: currentFloorUnits }, (_, i) => {
+            const uw = Math.floor(260 / Math.max(currentFloorUnits, 1))
+            return (
+              <g key={i}>
+                <rect x={5 + i * uw} y="5" width={uw - 4} height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+                <text x={5 + i * uw + (uw - 4) / 2} y="35" fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text>
+                <text x={5 + i * uw + (uw - 4) / 2} y="50" fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
+              </g>
+            )
+          })}
           
           {/* Corridor */}
           <rect x="5" y="85" width="260" height="30" fill="#64748b20" stroke="#64748b" strokeWidth="1" />
