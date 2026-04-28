@@ -1862,6 +1862,7 @@ export default function ArchiScanPage() {
                     siteArea={siteAreaNum}
                     selectedLayout={selectedLayout}
                     recommendedLayoutId={recommendedLayout?.id}
+                    landPricePerM2={landPriceData.pricePerM2 || 5000000}
                     onSelect={(id) => {
                       handleSelectLayout(id)
                     }}

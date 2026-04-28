@@ -10,6 +10,7 @@ interface LayoutComparisonProps {
   siteArea: number
   selectedLayout: number | null
   recommendedLayoutId?: number | null
+  landPricePerM2?: number
   onSelect: (id: number) => void
 }
 
@@ -18,6 +19,7 @@ export function LayoutComparison({
   siteArea,
   selectedLayout,
   recommendedLayoutId,
+  landPricePerM2,
   onSelect,
 }: LayoutComparisonProps) {
   const financials = useMemo(() =>
@@ -27,8 +29,9 @@ export function LayoutComparison({
       unitCount: l.units,
       floorCount: l.floors,
       parkingCount: l.parking,
+      landPricePerM2: landPricePerM2 || 5000000,
     })),
-    [layouts, siteArea]
+    [layouts, siteArea, landPricePerM2]
   )
 
   // 각 행별 최고값 계산
