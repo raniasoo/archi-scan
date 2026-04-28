@@ -277,14 +277,7 @@ export async function POST(req: NextRequest) {
         }
       } catch(e) { console.warn('[vworld] Overpass 실패:', String(e)) }
 
-      // 1-3: 좌표만 있을 때 면적 기반 정사각형 (최후 fallback)
-      const area = siteArea || 0
-      const parcel = buildParcelFromCoords(entX, entY, area, address)
-      return NextResponse.json({ success: true, parcel, coordinates: { lng: entX, lat: entY } })
-    }
-
-    // 1-4: Nominatim 좌표 역지오코딩으로 실제 건물 폴리곤 (entX/entY 있을 때)
-    if (entX && entY) {
+      // 1-3: Nominatim 좌표 역지오코딩으로 실제 건물 폴리곤
       try {
         const revUrl = `https://nominatim.openstreetmap.org/reverse?lat=${entY}&lon=${entX}&format=json&polygon_geojson=1&zoom=18`
         const revRes = await fetch(revUrl, {
@@ -316,9 +309,14 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch(e) { console.warn('[vworld] Nominatim reverse 실패:', String(e)) }
+
+      // 1-4: 모든 시도 실패 — 면적 기반 정사각형 (최후 fallback)
+      const area = siteArea || 0
+      const parcel = buildParcelFromCoords(entX, entY, area, address)
+      return NextResponse.json({ success: true, parcel, coordinates: { lng: entX, lat: entY } })
     }
 
-    // 2순위: Nominatim 주소 검색으로 실제 건물 폴리곤
+    // 2순위: Nominatim 주소 검색으로 실제 건물 폴리곤 (entX/entY 없을 때)
     if (address) {
       try {
         const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&countrycodes=kr&limit=3&polygon_geojson=1`
