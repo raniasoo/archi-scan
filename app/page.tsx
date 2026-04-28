@@ -597,9 +597,8 @@ export default function ArchiScanPage() {
     
     // Validate and extract zone type (filter out sentinel values)
     const validZoneTypes = ['residential-exclusive-1', 'residential-exclusive-2', 'residential-1', 'residential-2', 'residential-3', 'semi-residential', 'commercial-general', 'commercial-neighborhood', 'commercial-central', 'industrial', 'industrial-general', 'green-natural', 'green-production', 'green-conservation'] as const
-    const zoneType = validZoneTypes.includes(data.zoneType as typeof validZoneTypes[number]) 
-      ? data.zoneType as typeof validZoneTypes[number]
-      : (data.zoneType || 'residential-2') as typeof validZoneTypes[number] // 알 수 없는 타입도 그대로 사용
+    // zoneType이 비어있으면 기존 regulation 유지 (residential-2로 덮어쓰지 않음)
+    const hasValidZone = data.zoneType && (validZoneTypes as readonly string[]).includes(data.zoneType)
     
     // Extract height limit (now number or null)
     const heightLimit = typeof data.heightLimit === 'number' ? data.heightLimit : 30
@@ -607,8 +606,8 @@ export default function ArchiScanPage() {
     // Map supplement data to regulation state
     setRegulation(prev => ({
       ...prev,
-      // Map zoneType (validated)
-      zoneType: zoneType,
+      // Map zoneType — 유효한 값이 있을 때만 업데이트
+      zoneType: hasValidZone ? data.zoneType as typeof validZoneTypes[number] : prev.zoneType,
       // Map roadCondition to roadWidth
       roadWidth: data.roadCondition === '12m-plus' ? 12 :
                  data.roadCondition === '8m-plus' ? 8 :
@@ -626,29 +625,33 @@ export default function ArchiScanPage() {
       additionalNotes: data.hasDistrictPlan 
         ? (data.districtPlanNotes || '지구단위계획 적용')
         : '',
-      // Update ratios based on zone type (국계법 기준)
-      maxCoverageRatio: zoneType === 'residential-exclusive-1' ? 50 :
-                        zoneType === 'residential-exclusive-2' ? 50 :
-                        zoneType === 'residential-1' ? 60 :
-                        zoneType === 'residential-2' ? 60 :
-                        zoneType === 'residential-3' ? 50 :
-                        zoneType === 'semi-residential' ? 70 :
-                        zoneType === 'commercial-general' ? 80 :
-                        zoneType === 'commercial-neighborhood' ? 70 :
-                        zoneType === 'commercial-central' ? 90 :
-                        zoneType === 'industrial-general' ? 70 :
-                        zoneType === 'green-natural' ? 20 : prev.maxCoverageRatio,
-      maxFloorAreaRatio: zoneType === 'residential-exclusive-1' ? 100 :
-                         zoneType === 'residential-exclusive-2' ? 150 :
-                         zoneType === 'residential-1' ? 200 :
-                         zoneType === 'residential-2' ? 250 :
-                         zoneType === 'residential-3' ? 300 :
-                         zoneType === 'semi-residential' ? 500 :
-                         zoneType === 'commercial-general' ? 1300 :
-                         zoneType === 'commercial-neighborhood' ? 900 :
-                         zoneType === 'commercial-central' ? 1500 :
-                         zoneType === 'industrial-general' ? 400 :
-                         zoneType === 'green-natural' ? 100 : prev.maxFloorAreaRatio,
+      // Update ratios based on zone type (국계법 기준) — 유효한 zone이 있을 때만
+      maxCoverageRatio: hasValidZone ? (
+                        data.zoneType === 'residential-exclusive-1' ? 50 :
+                        data.zoneType === 'residential-exclusive-2' ? 50 :
+                        data.zoneType === 'residential-1' ? 60 :
+                        data.zoneType === 'residential-2' ? 60 :
+                        data.zoneType === 'residential-3' ? 50 :
+                        data.zoneType === 'semi-residential' ? 70 :
+                        data.zoneType === 'commercial-general' ? 80 :
+                        data.zoneType === 'commercial-neighborhood' ? 70 :
+                        data.zoneType === 'commercial-central' ? 90 :
+                        data.zoneType === 'industrial-general' ? 70 :
+                        data.zoneType === 'green-natural' ? 20 : prev.maxCoverageRatio
+                        ) : prev.maxCoverageRatio,
+      maxFloorAreaRatio: hasValidZone ? (
+                         data.zoneType === 'residential-exclusive-1' ? 100 :
+                         data.zoneType === 'residential-exclusive-2' ? 150 :
+                         data.zoneType === 'residential-1' ? 200 :
+                         data.zoneType === 'residential-2' ? 250 :
+                         data.zoneType === 'residential-3' ? 300 :
+                         data.zoneType === 'semi-residential' ? 500 :
+                         data.zoneType === 'commercial-general' ? 1300 :
+                         data.zoneType === 'commercial-neighborhood' ? 900 :
+                         data.zoneType === 'commercial-central' ? 1500 :
+                         data.zoneType === 'industrial-general' ? 400 :
+                         data.zoneType === 'green-natural' ? 100 : prev.maxFloorAreaRatio
+                         ) : prev.maxFloorAreaRatio,
     }))
     
     // Also update siteArea if provided
@@ -2408,12 +2411,17 @@ export default function ArchiScanPage() {
                             : 0,
                         },
                         regulation: {
-                          zoneType: regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
+                          zoneType: regulation?.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+                                    regulation?.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
+                                    regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
                                     regulation?.zoneType === 'residential-2' ? '제2종 일반주거지역' :
                                     regulation?.zoneType === 'residential-3' ? '제3종 일반주거지역' :
                                     regulation?.zoneType === 'semi-residential' ? '준주거지역' :
                                     regulation?.zoneType === 'commercial-general' ? '일반상업지역' :
                                     regulation?.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
+                                    regulation?.zoneType === 'commercial-central' ? '중심상업지역' :
+                                    regulation?.zoneType === 'industrial-general' ? '일반공업지역' :
+                                    regulation?.zoneType === 'green-natural' ? '자연녹지지역' :
                                     regulation?.zoneType ?? '제2종 일반주거지역',
                           roadWidth: regulation?.roadWidth,
                           maxHeight: regulation?.maxHeight,
@@ -2502,12 +2510,17 @@ export default function ArchiScanPage() {
                             : 0,
                         },
                         regulation: {
-                          zoneType: regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
+                          zoneType: regulation?.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+                                    regulation?.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
+                                    regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
                                     regulation?.zoneType === 'residential-2' ? '제2종 일반주거지역' :
                                     regulation?.zoneType === 'residential-3' ? '제3종 일반주거지역' :
                                     regulation?.zoneType === 'semi-residential' ? '준주거지역' :
                                     regulation?.zoneType === 'commercial-general' ? '일반상업지역' :
                                     regulation?.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
+                                    regulation?.zoneType === 'commercial-central' ? '중심상업지역' :
+                                    regulation?.zoneType === 'industrial-general' ? '일반공업지역' :
+                                    regulation?.zoneType === 'green-natural' ? '자연녹지지역' :
                                     regulation?.zoneType ?? '제2종 일반주거지역',
                           roadWidth: regulation?.roadWidth,
                           maxHeight: regulation?.maxHeight,
@@ -2596,12 +2609,17 @@ export default function ArchiScanPage() {
                             : 0,
                         },
                         regulation: {
-                          zoneType: regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
+                          zoneType: regulation?.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+                                    regulation?.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
+                                    regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
                                     regulation?.zoneType === 'residential-2' ? '제2종 일반주거지역' :
                                     regulation?.zoneType === 'residential-3' ? '제3종 일반주거지역' :
                                     regulation?.zoneType === 'semi-residential' ? '준주거지역' :
                                     regulation?.zoneType === 'commercial-general' ? '일반상업지역' :
                                     regulation?.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
+                                    regulation?.zoneType === 'commercial-central' ? '중심상업지역' :
+                                    regulation?.zoneType === 'industrial-general' ? '일반공업지역' :
+                                    regulation?.zoneType === 'green-natural' ? '자연녹지지역' :
                                     regulation?.zoneType ?? '제2종 일반주거지역',
                           roadWidth: regulation?.roadWidth,
                           maxHeight: regulation?.maxHeight,
@@ -2688,12 +2706,17 @@ export default function ArchiScanPage() {
                             : 0,
                         },
                         regulation: {
-                          zoneType: regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
+                          zoneType: regulation?.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+                                    regulation?.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
+                                    regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
                                     regulation?.zoneType === 'residential-2' ? '제2종 일반주거지역' :
                                     regulation?.zoneType === 'residential-3' ? '제3종 일반주거지역' :
                                     regulation?.zoneType === 'semi-residential' ? '준주거지역' :
                                     regulation?.zoneType === 'commercial-general' ? '일반상업지역' :
                                     regulation?.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
+                                    regulation?.zoneType === 'commercial-central' ? '중심상업지역' :
+                                    regulation?.zoneType === 'industrial-general' ? '일반공업지역' :
+                                    regulation?.zoneType === 'green-natural' ? '자연녹지지역' :
                                     regulation?.zoneType ?? '제2종 일반주거지역',
                           roadWidth: regulation?.roadWidth,
                           maxHeight: regulation?.maxHeight,

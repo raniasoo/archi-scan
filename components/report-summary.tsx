@@ -444,13 +444,18 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       <tr><th style="width: 120px;">소재지</th><td>${address}</td></tr>
       <tr><th>대지면적</th><td>${siteArea.toLocaleString()}㎡ (${Math.round(siteArea * 0.3025).toLocaleString()}평)</td></tr>
       <tr><th>토지이용계획</th><td>${regulation ? `${regulation.zoneType === 'custom' ? (regulation.zoneTypeCustom || '직접 입력') : 
+        regulation.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+        regulation.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
         regulation.zoneType === 'residential-1' ? '제1종 일반주거지역' :
         regulation.zoneType === 'residential-2' ? '제2종 일반주거지역' :
         regulation.zoneType === 'residential-3' ? '제3종 일반주거지역' :
         regulation.zoneType === 'semi-residential' ? '준주거지역' :
         regulation.zoneType === 'commercial-general' ? '일반상업지역' :
         regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-        regulation.zoneType === 'industrial' ? '준공업지역' : regulation.zoneType} <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
+        regulation.zoneType === 'commercial-central' ? '중심상업지역' :
+        regulation.zoneType === 'industrial-general' ? '일반공업지역' :
+        regulation.zoneType === 'industrial' ? '준공업지역' :
+        regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType} <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
       <tr><th>접도 현황</th><td>${regulation ? `${regulation.roadWidth}m 이상 도로 접함 (${regulation.roadCondition === 'corner' ? '코너' : regulation.roadCondition}) <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
       <tr><th>높이제한</th><td>${regulation ? `${regulation.maxHeight}m / ${regulation.maxFloors}층 <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
     </table>
@@ -485,13 +490,18 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     ${regulation ? `
     <table>
       <tr><th style="width: 120px;">용도지역</th><td>${regulation.zoneType === 'custom' ? (regulation.zoneTypeCustom || '직접 입력') : 
+        regulation.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+        regulation.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
         regulation.zoneType === 'residential-1' ? '제1종 일반주거지역' :
         regulation.zoneType === 'residential-2' ? '제2종 일반주거지역' :
         regulation.zoneType === 'residential-3' ? '제3종 일반주거지역' :
         regulation.zoneType === 'semi-residential' ? '준주거지역' :
         regulation.zoneType === 'commercial-general' ? '일반상업지역' :
         regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-        regulation.zoneType === 'industrial' ? '준공업지역' : regulation.zoneType}</td></tr>
+        regulation.zoneType === 'commercial-central' ? '중심상업지역' :
+        regulation.zoneType === 'industrial-general' ? '일반공업지역' :
+        regulation.zoneType === 'industrial' ? '준공업지역' :
+        regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType}</td></tr>
       <tr><th>접도 폭</th><td>${regulation.roadWidth}m (${regulation.roadCondition === 'corner' ? '코너 대지 2면 접도' : regulation.roadCondition + ' 이상'})</td></tr>
       <tr><th>이격거리</th><td>전면 ${regulation.setbackFront}m / 측면 ${regulation.setbackSide}m / 후면 ${regulation.setbackRear}m</td></tr>
       <tr><th>사선제한</th><td>${regulation.setbackType === 'none' ? '없음' : regulation.setbackType === 'north' ? '북측사선제한' : regulation.setbackType === 'road' ? '도로사선제한' : '복합적용'} ${regulation.setbackType !== 'none' ? '(' + regulation.setbackAngle + '°)' : ''}</td></tr>
@@ -1117,13 +1127,18 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       
       // Use actual regulation data for PDF - same source as HTML report
       const zoneLabel = regulation ? (
+        regulation.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+        regulation.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
         regulation.zoneType === 'residential-1' ? '제1종 일반주거지역' :
         regulation.zoneType === 'residential-2' ? '제2종 일반주거지역' :
         regulation.zoneType === 'residential-3' ? '제3종 일반주거지역' :
         regulation.zoneType === 'semi-residential' ? '준주거지역' :
         regulation.zoneType === 'commercial-general' ? '일반상업지역' :
         regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-        regulation.zoneType === 'industrial' ? '준공업지역' : regulation.zoneType
+        regulation.zoneType === 'commercial-central' ? '중심상업지역' :
+        regulation.zoneType === 'industrial-general' ? '일반공업지역' :
+        regulation.zoneType === 'industrial' ? '준공업지역' :
+        regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType
       ) : '현장 확인 필요'
       
       const roadLabel = regulation ? (
@@ -2094,12 +2109,18 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                       {regulation ? (
                         <span className="flex items-center gap-2">
                           {regulation.zoneType === 'custom' ? (regulation.zoneTypeCustom || '직접 입력') :
+                           regulation.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+                           regulation.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
                            regulation.zoneType === 'residential-1' ? '제1종 일반주거지역' :
                            regulation.zoneType === 'residential-2' ? '제2종 일반주거지역' :
                            regulation.zoneType === 'residential-3' ? '제3종 일반주거지역' :
                            regulation.zoneType === 'semi-residential' ? '준주거지역' :
                            regulation.zoneType === 'commercial-general' ? '일반상업지역' :
-                           regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' : regulation.zoneType}
+                           regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
+                           regulation.zoneType === 'commercial-central' ? '중심상업지역' :
+                           regulation.zoneType === 'industrial-general' ? '일반공업지역' :
+                           regulation.zoneType === 'industrial' ? '준공업지역' :
+                           regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType}
                           <span className="report-badge report-badge-info">적용</span>
                         </span>
                       ) : (
