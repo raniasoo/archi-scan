@@ -3,6 +3,21 @@
  * PDF / HTML / Excel / Print 모두 이 데이터 구조를 공유합니다.
  */
 
+const ZONE_LABELS: Record<string, string> = {
+  'residential-exclusive-1': '제1종 전용주거지역',
+  'residential-exclusive-2': '제2종 전용주거지역',
+  'residential-1': '제1종 일반주거지역',
+  'residential-2': '제2종 일반주거지역',
+  'residential-3': '제3종 일반주거지역',
+  'semi-residential': '준주거지역',
+  'commercial-general': '일반상업지역',
+  'commercial-neighborhood': '근린상업지역',
+  'commercial-central': '중심상업지역',
+  'industrial-general': '일반공업지역',
+  'industrial': '준공업지역',
+  'green-natural': '자연녹지지역',
+}
+
 // ============================================
 // 1. 공통 타입 정의
 // ============================================
@@ -432,11 +447,11 @@ export function buildReportDataV250(input: BuildReportDataInput): ReportDataV250
       address: address,
       siteArea: siteArea,
       siteAreaFormatted: formatArea(siteArea),
-      landUsePlan: regulation?.zoneType || '제2종 일반주거지역',
+      landUsePlan: (regulation?.zoneType ? ZONE_LABELS[regulation.zoneType] || regulation.zoneType : '제2종 일반주거지역'),
       roadAccess: `${safeNumber(regulation?.roadWidth, 8)}m 이상 도로 접함`,
       heightLimit: safeNumber(regulation?.maxHeight, 30),
       heightLimitFormatted: `${safeNumber(regulation?.maxHeight, 30)}m`,
-      districtPlan: regulation?.districtPlan || '해당 없음',
+      districtPlan: regulation?.additionalNotes?.includes('지구단위') ? '지구단위계획 적용' : '해당 없음',
     },
 
     regulationReview: {
@@ -595,8 +610,8 @@ export function buildReportDataV250(input: BuildReportDataInput): ReportDataV250
       profitability: roi >= 20 ? 90 : roi >= 10 ? 70 : 50,
       marketability: 75,
       totalScore: Math.round((85 + (roi >= 20 ? 90 : roi >= 10 ? 70 : 50) + 75) / 3),
-      summaryText: `본 대상지는 ${regulation?.zoneType || '제3종 일반주거지역'}에 위치하며, ${selectedLayout.name} 배치안 적용 시 ${selectedLayout.units}세대 규모의 공동주택 개발이 가능합니다. ROI ${formatPercent(roi)} 수준으로 ${verdict.text}으로 분석됩니다.`,
-      summary: `본 대상지는 ${regulation?.zoneType || '제3종 일반주거지역'}에 위치하며, ${selectedLayout.name} 배치안 적용 시 ${selectedLayout.units}세대 규모의 공동주택 개발이 가능합니다. ROI ${formatPercent(roi)} 수준으로 ${verdict.text}으로 분석됩니다.`,
+      summaryText: `본 대상지는 ${regulation?.zoneType ? ZONE_LABELS[regulation.zoneType] || regulation.zoneType : '제3종 일반주거지역'}에 위치하며, ${selectedLayout.name} 배치안 적용 시 ${selectedLayout.units}세대 규모의 공동주택 개발이 가능합니다. ROI ${formatPercent(roi)} 수준으로 ${verdict.text}으로 분석됩니다.`,
+      summary: `본 대상지는 ${regulation?.zoneType ? ZONE_LABELS[regulation.zoneType] || regulation.zoneType : '제3종 일반주거지역'}에 위치하며, ${selectedLayout.name} 배치안 적용 시 ${selectedLayout.units}세대 규모의 공동주택 개발이 가능합니다. ROI ${formatPercent(roi)} 수준으로 ${verdict.text}으로 분석됩니다.`,
       recommendation: `${selectedLayout.name}은 법정 용적률 대비 ${formatPercent(selectedLayout.far / safeNumber(regulation?.farLimit, 250) * 100)} 활용률을 보이며, 세대당 1대 이상 주차 확보가 가능합니다.`,
       caution: '실제 사업 추진 시 정밀 설계, 지질조사, 인허가 협의 등 추가 검토가 필요합니다.',
       designFeatures: [
