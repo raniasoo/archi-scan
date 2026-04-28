@@ -7,15 +7,28 @@ interface FloorPlanProps {
   floor: number
   totalFloors: number
   strategy?: DesignStrategy
+  zoneType?: string
 }
 
-export function FloorPlan({ type, floor, totalFloors, strategy = "profitability" }: FloorPlanProps) {
+export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType }: FloorPlanProps) {
   const isGroundFloor = floor === 1
   const isBasementOrParking = floor <= 0
   const isTopFloor = floor === totalFloors
   const isLowFloor = floor <= 3
   const isMidFloor = floor > 3 && floor < totalFloors - 2
   const isHighFloor = floor >= totalFloors - 2
+
+  // 용도지역별 1층 상가 허용 여부
+  // 전용주거지역: 상가 불가 → 전층 주거
+  // 일반주거/준주거/상업: 상가 가능
+  const allowCommercial = !zoneType || (
+    !zoneType.includes('exclusive') && zoneType !== 'green-natural' && zoneType !== 'green-production'
+  )
+  
+  // 1층 상가/세대 표시용 라벨과 색상
+  const gfLabel = allowCommercial ? '상가' : '세대'
+  const gfColor = allowCommercial ? '#f59e0b' : '#22c55e'
+  const gfFill = allowCommercial ? '#f59e0b20' : '#22c55e20'
 
   // 전략에 따른 색상 테마
   const getStrategyColors = () => {
@@ -41,7 +54,7 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
 
   // 층별 설명 텍스트
   const getFloorDescription = () => {
-    if (isGroundFloor) return "1층 (로비/상가/주차)"
+    if (isGroundFloor) return allowCommercial ? "1층 (로비/상가/주차)" : "1층 (로비/세대/주차)"
     if (floor === 2) return "2층 (저층 세대)"
     if (isTopFloor) return `${floor}층 (최상층/펜트하우스)`
     if (isHighFloor) return `${floor}층 (고층 세대)`
@@ -114,13 +127,13 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
           <text x="111" y="80" fontSize="6" textAnchor="middle" fill="white">계단</text>
           
           {/* Commercial/Amenity Spaces */}
-          <rect x="5" y="5" width="60" height="50" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="35" y="28" fontSize="8" textAnchor="middle" fill="#f59e0b">상가</text>
-          <text x="35" y="40" fontSize="7" textAnchor="middle" fill="#f59e0b">65㎡</text>
+          <rect x="5" y="5" width="60" height="50" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="35" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
+          <text x="35" y="40" fontSize="7" textAnchor="middle" fill={gfColor}>65㎡</text>
           
-          <rect x="135" y="5" width="60" height="50" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="165" y="28" fontSize="8" textAnchor="middle" fill="#f59e0b">상가</text>
-          <text x="165" y="40" fontSize="7" textAnchor="middle" fill="#f59e0b">65㎡</text>
+          <rect x="135" y="5" width="60" height="50" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="165" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
+          <text x="165" y="40" fontSize="7" textAnchor="middle" fill={gfColor}>65㎡</text>
           
           {/* Parking Area */}
           <rect x="5" y="100" width="190" height="55" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="4" />
@@ -153,8 +166,8 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
               {/* Interior rooms */}
               <rect x="10" y="10" width="35" height="25" fill="#22c55e20" stroke="#22c55e" strokeWidth="0.5" />
               <text x="27" y="25" fontSize="6" textAnchor="middle" fill="#22c55e">주침실</text>
-              <rect x="50" y="10" width="40" height="30" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="0.5" />
-              <text x="70" y="28" fontSize="6" textAnchor="middle" fill="#f59e0b">거실</text>
+              <rect x="50" y="10" width="40" height="30" fill={gfFill} stroke={gfColor} strokeWidth="0.5" />
+              <text x="70" y="28" fontSize="6" textAnchor="middle" fill={gfColor}>거실</text>
               {unitConfig.hasBalcony && (
                 <rect x="5" y="60" width="85" height="12" fill="#0ea5e920" stroke="#0ea5e9" strokeWidth="0.5" strokeDasharray="2" />
               )}
@@ -233,11 +246,11 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
           <text x="120" y="25" fontSize="8" textAnchor="middle" fill="#06b6d4">로비</text>
           
           {/* Commercial Spaces */}
-          <rect x="5" y="5" width="85" height="35" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="47" y="25" fontSize="8" textAnchor="middle" fill="#f59e0b">상가 A</text>
+          <rect x="5" y="5" width="85" height="35" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="47" y="25" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel} A</text>
           
-          <rect x="150" y="5" width="85" height="35" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="192" y="25" fontSize="8" textAnchor="middle" fill="#f59e0b">상가 B</text>
+          <rect x="150" y="5" width="85" height="35" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="192" y="25" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel} B</text>
           
           {/* Central Courtyard */}
           <rect x="50" y="50" width="140" height="70" fill="#22c55e15" stroke="#22c55e" strokeWidth="1" />
@@ -320,11 +333,11 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
           <text x="40" y="120" fontSize="9" textAnchor="middle" fill="#06b6d4">로비</text>
           
           {/* Commercial in vertical wing */}
-          <rect x="5" y="5" width="70" height="40" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="40" y="28" fontSize="8" textAnchor="middle" fill="#f59e0b">상가</text>
+          <rect x="5" y="5" width="70" height="40" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="40" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
           
-          <rect x="5" y="50" width="70" height="45" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="40" y="75" fontSize="8" textAnchor="middle" fill="#f59e0b">상가</text>
+          <rect x="5" y="50" width="70" height="45" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="40" y="75" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
           
           {/* Parking in horizontal wing */}
           <rect x="85" y="145" width="160" height="40" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="4" />
@@ -385,11 +398,11 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
           <text x="135" y="28" fontSize="9" textAnchor="middle" fill="#06b6d4">로비</text>
           
           {/* Commercial */}
-          <rect x="5" y="5" width="100" height="40" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="55" y="28" fontSize="8" textAnchor="middle" fill="#f59e0b">상가</text>
+          <rect x="5" y="5" width="100" height="40" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="55" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
           
-          <rect x="165" y="5" width="100" height="40" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="215" y="28" fontSize="8" textAnchor="middle" fill="#f59e0b">상가</text>
+          <rect x="165" y="5" width="100" height="40" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="215" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
           
           {/* Parking */}
           <rect x="5" y="50" width="260" height="65" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="4" />
@@ -425,15 +438,15 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
         <g transform="translate(30, 20)">
           {/* Building A */}
           <rect x="0" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          <rect x="5" y="5" width="90" height="40" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="50" y="28" fontSize="8" textAnchor="middle" fill="#f59e0b">상가/로비 A</text>
+          <rect x="5" y="5" width="90" height="40" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="50" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{allowCommercial ? "상가" : "세대"}/로비 A</text>
           <rect x="5" y="50" width="90" height="15" fill="#64748b20" stroke="#64748b" strokeWidth="0.5" />
           <text x="50" y="60" fontSize="6" textAnchor="middle" fill="#64748b">주차</text>
           
           {/* Building B */}
           <rect x="140" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          <rect x="145" y="5" width="90" height="40" fill="#f59e0b20" stroke="#f59e0b" strokeWidth="1" />
-          <text x="190" y="28" fontSize="8" textAnchor="middle" fill="#f59e0b">상가/로비 B</text>
+          <rect x="145" y="5" width="90" height="40" fill={gfFill} stroke={gfColor} strokeWidth="1" />
+          <text x="190" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{allowCommercial ? "상가" : "세대"}/로비 B</text>
           <rect x="145" y="50" width="90" height="15" fill="#64748b20" stroke="#64748b" strokeWidth="0.5" />
           
           {/* Central Open Space */}
