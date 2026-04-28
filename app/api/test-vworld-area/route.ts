@@ -20,21 +20,33 @@ export async function GET(req: NextRequest) {
     const features = data?.response?.result?.featureCollection?.features || []
     const props = features[0]?.properties || {}
     const geom = features[0]?.geometry || {}
+    
+    // Geometry debug
+    const geomType = geom.type
+    const rawCoords = geomType === 'Polygon' ? geom.coordinates?.[0] 
+      : geomType === 'MultiPolygon' ? geom.coordinates?.[0]?.[0] 
+      : null
+    const coordCount = rawCoords?.length || 0
+    const sampleCoords = rawCoords?.slice(0, 3) || []
+    
     let calcArea = 0
-    if (geom.type === 'Polygon' && geom.coordinates?.[0]) {
-      const coords = geom.coordinates[0]
-      const lats = coords.map((c: number[]) => c[1])
-      const cLat = (Math.min(...lats) + Math.max(...lats)) / 2
+    if (rawCoords && rawCoords.length >= 3) {
+      const coords = rawCoords.map((c: number[]) => [c[0], c[1]] as [number,number])
+      const lngs = coords.map((c:[number,number])=>c[0])
+      const lats = coords.map((c:[number,number])=>c[1])
+      const cLat = (Math.min(...lats)+Math.max(...lats))/2
       let pa = 0
-      for (let i = 0; i < coords.length - 1; i++) pa += (coords[i][0] - coords[i+1][0]) * (coords[i][1] + coords[i+1][1])
-      calcArea = Math.round(Math.abs(pa / 2) * 111319 * 111319 * Math.cos(cLat * Math.PI / 180))
+      for (let i=0;i<coords.length-1;i++) pa+=(coords[i][0]-coords[i+1][0])*(coords[i][1]+coords[i+1][1])
+      calcArea = Math.round(Math.abs(pa/2)*111319*111319*Math.cos(cLat*Math.PI/180))
     }
+    
     return NextResponse.json({
       bdMgtSn, pnu, vworldStatus: data?.response?.status,
       featuresCount: features.length,
-      shapeArea: props.SHAPE_AREA || null,
+      geomType, coordCount, sampleCoords,
       calculatedAreaM2: calcArea,
-      addr: props.addr || null, pnuResult: props.pnu || null,
+      allProps: Object.keys(props),
+      addr: props.addr, pnuResult: props.pnu,
     })
   } catch (e) {
     return NextResponse.json({ bdMgtSn, pnu, error: String(e) })
