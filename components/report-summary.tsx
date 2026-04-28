@@ -1120,8 +1120,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       drawSectionTitle(2, "대상지 분석")
       
       // Use actual regulation data for PDF - same source as HTML report
-      const zoneLabel = regulation ? (
-        effectiveZoneLabel
+      const zoneLabel = regulation ? effectiveZoneLabel : '현장 확인 필요'
       
       const roadLabel = regulation ? (
         regulation.roadCondition === 'both' ? '12m 이상 도로 (양면 접도)' :
