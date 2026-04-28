@@ -2411,20 +2411,20 @@ export default function ArchiScanPage() {
                             : 0,
                         },
                         regulation: {
-                          zoneType: regulation?.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
-                                    regulation?.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
-                                    regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
-                                    regulation?.zoneType === 'residential-2' ? '제2종 일반주거지역' :
-                                    regulation?.zoneType === 'residential-3' ? '제3종 일반주거지역' :
-                                    regulation?.zoneType === 'semi-residential' ? '준주거지역' :
-                                    regulation?.zoneType === 'commercial-general' ? '일반상업지역' :
-                                    regulation?.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-                                    regulation?.zoneType === 'commercial-central' ? '중심상업지역' :
-                                    regulation?.zoneType === 'industrial-general' ? '일반공업지역' :
-                                    regulation?.zoneType === 'green-natural' ? '자연녹지지역' :
-                                    regulation?.zoneType ?? '제2종 일반주거지역',
-                          roadWidth: regulation?.roadWidth,
-                          maxHeight: regulation?.maxHeight,
+                          zoneType: (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-exclusive-2' ? '제2종 전용주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-1' ? '제1종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-2' ? '제2종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-3' ? '제3종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'semi-residential' ? '준주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-general' ? '일반상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-neighborhood' ? '근린상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-central' ? '중심상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'industrial-general' ? '일반공업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'green-natural' ? '자연녹지지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) ?? '제2종 일반주거지역',
+                          roadWidth: molitSupplementData.roadWidth || regulation?.roadWidth,
+                          maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
                           buildingCoverageLimit: regulation?.maxCoverageRatio,
                           farLimit: regulation?.maxFloorAreaRatio,
                         },
@@ -2510,20 +2510,20 @@ export default function ArchiScanPage() {
                             : 0,
                         },
                         regulation: {
-                          zoneType: regulation?.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
-                                    regulation?.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
-                                    regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
-                                    regulation?.zoneType === 'residential-2' ? '제2종 일반주거지역' :
-                                    regulation?.zoneType === 'residential-3' ? '제3종 일반주거지역' :
-                                    regulation?.zoneType === 'semi-residential' ? '준주거지역' :
-                                    regulation?.zoneType === 'commercial-general' ? '일반상업지역' :
-                                    regulation?.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-                                    regulation?.zoneType === 'commercial-central' ? '중심상업지역' :
-                                    regulation?.zoneType === 'industrial-general' ? '일반공업지역' :
-                                    regulation?.zoneType === 'green-natural' ? '자연녹지지역' :
-                                    regulation?.zoneType ?? '제2종 일반주거지역',
-                          roadWidth: regulation?.roadWidth,
-                          maxHeight: regulation?.maxHeight,
+                          zoneType: (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-exclusive-2' ? '제2종 전용주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-1' ? '제1종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-2' ? '제2종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-3' ? '제3종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'semi-residential' ? '준주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-general' ? '일반상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-neighborhood' ? '근린상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-central' ? '중심상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'industrial-general' ? '일반공업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'green-natural' ? '자연녹지지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) ?? '제2종 일반주거지역',
+                          roadWidth: molitSupplementData.roadWidth || regulation?.roadWidth,
+                          maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
                           buildingCoverageLimit: regulation?.maxCoverageRatio,
                           farLimit: regulation?.maxFloorAreaRatio,
                         },
@@ -2609,20 +2609,20 @@ export default function ArchiScanPage() {
                             : 0,
                         },
                         regulation: {
-                          zoneType: regulation?.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
-                                    regulation?.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
-                                    regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
-                                    regulation?.zoneType === 'residential-2' ? '제2종 일반주거지역' :
-                                    regulation?.zoneType === 'residential-3' ? '제3종 일반주거지역' :
-                                    regulation?.zoneType === 'semi-residential' ? '준주거지역' :
-                                    regulation?.zoneType === 'commercial-general' ? '일반상업지역' :
-                                    regulation?.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-                                    regulation?.zoneType === 'commercial-central' ? '중심상업지역' :
-                                    regulation?.zoneType === 'industrial-general' ? '일반공업지역' :
-                                    regulation?.zoneType === 'green-natural' ? '자연녹지지역' :
-                                    regulation?.zoneType ?? '제2종 일반주거지역',
-                          roadWidth: regulation?.roadWidth,
-                          maxHeight: regulation?.maxHeight,
+                          zoneType: (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-exclusive-2' ? '제2종 전용주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-1' ? '제1종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-2' ? '제2종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-3' ? '제3종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'semi-residential' ? '준주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-general' ? '일반상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-neighborhood' ? '근린상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-central' ? '중심상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'industrial-general' ? '일반공업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'green-natural' ? '자연녹지지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) ?? '제2종 일반주거지역',
+                          roadWidth: molitSupplementData.roadWidth || regulation?.roadWidth,
+                          maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
                           buildingCoverageLimit: regulation?.maxCoverageRatio,
                           farLimit: regulation?.maxFloorAreaRatio,
                         },
@@ -2706,20 +2706,20 @@ export default function ArchiScanPage() {
                             : 0,
                         },
                         regulation: {
-                          zoneType: regulation?.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
-                                    regulation?.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
-                                    regulation?.zoneType === 'residential-1' ? '제1종 일반주거지역' :
-                                    regulation?.zoneType === 'residential-2' ? '제2종 일반주거지역' :
-                                    regulation?.zoneType === 'residential-3' ? '제3종 일반주거지역' :
-                                    regulation?.zoneType === 'semi-residential' ? '준주거지역' :
-                                    regulation?.zoneType === 'commercial-general' ? '일반상업지역' :
-                                    regulation?.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-                                    regulation?.zoneType === 'commercial-central' ? '중심상업지역' :
-                                    regulation?.zoneType === 'industrial-general' ? '일반공업지역' :
-                                    regulation?.zoneType === 'green-natural' ? '자연녹지지역' :
-                                    regulation?.zoneType ?? '제2종 일반주거지역',
-                          roadWidth: regulation?.roadWidth,
-                          maxHeight: regulation?.maxHeight,
+                          zoneType: (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-exclusive-2' ? '제2종 전용주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-1' ? '제1종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-2' ? '제2종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'residential-3' ? '제3종 일반주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'semi-residential' ? '준주거지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-general' ? '일반상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-neighborhood' ? '근린상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'commercial-central' ? '중심상업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'industrial-general' ? '일반공업지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) === 'green-natural' ? '자연녹지지역' :
+                                    (molitSupplementData.zoneCode || regulation?.zoneType) ?? '제2종 일반주거지역',
+                          roadWidth: molitSupplementData.roadWidth || regulation?.roadWidth,
+                          maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
                           buildingCoverageLimit: regulation?.maxCoverageRatio,
                           farLimit: regulation?.maxFloorAreaRatio,
                         },
@@ -2754,7 +2754,14 @@ export default function ArchiScanPage() {
                   siteArea={siteAreaNum}
                   gfa={gfa}
                   allLayouts={layouts}
-                  regulation={regulation}
+                  regulation={{
+                    ...regulation,
+                    zoneType: (molitSupplementData.zoneCode || regulation.zoneType) as typeof regulation.zoneType,
+                    roadWidth: molitSupplementData.roadWidth || regulation.roadWidth,
+                    maxHeight: molitSupplementData.heightLimit || regulation.maxHeight,
+                    maxFloors: molitSupplementData.heightLimit ? Math.floor(molitSupplementData.heightLimit / 3.3) : regulation.maxFloors,
+                    additionalNotes: molitSupplementData.hasDistrictPlan ? '지구단위계획 적용' : regulation.additionalNotes,
+                  }}
                   siteVisuals={siteVisuals}
                   financialScenarios={financialScenarios}
                   onScenariosChange={setFinancialScenarios}
