@@ -3,6 +3,8 @@
 
 import { useRef, useState, useEffect } from "react"
 import { generateSitePlanSvg, generateSectionSvg } from "@/lib/report-drawings"
+import { SitePlan } from "@/components/site-plan"
+import { SectionView } from "@/components/section-view"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -1487,9 +1489,19 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       const drs = (regulation?.setbackRear ?? 1) * dScale
       pdf.setDrawColor(34, 211, 238)
       pdf.setLineWidth(0.2)
-      pdf.setLineDashPattern([1, 1], 0)
-      pdf.rect(dsX + dss, dsY + drs, dsW - dss * 2, dsH - dfs - drs)
-      pdf.setLineDashPattern([], 0)
+      // 대시 패턴 — 호환성 위해 수동 대시선
+      const dashLen = 1.5, gapLen = 1
+      const setbackRect = { x: dsX + dss, y: dsY + drs, w: dsW - dss * 2, h: dsH - dfs - drs }
+      for (let dx = 0; dx < setbackRect.w; dx += dashLen + gapLen) {
+        const len = Math.min(dashLen, setbackRect.w - dx)
+        pdf.line(setbackRect.x + dx, setbackRect.y, setbackRect.x + dx + len, setbackRect.y)
+        pdf.line(setbackRect.x + dx, setbackRect.y + setbackRect.h, setbackRect.x + dx + len, setbackRect.y + setbackRect.h)
+      }
+      for (let dy = 0; dy < setbackRect.h; dy += dashLen + gapLen) {
+        const len = Math.min(dashLen, setbackRect.h - dy)
+        pdf.line(setbackRect.x, setbackRect.y + dy, setbackRect.x, setbackRect.y + dy + len)
+        pdf.line(setbackRect.x + setbackRect.w, setbackRect.y + dy, setbackRect.x + setbackRect.w, setbackRect.y + dy + len)
+      }
 
       // 건물
       const dbW = (dsW - dss * 2) * 0.75
@@ -2525,12 +2537,60 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           </div>
         </div>
 
-        {/* Section 6: 사업성 검토 */}
+        {/* Section 6: 설계 도면 */}
+        <div className="report-card avoid-break print-section">
+          <div className="p-4 sm:p-5 space-y-4">
+            <div className="report-section-title">
+              <Ruler className="h-4 w-4" style={{ color: '#2F6B4F' }} />
+              <span>{sn(6)}. 설계 도면</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>배치도</p>
+                <SitePlan
+                  siteArea={siteArea}
+                  buildingCoverage={layout.coverage}
+                  floors={layout.floors}
+                  units={layout.units}
+                  parking={layout.parking}
+                  type={layout.type}
+                  setbacks={{
+                    front: regulation?.setbackFront ?? 1,
+                    side: regulation?.setbackSide ?? 0.5,
+                    rear: regulation?.setbackRear ?? 1,
+                  }}
+                  landscapingRatio={siteArea >= 200 ? 15 : 0}
+                  roadWidth={regulation?.roadWidth ?? 8}
+                  hasDistrictPlan={false}
+                  layoutName={layout.name}
+                />
+              </div>
+              <div>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>단면도</p>
+                <SectionView
+                  siteArea={siteArea}
+                  buildingCoverage={layout.coverage}
+                  floors={layout.floors}
+                  units={layout.units}
+                  parking={layout.parking}
+                  heightLimit={regulation?.maxHeight ?? 30}
+                  type={layout.type}
+                  layoutName={layout.name}
+                  roadWidth={regulation?.roadWidth ?? 8}
+                  hasDistrictPlan={false}
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-center" style={{ color: '#94a3b8' }}>※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
+          </div>
+        </div>
+
+        {/* Section 7: 사업성 검토 */}
         <div className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <Banknote className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>{sn(6)}. 사업성 검토</span>
+              <span>{sn(7)}. 사업성 검토</span>
             </div>
 
             {/* 사업비 추정 테이블 */}
@@ -2654,7 +2714,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <TrendingUp className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>{sn(7)}. AI 분석</span>
+              <span>{sn(8)}. AI 분석</span>
             </div>
             
             {/* AI 점수 그리드 - 4개 카드 (종합 점수 강조) */}
@@ -2730,7 +2790,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <span>{sn(8)}. 리스크 및 고려사항</span>
+              <span>{sn(9)}. 리스크 및 고려사항</span>
             </div>
             
             <div className="report-risk-grid">
@@ -2758,7 +2818,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <TrendingUp className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>{sn(9)}. 결론 및 제안</span>
+              <span>{sn(10)}. 결론 및 제안</span>
             </div>
             
             {/* 결론 문장 - 핵심 수치만 강조 */}
