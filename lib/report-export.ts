@@ -5,6 +5,7 @@
 
 import * as XLSX from 'xlsx';
 import { type ReportDataV250, buildReportDataV250 } from './report-data-v250';
+import { generateSitePlanSvg, generateSectionSvg } from './report-drawings';
 
 // ============================================
 // 파일명 생성 헬퍼
@@ -29,6 +30,7 @@ export interface ExportData {
   siteArea: number;
   layout: {
     name: string;
+    type?: string;
     floors: number;
     units: number;
     parking: number;
@@ -859,7 +861,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     }
   `;
   
-  const htmlContent = `<!DOCTYPE html>
+  let htmlContent = `<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -1562,6 +1564,51 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 </body>
 </html>`;
 
+  // 도면 SVG 삽입
+  try {
+    const drawingInput = {
+      siteArea: data.siteArea,
+      buildingCoverage: data.layout.buildingCoverage,
+      floors: data.layout.floors,
+      units: data.layout.units,
+      parking: data.layout.parking,
+      type: data.layout.type || 'tower',
+      roadWidth: data.regulation?.roadWidth || 8,
+      heightLimit: data.regulation?.maxHeight || 30,
+      setbacks: { front: data.regulation?.hasDistrictPlan ? 2 : 1, side: 0.5, rear: 1 },
+      layoutName: data.layout.name,
+      gfa: data.layout.gfa,
+    };
+    const sitePlanSvg = generateSitePlanSvg(drawingInput);
+    const sectionSvg = generateSectionSvg(drawingInput);
+    const drawingSection = `
+    <!-- 6. 설계 도면 -->
+    <section class="pdf-section" style="page-break-before: always;">
+      <div class="print-title-group">
+        <h2 class="section-title">6. 설계 도면</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">배치도</p>
+          ${sitePlanSvg}
+        </div>
+        <div>
+          <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">단면도</p>
+          ${sectionSvg}
+        </div>
+      </div>
+      <p style="font-size: 9px; color: #94a3b8; margin-top: 8px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
+    </section>
+
+    <!-- 7. 사업성 검토 -->`;
+    htmlContent = htmlContent.replace('<!-- 6. 사업성 검토 -->', drawingSection);
+    htmlContent = htmlContent.replace('>6. 사업성 검토<', '>7. 사업성 검토<');
+    htmlContent = htmlContent.replace('>7. AI 분석<', '>8. AI 분석<');
+    htmlContent = htmlContent.replace('>8. 시나리오<', '>9. 시나리오<');
+    htmlContent = htmlContent.replace('>9. 리스크 및 고려사항<', '>10. 리스크 및 고려사항<');
+    htmlContent = htmlContent.replace('>10. 결론 및 제안<', '>11. 결론 및 제안<');
+  } catch (e) { console.warn('[report-export] HTML 도면 삽입 실패:', e); }
+
   const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1588,7 +1635,53 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 export async function downloadPdf(data: ExportData): Promise<{ success: boolean; error?: string }> {
   try {
     const report = convertToV250(data);
-    const htmlContent = generateFullHtmlReport(report, data.address);
+    let htmlContent = generateFullHtmlReport(report, data.address);
+    
+    // 도면 SVG 삽입
+    try {
+      const drawingInput = {
+        siteArea: data.siteArea,
+        buildingCoverage: data.layout.buildingCoverage,
+        floors: data.layout.floors,
+        units: data.layout.units,
+        parking: data.layout.parking,
+        type: data.layout.type || 'tower',
+        roadWidth: data.regulation?.roadWidth || 8,
+        heightLimit: data.regulation?.maxHeight || 30,
+        setbacks: { front: data.regulation?.hasDistrictPlan ? 2 : 1, side: 0.5, rear: 1 },
+        layoutName: data.layout.name,
+        gfa: data.layout.gfa,
+      };
+      const sitePlanSvg = generateSitePlanSvg(drawingInput);
+      const sectionSvg = generateSectionSvg(drawingInput);
+      const drawingSection = `
+    <!-- 6. 설계 도면 -->
+    <section class="pdf-section" style="page-break-before: always;">
+      <div class="print-title-group">
+        <h2 class="section-title">6. 설계 도면</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">배치도</p>
+          ${sitePlanSvg}
+        </div>
+        <div>
+          <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">단면도</p>
+          ${sectionSvg}
+        </div>
+      </div>
+      <p style="font-size: 9px; color: #94a3b8; margin-top: 8px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
+    </section>
+
+    <!-- 7. 사업성 검토 -->`;
+      htmlContent = htmlContent.replace('<!-- 6. 사업성 검토 -->', drawingSection);
+      // 섹션 번호 +1
+      htmlContent = htmlContent.replace('>6. 사업성 검토<', '>7. 사업성 검토<');
+      htmlContent = htmlContent.replace('>7. AI 분석<', '>8. AI 분석<');
+      htmlContent = htmlContent.replace('>8. 시나리오<', '>9. 시나리오<');
+      htmlContent = htmlContent.replace('>9. 리스크 및 고려사항<', '>10. 리스크 및 고려사항<');
+      htmlContent = htmlContent.replace('>10. 결론 및 제안<', '>11. 결론 및 제안<');
+    } catch (e) { console.warn('[report-export] 도면 삽입 실패:', e); }
     
     // 동적으로 jsPDF와 html2canvas 로드
     const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([

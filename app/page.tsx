@@ -2492,6 +2492,7 @@ export default function ArchiScanPage() {
                         siteArea: siteAreaNum,
                         layout: {
                           name: selectedLayoutData.name,
+            type: selectedLayoutData.type,
                           floors: selectedLayoutData.floors,
                           units: selectedLayoutData.units,
                           parking: selectedLayoutData.parking,
@@ -2592,6 +2593,7 @@ export default function ArchiScanPage() {
                         siteArea: siteAreaNum,
                         layout: {
                           name: selectedLayoutData.name,
+            type: selectedLayoutData.type,
                           floors: selectedLayoutData.floors,
                           units: selectedLayoutData.units,
                           parking: selectedLayoutData.parking,
@@ -2692,6 +2694,7 @@ export default function ArchiScanPage() {
                         siteArea: siteAreaNum,
                         layout: {
                           name: selectedLayoutData.name,
+            type: selectedLayoutData.type,
                           floors: selectedLayoutData.floors,
                           units: selectedLayoutData.units,
                           parking: selectedLayoutData.parking,
@@ -2790,6 +2793,7 @@ export default function ArchiScanPage() {
                         siteArea: siteAreaNum,
                         layout: {
                           name: selectedLayoutData.name,
+            type: selectedLayoutData.type,
                           floors: selectedLayoutData.floors,
                           units: selectedLayoutData.units,
                           parking: selectedLayoutData.parking,
@@ -2924,6 +2928,7 @@ export default function ArchiScanPage() {
           selectedLayout={selectedLayoutData ? {
             id: selectedLayoutData.id,
             name: selectedLayoutData.name,
+            type: selectedLayoutData.type,
             floors: selectedLayoutData.floors,
             units: selectedLayoutData.units,
             parking: selectedLayoutData.parking,
@@ -2982,6 +2987,7 @@ export default function ArchiScanPage() {
           selectedLayout={selectedLayoutData ? {
             id: selectedLayoutData.id,
             name: selectedLayoutData.name,
+            type: selectedLayoutData.type,
             floors: selectedLayoutData.floors,
             units: selectedLayoutData.units,
             parking: selectedLayoutData.parking,
@@ -3039,6 +3045,7 @@ export default function ArchiScanPage() {
           selectedLayout={selectedLayoutData ? {
             id: selectedLayoutData.id,
             name: selectedLayoutData.name,
+            type: selectedLayoutData.type,
             floors: selectedLayoutData.floors,
             units: selectedLayoutData.units,
             parking: selectedLayoutData.parking,
