@@ -484,24 +484,36 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
       {/* Cluster Type - Ground Floor */}
       {isGroundFloor && type === "cluster" && (
         <g transform="translate(30, 20)">
-          {/* Building A */}
-          <rect x="0" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          <rect x="5" y="5" width="90" height="40" fill={gfFill} stroke={gfColor} strokeWidth="1" />
-          <text x="50" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{allowCommercial ? "상가" : "세대"}/로비 A</text>
-          <rect x="5" y="50" width="90" height="15" fill="#64748b20" stroke="#64748b" strokeWidth="0.5" />
-          <text x="50" y="60" fontSize="6" textAnchor="middle" fill="#64748b">주차</text>
-          
-          {/* Building B */}
-          <rect x="140" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          <rect x="145" y="5" width="90" height="40" fill={gfFill} stroke={gfColor} strokeWidth="1" />
-          <text x="190" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{allowCommercial ? "상가" : "세대"}/로비 B</text>
-          <rect x="145" y="50" width="90" height="15" fill="#64748b20" stroke="#64748b" strokeWidth="0.5" />
+          {/* Dynamic cluster ground floor */}
+          {(() => {
+            const gfUnits = groundFloorUnits
+            const bldgAUnits = Math.ceil(gfUnits / 2)
+            const bldgBUnits = gfUnits - bldgAUnits
+            const elements: React.ReactElement[] = []
+            // Building A
+            elements.push(<rect key="bA" x="0" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />)
+            const aw = Math.floor(90 / (bldgAUnits + 1)) // units + lobby
+            for (let i = 0; i < bldgAUnits; i++) {
+              elements.push(<g key={`a${i}`}><rect x={5 + i * aw} y={5} width={aw - 3} height={40} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={5 + i * aw + (aw - 3) / 2} y={28} fontSize="7" textAnchor="middle" fill={gfColor}>{gfLabel}</text></g>)
+            }
+            elements.push(<g key="lobbyA"><rect x={5 + bldgAUnits * aw} y={5} width={aw - 3} height={40} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1" /><text x={5 + bldgAUnits * aw + (aw - 3) / 2} y={28} fontSize="7" textAnchor="middle" fill="#06b6d4">로비</text></g>)
+            elements.push(<rect key="parkA" x="5" y="50" width="90" height="15" fill="#64748b20" stroke="#64748b" strokeWidth="0.5" />)
+            // Building B
+            elements.push(<rect key="bB" x="140" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />)
+            const bw = Math.floor(90 / (bldgBUnits + 1))
+            for (let i = 0; i < bldgBUnits; i++) {
+              elements.push(<g key={`b${i}`}><rect x={145 + i * bw} y={5} width={bw - 3} height={40} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={145 + i * bw + (bw - 3) / 2} y={28} fontSize="7" textAnchor="middle" fill={gfColor}>{gfLabel}</text></g>)
+            }
+            elements.push(<g key="lobbyB"><rect x={145 + bldgBUnits * bw} y={5} width={bw - 3} height={40} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1" /><text x={145 + bldgBUnits * bw + (bw - 3) / 2} y={28} fontSize="7" textAnchor="middle" fill="#06b6d4">로비</text></g>)
+            elements.push(<rect key="parkB" x="145" y="50" width="90" height="15" fill="#64748b20" stroke="#64748b" strokeWidth="0.5" />)
+            return elements
+          })()}
           
           {/* Central Open Space */}
           <rect x="50" y="85" width="140" height="60" fill="#22c55e15" stroke="#22c55e" strokeWidth="1" strokeDasharray="4" />
           <text x="120" y="118" fontSize="9" textAnchor="middle" fill="#22c55e">중앙 정원</text>
           
-          {/* Building C */}
+          {/* Side Buildings */}
           <rect x="0" y="90" width="45" height="60" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
           <rect x="195" y="90" width="45" height="60" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
           
