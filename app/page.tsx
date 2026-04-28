@@ -657,6 +657,19 @@ export default function ArchiScanPage() {
     // Also update siteArea if provided
     if (data.siteArea && data.siteArea > 0) {
       setSiteArea(String(data.siteArea))
+    } else if (data.entX && data.entY) {
+      // MOLIT에서 면적 없으면 Vworld 지적도에서 자동 조회
+      fetch('/api/vworld', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, siteArea: 0, entX: data.entX, entY: data.entY, bdMgtSn: data.bdMgtSn }),
+      }).then(r => r.json()).then(vd => {
+        if (vd.parcel?.area && vd.parcel.area > 0) {
+          setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0)
+            ? String(Math.round(vd.parcel.area)) : prev)
+          console.log('[v0] Vworld fallback 대지면적:', vd.parcel.area)
+        }
+      }).catch(() => {})
     }
     
     // MOLIT supplement 직접 저장 (법규검토 패널 우선 사용)
