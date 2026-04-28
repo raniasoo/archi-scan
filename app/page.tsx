@@ -665,14 +665,14 @@ export default function ArchiScanPage() {
                          data.roadCondition === '6m-plus' ? 6 :
                          data.roadCondition === '4m-plus' ? 4 : 6
     setMolitSupplementData({
-      zoneCode: zoneType,
+      zoneCode: hasValidZone ? data.zoneType : '',
       roadWidth: roadWidthNum,
       heightLimit: typeof data.heightLimit === 'number' ? data.heightLimit : 30,
       hasDistrictPlan: !!data.hasDistrictPlan,
     })
     
     console.log('[v0] Regulation state updated from supplement data:', {
-      zoneType,
+      zoneType: data.zoneType,
       heightLimit,
       hasDistrictPlan: data.hasDistrictPlan,
     })
