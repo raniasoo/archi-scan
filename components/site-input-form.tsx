@@ -535,7 +535,10 @@ export function SiteInputForm({
         
         // Notify parent component
         if (onMolitDataFetched) {
-          onMolitDataFetched(result.data)
+          onMolitDataFetched({
+            ...result.data,
+            roadAddress: resolvedJuso?.roadAddr || result.data?.address || address,
+          })
         }
         // 보완 데이터도 부모에 전달 (건폐율/용적률 업데이트용)
         if (onSupplementDataChange && mappedZone) {

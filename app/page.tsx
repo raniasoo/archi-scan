@@ -664,12 +664,13 @@ export default function ArchiScanPage() {
                          data.roadCondition === '8m-plus' ? 8 :
                          data.roadCondition === '6m-plus' ? 6 :
                          data.roadCondition === '4m-plus' ? 4 : 6
-    setMolitSupplementData({
-      zoneCode: hasValidZone ? data.zoneType : '',
-      roadWidth: roadWidthNum,
-      heightLimit: typeof data.heightLimit === 'number' ? data.heightLimit : 30,
-      hasDistrictPlan: !!data.hasDistrictPlan,
-    })
+    setMolitSupplementData(prev => ({
+      ...prev,
+      zoneCode: hasValidZone ? data.zoneType : prev.zoneCode || '',
+      roadWidth: roadWidthNum || prev.roadWidth,
+      heightLimit: typeof data.heightLimit === 'number' ? data.heightLimit : prev.heightLimit ?? 30,
+      hasDistrictPlan: data.hasDistrictPlan ?? prev.hasDistrictPlan ?? false,
+    }))
     
     console.log('[v0] Regulation state updated from supplement data:', {
       zoneType: data.zoneType,
@@ -776,8 +777,8 @@ export default function ArchiScanPage() {
       console.log('[v0] site-input-form에서 전달된 zone:', vwZone)
       return
     }
-    // MOLIT 조회 결과 처리
-    setMolitSupplementData({})
+    // MOLIT 조회 결과 처리 — 기존 vworld-zone 데이터 보존
+    setMolitSupplementData(prev => ({ ...prev }))
     if (data.bdMgtSn) setSiteBdMgtSn(data.bdMgtSn)
     const mappedZone = mapZoneString(data.zoneType || '')
     const roadAddr = data.roadAddress || address || ''
