@@ -382,8 +382,21 @@ export function generateAIReasoning(
   const summary = summaryParts.join(" ")
   
   // 법규 고려 사항
+  const zoneLabel = 
+    regulation.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
+    regulation.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
+    regulation.zoneType === 'residential-1' ? '제1종 일반주거지역' :
+    regulation.zoneType === 'residential-2' ? '제2종 일반주거지역' :
+    regulation.zoneType === 'residential-3' ? '제3종 일반주거지역' :
+    regulation.zoneType === 'semi-residential' ? '준주거지역' :
+    regulation.zoneType === 'commercial-general' ? '일반상업지역' :
+    regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
+    regulation.zoneType === 'commercial-central' ? '중심상업지역' :
+    regulation.zoneType === 'industrial-general' ? '일반공업지역' :
+    regulation.zoneType === 'industrial' ? '준공업지역' :
+    regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType
   const regulationConsiderations: string[] = [
-    `용도지역: ${regulation.zoneType === "residential-2" ? "제2종 일반주거지역" : regulation.zoneType}`,
+    `용도지역: ${zoneLabel}`,
     `건폐율 ${regulation.maxCoverageRatio}% 이내 계획 (적용: ${far}%)`,
     `용적률 ${regulation.maxFloorAreaRatio}% 한도 내 최적화`,
     `최고 높이 ${regulation.maxHeight}m (${regulation.maxFloors}층) 제한 준수`,
