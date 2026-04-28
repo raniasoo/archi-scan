@@ -49,6 +49,9 @@ import { RegulationInput } from "@/components/regulation-input"
 import { RegulationAnalysisPanel } from "@/components/regulation-analysis"
 import { LegalReviewPanel } from "@/components/legal-review-panel"
 import { CadastralMap } from "@/components/cadastral-map"
+import { SitePlan } from "@/components/site-plan"
+import { IsometricView } from "@/components/isometric-view"
+import { SectionView } from "@/components/section-view"
 import { StrategySelection } from "@/components/strategy-selection"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
@@ -423,6 +426,7 @@ export default function ArchiScanPage() {
   const [selectedFloor, setSelectedFloor] = useState(1)
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
+  const [drawingTab, setDrawingTab] = useState<"floor" | "site" | "iso" | "section">("floor")
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
@@ -2286,6 +2290,70 @@ export default function ArchiScanPage() {
                 </button>
               </div>
               {/* 3D 볼륨 버튼 */}
+              {/* 도면 탭 — 배치도 / 아이소메트릭 / 단면도 */}
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="flex border-b border-border overflow-x-auto">
+                  {([
+                    { id: "site" as const, label: "배치도" },
+                    { id: "iso" as const, label: "아이소메트릭" },
+                    { id: "section" as const, label: "단면도" },
+                  ]).map(tab => (
+                    <button key={tab.id} onClick={() => setDrawingTab(tab.id)}
+                      className={`px-4 py-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
+                        drawingTab === tab.id
+                          ? "bg-primary/10 text-primary border-b-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}>{tab.label}</button>
+                  ))}
+                </div>
+                <div className="p-3">
+                  {drawingTab === "site" && (
+                    <SitePlan
+                      siteArea={siteAreaNum}
+                      buildingCoverage={selectedLayoutData.coverage}
+                      floors={selectedLayoutData.floors}
+                      units={selectedLayoutData.units}
+                      parking={selectedLayoutData.parking}
+                      type={selectedLayoutData.type}
+                      setbacks={{
+                        front: molitSupplementData.hasDistrictPlan ? 2 : 1,
+                        side: (molitSupplementData.zoneCode || regulation.zoneType)?.includes('residential') ? 1 : 0.5,
+                        rear: (molitSupplementData.zoneCode || regulation.zoneType)?.includes('residential') ? 1.5 : 1,
+                      }}
+                      landscapingRatio={siteAreaNum >= 200 ? 15 : 0}
+                      roadWidth={molitSupplementData.roadWidth || regulation.roadWidth || 8}
+                      hasDistrictPlan={molitSupplementData.hasDistrictPlan ?? false}
+                      layoutName={selectedLayoutData.name}
+                      sitePolygon={sitePolygon}
+                    />
+                  )}
+                  {drawingTab === "iso" && (
+                    <IsometricView
+                      siteArea={siteAreaNum}
+                      buildingCoverage={selectedLayoutData.coverage}
+                      floors={selectedLayoutData.floors}
+                      units={selectedLayoutData.units}
+                      type={selectedLayoutData.type}
+                      layoutName={selectedLayoutData.name}
+                      zoneType={molitSupplementData.zoneCode || regulation.zoneType}
+                    />
+                  )}
+                  {drawingTab === "section" && (
+                    <SectionView
+                      siteArea={siteAreaNum}
+                      buildingCoverage={selectedLayoutData.coverage}
+                      floors={selectedLayoutData.floors}
+                      units={selectedLayoutData.units}
+                      parking={selectedLayoutData.parking}
+                      heightLimit={molitSupplementData.heightLimit || regulation.maxHeight}
+                      type={selectedLayoutData.type}
+                      layoutName={selectedLayoutData.name}
+                      roadWidth={molitSupplementData.roadWidth || regulation.roadWidth || 8}
+                      hasDistrictPlan={molitSupplementData.hasDistrictPlan ?? false}
+                    />
+                  )}
+                </div>
+              </div>
               <button
                 onClick={() => setShow3DVolume(true)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-purple-500/30 text-purple-400 bg-purple-500/5 hover:bg-purple-500/10 transition-colors text-sm font-medium"
