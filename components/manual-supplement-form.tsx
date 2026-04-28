@@ -713,15 +713,8 @@ interface SupplementSummaryProps {
 export function SupplementSummary({ data, onEdit, addressOverride }: SupplementSummaryProps) {
   const getZoneLabel = (value: string) => formatDisplayValue(value, ZONE_TYPE_OPTIONS)
   
-  // 주소가 있으면 도로명 부분에서 roadCondition 직접 계산
-  // "종로구"의 "로"가 매칭되지 않도록 구/군/시 이후 부분만 사용
-  const roadPart = addressOverride ? addressOverride.replace(/.*[구군시]\s*/,'') : ''
-  const effectiveRoadCondition = addressOverride
-    ? (roadPart.includes('대로') ? '12m-plus' :
-       roadPart.includes('길') ? '4m-plus' :
-       roadPart.includes('로') ? '8m-plus' :
-       data.roadCondition)
-    : data.roadCondition
+  // roadCondition은 regulation에서 이미 정확히 계산됨 (applyZoneData/handleMolitDataFetched)
+  const effectiveRoadCondition = data.roadCondition
   const getRoadLabel = (value: string) => formatDisplayValue(value, ROAD_CONDITION_OPTIONS)
   
   // Format hasDistrictPlan (boolean) to display string

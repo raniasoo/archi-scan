@@ -1683,11 +1683,7 @@ export default function ArchiScanPage() {
               <div className="order-1 lg:order-2 space-y-4">
                 {/* 기존 분석 패널 */}
                 {(() => {
-                  // address에서 도로명만 추출 (종로구의 "로" 오매칭 방지)
-                  const roadPart = address.replace(/.*[구군시]\s*/,'')
-                  const rw = roadPart.includes('대로') ? 12 :
-                             roadPart.includes('길') ? 4 :
-                             roadPart.includes('로') ? 8 : 6
+                  const rw = molitSupplementData.roadWidth || regulation.roadWidth || 8
                   const zc = molitSupplementData.zoneCode || regulation.zoneType
                   const ht = molitSupplementData.heightLimit || regulation.maxHeight
                   const dp = molitSupplementData.hasDistrictPlan ?? regulation.additionalNotes.includes('지구단위')
@@ -1719,7 +1715,7 @@ export default function ArchiScanPage() {
                   <LegalReviewPanel
                     zoneCode={molitSupplementData.zoneCode || regulation.zoneType}
                     siteArea={siteAreaNum}
-                    roadWidth={(() => { const r = address.replace(/.*[구군시]\s*/,''); return r.includes('대로') ? 12 : r.includes('길') ? 4 : r.includes('로') ? 8 : 6 })()}
+                    roadWidth={molitSupplementData.roadWidth || regulation.roadWidth || 8}
                     heightLimit={molitSupplementData.heightLimit || regulation.maxHeight}
                     hasDistrictPlan={molitSupplementData.hasDistrictPlan ?? regulation.additionalNotes?.includes('지구단위') ?? false}
                   />

@@ -486,10 +486,14 @@ export function SiteInputForm({
         // "길" 우선 판단 (평창길, 골목길 등은 소로)
         // 도로명 부분만 추출 (종로구의 "로" 오매칭 방지)
         const roadNamePart = roadAddrSources.replace(/.*[구군시]\s*/,'')
+        // applyZoneData와 동일한 기준: 대로→25m, 로→12m, 길→4m
+        const roadWidthEstimate = roadNamePart.includes('대로') ? 25 :
+                                  roadNamePart.includes('길')   ? 4 :
+                                  roadNamePart.includes('로')   ? 12 : 8
         const mappedRoadCondition =
-          roadNamePart.includes('대로') ? '12m-plus' :
-          roadNamePart.includes('길')   ? '4m-plus' :
-          roadNamePart.includes('로')   ? '8m-plus' : '6m-plus'
+          roadWidthEstimate >= 12 ? '12m-plus' :
+          roadWidthEstimate >= 8  ? '8m-plus' :
+          roadWidthEstimate >= 4  ? '4m-plus' : '6m-plus'
 
         console.log('[v0] roadAddr sources:', roadAddrSources, '→', mappedRoadCondition)
 
@@ -973,10 +977,10 @@ export function SiteInputForm({
                     if (!externalSupplement?.zoneCode) {
                       const roadAddr = resolvedJuso.roadAddr || address
                       const rn = roadAddr.replace(/.*[구군시]\s*/,'')
-                      const mappedRoadCondition =
-                        rn.includes('대로') ? '12m-plus' :
-                        rn.includes('길') ? '4m-plus' :
-                        rn.includes('로') ? '8m-plus' : '6m-plus'
+                      const mappedRoadCondition = (() => {
+                        const rw = rn.includes('대로') ? 25 : rn.includes('길') ? 4 : rn.includes('로') ? 12 : 8
+                        return rw >= 12 ? '12m-plus' : rw >= 8 ? '8m-plus' : rw >= 4 ? '4m-plus' : '6m-plus'
+                      })()
                       setSupplementData(prev => ({
                         zoneType: prev?.zoneType && prev.zoneType !== 'residential-2' ? prev.zoneType : '',
                         roadCondition: mappedRoadCondition,
