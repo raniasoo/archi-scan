@@ -136,6 +136,7 @@ interface ReportSummaryProps {
   financialScenarios?: FinancialScenariosConfig
   onScenariosChange?: (config: FinancialScenariosConfig) => void
   landPricePerM2?: number
+  molitData?: { zoneCode?: string; roadWidth?: number; heightLimit?: number | null; hasDistrictPlan?: boolean }
   // NEW: Centralized feasibility result from parent
   feasibilityResult?: CentralizedFeasibilityResult | null
 }
@@ -208,7 +209,23 @@ function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): Layout
   return bestLayout
 }
 
-export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, feasibilityResult: externalFeasibility }: ReportSummaryProps) {
+export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility }: ReportSummaryProps) {
+  // molitData 우선 적용 — regulation race condition 방지
+  const effectiveZoneType = molitData?.zoneCode || regulation?.zoneType || 'residential-2'
+  const effectiveRoadWidth = molitData?.roadWidth || regulation?.roadWidth || 8
+  const effectiveMaxHeight = molitData?.heightLimit || regulation?.maxHeight || 30
+  const effectiveMaxFloors = molitData?.heightLimit ? Math.floor(molitData.heightLimit / 3.3) : regulation?.maxFloors || 10
+  const effectiveHasDistrict = molitData?.hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false
+  const ZONE_MAP: Record<string, string> = {
+    'residential-exclusive-1': '제1종 전용주거지역', 'residential-exclusive-2': '제2종 전용주거지역',
+    'residential-1': '제1종 일반주거지역', 'residential-2': '제2종 일반주거지역',
+    'residential-3': '제3종 일반주거지역', 'semi-residential': '준주거지역',
+    'commercial-general': '일반상업지역', 'commercial-neighborhood': '근린상업지역',
+    'commercial-central': '중심상업지역', 'industrial-general': '일반공업지역',
+    'green-natural': '자연녹지지역',
+  }
+  const effectiveZoneLabel = ZONE_MAP[effectiveZoneType] || effectiveZoneType
+  const effectiveRoadLabel = `${effectiveRoadWidth}m 이상 도로 접함`
   // Use provided branding or default
   const brandConfig = branding || DEFAULT_BRANDING
   // Use provided site visuals or empty
@@ -444,21 +461,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     <table>
       <tr><th style="width: 120px;">소재지</th><td>${address}</td></tr>
       <tr><th>대지면적</th><td>${siteArea.toLocaleString()}㎡ (${Math.round(siteArea * 0.3025).toLocaleString()}평)</td></tr>
-      <tr><th>토지이용계획</th><td>${regulation ? `${regulation.zoneType === 'custom' ? (regulation.zoneTypeCustom || '직접 입력') : 
-        regulation.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
-        regulation.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
-        regulation.zoneType === 'residential-1' ? '제1종 일반주거지역' :
-        regulation.zoneType === 'residential-2' ? '제2종 일반주거지역' :
-        regulation.zoneType === 'residential-3' ? '제3종 일반주거지역' :
-        regulation.zoneType === 'semi-residential' ? '준주거지역' :
-        regulation.zoneType === 'commercial-general' ? '일반상업지역' :
-        regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-        regulation.zoneType === 'commercial-central' ? '중심상업지역' :
-        regulation.zoneType === 'industrial-general' ? '일반공업지역' :
-        regulation.zoneType === 'industrial' ? '준공업지역' :
-        regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType} <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
-      <tr><th>접도 현황</th><td>${regulation ? `${regulation.roadWidth}m 이상 도로 접함 (${regulation.roadCondition === 'corner' ? '코너' : regulation.roadCondition}) <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
-      <tr><th>높이제한</th><td>${regulation ? `${regulation.maxHeight}m / ${regulation.maxFloors}층 <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
+      <tr><th>토지이용계획</th><td>${regulation ? `${effectiveZoneLabel} <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
+      <tr><th>접도 현황</th><td>${regulation ? `${effectiveRoadLabel} <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
+      <tr><th>높이제한</th><td>${regulation ? `${effectiveMaxHeight}m / ${effectiveMaxFloors}층 <span class="badge badge-blue" style="font-size: 8pt; margin-left: 4px;">적용</span>` : '<span style="color: #94a3b8;">현장 확인 필요</span>'}</td></tr>
     </table>
     ${hasSiteMap(visualsConfig) || hasSitePhotos(visualsConfig) ? `
     <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
@@ -490,20 +495,8 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     </div>
     ${regulation ? `
     <table>
-      <tr><th style="width: 120px;">용도지역</th><td>${regulation.zoneType === 'custom' ? (regulation.zoneTypeCustom || '직접 입력') : 
-        regulation.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
-        regulation.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
-        regulation.zoneType === 'residential-1' ? '제1종 일반주거지역' :
-        regulation.zoneType === 'residential-2' ? '제2종 일반주거지역' :
-        regulation.zoneType === 'residential-3' ? '제3종 일반주거지역' :
-        regulation.zoneType === 'semi-residential' ? '준주거지역' :
-        regulation.zoneType === 'commercial-general' ? '일반상업지역' :
-        regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-        regulation.zoneType === 'commercial-central' ? '중심상업지역' :
-        regulation.zoneType === 'industrial-general' ? '일반공업지역' :
-        regulation.zoneType === 'industrial' ? '준공업지역' :
-        regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType}</td></tr>
-      <tr><th>접도 폭</th><td>${regulation.roadWidth}m (${regulation.roadCondition === 'corner' ? '코너 대지 2면 접도' : regulation.roadCondition + ' 이상'})</td></tr>
+      <tr><th style="width: 120px;">용도지역</th><td>${effectiveZoneLabel}</td></tr>
+      <tr><th>접도 폭</th><td>${effectiveRoadWidth}m (${regulation.roadCondition === 'corner' ? '코너 대지 2면 접도' : regulation.roadCondition + ' 이상'})</td></tr>
       <tr><th>이격거리</th><td>전면 ${regulation.setbackFront}m / 측면 ${regulation.setbackSide}m / 후면 ${regulation.setbackRear}m</td></tr>
       <tr><th>사선제한</th><td>${regulation.setbackType === 'none' ? '없음' : regulation.setbackType === 'north' ? '북측사선제한' : regulation.setbackType === 'road' ? '도로사선제한' : '복합적용'} ${regulation.setbackType !== 'none' ? '(' + regulation.setbackAngle + '°)' : ''}</td></tr>
     </table>
@@ -519,7 +512,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       <tbody>
         <tr><td>건폐율</td><td class="text-center">${regulation ? regulation.maxCoverageRatio : 60}% 이하</td><td class="text-center" style="font-weight: 600;">${layout.coverage}%</td><td class="text-center"><span class="badge ${layout.coverage <= (regulation ? regulation.maxCoverageRatio : 60) ? 'badge-green' : 'badge-amber'}">${layout.coverage <= (regulation ? regulation.maxCoverageRatio : 60) ? '적정' : '초과'}</span></td></tr>
         <tr><td>용적률</td><td class="text-center">${regulation ? regulation.maxFloorAreaRatio : 200}% 이하</td><td class="text-center" style="font-weight: 600;">${far}%</td><td class="text-center"><span class="badge ${parseFloat(far) <= (regulation ? regulation.maxFloorAreaRatio : 200) ? 'badge-green' : 'badge-amber'}">${parseFloat(far) <= (regulation ? regulation.maxFloorAreaRatio : 200) ? '적정' : '초과'}</span></td></tr>
-        <tr><td>높이제한</td><td class="text-center">${regulation ? regulation.maxHeight + 'm / ' + regulation.maxFloors + '층 이하' : '<span style="color: #d97706;">지구단위/현장 확인</span>'}</td><td class="text-center" style="font-weight: 600;">지상 ${layout.floors}층</td><td class="text-center"><span class="badge ${regulation && layout.floors <= regulation.maxFloors ? 'badge-green' : 'badge-amber'}">${regulation && layout.floors <= regulation.maxFloors ? '적정' : (regulation ? '초과 검토' : '확인 필요')}</span></td></tr>
+        <tr><td>높이제한</td><td class="text-center">${regulation ? effectiveMaxHeight + 'm / ' + effectiveMaxFloors + '층 이하' : '<span style="color: #d97706;">지구단위/현장 확인</span>'}</td><td class="text-center" style="font-weight: 600;">지상 ${layout.floors}층</td><td class="text-center"><span class="badge ${regulation && layout.floors <= effectiveMaxFloors ? 'badge-green' : 'badge-amber'}">${regulation && layout.floors <= effectiveMaxFloors ? '적정' : (regulation ? '초과 검토' : '확인 필요')}</span></td></tr>
         <tr><td>주차기준</td><td class="text-center">세대당 ${regulation ? regulation.parkingRatio : 1.0}대</td><td class="text-center" style="font-weight: 600;">${layout.parking}대 (${(layout.parking / layout.units).toFixed(2)}대/세대)</td><td class="text-center"><span class="badge ${(layout.parking / layout.units) >= (regulation ? regulation.parkingRatio : 1.0) ? 'badge-green' : 'badge-amber'}">${(layout.parking / layout.units) >= (regulation ? regulation.parkingRatio : 1.0) ? '충족' : '부족'}</span></td></tr>
       </tbody>
     </table>
@@ -1128,25 +1121,13 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       
       // Use actual regulation data for PDF - same source as HTML report
       const zoneLabel = regulation ? (
-        regulation.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
-        regulation.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
-        regulation.zoneType === 'residential-1' ? '제1종 일반주거지역' :
-        regulation.zoneType === 'residential-2' ? '제2종 일반주거지역' :
-        regulation.zoneType === 'residential-3' ? '제3종 일반주거지역' :
-        regulation.zoneType === 'semi-residential' ? '준주거지역' :
-        regulation.zoneType === 'commercial-general' ? '일반상업지역' :
-        regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-        regulation.zoneType === 'commercial-central' ? '중심상업지역' :
-        regulation.zoneType === 'industrial-general' ? '일반공업지역' :
-        regulation.zoneType === 'industrial' ? '준공업지역' :
-        regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType
-      ) : '현장 확인 필요'
+        effectiveZoneLabel
       
       const roadLabel = regulation ? (
         regulation.roadCondition === 'both' ? '12m 이상 도로 (양면 접도)' :
         regulation.roadCondition === 'corner' ? '8m 이상 도로 (코너)' :
-        regulation.roadCondition === 'single' ? `${regulation.roadWidth}m 이상 도로 접함` :
-        `${regulation.roadWidth}m 도로 접함`
+        regulation.roadCondition === 'single' ? `${effectiveRoadWidth}m 이상 도로 접함` :
+        `${effectiveRoadWidth}m 도로 접함`
       ) : '현장 확인 필요'
       
       const siteData = [
@@ -1268,7 +1249,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       const regRows = [
         ["건폐율", `${regulation?.maxCoverageRatio || 60}% 이하`, `${layout.coverage}%`, layout.coverage <= (regulation?.maxCoverageRatio || 60) ? "적정" : "초과"],
         ["용적률", `${regulation?.maxFloorAreaRatio || 200}% 이하`, `${far}%`, parseFloat(far) <= (regulation?.maxFloorAreaRatio || 200) ? "적정" : "초과"],
-        ["높이제한", regulation ? `${regulation.maxHeight}m / ${regulation.maxFloors}층 이하` : "지구단위 확인", `지상 ${layout.floors}층`, regulation && layout.floors <= regulation.maxFloors ? "적정" : (regulation ? "초과 검토" : "확인 필요")],
+        ["높이제한", regulation ? `${effectiveMaxHeight}m / ${effectiveMaxFloors}층 이하` : "지구단위 확인", `지상 ${layout.floors}층`, regulation && layout.floors <= effectiveMaxFloors ? "적정" : (regulation ? "초과 검토" : "확인 필요")],
       ]
       
       setKoreanFont("normal")
@@ -2109,19 +2090,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                     <td style={{ color: '#2F2A24' }}>
                       {regulation ? (
                         <span className="flex items-center gap-2">
-                          {regulation.zoneType === 'custom' ? (regulation.zoneTypeCustom || '직접 입력') :
-                           regulation.zoneType === 'residential-exclusive-1' ? '제1종 전용주거지역' :
-                           regulation.zoneType === 'residential-exclusive-2' ? '제2종 전용주거지역' :
-                           regulation.zoneType === 'residential-1' ? '제1종 일반주거지역' :
-                           regulation.zoneType === 'residential-2' ? '제2종 일반주거지역' :
-                           regulation.zoneType === 'residential-3' ? '제3종 일반주거지역' :
-                           regulation.zoneType === 'semi-residential' ? '준주거지역' :
-                           regulation.zoneType === 'commercial-general' ? '일반상업지역' :
-                           regulation.zoneType === 'commercial-neighborhood' ? '근린상업지역' :
-                           regulation.zoneType === 'commercial-central' ? '중심상업지역' :
-                           regulation.zoneType === 'industrial-general' ? '일반공업지역' :
-                           regulation.zoneType === 'industrial' ? '준공업지역' :
-                           regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType}
+                          {effectiveZoneLabel}
                           <span className="report-badge report-badge-info">적용</span>
                         </span>
                       ) : (
@@ -2134,7 +2103,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                     <td style={{ color: '#2F2A24' }}>
                       {regulation ? (
                         <span className="flex items-center gap-2">
-                          {regulation.roadWidth}m 이상 도로 접함
+                          {effectiveRoadWidth}m 이상 도로 접함
                           <span className="report-badge report-badge-info">적용</span>
                         </span>
                       ) : (
@@ -2147,7 +2116,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                     <td style={{ color: '#2F2A24' }}>
                       {regulation ? (
                         <span className="flex items-center gap-2">
-                          {regulation.maxHeight}m / {regulation.maxFloors}층 이하
+                          {effectiveMaxHeight}m / {effectiveMaxFloors}층 이하
                           <span className="report-badge report-badge-info">적용</span>
                         </span>
                       ) : (
@@ -2220,8 +2189,8 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
               <span className={`report-badge ${parseFloat(far) <= (regulation?.maxFloorAreaRatio || 200) ? 'report-badge-success' : 'report-badge-danger'}`}>
                 용적률 {parseFloat(far) <= (regulation?.maxFloorAreaRatio || 200) ? '적합' : '초과'}
               </span>
-              <span className={`report-badge ${regulation && layout.floors <= regulation.maxFloors ? 'report-badge-success' : 'report-badge-warning'}`}>
-                높이 {regulation && layout.floors <= regulation.maxFloors ? '적합' : '확인 필요'}
+              <span className={`report-badge ${regulation && layout.floors <= effectiveMaxFloors ? 'report-badge-success' : 'report-badge-warning'}`}>
+                높이 {regulation && layout.floors <= effectiveMaxFloors ? '적합' : '확인 필요'}
               </span>
             </div>
             
@@ -2259,14 +2228,14 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   </tr>
                   <tr>
                     <td>높이제한</td>
-                    <td className="text-center">{regulation ? `${regulation.maxHeight}m / ${regulation.maxFloors}층` : '지구단위 확인'}</td>
+                    <td className="text-center">{regulation ? `${effectiveMaxHeight}m / ${effectiveMaxFloors}층` : '지구단위 확인'}</td>
                     <td className="text-center font-semibold">지상 {layout.floors}층</td>
                     <td className="text-center">
                       <span className={`report-badge ${
-                        regulation && layout.floors <= regulation.maxFloors
+                        regulation && layout.floors <= effectiveMaxFloors
                           ? 'report-badge-success'
                           : 'report-badge-warning'
-                      }`}>{regulation && layout.floors <= regulation.maxFloors ? '적합' : '확인 필요'}</span>
+                      }`}>{regulation && layout.floors <= effectiveMaxFloors ? '적합' : '확인 필요'}</span>
                     </td>
                   </tr>
                 </tbody>

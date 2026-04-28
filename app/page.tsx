@@ -2769,14 +2769,8 @@ export default function ArchiScanPage() {
                   siteArea={siteAreaNum}
                   gfa={gfa}
                   allLayouts={layouts}
-                  regulation={{
-                    ...regulation,
-                    zoneType: (molitSupplementData.zoneCode || regulation.zoneType) as typeof regulation.zoneType,
-                    roadWidth: molitSupplementData.roadWidth || regulation.roadWidth,
-                    maxHeight: molitSupplementData.heightLimit || regulation.maxHeight,
-                    maxFloors: molitSupplementData.heightLimit ? Math.floor(molitSupplementData.heightLimit / 3.3) : regulation.maxFloors,
-                    additionalNotes: molitSupplementData.hasDistrictPlan ? '지구단위계획 적용' : regulation.additionalNotes,
-                  }}
+                  regulation={regulation}
+                  molitData={molitSupplementData}
                   siteVisuals={siteVisuals}
                   financialScenarios={financialScenarios}
                   onScenariosChange={setFinancialScenarios}
