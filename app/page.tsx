@@ -1355,6 +1355,9 @@ export default function ArchiScanPage() {
               <div className="hidden md:block">
                 <UserBadge />
               </div>
+              <button onClick={() => setShowBrandingEditor(true)} className="p-2 rounded-lg hover:bg-secondary transition-colors" title="보고서 브랜딩 설정">
+                <Settings2 className="h-4 w-4 text-muted-foreground" />
+              </button>
             </div>
 
             {/* Action Buttons - scrollable on mobile */}

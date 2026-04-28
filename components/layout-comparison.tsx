@@ -3,10 +3,16 @@
 import { useMemo } from "react"
 import { CheckCircle2, Sparkles, TrendingUp } from "lucide-react"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
-import type { LayoutOption } from "@/app/page"
+
+interface ComparisonLayout {
+  id: number; name: string; type: string; coverage: number; units: number
+  floors: number; parking: number; gfa: number; features: string[]
+  scores?: { overall?: number } | null
+  recommendation: { isRecommended: boolean }
+}
 
 interface LayoutComparisonProps {
-  layouts: LayoutOption[]
+  layouts: ComparisonLayout[]
   siteArea: number
   selectedLayout: number | null
   recommendedLayoutId?: number | null
