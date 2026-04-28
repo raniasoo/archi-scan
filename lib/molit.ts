@@ -1712,7 +1712,28 @@ const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
 
 async function fetchVworldPnuArea(bdMgtSn: string): Promise<{ area: number; address?: string } | null> {
   if (!bdMgtSn || bdMgtSn.length < 19) return null
-  const pnu = bdMgtSn.slice(0, 19)
+  // bdMgtSn 대지구분: 0=대지, 1=산 → PNU 대지구분: 1=대지, 2=산
+  const sigBjd = bdMgtSn.slice(0, 10) // 시군구+법정동
+  const platGbCd = bdMgtSn.charAt(10) // 0=대지, 1=산
+  const pnuPlatGb = platGbCd === '1' ? '2' : '1' // 변환
+  const bunJi = bdMgtSn.slice(11, 19) // 본번+부번
+  const pnu = `${sigBjd}${pnuPlatGb}${bunJi}`
+  console.log(`[MOLIT-VWORLD] bdMgtSn=${bdMgtSn.slice(0,19)} → PNU=${pnu} (platGbCd ${platGbCd}→${pnuPlatGb})`)
+  
+  // 1차: 변환된 PNU로 시도
+  const result = await fetchVworldPnuAreaByPnu(pnu)
+  if (result) return result
+  
+  // 2차: 원본 그대로 시도 (일부 API에서 0도 허용)
+  const rawPnu = bdMgtSn.slice(0, 19)
+  if (rawPnu !== pnu) {
+    console.log(`[MOLIT-VWORLD] 1차 실패 → 원본 PNU ${rawPnu}로 재시도`)
+    return await fetchVworldPnuAreaByPnu(rawPnu)
+  }
+  return null
+}
+
+async function fetchVworldPnuAreaByPnu(pnu: string): Promise<{ area: number; address?: string } | null> {
   try {
     const params = new URLSearchParams({
       service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
