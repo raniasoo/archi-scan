@@ -135,6 +135,7 @@ interface ReportSummaryProps {
   siteVisuals?: SiteVisualsConfig
   financialScenarios?: FinancialScenariosConfig
   onScenariosChange?: (config: FinancialScenariosConfig) => void
+  landPricePerM2?: number
   // NEW: Centralized feasibility result from parent
   feasibilityResult?: CentralizedFeasibilityResult | null
 }
@@ -154,11 +155,11 @@ function formatKRW(value: number): string {
  * Local fallback calculation for report - matches project-analysis-state.ts calculateFeasibility
  * IMPORTANT: Keep in sync with lib/project-analysis-state.ts calculateFeasibility
  */
-function calculateFinancials(siteArea: number, layout: LayoutOption) {
+function calculateFinancials(siteArea: number, layout: LayoutOption, landPricePerM2?: number) {
   const gfa = Math.round(siteArea * (layout.coverage / 100) * layout.floors)
   
-  // 비용 단가 (공통 함수와 동일)
-  const landPricePerSqm = 5000000 // 토지 ㎡당 500만원
+  // 비용 단가 — 실제 공시지가가 있으면 사용, 없으면 기본값
+  const landPricePerSqm = landPricePerM2 || 5000000
   const constructionCostPerSqm = 2500000 // 공사비 ㎡당 250만원
   const salesPricePerSqm = 8000000 // 분양가 ㎡당 800만원
   
@@ -190,7 +191,7 @@ function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): Layout
   }
   
   layouts.forEach(layout => {
-    const financials = calculateFinancials(siteArea, layout)
+    const financials = calculateFinancials(siteArea, layout, landPricePerM2)
     const roiScore = Math.min(financials.roi / 25, 1) * 40
     const maxUnits = Math.max(...layouts.map(l => l.units), 1)
     const maxParkingRatio = Math.max(...layouts.map(l => l.parking / Math.max(l.units, 1)), 1)
@@ -207,7 +208,7 @@ function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): Layout
   return bestLayout
 }
 
-export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, feasibilityResult: externalFeasibility }: ReportSummaryProps) {
+export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, feasibilityResult: externalFeasibility }: ReportSummaryProps) {
   // Use provided branding or default
   const brandConfig = branding || DEFAULT_BRANDING
   // Use provided site visuals or empty
@@ -217,7 +218,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   const printRef = useRef<HTMLDivElement>(null)
   
   // Use centralized feasibility result if provided, otherwise calculate locally (fallback)
-  const localFinancials = calculateFinancials(siteArea, layout)
+  const localFinancials = calculateFinancials(siteArea, layout, landPricePerM2)
   const financials = externalFeasibility ? {
     gfa: gfa || localFinancials.gfa,
     landCost: externalFeasibility.landCost,
@@ -533,7 +534,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       </thead>
       <tbody>
         ${layouts.map(l => {
-          const f = calculateFinancials(siteArea, l)
+          const f = calculateFinancials(siteArea, l, landPricePerM2)
           const isRec = l.id === recommendedLayout.id
           return `<tr${isRec ? ' class="recommended"' : ''}>
             <td>${l.name}${isRec ? ' <span class="badge badge-blue">추천</span>' : ''}</td>
@@ -1307,7 +1308,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         
         setKoreanFont("normal")
         layouts.forEach((l) => {
-          const f = calculateFinancials(siteArea, l)
+          const f = calculateFinancials(siteArea, l, landPricePerM2)
           const isRec = l.id === recommendedLayout.id
           
           if (isRec) {
@@ -2286,7 +2287,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
               {/* 모바일: 카드형 레이아웃 */}
               <div className="sm:hidden space-y-2.5">
                 {layouts.map((l) => {
-                  const f = calculateFinancials(siteArea, l)
+                  const f = calculateFinancials(siteArea, l, landPricePerM2)
                   const isRec = l.id === recommendedLayout.id
                   return (
                     <div key={l.id} className={`rounded-lg border p-3 ${isRec ? 'report-highlight-bg report-highlight-border' : 'report-border'}`}>
@@ -2319,7 +2320,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   </thead>
                   <tbody>
                     {layouts.map((l) => {
-                      const f = calculateFinancials(siteArea, l)
+                      const f = calculateFinancials(siteArea, l, landPricePerM2)
                       const isRec = l.id === recommendedLayout.id
                       return (
                         <tr key={l.id} className={isRec ? 'report-highlight-bg' : ''}>

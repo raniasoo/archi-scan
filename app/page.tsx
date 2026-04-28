@@ -2766,6 +2766,7 @@ export default function ArchiScanPage() {
                   siteVisuals={siteVisuals}
                   financialScenarios={financialScenarios}
                   onScenariosChange={setFinancialScenarios}
+                  landPricePerM2={landPriceData.pricePerM2 || 5000000}
                   feasibilityResult={feasibilityResult}
                 />
               </TabsContent>
