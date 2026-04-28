@@ -2407,12 +2407,7 @@ export default function ArchiScanPage() {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-foreground">{ARCHISCAN_COPY.feasibility.title}</h2>
-                  <button onClick={() => setShowBrandingEditor(true)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors" title="보고서 브랜딩 설정">
-                    <Settings2 className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </div>
+                <h2 className="text-xl md:text-2xl font-bold text-foreground">{ARCHISCAN_COPY.feasibility.title}</h2>
                 <p className="text-sm text-muted-foreground">{selectedLayoutData.name} - 투자 분석</p>
               </div>
               <Button onClick={() => setCurrentStep("report")} className="gap-2">
@@ -2492,9 +2487,9 @@ export default function ArchiScanPage() {
                   <h2 className="text-xl md:text-2xl font-bold text-foreground">종합 보고서</h2>
                 </div>
                 <p className="text-sm text-muted-foreground">{selectedLayoutData.name} 분석 결과</p>
-                <button onClick={() => setShowBrandingEditor(true)} className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                <button onClick={() => setShowBrandingEditor(true)} className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-lg border border-primary/50 text-xs text-primary hover:bg-primary/10 transition-colors font-medium">
                   <Settings2 className="h-3.5 w-3.5" />
-                  보고서 브랜딩 설정
+                  보고서 브랜딩 설정 (회사 로고·담당자)
                 </button>
               </div>
               <div className="flex flex-col gap-2 w-full md:w-auto">
