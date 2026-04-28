@@ -58,7 +58,7 @@ export const AUTO_LOOKUP_MESSAGES: Record<AutoLookupStatus, string> = {
   'loading': '건축물 정보를 조회하고 있습니다...',
   'success': '건축물 정보를 성공적으로 조회했습니다.',
   'success-empty': '자동조회는 완료되었지만 확인 가능한 건축 정보가 없어 수동 검토가 필요합니다.',
-  'juso-failed': '주소 정규화 과정에서 문제가 발생했습니다. 주소를 다시 확인해주세요.',
+  'juso-failed': '해당 주소를 찾을 수 없습니다. 건물번호를 확인하거나, 주소 입력 시 나타나는 자동완성 목록에서 선택해주세요.',
   'molit-failed': '건축물대장 조회에서 유효한 결과를 찾지 못했습니다.',
   'upstream-error': '외부 시스템 응답이 불안정하여 자동조회를 완료하지 못했습니다.',
   'parse-error': '조회 응답은 수신했지만 데이터를 해석하는 과정에서 문제가 발생했습니다.',

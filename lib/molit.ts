@@ -1625,6 +1625,16 @@ export async function lookupSiteData(
       }
       diagnostics.stoppedAt = 'complete'
       
+      // Vworld PNU fallback: MOLIT 데이터 있지만 siteArea 없는 경우
+      if ((!siteData.siteArea || siteData.siteArea <= 0) && siteData.bdMgtSn) {
+        console.log('[MOLIT] siteArea 없음 → Vworld PNU fallback 시도')
+        const vwArea = await fetchVworldPnuArea(siteData.bdMgtSn)
+        if (vwArea && vwArea.area > 0) {
+          siteData.siteArea = vwArea.area
+          console.log(`[MOLIT] Vworld PNU 대지면적 보완: ${vwArea.area}㎡`)
+        }
+      }
+      
       return {
         success: true,
         data: siteData,
@@ -1644,16 +1654,34 @@ export async function lookupSiteData(
     
     console.log(`[MOLIT] All endpoints returned empty (path: ${lookupPath})`)
     
+    // Vworld PNU fallback: MOLIT 0건이지만 bdMgtSn 있으면 대지면적 보완
+    const diagJusoEmpty = diagnostics.jusoResult as Record<string, unknown> | undefined
+    const emptyBdMgtSn = (diagJusoEmpty?.bdMgtSn as string) || ''
+    let vworldSiteArea: number | undefined
+    if (emptyBdMgtSn.length >= 19) {
+      console.log('[MOLIT] MOLIT 0건 → Vworld PNU fallback 시도:', emptyBdMgtSn)
+      const vwArea = await fetchVworldPnuArea(emptyBdMgtSn)
+      if (vwArea && vwArea.area > 0) {
+        vworldSiteArea = vwArea.area
+        console.log(`[MOLIT] Vworld PNU 대지면적 보완 성공: ${vwArea.area}㎡`)
+      }
+    }
+    
     return {
       success: false,
       error: '해당 주소로 조회 가능한 건축물대장 정보를 찾지 못했습니다. 주소를 더 정확히 입력하거나 다른 주소로 다시 시도해주세요.',
       diagnostics,
       data: {
         address: normalizedAddress,
+        roadAddress: (diagJusoEmpty?.roadAddr as string) || (diagJusoEmpty?.rawResponse as any)?.roadAddr,
         sigunguCode: sigunguCd,
         bjdongCode: bjdongCd,
         bun,
         ji,
+        siteArea: vworldSiteArea,
+        bdMgtSn: emptyBdMgtSn || undefined,
+        entX: (diagJusoEmpty?.entX as number) || undefined,
+        entY: (diagJusoEmpty?.entY as number) || undefined,
         dataSource: 'address' as const,
         fetchedAt: new Date().toISOString(),
       },
@@ -1675,6 +1703,51 @@ export async function lookupSiteData(
 /**
 * Check if MOLIT API is configured
 */
+
+// ============================================
+// Vworld PNU Fallback (MOLIT 0건 또는 siteArea null 시)
+// ============================================
+const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
+const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
+
+async function fetchVworldPnuArea(bdMgtSn: string): Promise<{ area: number; address?: string } | null> {
+  if (!bdMgtSn || bdMgtSn.length < 19) return null
+  const pnu = bdMgtSn.slice(0, 19)
+  try {
+    const params = new URLSearchParams({
+      service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
+      key: VWORLD_KEY, domain: VWORLD_DOMAIN, geometry: 'true', attribute: 'true',
+      page: '1', size: '1', crs: 'EPSG:4326', format: 'json',
+      attrFilter: `pnu:=:${pnu}`,
+    })
+    const res = await fetch(`https://api.vworld.kr/req/data?${params}`, {
+      signal: AbortSignal.timeout(8000),
+      headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+    })
+    const data = await res.json()
+    const features = data?.response?.result?.featureCollection?.features || []
+    if (!features.length) return null
+    const geom = features[0]?.geometry
+    const props = features[0]?.properties || {}
+    // 면적 계산 (Shoelace formula)
+    const rawCoords = geom?.type === 'Polygon' ? geom.coordinates?.[0]
+      : geom?.type === 'MultiPolygon' ? geom.coordinates?.[0]?.[0] : null
+    if (!rawCoords || rawCoords.length < 3) return null
+    const lats = rawCoords.map((c: number[]) => c[1])
+    const cLat = (Math.min(...lats) + Math.max(...lats)) / 2
+    let pa = 0
+    for (let i = 0; i < rawCoords.length - 1; i++) {
+      pa += (rawCoords[i][0] - rawCoords[i+1][0]) * (rawCoords[i][1] + rawCoords[i+1][1])
+    }
+    const areaM2 = Math.abs(pa / 2) * 111319 * 111319 * Math.cos(cLat * Math.PI / 180)
+    console.log(`[MOLIT-VWORLD] PNU ${pnu} 면적: ${Math.round(areaM2)}㎡ (${props.addr || ''})`)
+    return { area: Math.round(areaM2), address: props.addr }
+  } catch (e) {
+    console.warn('[MOLIT-VWORLD] PNU 면적 조회 실패:', e)
+    return null
+  }
+}
+
 export function isMolitConfigured(): boolean {
   // Use hardcoded key as fallback if env var is not set
   return !!(process.env.MOLIT_API_KEY || HARDCODED_MOLIT_KEY)
