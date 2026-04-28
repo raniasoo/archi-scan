@@ -64,6 +64,7 @@ export interface ExportData {
     maxHeight?: number;
     buildingCoverageLimit?: number;
     farLimit?: number;
+    hasDistrictPlan?: boolean;
   };
   verdict: string;
   risks?: {
@@ -98,7 +99,10 @@ function convertToV250(data: ExportData): ReportDataV250 {
   const input = {
     address: data.address,
     siteArea: data.siteArea || 0,
-    regulation: data.regulation,
+    regulation: {
+      ...data.regulation,
+      districtPlan: data.regulation?.hasDistrictPlan ? '지구단위계획 적용' : undefined,
+    },
     selectedLayout: {
       id: 'selected',
       name: data.layout.name || '기본 배치안',

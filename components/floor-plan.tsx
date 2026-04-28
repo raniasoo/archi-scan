@@ -168,43 +168,43 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
         <g transform="translate(50, 20)">
           <rect x="0" y="0" width="200" height="160" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
           
-          {/* Dynamic units based on actual count */}
-          {(() => {
-            const n = currentFloorUnits
-            const topRow = Math.ceil(n / 2)
-            const bottomRow = n - topRow
-            const unitNames = ['A','B','C','D','E','F','G','H','I','J']
-            const elements: React.ReactElement[] = []
-            // Top row units
-            const tw = Math.floor((195) / Math.max(topRow, 1))
-            for (let i = 0; i < topRow; i++) {
-              const x = 5 + i * tw
-              const w = tw - 5
-              elements.push(
-                <g key={`t${i}`}>
-                  <rect x={x} y={5} width={w} height={50} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                  <text x={x + w/2} y={25} fontSize="9" textAnchor="middle" fill={colors.primary}>{unitNames[i]}호</text>
-                  <text x={x + w/2} y={38} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-                </g>
-              )
-            }
-            // Bottom row units
-            if (bottomRow > 0) {
-              const bw = Math.floor((195) / Math.max(bottomRow, 1))
-              for (let i = 0; i < bottomRow; i++) {
-                const x = 5 + i * bw
-                const w = bw - 5
-                elements.push(
-                  <g key={`b${i}`}>
-                    <rect x={x} y={95} width={w} height={50} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                    <text x={x + w/2} y={115} fontSize="9" textAnchor="middle" fill={colors.primary}>{unitNames[topRow + i]}호</text>
-                    <text x={x + w/2} y={128} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-                  </g>
-                )
+          {currentFloorUnits <= 8 ? (
+            /* Individual units for small buildings */
+            (() => {
+              const n = currentFloorUnits
+              const topRow = Math.ceil(n / 2)
+              const bottomRow = n - topRow
+              const elements: React.ReactElement[] = []
+              const tw = Math.floor((195) / Math.max(topRow, 1))
+              for (let i = 0; i < topRow; i++) {
+                const x = 5 + i * tw; const w = tw - 5
+                elements.push(<g key={`t${i}`}><rect x={x} y={5} width={w} height={50} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={x+w/2} y={25} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65+i)}호</text><text x={x+w/2} y={38} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>)
               }
-            }
-            return elements
-          })()}
+              if (bottomRow > 0) {
+                const bw = Math.floor((195) / Math.max(bottomRow, 1))
+                for (let i = 0; i < bottomRow; i++) {
+                  const x = 5 + i * bw; const w = bw - 5
+                  elements.push(<g key={`b${i}`}><rect x={x} y={95} width={w} height={50} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={x+w/2} y={115} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65+topRow+i)}호</text><text x={x+w/2} y={128} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>)
+                }
+              }
+              return elements
+            })()
+          ) : (
+            /* Compact summary for large buildings (9+ units/floor) */
+            <>
+              {/* 4 representative units */}
+              <rect x="5" y="5" width="90" height="55" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+              <text x="50" y="28" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">A호</text>
+              <text x="50" y="43" fontSize="8" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
+              <rect x="105" y="5" width="90" height="55" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+              <text x="150" y="28" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">B호</text>
+              <text x="150" y="43" fontSize="8" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
+              {/* Summary label */}
+              <rect x="5" y="95" width="190" height="55" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
+              <text x="100" y="118" fontSize="11" textAnchor="middle" fill={colors.primary} fontWeight="600">... 외 {currentFloorUnits - 2}세대</text>
+              <text x="100" y="135" fontSize="8" textAnchor="middle" fill={colors.primary}>기준층 총 {currentFloorUnits}세대 × {unitArea}㎡</text>
+            </>
+          )}
           
           {/* Core */}
           <rect x="75" y="60" width="50" height="30" fill="#64748b40" stroke="#64748b" strokeWidth="2" />
@@ -262,18 +262,36 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
         <g transform="translate(30, 15)">
           <rect x="0" y="0" width="240" height="170" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
           
-          {/* Dynamic top wing units */}
-          {(() => {
-            const topCount = Math.ceil(currentFloorUnits / 2)
-            const tw = Math.floor(230 / Math.max(topCount, 1))
-            return Array.from({ length: topCount }, (_, i) => (
-              <g key={`t${i}`}>
-                <rect x={5 + i * tw} y={5} width={tw - 5} height={40} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                <text x={5 + i * tw + (tw - 5) / 2} y={22} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text>
-                <text x={5 + i * tw + (tw - 5) / 2} y={35} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-              </g>
-            ))
-          })()}
+          {currentFloorUnits <= 8 ? (
+            /* Individual units */
+            <>
+              {(() => {
+                const topCount = Math.ceil(currentFloorUnits / 2)
+                const tw = Math.floor(230 / Math.max(topCount, 1))
+                return Array.from({ length: topCount }, (_, i) => (
+                  <g key={`t${i}`}><rect x={5 + i * tw} y={5} width={tw - 5} height={40} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={5 + i * tw + (tw - 5) / 2} y={22} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text><text x={5 + i * tw + (tw - 5) / 2} y={35} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>
+                ))
+              })()}
+              {(() => {
+                const topCount = Math.ceil(currentFloorUnits / 2)
+                const bottomCount = currentFloorUnits - topCount
+                const bw = Math.floor(230 / Math.max(bottomCount, 1))
+                return Array.from({ length: bottomCount }, (_, i) => (
+                  <g key={`b${i}`}><rect x={5 + i * bw} y={125} width={bw - 5} height={40} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={5 + i * bw + (bw - 5) / 2} y={142} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + topCount + i)}호</text><text x={5 + i * bw + (bw - 5) / 2} y={155} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>
+                ))
+              })()}
+            </>
+          ) : (
+            /* Compact summary */
+            <>
+              <rect x="5" y="5" width="110" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+              <text x="60" y="22" fontSize="9" textAnchor="middle" fill={colors.primary} fontWeight="500">A호 {unitArea}㎡</text>
+              <rect x="125" y="5" width="110" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
+              <text x="180" y="22" fontSize="8" textAnchor="middle" fill={colors.primary}>... 외 {Math.ceil(currentFloorUnits/2)-1}세대</text>
+              <rect x="5" y="125" width="230" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
+              <text x="120" y="142" fontSize="9" textAnchor="middle" fill={colors.primary} fontWeight="600">하단 윙 {currentFloorUnits - Math.ceil(currentFloorUnits/2)}세대 × {unitArea}㎡</text>
+            </>
+          )}
           
           {/* Courtyard */}
           <rect x="50" y="50" width="140" height="70" fill="#22c55e15" stroke="#22c55e" strokeWidth="1" strokeDasharray="4" />
@@ -283,20 +301,6 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
           <rect x="5" y="50" width="40" height="70" fill="#64748b20" stroke="#64748b" strokeWidth="1" />
           <text x="25" y="90" fontSize="7" textAnchor="middle" fill="#64748b" transform="rotate(-90, 25, 85)">복도</text>
           <rect x="195" y="50" width="40" height="70" fill="#64748b20" stroke="#64748b" strokeWidth="1" />
-          
-          {/* Dynamic bottom wing units */}
-          {(() => {
-            const topCount = Math.ceil(currentFloorUnits / 2)
-            const bottomCount = currentFloorUnits - topCount
-            const bw = Math.floor(230 / Math.max(bottomCount, 1))
-            return Array.from({ length: bottomCount }, (_, i) => (
-              <g key={`b${i}`}>
-                <rect x={5 + i * bw} y={125} width={bw - 5} height={40} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                <text x={5 + i * bw + (bw - 5) / 2} y={142} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + topCount + i)}호</text>
-                <text x={5 + i * bw + (bw - 5) / 2} y={155} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-              </g>
-            ))
-          })()}
         </g>
       )}
       
@@ -337,35 +341,49 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
           <rect x="0" y="140" width="250" height="50" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
           
           {/* Dynamic vertical wing units */}
-          {(() => {
-            const vCount = Math.ceil(currentFloorUnits / 2)
-            const vh = Math.floor(130 / Math.max(vCount, 1))
-            return Array.from({ length: vCount }, (_, i) => (
-              <g key={`v${i}`}>
-                <rect x={5} y={5 + i * vh} width={70} height={vh - 5} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                <text x={40} y={5 + i * vh + (vh - 5) / 2} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text>
-                <text x={40} y={5 + i * vh + (vh - 5) / 2 + 13} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-              </g>
-            ))
-          })()}
+          {currentFloorUnits <= 8 ? (
+            <>
+              {(() => {
+                const vCount = Math.ceil(currentFloorUnits / 2)
+                const vh = Math.floor(130 / Math.max(vCount, 1))
+                return Array.from({ length: vCount }, (_, i) => (
+                  <g key={`v${i}`}><rect x={5} y={5 + i * vh} width={70} height={vh - 5} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={40} y={5 + i * vh + (vh - 5) / 2} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text><text x={40} y={5 + i * vh + (vh - 5) / 2 + 13} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>
+                ))
+              })()}
+            </>
+          ) : (
+            /* Compact vertical wing */
+            <>
+              <rect x="5" y="5" width="70" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+              <text x="40" y="22" fontSize="9" textAnchor="middle" fill={colors.primary} fontWeight="500">A호 {unitArea}㎡</text>
+              <rect x="5" y="50" width="70" height="85" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
+              <text x="40" y="85" fontSize="8" textAnchor="middle" fill={colors.primary}>수직동</text>
+              <text x="40" y="100" fontSize="8" textAnchor="middle" fill={colors.primary}>{Math.ceil(currentFloorUnits/2)}세대</text>
+            </>
+          )}
           
           {/* Core at corner */}
           <rect x="5" y="145" width="40" height="40" fill="#64748b40" stroke="#64748b" strokeWidth="2" />
           <text x="25" y="168" fontSize="7" textAnchor="middle" fill="#64748b">코어</text>
           
           {/* Dynamic horizontal wing units */}
-          {(() => {
-            const vCount = Math.ceil(currentFloorUnits / 2)
-            const hCount = currentFloorUnits - vCount
-            const hw = Math.floor(195 / Math.max(hCount, 1))
-            return Array.from({ length: hCount }, (_, i) => (
-              <g key={`h${i}`}>
-                <rect x={50 + i * hw} y={145} width={hw - 5} height={40} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                <text x={50 + i * hw + (hw - 5) / 2} y={162} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + vCount + i)}호</text>
-                <text x={50 + i * hw + (hw - 5) / 2} y={175} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-              </g>
-            ))
-          })()}
+          {currentFloorUnits <= 8 ? (
+            (() => {
+              const vCount = Math.ceil(currentFloorUnits / 2)
+              const hCount = currentFloorUnits - vCount
+              const hw = Math.floor(195 / Math.max(hCount, 1))
+              return Array.from({ length: hCount }, (_, i) => (
+                <g key={`h${i}`}><rect x={50 + i * hw} y={145} width={hw - 5} height={40} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={50 + i * hw + (hw - 5) / 2} y={162} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + vCount + i)}호</text><text x={50 + i * hw + (hw - 5) / 2} y={175} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>
+              ))
+            })()
+          ) : (
+            /* Compact horizontal wing */
+            <rect x="50" y="145" width="195" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3">
+            </rect>
+          )}
+          {currentFloorUnits > 8 && (
+            <text x="147" y="168" fontSize="8" textAnchor="middle" fill={colors.primary}>수평동 {currentFloorUnits - Math.ceil(currentFloorUnits/2)}세대 × {unitArea}㎡</text>
+          )}
         </g>
       )}
 
@@ -421,17 +439,32 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
         <g transform="translate(15, 40)">
           <rect x="0" y="0" width="270" height="120" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
           
-          {/* Dynamic units in a row */}
-          {Array.from({ length: currentFloorUnits }, (_, i) => {
-            const uw = Math.floor(260 / Math.max(currentFloorUnits, 1))
-            return (
-              <g key={i}>
-                <rect x={5 + i * uw} y="5" width={uw - 4} height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                <text x={5 + i * uw + (uw - 4) / 2} y="35" fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text>
-                <text x={5 + i * uw + (uw - 4) / 2} y="50" fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-              </g>
-            )
-          })}
+          {currentFloorUnits <= 8 ? (
+            Array.from({ length: currentFloorUnits }, (_, i) => {
+              const uw = Math.floor(260 / Math.max(currentFloorUnits, 1))
+              return (
+                <g key={i}>
+                  <rect x={5 + i * uw} y="5" width={uw - 4} height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+                  <text x={5 + i * uw + (uw - 4) / 2} y="35" fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text>
+                  <text x={5 + i * uw + (uw - 4) / 2} y="50" fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
+                </g>
+              )
+            })
+          ) : (
+            /* Compact for 9+ units */
+            <>
+              <rect x="5" y="5" width="80" height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+              <text x="45" y="35" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">A호</text>
+              <text x="45" y="50" fontSize="8" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
+              <rect x="90" y="5" width="80" height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
+              <text x="130" y="35" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">B호</text>
+              <text x="130" y="50" fontSize="8" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
+              <rect x="175" y="5" width="90" height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
+              <text x="220" y="30" fontSize="9" textAnchor="middle" fill={colors.primary} fontWeight="600">... 외 {currentFloorUnits - 2}세대</text>
+              <text x="220" y="48" fontSize="7" textAnchor="middle" fill={colors.primary}>총 {currentFloorUnits}세대</text>
+              <text x="220" y="62" fontSize="7" textAnchor="middle" fill={colors.primary}>× {unitArea}㎡</text>
+            </>
+          )}
           
           {/* Corridor */}
           <rect x="5" y="85" width="260" height="30" fill="#64748b20" stroke="#64748b" strokeWidth="1" />

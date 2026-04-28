@@ -2442,6 +2442,7 @@ export default function ArchiScanPage() {
                           maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
                           buildingCoverageLimit: regulation?.maxCoverageRatio,
                           farLimit: regulation?.maxFloorAreaRatio,
+                          hasDistrictPlan: molitSupplementData.hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false,
                         },
                         verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
                         risks: {
@@ -2541,6 +2542,7 @@ export default function ArchiScanPage() {
                           maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
                           buildingCoverageLimit: regulation?.maxCoverageRatio,
                           farLimit: regulation?.maxFloorAreaRatio,
+                          hasDistrictPlan: molitSupplementData.hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false,
                         },
                         verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
                         risks: {
@@ -2640,6 +2642,7 @@ export default function ArchiScanPage() {
                           maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
                           buildingCoverageLimit: regulation?.maxCoverageRatio,
                           farLimit: regulation?.maxFloorAreaRatio,
+                          hasDistrictPlan: molitSupplementData.hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false,
                         },
                         verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
                         risks: {
@@ -2737,6 +2740,7 @@ export default function ArchiScanPage() {
                           maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
                           buildingCoverageLimit: regulation?.maxCoverageRatio,
                           farLimit: regulation?.maxFloorAreaRatio,
+                          hasDistrictPlan: molitSupplementData.hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false,
                         },
                         verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
                         risks: {

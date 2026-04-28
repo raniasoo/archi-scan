@@ -451,7 +451,7 @@ export function buildReportDataV250(input: BuildReportDataInput): ReportDataV250
       roadAccess: `${safeNumber(regulation?.roadWidth, 8)}m 이상 도로 접함`,
       heightLimit: safeNumber(regulation?.maxHeight, 30),
       heightLimitFormatted: `${safeNumber(regulation?.maxHeight, 30)}m`,
-      districtPlan: regulation?.additionalNotes?.includes('지구단위') ? '지구단위계획 적용' : '해당 없음',
+      districtPlan: regulation?.districtPlan || (regulation?.additionalNotes?.includes('지구단위') ? '지구단위계획 적용' : '해당 없음'),
     },
 
     regulationReview: {
