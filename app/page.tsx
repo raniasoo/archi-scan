@@ -2490,11 +2490,12 @@ export default function ArchiScanPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl md:text-2xl font-bold text-foreground">종합 보고서</h2>
-                  <button onClick={() => setShowBrandingEditor(true)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors" title="보고서 브랜딩 설정">
-                    <Settings2 className="h-4 w-4 text-muted-foreground" />
-                  </button>
                 </div>
                 <p className="text-sm text-muted-foreground">{selectedLayoutData.name} 분석 결과</p>
+                <button onClick={() => setShowBrandingEditor(true)} className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  보고서 브랜딩 설정
+                </button>
               </div>
               <div className="flex flex-col gap-2 w-full md:w-auto">
                 <Button variant="outline" onClick={() => setCurrentStep("input")} className="gap-2 w-full md:w-auto">
