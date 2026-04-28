@@ -97,7 +97,8 @@ export function LayoutComparison({
   return (
     <div className="space-y-4">
       {/* 상단: 카드 비교 (아이소메트릭 + 핵심 수치) */}
-      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(layouts.length, 5)}, 1fr)` }}>
+      <div className="overflow-x-auto pb-2">
+        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(layouts.length, 5)}, minmax(120px, 1fr))`, minWidth: layouts.length > 3 ? `${layouts.length * 130}px` : undefined }}>
         {layouts.map((layout, i) => {
           const f = financials[i]
           const isSelected = selectedLayout === layout.id
@@ -160,6 +161,7 @@ export function LayoutComparison({
             </button>
           )
         })}
+      </div>
       </div>
 
       {/* ROI 비교 바 차트 */}

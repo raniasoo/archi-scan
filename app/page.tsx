@@ -123,7 +123,7 @@ import {
   type Project,
 } from "@/lib/database"
 
-interface LayoutOption {
+export interface LayoutOption {
   id: number
   name: string
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
@@ -2407,7 +2407,12 @@ export default function ArchiScanPage() {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl md:text-2xl font-bold text-foreground">{ARCHISCAN_COPY.feasibility.title}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground">{ARCHISCAN_COPY.feasibility.title}</h2>
+                  <button onClick={() => setShowBrandingEditor(true)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors" title="보고서 브랜딩 설정">
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
                 <p className="text-sm text-muted-foreground">{selectedLayoutData.name} - 투자 분석</p>
               </div>
               <Button onClick={() => setCurrentStep("report")} className="gap-2">
