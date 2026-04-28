@@ -54,6 +54,8 @@ import { IsometricView } from "@/components/isometric-view"
 import { SectionView } from "@/components/section-view"
 import { ElevationView } from "@/components/elevation-view"
 import { ScenarioSlider } from "@/components/scenario-slider"
+import { BrandingEditor } from "@/components/branding-editor"
+import { type BrandingConfig, loadBrandingConfig } from "@/lib/branding-config"
 import { StrategySelection } from "@/components/strategy-selection"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
@@ -433,6 +435,13 @@ export default function ArchiScanPage() {
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
   const [show3DVolume, setShow3DVolume] = useState(false)
+  const [showBrandingEditor, setShowBrandingEditor] = useState(false)
+  const [branding, setBranding] = useState<BrandingConfig | null>(null)
+  
+  // 브랜딩 초기 로드
+  useEffect(() => {
+    if (mounted) setBranding(loadBrandingConfig())
+  }, [mounted])
   const [supplementKey, setSupplementKey] = useState(0)  // 강제 리렌더용
   const [regulation, setRegulation] = useState<ZoningRegulation>(getDefaultRegulation())
   const [strategy, setStrategy] = useState<DesignStrategy>("profitability")
@@ -1235,6 +1244,15 @@ export default function ArchiScanPage() {
           coverage={selectedLayoutData.coverage}
           sitePolygon={sitePolygon}
           onClose={() => setShow3DVolume(false)}
+        />
+      )}
+
+      {/* 브랜딩 설정 모달 */}
+      {showBrandingEditor && branding && (
+        <BrandingEditor
+          branding={branding}
+          onChange={setBranding}
+          onClose={() => setShowBrandingEditor(false)}
         />
       )}
 
@@ -2465,7 +2483,12 @@ export default function ArchiScanPage() {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl md:text-2xl font-bold text-foreground">종합 보고서</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground">종합 보고서</h2>
+                  <button onClick={() => setShowBrandingEditor(true)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors" title="보고서 브랜딩 설정">
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
                 <p className="text-sm text-muted-foreground">{selectedLayoutData.name} 분석 결과</p>
               </div>
               <div className="flex flex-col gap-2 w-full md:w-auto">
@@ -2901,6 +2924,7 @@ export default function ArchiScanPage() {
                   gfa={gfa}
                   allLayouts={layouts}
                   regulation={regulation}
+                  branding={branding || undefined}
                   molitData={molitSupplementData}
                   siteVisuals={siteVisuals}
                   financialScenarios={financialScenarios}
