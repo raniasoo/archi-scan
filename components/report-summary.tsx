@@ -326,16 +326,16 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     }
     @media screen and (max-width: 600px) {
       body { padding: 10px; font-size: 10pt; }
-      /* 표지 - 잘림 방지 */
-      .cover { padding: 20px 10px; }
-      .cover h1 { font-size: 14pt; word-break: keep-all; overflow-wrap: break-word; line-height: 1.4; }
-      .cover .address { font-size: 11pt; word-break: break-all; }
+      /* 표지 - 잘림 완전 방지 */
+      .cover { padding: 20px 10px; min-height: auto; overflow: visible; }
+      .cover h1 { font-size: 14pt; word-break: keep-all; overflow-wrap: break-word; line-height: 1.4; max-width: 100%; white-space: normal; }
+      .cover .address { font-size: 11pt; word-break: break-all; max-width: 100%; }
       .cover .meta { flex-direction: column; gap: 8px; }
       /* 그리드 - 모바일 2열 */
       .grid-2 { grid-template-columns: 1fr 1fr; gap: 6px; }
       .risk-grid { grid-template-columns: 1fr; gap: 8px; }
       /* AI 점수 카드 - 모바일 2x2 */
-      .ai-score-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+      .ai-score-grid { grid-template-columns: 1fr 1fr !important; gap: 6px; }
       .ai-score-card { padding: 8px 6px; min-height: 0; }
       /* 5번 섹션 카드 모바일 축소 */
       .stat-box { padding: 7px 6px; }
@@ -345,8 +345,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       .stat-box { padding: 7px 6px; }
       .stat-value { font-size: 11pt; }
       .stat-label { font-size: 8pt; }
-      /* 섹션 간격 압축 */
+      /* 섹션 간격 압축 — 후반 섹션 여백 최소화 */
       .section { margin-bottom: 14px; padding-bottom: 10px; }
+      .section:last-child { margin-bottom: 6px; padding-bottom: 4px; }
       .section-title { font-size: 12pt; margin-bottom: 10px; padding-bottom: 8px; }
       /* 여백 압축 */
       .highlight { padding: 8px 10px; margin: 8px 0; }
@@ -639,20 +640,20 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
 
   <div class="section">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '7' : '6'}</span> AI 분석</div>
-    <div class="ai-score-grid">
-      <div class="ai-score-card">
+    <div class="ai-score-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">
+      <div class="ai-score-card" style="background:#f8fafc;padding:12px 8px;border-radius:6px;border:1px solid #e2e8f0;text-align:center;">
         <div class="stat-label">법규 적합성</div>
         <div class="stat-value">${layout.scores?.regulationCompliance ?? (layout.coverage <= 60 ? 90 : 70)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
-      <div class="ai-score-card">
+      <div class="ai-score-card" style="background:#f8fafc;padding:12px 8px;border-radius:6px;border:1px solid #e2e8f0;text-align:center;">
         <div class="stat-label">사업성</div>
         <div class="stat-value">${layout.scores?.profitability ?? (financials.roi > 20 ? 85 : financials.roi > 12 ? 70 : 55)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
-      <div class="ai-score-card">
+      <div class="ai-score-card" style="background:#f8fafc;padding:12px 8px;border-radius:6px;border:1px solid #e2e8f0;text-align:center;">
         <div class="stat-label">상품성</div>
         <div class="stat-value">${layout.scores?.marketability ?? (financials.roi > 15 ? 78 : 65)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
-      <div class="ai-score-card">
+      <div class="ai-score-card" style="background:#ecfdf5;padding:12px 8px;border-radius:6px;border:1px solid #6ee7b7;text-align:center;">
         <div class="stat-label">종합 점수</div>
         <div class="stat-value" style="color: #166534;">${layout.scores?.overall ?? Math.round((financials.roi > 20 ? 85 : financials.roi > 12 ? 70 : 55) * 0.95)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>
       </div>
@@ -1624,8 +1625,10 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           
           scoreData.forEach((score, idx) => {
             const sx = margin + idx * (scoreBoxW + 2)
-            pdf.setFillColor(248, 250, 252)
-            pdf.rect(sx, y, scoreBoxW, 15, "F")
+            pdf.setDrawColor(226, 232, 240)
+            if (idx === 3) { pdf.setFillColor(236, 253, 245); pdf.setDrawColor(110, 231, 183) }
+            else pdf.setFillColor(248, 250, 252)
+            pdf.roundedRect(sx, y, scoreBoxW, 15, 1.5, 1.5, "FD")
             pdf.setFontSize(6.5)
             pdf.setTextColor(100, 116, 139)
             pdf.text(score.label, sx + scoreBoxW / 2, y + 4, { align: 'center' })

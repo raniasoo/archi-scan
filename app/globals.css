@@ -889,6 +889,11 @@
     font-weight: 700 !important;
   }
   
+  .report-ai-score.highlight {
+    background: #ecfdf5 !important;
+    border: 1.5px solid #6ee7b7 !important;
+  }
+  
   .report-conclusion {
     background: #f0fdfa !important;
     border: 1px solid #99f6e4 !important;
