@@ -62,13 +62,18 @@ export type SetbackType =
   | "both" // 복합적용
 
 export const ZONE_TYPE_LABELS: Record<ZoneType, string> = {
+  "residential-exclusive-1": "제1종 전용주거지역",
+  "residential-exclusive-2": "제2종 전용주거지역",
   "residential-1": "제1종 일반주거지역",
   "residential-2": "제2종 일반주거지역",
   "residential-3": "제3종 일반주거지역",
   "semi-residential": "준주거지역",
   "commercial-general": "일반상업지역",
   "commercial-neighborhood": "근린상업지역",
+  "commercial-central": "중심상업지역",
   "industrial": "준공업지역",
+  "industrial-general": "일반공업지역",
+  "green-natural": "자연녹지지역",
   "custom": "직접 입력",
 }
 
