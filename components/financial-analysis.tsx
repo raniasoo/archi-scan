@@ -34,6 +34,7 @@ interface FinancialAnalysisProps {
   floors: number
   // NEW: Use centralized result if provided
   feasibilityResult?: CentralizedFeasibilityResult | null
+  landPricePerM2?: number
 }
 
 /**
@@ -86,8 +87,9 @@ function formatKRW(value: number): string {
   return `${value.toLocaleString()}원`
 }
 
-export function FinancialAnalysis({ siteArea, gfa, units, floors, feasibilityResult }: FinancialAnalysisProps) {
+export function FinancialAnalysis({ siteArea, gfa, units, floors, feasibilityResult, landPricePerM2 }: FinancialAnalysisProps) {
   // Use centralized result if provided, otherwise calculate locally (fallback)
+  const effectiveLandPrice = landPricePerM2 || 5000000
   const localData = calculateFinancials(siteArea, gfa, units, floors)
   
   const data: FinancialData = feasibilityResult ? {
@@ -218,7 +220,7 @@ export function FinancialAnalysis({ siteArea, gfa, units, floors, feasibilityRes
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">토지 매입비</span>
-                  <span className="font-mono">{siteArea.toLocaleString()}㎡ × 500만원 = {formatKRW(data.landCost)}</span>
+                  <span className="font-mono">{siteArea.toLocaleString()}㎡ × {Math.round(effectiveLandPrice / 10000).toLocaleString()}만원 = {formatKRW(data.landCost)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">공사비</span>

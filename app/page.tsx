@@ -581,7 +581,7 @@ export default function ArchiScanPage() {
     
     setFeasibilityResult(result)
     console.log('[v0] FeasibilityResult updated:', result)
-  }, [selectedLayout, layouts, siteArea])
+  }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2])
 
   const handleSiteInputComplete = () => {
     setCurrentStep("strategy")
@@ -2313,6 +2313,7 @@ export default function ArchiScanPage() {
               units={selectedLayoutData.units}
               floors={selectedLayoutData.floors}
               feasibilityResult={feasibilityResult}
+              landPricePerM2={landPriceData.pricePerM2 || 5000000}
             />
 
             <div className="flex flex-col items-center gap-2 pt-4">
@@ -2793,6 +2794,7 @@ export default function ArchiScanPage() {
                   units={selectedLayoutData.units}
                   floors={selectedLayoutData.floors}
                   feasibilityResult={feasibilityResult}
+                  landPricePerM2={landPriceData.pricePerM2 || 5000000}
                 />
               </TabsContent>
             </Tabs>
