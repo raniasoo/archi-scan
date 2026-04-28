@@ -174,12 +174,55 @@ export async function POST(req: NextRequest) {
         }
       } catch(e) { console.warn('[vworld] Vworld 직접 조회 실패:', String(e)) }
 
-      // 1-2: Overpass API로 실제 건물 footprint 조회 (OpenStreetMap) - 반경 200m
+      // 1-1b: Vworld BBOX fallback (POINT 실패 시 약간 넓은 영역으로 재시도)
       try {
-        // 대형 건물(13,000㎡+)은 반경을 넓게: 면적에 따라 동적으로 설정
-        const radius = siteArea && siteArea > 5000 ? 300 : 150
-        const overpassQuery = `[out:json][timeout:15];(way(around:${radius},${entY},${entX})[building];relation(around:${radius},${entY},${entX})[building];);out geom;`
-        console.log(`[vworld] Overpass 쿼리: radius=${radius}m, lat=${entY}, lng=${entX}`)
+        const vwKey = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
+        const vwDomain = 'v0-archi-scan-layout-generator.vercel.app'
+        const buf = 0.0003 // ~30m buffer
+        const bboxStr = `${entX - buf},${entY - buf},${entX + buf},${entY + buf}`
+        const bboxUrl = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN&key=${vwKey}&domain=${vwDomain}&geometry=true&attribute=true&page=1&size=5&crs=EPSG:4326&geomFilter=BOX(${bboxStr})&format=json`
+        console.log('[vworld] BBOX fallback 조회:', bboxStr)
+        const bboxRes = await fetch(bboxUrl, {
+          headers: { 'Referer': `https://${vwDomain}`, 'Origin': `https://${vwDomain}` },
+          signal: AbortSignal.timeout(10000)
+        })
+        if (bboxRes.ok) {
+          const bboxData = await bboxRes.json()
+          const features = bboxData?.response?.result?.featureCollection?.features || []
+          console.log('[vworld] BBOX features:', features.length)
+          // siteArea에 가장 가까운 필지 선택
+          if (features.length > 0) {
+            let bestF = features[0], bestDiff = Infinity
+            for (const f of features) {
+              const fArea = parseFloat(f?.properties?.SHAPE_AREA || '0')
+              const diff = siteArea ? Math.abs(fArea - siteArea) : 0
+              if (diff < bestDiff) { bestDiff = diff; bestF = f }
+            }
+            const geom = bestF?.geometry, props = bestF?.properties || {}
+            if (geom && (geom.type === 'Polygon' || geom.type === 'MultiPolygon')) {
+              const rawCoords = geom.type === 'Polygon' ? geom.coordinates[0] : geom.coordinates[0][0]
+              if (rawCoords && rawCoords.length >= 3) {
+                const coords = rawCoords.map((c: number[]) => [c[0], c[1]] as [number,number])
+                const lngs = coords.map((c:[number,number])=>c[0]), lats = coords.map((c:[number,number])=>c[1])
+                const cLng = (Math.min(...lngs)+Math.max(...lngs))/2, cLat = (Math.min(...lats)+Math.max(...lats))/2
+                let pa = 0; for (let i=0;i<coords.length-1;i++) pa+=(coords[i][0]-coords[i+1][0])*(coords[i][1]+coords[i+1][1])
+                const aM2 = Math.abs(pa/2)*111319*111319*Math.cos(cLat*Math.PI/180)
+                const finalArea = siteArea && siteArea > 0 ? siteArea : Math.round(aM2)
+                const bbox = { minLng:Math.min(...lngs), minLat:Math.min(...lats), maxLng:Math.max(...lngs), maxLat:Math.max(...lats) }
+                console.log(`[vworld] BBOX fallback 성공: ${coords.length}점, pnu=${props.pnu}`)
+                return NextResponse.json({ success: true, parcel: { pnu: props.pnu||null, address, area: finalArea, coordinates: coords, centroid: [cLng,cLat] as [number,number], bbox, isDemo: false, source: 'vworld-bbox' } })
+              }
+            }
+          }
+        }
+      } catch(e) { console.warn('[vworld] BBOX fallback 실패:', String(e)) }
+
+      // 1-2: Overpass API로 실제 건물 footprint 조회 (OpenStreetMap)
+      // 면적 기반 동적 반경: √(면적) * 1.5 (최소 150m, 최대 500m)
+      try {
+        const dynamicRadius = siteArea ? Math.min(500, Math.max(150, Math.round(Math.sqrt(siteArea) * 1.5))) : 150
+        const overpassQuery = `[out:json][timeout:15];(way(around:${dynamicRadius},${entY},${entX})[building];relation(around:${dynamicRadius},${entY},${entX})[building];way(around:${dynamicRadius},${entY},${entX})[landuse];);out geom;`
+        console.log(`[vworld] Overpass 쿼리: radius=${dynamicRadius}m (면적=${siteArea}㎡), lat=${entY}, lng=${entX}`)
         const overpassRes = await fetch('https://overpass-api.de/api/interpreter', {
           method: 'POST',
           body: overpassQuery,
@@ -191,7 +234,7 @@ export async function POST(req: NextRequest) {
         console.log(`[vworld] Overpass elements: ${elements.length}`)
         
         if (elements.length > 0) {
-          // Shoelace 공식으로 실제 면적 계산해서 가장 큰 건물 선택
+          // 좌표 근접도 + 면적 유사도로 최적 건물 선택
           function calcPolyArea(geom: {lat:number,lon:number}[]) {
             let area = 0
             for (let i = 0; i < geom.length - 1; i++) {
@@ -200,15 +243,24 @@ export async function POST(req: NextRequest) {
             const cLat = geom.reduce((s,g)=>s+g.lat,0)/geom.length
             return Math.abs(area/2) * 111319 * 111319 * Math.cos(cLat * Math.PI / 180)
           }
+          function calcCentroidDist(geom: {lat:number,lon:number}[]) {
+            const cLng = geom.reduce((s,g)=>s+g.lon,0)/geom.length
+            const cLat = geom.reduce((s,g)=>s+g.lat,0)/geom.length
+            return Math.sqrt(Math.pow((cLng - entX) * 111319, 2) + Math.pow((cLat - entY) * 111319, 2))
+          }
           
           let bestGeom: {lat:number,lon:number}[] = []
-          let bestArea = 0
+          let bestScore = -Infinity
           for (const el of elements) {
             const geom: {lat:number,lon:number}[] = el.geometry || []
             if (geom.length >= 4) {
               const elArea = calcPolyArea(geom)
-              console.log(`[vworld] Overpass element id=${el.id} area=${Math.round(elArea)}㎡`)
-              if (elArea > bestArea) { bestArea = elArea; bestGeom = geom }
+              const dist = calcCentroidDist(geom)
+              // 점수: 면적이 siteArea에 가까울수록 + 좌표가 가까울수록 높음
+              const areaDiff = siteArea ? Math.abs(elArea - siteArea) / Math.max(siteArea, 1) : 0
+              const score = elArea - dist * 10 - areaDiff * 1000
+              console.log(`[vworld] Overpass id=${el.id} area=${Math.round(elArea)}㎡ dist=${Math.round(dist)}m score=${Math.round(score)}`)
+              if (score > bestScore) { bestScore = score; bestGeom = geom }
             }
           }
           if (bestGeom.length >= 3) {
