@@ -126,10 +126,25 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
         <g transform="translate(50, 20)">
           <rect x="0" y="0" width="200" height="160" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
           
-          {/* Lobby */}
-          <rect x="70" y="5" width="60" height="50" fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" />
-          <text x="100" y="30" fontSize="9" textAnchor="middle" fill="#06b6d4" fontWeight="500">로비</text>
-          <text x="100" y="42" fontSize="7" textAnchor="middle" fill="#06b6d4">Lobby</text>
+          {/* Dynamic ground floor: units + lobby */}
+          {(() => {
+            const gfUnits = groundFloorUnits
+            const totalSlots = gfUnits + 1
+            const slotW = Math.floor(190 / totalSlots)
+            const lobbyIdx = Math.floor(gfUnits / 2)
+            const elements: React.ReactElement[] = []
+            let unitIdx = 0
+            for (let i = 0; i < totalSlots; i++) {
+              const x = 5 + i * slotW; const w = slotW - 3
+              if (i === lobbyIdx) {
+                elements.push(<g key="lobby"><rect x={x} y={5} width={w} height={50} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" /><text x={x+w/2} y={30} fontSize="9" textAnchor="middle" fill="#06b6d4" fontWeight="500">로비</text></g>)
+              } else {
+                elements.push(<g key={`gf${unitIdx}`}><rect x={x} y={5} width={w} height={50} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={x+w/2} y={30} fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text></g>)
+                unitIdx++
+              }
+            }
+            return elements
+          })()}
           
           {/* Elevator/Stairs Core */}
           <rect x="75" y="60" width="50" height="35" fill="#64748b40" stroke="#64748b" strokeWidth="2" />
@@ -138,24 +153,9 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
           <rect x="102" y="65" width="18" height="25" fill="#334155" />
           <text x="111" y="80" fontSize="6" textAnchor="middle" fill="white">계단</text>
           
-          {/* Commercial/Amenity Spaces */}
-          <rect x="5" y="5" width="60" height="50" fill={gfFill} stroke={gfColor} strokeWidth="1" />
-          <text x="35" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
-          <text x="35" y="40" fontSize="7" textAnchor="middle" fill={gfColor}>65㎡</text>
-          
-          <rect x="135" y="5" width="60" height="50" fill={gfFill} stroke={gfColor} strokeWidth="1" />
-          <text x="165" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
-          <text x="165" y="40" fontSize="7" textAnchor="middle" fill={gfColor}>65㎡</text>
-          
           {/* Parking Area */}
           <rect x="5" y="100" width="190" height="55" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="4" />
-          <text x="100" y="125" fontSize="10" textAnchor="middle" fill="#64748b">주차장</text>
-          <text x="100" y="140" fontSize="8" textAnchor="middle" fill="#64748b">10대 / 기계식</text>
-          
-          {/* Parking Spots */}
-          {[0, 1, 2, 3, 4].map((i) => (
-            <rect key={i} x={15 + i * 36} y={105} width="30" height="18" fill="#64748b30" stroke="#64748b" strokeWidth="0.5" />
-          ))}
+          <text x="100" y="130" fontSize="10" textAnchor="middle" fill="#64748b">주차장</text>
           
           {/* Entrance */}
           <rect x="90" y="155" width="20" height="8" fill="#2dd4bf" />
@@ -220,35 +220,41 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
         <g transform="translate(30, 15)">
           <rect x="0" y="0" width="240" height="170" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
           
-          {/* Main Entrance/Lobby */}
-          <rect x="95" y="5" width="50" height="35" fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" />
-          <text x="120" y="25" fontSize="8" textAnchor="middle" fill="#06b6d4">로비</text>
-          
-          {/* Commercial Spaces */}
-          <rect x="5" y="5" width="85" height="35" fill={gfFill} stroke={gfColor} strokeWidth="1" />
-          <text x="47" y="25" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel} A</text>
-          
-          <rect x="150" y="5" width="85" height="35" fill={gfFill} stroke={gfColor} strokeWidth="1" />
-          <text x="192" y="25" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel} B</text>
+          {/* Dynamic top row: units + lobby */}
+          {(() => {
+            const topUnits = Math.min(groundFloorUnits, 4)
+            const totalSlots = topUnits + 1
+            const slotW = Math.floor(230 / totalSlots)
+            const lobbyIdx = Math.floor(topUnits / 2)
+            const elements: React.ReactElement[] = []
+            let unitIdx = 0
+            for (let i = 0; i < totalSlots; i++) {
+              const x = 5 + i * slotW; const w = slotW - 3
+              if (i === lobbyIdx) {
+                elements.push(<g key="lobby"><rect x={x} y={5} width={w} height={35} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" /><text x={x+w/2} y={25} fontSize="8" textAnchor="middle" fill="#06b6d4">로비</text></g>)
+              } else {
+                elements.push(<g key={`gf${unitIdx}`}><rect x={x} y={5} width={w} height={35} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={x+w/2} y={25} fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel} {String.fromCharCode(65 + unitIdx)}</text></g>)
+                unitIdx++
+              }
+            }
+            return elements
+          })()}
           
           {/* Central Courtyard */}
           <rect x="50" y="50" width="140" height="70" fill="#22c55e15" stroke="#22c55e" strokeWidth="1" />
           <text x="120" y="85" fontSize="10" textAnchor="middle" fill="#22c55e">중정 / 조경</text>
           <text x="120" y="100" fontSize="7" textAnchor="middle" fill="#22c55e">커뮤니티 공간</text>
           
-          {/* Side Corridors with Parking */}
+          {/* Side Corridors */}
           <rect x="5" y="45" width="40" height="80" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="3" />
           <text x="25" y="88" fontSize="6" textAnchor="middle" fill="#64748b" transform="rotate(-90, 25, 85)">주차/복도</text>
-          
           <rect x="195" y="45" width="40" height="80" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="3" />
           
-          {/* Lower Units - Ground Floor Amenities */}
+          {/* Lower Amenities */}
           <rect x="5" y="130" width="70" height="35" fill="#8b5cf620" stroke="#8b5cf6" strokeWidth="1" />
           <text x="40" y="150" fontSize="8" textAnchor="middle" fill="#8b5cf6">관리실</text>
-          
           <rect x="85" y="130" width="70" height="35" fill="#64748b20" stroke="#64748b" strokeWidth="1" />
           <text x="120" y="150" fontSize="8" textAnchor="middle" fill="#64748b">기계실</text>
-          
           <rect x="165" y="130" width="70" height="35" fill="#ec489920" stroke="#ec4899" strokeWidth="1" />
           <text x="200" y="150" fontSize="8" textAnchor="middle" fill="#ec4899">커뮤니티</text>
           
@@ -312,16 +318,19 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
           {/* Horizontal wing */}
           <rect x="0" y="140" width="250" height="50" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
           
-          {/* Lobby in corner */}
-          <rect x="5" y="100" width="70" height="35" fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" />
-          <text x="40" y="120" fontSize="9" textAnchor="middle" fill="#06b6d4">로비</text>
-          
-          {/* Commercial in vertical wing */}
-          <rect x="5" y="5" width="70" height="40" fill={gfFill} stroke={gfColor} strokeWidth="1" />
-          <text x="40" y="28" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
-          
-          <rect x="5" y="50" width="70" height="45" fill={gfFill} stroke={gfColor} strokeWidth="1" />
-          <text x="40" y="75" fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
+          {/* Dynamic vertical wing: units + lobby */}
+          {(() => {
+            const vUnits = Math.min(groundFloorUnits, 3)
+            const totalSlots = vUnits + 1 // units + lobby
+            const slotH = Math.floor(130 / totalSlots)
+            const elements: React.ReactElement[] = []
+            for (let i = 0; i < vUnits; i++) {
+              elements.push(<g key={`gf${i}`}><rect x={5} y={5 + i * slotH} width={70} height={slotH - 5} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={40} y={5 + i * slotH + (slotH - 5) / 2 + 3} fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text></g>)
+            }
+            // Lobby at bottom of vertical wing
+            elements.push(<g key="lobby"><rect x={5} y={5 + vUnits * slotH} width={70} height={slotH - 5} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" /><text x={40} y={5 + vUnits * slotH + (slotH - 5) / 2 + 3} fontSize="9" textAnchor="middle" fill="#06b6d4">로비</text></g>)
+            return elements
+          })()}
           
           {/* Parking in horizontal wing */}
           <rect x="85" y="145" width="160" height="40" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="4" />
