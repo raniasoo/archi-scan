@@ -788,6 +788,20 @@ export default function ArchiScanPage() {
       const coords = { entX: data.entX, entY: data.entY, sigunguCd: data.sigunguCd, bjdongCd: data.bjdongCd, bun: data.bun, ji: data.ji, bdMgtSn: data.bdMgtSn }
       applyZoneData(vwZone, roadAddr, vwDistrict, coords)
       console.log('[v0] site-input-form에서 전달된 zone:', vwZone)
+      // siteArea가 아직 비어있으면 Vworld에서 면적 자동 조회
+      if (data.entX && data.entY) {
+        fetch('/api/vworld', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: roadAddr || address, siteArea: 0, entX: data.entX, entY: data.entY, bdMgtSn: data.bdMgtSn }),
+        }).then(r => r.json()).then(vd => {
+          if (vd.parcel?.area && vd.parcel.area > 0) {
+            setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0)
+              ? String(Math.round(vd.parcel.area)) : prev)
+            console.log('[v0] zone-path Vworld 대지면적:', vd.parcel.area)
+          }
+        }).catch(() => {})
+      }
       return
     }
     // MOLIT 조회 결과 처리 — 기존 vworld-zone 데이터 보존
