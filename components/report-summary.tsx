@@ -2,6 +2,7 @@
 // @version STABLE-v194 | @checkpoint release-candidate | 2026-04-10
 
 import { useRef, useState, useEffect } from "react"
+import { generateSitePlanSvg, generateSectionSvg } from "@/lib/report-drawings"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -498,7 +499,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     <table>
       <tr><th style="width: 120px;">용도지역</th><td>${effectiveZoneLabel}</td></tr>
       <tr><th>접도 폭</th><td>${effectiveRoadWidth}m (${regulation.roadCondition === 'corner' ? '코너 대지 2면 접도' : regulation.roadCondition + ' 이상'})</td></tr>
-      <tr><th>이격거리</th><td>전면 ${regulation.setbackFront}m / 측면 ${regulation.setbackSide}m / 후면 ${regulation.setbackRear}m</td></tr>
+      <tr><th>이격거리</th><td>전면 ${regulation?.setbackFront ?? 1}m / 측면 ${regulation?.setbackSide ?? 0.5}m / 후면 ${regulation?.setbackRear ?? 1}m</td></tr>
       <tr><th>사선제한</th><td>${regulation.setbackType === 'none' ? '없음' : regulation.setbackType === 'north' ? '북측사선제한' : regulation.setbackType === 'road' ? '도로사선제한' : '복합적용'} ${regulation.setbackType !== 'none' ? '(' + regulation.setbackAngle + '°)' : ''}</td></tr>
     </table>
     ` : `
@@ -600,8 +601,36 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     </div>
   </div>
 
+  <!-- 설계 도면 섹션 -->
+  <div class="section" style="page-break-before: always;">
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '6' : '5'}</span> 설계 도면</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div>
+        <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">배치도</p>
+        ${generateSitePlanSvg({
+          siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+          units: layout.units, parking: layout.parking, type: layout.type,
+          roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
+          setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+          layoutName: layout.name, gfa,
+        })}
+      </div>
+      <div>
+        <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">단면도</p>
+        ${generateSectionSvg({
+          siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+          units: layout.units, parking: layout.parking, type: layout.type,
+          roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
+          setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+          layoutName: layout.name, gfa,
+        })}
+      </div>
+    </div>
+    <p style="font-size: 7pt; color: #94a3b8; margin-top: 6px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
+  </div>
+
   <div class="section" style="page-break-before: auto;">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '6' : '5'}</span> 사업성 검토</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '7' : '6'}</span> 사업성 검토</div>
     <table style="page-break-before: avoid; break-before: avoid;">
       <caption style="font-weight: 500; text-align: left; padding: 0 0 8px 0; color: #374151;">사업비 추정</caption>
       <thead>
@@ -639,7 +668,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="section">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '7' : '6'}</span> AI 분석</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '8' : '7'}</span> AI 분석</div>
     <div class="ai-score-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">
       <div class="ai-score-card" style="background:#f8fafc;padding:12px 8px;border-radius:6px;border:1px solid #e2e8f0;text-align:center;">
         <div class="stat-label">법규 적합성</div>
@@ -717,7 +746,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="section">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '8' : '7'}</span> 리스크 및 고려사항</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '9' : '8'}</span> 리스크 및 고려사항</div>
     <div class="risk-grid">
       <div class="risk-box">
         <div class="risk-title">토지 관련</div>
@@ -755,7 +784,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="section">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '9' : '8'}</span> 결론 및 제안</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '10' : '9'}</span> 결론 및 제안</div>
     
     <div class="stat-box" style="margin-bottom: 20px;">
       <p style="line-height: 1.8;">
@@ -1424,9 +1453,122 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       })
       y += 10
 
-      // === SECTION 6/5: 사업성 검토 ===
+      // === SECTION 6/5: 설계 도면 (배치도 + 단면도 간략) ===
+      checkPageBreak(100, true)
+      drawSectionTitle(sectionNum(6), "설계 도면")
+
+      // 배치도 (좌측)
+      const drawW = (contentWidth - 8) / 2
+      const drawH = 70
+      const drawX1 = margin
+      const drawX2 = margin + drawW + 8
+      const drawY = y
+
+      // -- 배치도 --
+      setKoreanFont("bold")
+      pdf.setFontSize(7)
+      pdf.setTextColor(30, 41, 59)
+      pdf.text("배치도", drawX1, drawY)
+
+      const siteRW = Math.sqrt(siteArea * 1.25)
+      const siteRH = siteArea / siteRW
+      const dScale = Math.min((drawW - 10) / siteRW, (drawH - 18) / siteRH)
+      const dsW = siteRW * dScale, dsH = siteRH * dScale
+      const dsX = drawX1 + (drawW - dsW) / 2, dsY = drawY + 5
+
+      // 대지 경계
+      pdf.setDrawColor(59, 130, 246)
+      pdf.setLineWidth(0.4)
+      pdf.rect(dsX, dsY, dsW, dsH)
+
+      // 이격거리선
+      const dfs = (regulation?.setbackFront ?? 1) * dScale
+      const dss = (regulation?.setbackSide ?? 0.5) * dScale
+      const drs = (regulation?.setbackRear ?? 1) * dScale
+      pdf.setDrawColor(34, 211, 238)
+      pdf.setLineWidth(0.2)
+      pdf.setLineDashPattern([1, 1], 0)
+      pdf.rect(dsX + dss, dsY + drs, dsW - dss * 2, dsH - dfs - drs)
+      pdf.setLineDashPattern([], 0)
+
+      // 건물
+      const dbW = (dsW - dss * 2) * 0.75
+      const dbH = (dsH - dfs - drs) * 0.6
+      const dbX = dsX + dss + ((dsW - dss * 2) - dbW) / 2
+      const dbY = dsY + drs + ((dsH - dfs - drs) - dbH) / 2
+      pdf.setFillColor(219, 234, 254)
+      pdf.setDrawColor(37, 99, 235)
+      pdf.setLineWidth(0.3)
+      pdf.rect(dbX, dbY, dbW, dbH, "FD")
+
+      // 건물 라벨
+      setKoreanFont("bold")
+      pdf.setFontSize(6)
+      pdf.setTextColor(30, 64, 175)
+      pdf.text(layout.name, dbX + dbW / 2, dbY + dbH / 2 + 1, { align: "center" })
+
+      // 치수
+      pdf.setFontSize(5)
+      pdf.setTextColor(239, 68, 68)
+      pdf.text(`${siteRW.toFixed(1)}m`, dsX + dsW / 2, dsY - 1, { align: "center" })
+      pdf.text(`${siteRH.toFixed(1)}m`, dsX - 2, dsY + dsH / 2, { angle: 90 })
+
+      // -- 단면도 --
+      setKoreanFont("bold")
+      pdf.setFontSize(7)
+      pdf.setTextColor(30, 41, 59)
+      pdf.text("단면도", drawX2, drawY)
+
+      const secY = drawY + 5
+      const glY = secY + drawH * 0.5
+      const totalBldH = 4.5 + (layout.floors - 1) * 3.3
+      const secVScale = Math.min((drawH * 0.45) / totalBldH, 1.2)
+      const secBldW = drawW * 0.5
+      const secBldX = drawX2 + (drawW - secBldW) / 2
+
+      // 지반선
+      pdf.setDrawColor(120, 113, 108)
+      pdf.setLineWidth(0.5)
+      pdf.line(drawX2 + 5, glY, drawX2 + drawW - 5, glY)
+      pdf.setFontSize(4)
+      pdf.setTextColor(120, 113, 108)
+      pdf.text("GL", drawX2 + 3, glY + 1.5)
+
+      // 건물
+      const bldTopY = glY - totalBldH * secVScale
+      pdf.setFillColor(219, 234, 254)
+      pdf.setDrawColor(37, 99, 235)
+      pdf.setLineWidth(0.3)
+      pdf.rect(secBldX, bldTopY, secBldW, totalBldH * secVScale, "FD")
+
+      // 1층 강조
+      const gfPxH = 4.5 * secVScale
+      pdf.setFillColor(254, 243, 199)
+      pdf.setDrawColor(245, 158, 11)
+      pdf.setLineWidth(0.2)
+      pdf.rect(secBldX, glY - gfPxH, secBldW, gfPxH, "FD")
+      pdf.setFontSize(4.5)
+      pdf.setTextColor(146, 64, 14)
+      pdf.text("로비", secBldX + secBldW / 2, glY - gfPxH / 2 + 1, { align: "center" })
+
+      // 높이 치수
+      pdf.setFontSize(4.5)
+      pdf.setTextColor(239, 68, 68)
+      pdf.text(`${totalBldH.toFixed(1)}m`, secBldX - 3, bldTopY + (totalBldH * secVScale) / 2, { angle: 90 })
+
+      // 층수
+      pdf.setTextColor(100, 116, 139)
+      pdf.text(`${layout.floors}F`, secBldX + secBldW + 2, bldTopY + 3)
+
+      y = drawY + drawH + 4
+      pdf.setFontSize(5)
+      pdf.setTextColor(148, 163, 184)
+      pdf.text("※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.", margin, y)
+      y += 8
+
+      // === SECTION 7/6: 사업성 검토 ===
       checkPageBreak(85, true)
-      drawSectionTitle(sectionNum(6), "사업성 검토")
+      drawSectionTitle(sectionNum(7), "사업성 검토")
       
       setKoreanFont("bold")
       pdf.setFontSize(8)
@@ -1611,7 +1753,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       const hasAIAnalysis = layout.scores || layout.reasoning || layout.recommendation
       if (hasAIAnalysis) {
         checkPageBreak(80, true)
-        drawSectionTitle(sectionNum(7), "AI 분석")
+        drawSectionTitle(sectionNum(8), "AI 분석")
         
         // Scores grid - compact
         if (layout.scores) {
@@ -1747,7 +1889,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
 
       // === SECTION 7/6 or 8/7: 리스크 및 고려사항 ===
       checkPageBreak(55, true)
-      drawSectionTitle(hasAIAnalysis ? sectionNum(8) : sectionNum(7), "리스크 및 고려사항")
+      drawSectionTitle(hasAIAnalysis ? sectionNum(9) : sectionNum(8), "리스크 및 고려사항")
       
       const risks = [
         { title: "토지 관련", items: ["감정평가에 따른 매입가 변동", "소유권 및 권리관계 확인", "토지���래허가구역 해당 여부"] },
@@ -1777,7 +1919,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
 
       // === SECTION 8/7 or 9/8: 결론 및 제안 ===
       checkPageBreak(55, true)
-      drawSectionTitle(hasAIAnalysis ? sectionNum(9) : sectionNum(8), "결론 및 제안")
+      drawSectionTitle(hasAIAnalysis ? sectionNum(10) : sectionNum(9), "결론 및 제안")
       
       // Summary box - compact
       pdf.setFillColor(248, 250, 252)
