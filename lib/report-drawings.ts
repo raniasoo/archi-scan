@@ -6,37 +6,82 @@
 /** SVG → Canvas → PNG base64 <img> 태그 (async, 모든 뷰어 호환) */
 export async function svgToPngImgTag(svgStr: string, width = 720, height = 600): Promise<string> {
   try {
+    if (typeof document === 'undefined') throw new Error('No document')
+    
     const canvas = document.createElement('canvas')
     canvas.width = width
     canvas.height = height
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Canvas not supported')
     
-    // 배경 채우기
+    // 배경 채우기 (SVG 투명 영역 방지)
     ctx.fillStyle = '#f8fafc'
     ctx.fillRect(0, 0, width, height)
     
+    // SVG에 명시적 width/height 주입 (Canvas 렌더링 필수)
+    // style에서 width:100%와 max-width만 제거, background 등 보존
+    let fixedSvg = svgStr
+    
+    // 1) width/height 속성 주입
+    fixedSvg = fixedSvg.replace(/<svg\s/, `<svg width="${width}" height="${height}" `)
+    
+    // 2) style에서 상대 크기만 제거 (background, border 등은 유지)
+    fixedSvg = fixedSvg.replace(/style="([^"]*)"/g, (match, styleContent) => {
+      const cleaned = styleContent
+        .split(';')
+        .filter((s: string) => !s.includes('width') && !s.includes('max-width'))
+        .join(';')
+        .replace(/^;+|;+$/g, '')
+      return cleaned ? `style="${cleaned}"` : ''
+    })
+    
+    // viewBox가 없으면 추가
+    if (!fixedSvg.includes('viewBox')) {
+      fixedSvg = fixedSvg.replace('<svg ', `<svg viewBox="0 0 360 300" `)
+    }
+    
+    // xmlns 확인
+    if (!fixedSvg.includes('xmlns')) {
+      fixedSvg = fixedSvg.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
+    }
+    
     const img = new Image()
-    const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
+    img.width = width
+    img.height = height
+    const svgBlob = new Blob([fixedSvg], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(svgBlob)
     
     const dataUrl: string = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        URL.revokeObjectURL(url)
+        reject(new Error('SVG render timeout'))
+      }, 5000)
+      
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, width, height)
-        URL.revokeObjectURL(url)
-        resolve(canvas.toDataURL('image/png'))
+        clearTimeout(timeout)
+        try {
+          ctx.drawImage(img, 0, 0, width, height)
+          URL.revokeObjectURL(url)
+          resolve(canvas.toDataURL('image/png'))
+        } catch (e) {
+          URL.revokeObjectURL(url)
+          reject(e)
+        }
       }
-      img.onerror = () => {
+      img.onerror = (e) => {
+        clearTimeout(timeout)
         URL.revokeObjectURL(url)
-        reject(new Error('SVG render failed'))
+        reject(new Error('SVG render failed: ' + String(e)))
       }
       img.src = url
     })
     
+    console.log('[v0] SVG→PNG 변환 성공, dataUrl 길이:', dataUrl.length)
     return `<img src="${dataUrl}" style="width:100%;max-width:360px;border-radius:6px;border:1px solid #e2e8f0;" />`
-  } catch {
-    // Fallback: base64 SVG (서버 환경 또는 Canvas 미지원 시)
-    return svgToImgTag(svgStr)
+  } catch (err) {
+    console.warn('[v0] SVG→PNG 변환 실패:', err)
+    // Fallback: 도면 없이 텍스트 플레이스홀더
+    return `<div style="width:100%;max-width:360px;height:200px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;">도면은 앱에서 확인 가능합니다</div>`
   }
 }
 
