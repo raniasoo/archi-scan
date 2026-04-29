@@ -161,29 +161,26 @@ function formatKRW(value: number): string {
  * IMPORTANT: Keep in sync with lib/project-analysis-state.ts calculateFeasibility
  */
 function calculateFinancials(siteArea: number, layout: LayoutOption, landPricePerM2?: number) {
-  const gfa = Math.round(siteArea * (layout.coverage / 100) * layout.floors)
-  
-  // 비용 단가 — 실제 공시지가가 있으면 사용, 없으면 기본값
-  const landPricePerSqm = landPricePerM2 || 5000000
-  const constructionCostPerSqm = 2500000 // 공사비 ㎡당 250만원
-  const salesPricePerSqm = 8000000 // 분양가 ㎡당 800만원
-  
-  // 층수 프리미엄
-  const heightPremium = layout.floors > 15 ? 1.15 : layout.floors > 10 ? 1.08 : 1.0
-  
-  // 계산
-  const landCost = siteArea * landPricePerSqm
-  const constructionCost = gfa * constructionCostPerSqm * heightPremium
-  const softCost = constructionCost * 0.15 // 간접비 15%
-  const parkingCost = layout.parking * 30000000 // 주차장 비용
-  const totalInvestment = landCost + constructionCost + softCost + parkingCost
-  
-  const projectedRevenue = gfa * salesPricePerSqm // 연면적 기반 수익
-  const profit = projectedRevenue - totalInvestment
-  const roi = totalInvestment > 0 ? (profit / totalInvestment * 100) : 0
-  const breakEvenRate = projectedRevenue > 0 ? (totalInvestment / projectedRevenue * 100) : 0
-  
-  return { gfa, landCost, constructionCost, softCost, totalInvestment, projectedRevenue, profit, roi, breakEvenRate }
+  // calculateFeasibility와 동일한 공식 사용 (ROI 불일치 방지)
+  const result = calculateFeasibility({
+    siteArea,
+    grossFloorArea: layout.gfa || Math.round(siteArea * (layout.coverage / 100) * layout.floors),
+    unitCount: layout.units,
+    floorCount: layout.floors,
+    parkingCount: layout.parking,
+    landPricePerM2: landPricePerM2 || 5000000,
+  })
+  return {
+    gfa: result.grossFloorArea || layout.gfa,
+    landCost: result.landCost,
+    constructionCost: result.constructionCost,
+    softCost: result.softCost,
+    totalInvestment: result.totalCost,
+    projectedRevenue: result.totalRevenue,
+    profit: result.profit,
+    roi: result.roi,
+    breakEvenRate: result.totalCost > 0 ? (result.totalCost / result.totalRevenue * 100) : 0,
+  }
 }
 
 function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): LayoutOption {

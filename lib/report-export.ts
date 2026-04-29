@@ -6,6 +6,7 @@
 import * as XLSX from 'xlsx';
 import { type ReportDataV250, buildReportDataV250 } from './report-data-v250';
 import { generateSitePlanSvg, generateSectionSvg } from './report-drawings';
+import { calculateFeasibility } from './project-analysis-state';
 
 // ============================================
 // 파일명 생성 헬퍼
@@ -127,18 +128,30 @@ function convertToV250(data: ExportData): ReportDataV250 {
       far: data.layout.far || 0,
       gfa: data.layout.gfa || 0,
     },
-    allLayouts: data.allLayouts?.map((l, i) => ({
-      id: l.name === data.layout.name ? 'selected' : `layout-${i}`,
-      name: l.name || `배치안 ${i + 1}`,
-      floors: l.floors || 0,
-      units: l.units || 0,
-      parking: l.parking || 0,
-      buildingCoverage: l.buildingCoverage || 0,
-      far: 0,
-      gfa: 0,
-      roi: l.roi,
-      isRecommended: l.isRecommended || l.name === data.layout.name,
-    })),
+    allLayouts: data.allLayouts?.map((l, i) => {
+      const layoutFeas = calculateFeasibility({
+        siteArea: data.siteArea,
+        grossFloorArea: l.gfa || Math.round(data.siteArea * (l.buildingCoverage / 100) * l.floors),
+        unitCount: l.units,
+        floorCount: l.floors,
+        parkingCount: l.parking,
+        landPricePerM2: data.feasibility?.landCost && data.siteArea
+          ? (data.feasibility.landCost * 1e8) / data.siteArea  // 억원→원 역산
+          : 5000000,
+      });
+      return {
+        id: l.name === data.layout.name ? 'selected' : `layout-${i}`,
+        name: l.name || `배치안 ${i + 1}`,
+        floors: l.floors || 0,
+        units: l.units || 0,
+        parking: l.parking || 0,
+        buildingCoverage: l.buildingCoverage || 0,
+        far: 0,
+        gfa: l.gfa || 0,
+        roi: l.name === data.layout.name ? (data.feasibility?.roi || 0) : layoutFeas.roi,
+        isRecommended: l.isRecommended || l.name === data.layout.name,
+      };
+    }),
     feasibilityResult: {
       landCost: data.feasibility?.landCost || 0,
       constructionCost: data.feasibility?.constructionCost || 0,
