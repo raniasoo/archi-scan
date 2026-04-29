@@ -5,7 +5,7 @@
 
 import * as XLSX from 'xlsx';
 import { type ReportDataV250, buildReportDataV250 } from './report-data-v250';
-import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg } from './report-drawings';
+import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg } from './report-drawings';
 import { calculateFeasibility } from './project-analysis-state';
 
 // ============================================
@@ -1610,6 +1610,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     const sectionSvg = generateSectionSvg(drawingInput);
     const isometricSvg = generateIsometricSvg(drawingInput);
     const elevationSvg = generateElevationSvg(drawingInput);
+    const perspectiveSvg = generatePerspectiveSvg(drawingInput);
     const drawingSection = `
     <!-- 6. 설계 도면 -->
     <section class="pdf-section" style="page-break-before: always;">
@@ -1633,6 +1634,10 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
           <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">입면도</p>
           ${elevationSvg}
         </div>
+      </div>
+      <div style="margin-top: 12px;">
+        <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">투시도</p>
+        ${perspectiveSvg}
       </div>
       <p style="font-size: 9px; color: #94a3b8; margin-top: 8px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
     </section>
@@ -1693,6 +1698,7 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       const sectionSvg = generateSectionSvg(drawingInput);
       const isometricSvg = generateIsometricSvg(drawingInput);
       const elevationSvg = generateElevationSvg(drawingInput);
+      const perspectiveSvg = generatePerspectiveSvg(drawingInput);
       const drawingSection = `
     <!-- 6. 설계 도면 -->
     <section class="pdf-section" style="page-break-before: always;">
@@ -1716,6 +1722,10 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
           <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">입면도</p>
           ${elevationSvg}
         </div>
+      </div>
+      <div style="margin-top: 12px;">
+        <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">투시도</p>
+        ${perspectiveSvg}
       </div>
       <p style="font-size: 9px; color: #94a3b8; margin-top: 8px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
     </section>

@@ -510,19 +510,29 @@ function checkCompliance(
     checks.push({ item: '접도 폭', status: 'ok', detail: `접도 ${input.roadWidth}m — 적합` })
   }
 
-  // 2. 건폐율 적합성
-  checks.push({
-    item: '건폐율 한도',
-    status: 'ok',
-    detail: `법정 최대 건폐율 ${legal.maxCoverageRatio}% 이하 적용 (${legal.source})`
-  })
+  // 2. 건폐율 적합성 — 실제 건축면적 비교
+  {
+    const actualCoverage = Math.round(envelope.maxBuildingFootprint / input.siteArea * 100 * 10) / 10
+    const isOver = actualCoverage > legal.maxCoverageRatio
+    checks.push({
+      item: '건폐율 한도',
+      status: isOver ? 'violation' : 'ok',
+      detail: `계획 건폐율 ${actualCoverage}% / 법정 최대 ${legal.maxCoverageRatio}% (${legal.source})`,
+      recommendation: isOver ? `건축면적을 ${Math.floor(input.siteArea * legal.maxCoverageRatio / 100)}㎡ 이하로 축소 필요` : undefined,
+    })
+  }
 
-  // 3. 용적률 적합성
-  checks.push({
-    item: '용적률 한도',
-    status: 'ok',
-    detail: `법정 최대 용적률 ${legal.maxFloorAreaRatio}% 이하 적용`
-  })
+  // 3. 용적률 적합성 — 실제 연면적 비교
+  {
+    const actualFAR = Math.round(envelope.maxGrossFloorArea / input.siteArea * 100 * 10) / 10
+    const isOver = actualFAR > legal.maxFloorAreaRatio
+    checks.push({
+      item: '용적률 한도',
+      status: isOver ? 'violation' : 'ok',
+      detail: `계획 용적률 ${actualFAR}% / 법정 최대 ${legal.maxFloorAreaRatio}%`,
+      recommendation: isOver ? `연면적을 ${Math.floor(input.siteArea * legal.maxFloorAreaRatio / 100).toLocaleString()}㎡ 이하로 조정 필요` : undefined,
+    })
+  }
 
   // 4. 주차 확보 가능성 — 자동으로 지하주차 계획으로 해결
   {

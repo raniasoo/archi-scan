@@ -291,3 +291,76 @@ export function generateElevationSvg(d: DrawingInput): string {
   <text x="${W/2}" y="${H-8}" text-anchor="middle" font-size="5" fill="#94a3b8">정면도 · ${d.layoutName} · 지상 ${d.floors}층</text>
 </svg>`
 }
+
+// ===== 투시도 SVG =====
+export function generatePerspectiveSvg(d: DrawingInput): string {
+  const W = 360, H = 300
+  const vpX = W/2, vpY = 60, groundY = 260
+  const floorH = 3.3, totalH = d.floors * floorH
+  const buildingArea = d.siteArea * (d.buildingCoverage / 100)
+  const sideM = Math.sqrt(buildingArea)
+  const bw = Math.min(sideM * 1.6, 140)
+  const bd = Math.min(sideM * 0.6, 50)
+  const bx = vpX - bw / 2, bDepth = 15
+
+  function toP(x3d: number, y3d: number, z3d: number): [number, number] {
+    const depth = Math.max(0.3, 1 - y3d * 0.008)
+    const px = vpX + (x3d - vpX) * depth * 0.45
+    const pz = groundY - z3d * depth * 0.45
+    const py = pz + (vpY - pz) * (1 - depth) * 0.3
+    return [vpX + (px - vpX), py]
+  }
+  function pFace(cs: [number,number,number][]): string {
+    return cs.map(c => { const [a,b] = toP(c[0],c[1],c[2]); return `${a.toFixed(1)},${b.toFixed(1)}` }).join(' ')
+  }
+
+  // 창문 생성
+  const cols = Math.max(2, Math.min(7, Math.floor(bw / 14)))
+  const winW = bw * 0.65 / cols, winGap = bw * 0.35 / (cols + 1)
+  let windows = ''
+  for (let f = 0; f < d.floors; f++) {
+    const z = f * floorH + floorH * 0.15, wh = floorH * (f === 0 ? 0.75 : 0.6)
+    for (let c = 0; c < cols; c++) {
+      const wx = bx + winGap + c * (winW + winGap)
+      windows += `<polygon points="${pFace([[wx,bDepth,z],[wx+winW,bDepth,z],[wx+winW,bDepth,z+wh],[wx,bDepth,z+wh]])}" fill="#7dd3fc" opacity="0.35" stroke="#38bdf8" stroke-width="0.3"/>`
+    }
+  }
+
+  // 입구
+  const doorW = bw * 0.1, doorH = floorH * 0.85, doorX = bx + bw/2 - doorW/2
+  const door = `<polygon points="${pFace([[doorX,bDepth,0],[doorX+doorW,bDepth,0],[doorX+doorW,bDepth,doorH],[doorX,bDepth,doorH]])}" fill="#fbbf24" opacity="0.5" stroke="#f59e0b" stroke-width="0.5"/>`
+
+  // 높이 치수
+  const [dbx,dby] = toP(bx-12,bDepth,0), [dtx,dty] = toP(bx-12,bDepth,totalH)
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">
+  <defs><linearGradient id="skyp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0c1222"/><stop offset="60%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient></defs>
+  <rect width="${W}" height="${H}" fill="url(#skyp)"/>
+  <!-- 지면 -->
+  <polygon points="${pFace([[0,-15,0],[W,-15,0],[W,80,0],[0,80,0]])}" fill="#1a2332"/>
+  <!-- 도로 -->
+  <polygon points="${pFace([[20,-12,0],[W-20,-12,0],[W-20,-4,0],[20,-4,0]])}" fill="#374151" stroke="#4b5563" stroke-width="0.5"/>
+  <!-- 대지 경계 -->
+  <polygon points="${pFace([[bx-8,bDepth-4,0],[bx+bw+8,bDepth-4,0],[bx+bw+8,bDepth+bd+8,0],[bx-8,bDepth+bd+8,0]])}" fill="#3b82f610" stroke="#3b82f6" stroke-width="0.6" stroke-dasharray="3 2" opacity="0.5"/>
+  <!-- 그림자 -->
+  <polygon points="${pFace([[bx-2,bDepth-2,0],[bx+bw+4,bDepth-2,0],[bx+bw+6,bDepth+bd+3,0],[bx-1,bDepth+bd+3,0]])}" fill="#000" opacity="0.12"/>
+  <!-- 건물 전면 -->
+  <polygon points="${pFace([[bx,bDepth,0],[bx+bw,bDepth,0],[bx+bw,bDepth,totalH],[bx,bDepth,totalH]])}" fill="#334155" stroke="#475569" stroke-width="0.8"/>
+  <!-- 건물 우측 -->
+  <polygon points="${pFace([[bx+bw,bDepth,0],[bx+bw,bDepth+bd,0],[bx+bw,bDepth+bd,totalH],[bx+bw,bDepth,totalH]])}" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+  <!-- 건물 옥상 -->
+  <polygon points="${pFace([[bx,bDepth,totalH],[bx+bw,bDepth,totalH],[bx+bw,bDepth+bd,totalH],[bx,bDepth+bd,totalH]])}" fill="#475569" stroke="#64748b" stroke-width="0.5"/>
+  ${windows}
+  ${door}
+  <!-- 높이 치수 -->
+  <line x1="${dbx}" y1="${dby}" x2="${dtx}" y2="${dty}" stroke="#f59e0b" stroke-width="0.6"/>
+  <text x="${dtx-6}" y="${(dby+dty)/2}" text-anchor="end" font-size="5.5" fill="#f59e0b" font-weight="bold">${totalH.toFixed(1)}m</text>
+  <text x="${dtx-6}" y="${(dby+dty)/2+7}" text-anchor="end" font-size="4.5" fill="#94a3b8">${d.floors}F</text>
+  <!-- 방위 -->
+  <circle cx="${W-25}" cy="22" r="10" fill="#0f172a" stroke="#334155" stroke-width="0.8"/>
+  <text x="${W-25}" y="18" text-anchor="middle" font-size="7" fill="#60a5fa" font-weight="bold">N</text>
+  <!-- 정보 -->
+  <text x="${vpX}" y="18" text-anchor="middle" font-size="6" fill="#e2e8f0" font-weight="bold">${d.layoutName || '투시도'}</text>
+  <text x="${vpX}" y="${H-8}" text-anchor="middle" font-size="5" fill="#94a3b8">투시도 · ${d.layoutName} · ${d.floors}F · ${d.units}세대</text>
+</svg>`
+}

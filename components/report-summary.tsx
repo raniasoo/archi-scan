@@ -2,11 +2,12 @@
 // @version STABLE-v194 | @checkpoint release-candidate | 2026-04-10
 
 import { useRef, useState, useEffect } from "react"
-import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg } from "@/lib/report-drawings"
+import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg } from "@/lib/report-drawings"
 import { SitePlan } from "@/components/site-plan"
 import { SectionView } from "@/components/section-view"
 import { IsometricView } from "@/components/isometric-view"
 import { ElevationView } from "@/components/elevation-view"
+import { PerspectiveView } from "@/components/perspective-view"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
@@ -671,6 +672,16 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           layoutName: layout.name, gfa,
         })}
       </div>
+    </div>
+    <div style="margin-top: 10px;">
+      <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">투시도</p>
+      ${generatePerspectiveSvg({
+        siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+        units: layout.units, parking: layout.parking, type: layout.type,
+        roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
+        setbacks: { front: 1, side: 0.5, rear: 1 },
+        layoutName: layout.name, gfa,
+      })}
     </div>
     <p style="font-size: 7pt; color: #94a3b8; margin-top: 6px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
   </div>
@@ -2650,6 +2661,18 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   roadWidth={regulation?.roadWidth ?? 8}
                 />
               </div>
+            </div>
+            <div className="mt-3">
+              <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>투시도</p>
+              <PerspectiveView
+                siteArea={siteArea}
+                buildingCoverage={layout.coverage}
+                floors={layout.floors}
+                units={layout.units}
+                type={layout.type}
+                layoutName={layout.name}
+                zoneType={regulation?.zoneType}
+              />
             </div>
             <p className="text-[10px] text-center" style={{ color: '#94a3b8' }}>※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
           </div>

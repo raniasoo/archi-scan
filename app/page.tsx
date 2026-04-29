@@ -54,6 +54,7 @@ import { SitePlan } from "@/components/site-plan"
 import { IsometricView } from "@/components/isometric-view"
 import { SectionView } from "@/components/section-view"
 import { ElevationView } from "@/components/elevation-view"
+import { PerspectiveView } from "@/components/perspective-view"
 import { ScenarioSlider } from "@/components/scenario-slider"
 import { BrandingEditor } from "@/components/branding-editor"
 import { type BrandingConfig, loadBrandingConfig } from "@/lib/branding-config"
@@ -434,7 +435,7 @@ export default function ArchiScanPage() {
   const [selectedFloor, setSelectedFloor] = useState(1)
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
-  const [drawingTab, setDrawingTab] = useState<"floor" | "site" | "iso" | "section" | "elevation">("site")
+  const [drawingTab, setDrawingTab] = useState<"floor" | "site" | "iso" | "section" | "elevation" | "perspective">("site")
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
@@ -2448,6 +2449,7 @@ export default function ArchiScanPage() {
                   {([
                     { id: "site" as const, label: "배치도" },
                     { id: "iso" as const, label: "아이소메트릭" },
+                    { id: "perspective" as const, label: "투시도" },
                     { id: "section" as const, label: "단면도" },
                     { id: "elevation" as const, label: "입면도" },
                   ]).map(tab => (
@@ -2482,6 +2484,17 @@ export default function ArchiScanPage() {
                   )}
                   {drawingTab === "iso" && (
                     <IsometricView
+                      siteArea={siteAreaNum}
+                      buildingCoverage={selectedLayoutData.coverage}
+                      floors={selectedLayoutData.floors}
+                      units={selectedLayoutData.units}
+                      type={selectedLayoutData.type}
+                      layoutName={selectedLayoutData.name}
+                      zoneType={molitSupplementData.zoneCode || regulation.zoneType}
+                    />
+                  )}
+                  {drawingTab === "perspective" && (
+                    <PerspectiveView
                       siteArea={siteAreaNum}
                       buildingCoverage={selectedLayoutData.coverage}
                       floors={selectedLayoutData.floors}
