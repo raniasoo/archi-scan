@@ -71,6 +71,33 @@ export interface SetbackRequirement {
   northSetbackApplied: boolean  // 북측사선 적용 여부
   roadSetbackApplied: boolean   // 도로사선 적용 여부
   basis: string
+  // 일조권 사선제한 상세 (건축법 제61조)
+  sunlight?: SunlightSetbackAnalysis
+}
+
+/** 일조권 사선제한 분석 결과 (건축법 제61조) */
+export interface SunlightSetbackAnalysis {
+  // 정북방향 높이제한
+  northMaxHeight9m: number       // 9m 이하 구간: 인접대지경계선에서 최소 이격 (m)
+  northMaxHeightFormula: string  // 9m 초과 구간: 높이의 1/2 이상 이격 공식
+  effectiveNorthSetback: number  // 실제 북측 이격거리 (m)
+  maxHeightAtNorth: number       // 북측 경계에서의 최대 건물 높이 (m)
+  
+  // 도로사선 제한
+  roadSlopeRatio: number         // 사선 비율 (1:1.5 등)
+  maxHeightByRoad: number        // 도로사선에 의한 최대 높이 (m)
+  
+  // 상층부 영향
+  fullFloorMaxHeight: number     // 전체 바닥면적 가능 최대 높이 (m)
+  reducedFloorStart: number      // 면적 축소 시작 층
+  upperFloorReduction: number    // 상층부 면적 감소율 (%)
+  effectiveMaxFloors: number     // 사선 반영 실효 최대 층수
+  effectiveGFA: number           // 사선 반영 실효 연면적 (㎡)
+  
+  // 판정
+  isConstraining: boolean        // 사선제한이 높이/볼륨에 실질적 영향 있는지
+  summary: string                // 요약 설명
+  legalBasis: string             // 법적 근거
 }
 
 export interface ComplianceCheck {
@@ -262,7 +289,141 @@ function calcSetback(input: RegulationInput): SetbackRequirement {
     ? '지구단위계획 기준 이격거리 적용'
     : '건축법 제58조 대지 안의 공지 기준'
 
-  return { front, side, rear, roadSetback, northSetbackApplied, roadSetbackApplied, basis }
+  // 일조권 사선제한 상세 계산 (건축법 제61조)
+  let sunlight: SunlightSetbackAnalysis | undefined
+  if (northSetbackApplied) {
+    sunlight = calcSunlightSetback(input, { front, side, rear, roadSetback, northSetbackApplied, roadSetbackApplied, basis })
+  }
+
+  return { front, side, rear, roadSetback, northSetbackApplied, roadSetbackApplied, basis, sunlight }
+}
+
+// ============================================================
+// 일조권 사선제한 상세 계산 (건축법 제61조)
+// ============================================================
+function calcSunlightSetback(
+  input: RegulationInput,
+  basicSetback: { front: number; side: number; rear: number; roadSetback: number; northSetbackApplied: boolean; roadSetbackApplied: boolean; basis: string }
+): SunlightSetbackAnalysis {
+  const { siteArea, heightLimit, roadWidth, zoneCode } = input
+  const floorHeight = 3.3
+  
+  // 대지 형상 근사 (정방형)
+  const siteDepth = Math.sqrt(siteArea)
+  
+  // 북측 인접대지 경계선까지의 이격거리
+  // 후면 이격 + 사선제한 여유
+  const rearSetback = basicSetback.rear
+  const effectiveNorthSetback = Math.max(rearSetback, 1.5) // 최소 1.5m (건축법 제61조)
+  
+  // ── 정북방향 높이제한 (건축법 제61조 제1항) ──
+  // 1) 높이 9m 이하 부분: 인접대지경계선에서 1.5m 이상 이격
+  // 2) 높이 9m 초과 부분: 인접대지경계선에서 해당 높이의 1/2 이상 이격
+  const northMaxHeight9m = 1.5 // 9m 이하 구간 최소 이격
+  
+  // 건물 북측면이 경계선에서 effectiveNorthSetback만큼 떨어져 있을 때
+  // 9m 초과 부분에서 추가로 높이의 1/2 이격 필요
+  // 즉, 경계선에서 d미터 떨어진 곳의 최대 높이 = min(9 + (d - 1.5) × 2, heightLimit)
+  // 단, d >= 1.5m 일 때
+  const maxHeightAtNorth = effectiveNorthSetback >= 1.5
+    ? Math.min(9 + (effectiveNorthSetback - 1.5) * 2, heightLimit)
+    : 9 // 이격 부족하면 9m가 최대
+    
+  // ── 도로사선 제한 (건축법 제61조 제2항) ──
+  // 전면도로 반대편 경계선에서 1:1.5 비율 (전용주거·일반주거)
+  const isExclusiveOrGeneral = zoneCode.includes('exclusive') || 
+    zoneCode === 'residential-1' || zoneCode === 'residential-2'
+  const roadSlopeRatio = isExclusiveOrGeneral ? 1.5 : 0 // 0이면 미적용
+  
+  // 도로사선 최대 높이: 도로 반대편 경계 → 건물까지의 수평거리 × 1.5
+  // 수평거리 = 도로폭 + 전면이격 + 건축선후퇴
+  const horizontalToRoad = roadWidth + basicSetback.front + basicSetback.roadSetback
+  const maxHeightByRoad = roadSlopeRatio > 0 
+    ? Math.min(horizontalToRoad * roadSlopeRatio, heightLimit)
+    : heightLimit // 미적용
+    
+  // ── 실효 최대 높이 (모든 제한 중 최소값) ──
+  const effectiveMaxHeight = Math.min(heightLimit, maxHeightAtNorth, maxHeightByRoad)
+  const effectiveMaxFloors = Math.floor(effectiveMaxHeight / floorHeight)
+  
+  // ── 상층부 면적 감소 계산 ──
+  // 사선 초과 시작 높이 (9m = 약 2.7층 → 3층부터 사선 영향)
+  const fullFloorMaxHeight = Math.min(9, effectiveMaxHeight) // 사선 없이 전체 바닥면적 가능 높이
+  const fullFloors = Math.floor(fullFloorMaxHeight / floorHeight) // 전체 면적 가능 층수
+  const reducedFloorStart = fullFloors + 1 // 면적 축소 시작 층
+  
+  // 상층부(사선 영향 구간)의 평균 면적 감소율
+  // 사선에 의해 북측 면이 후퇴 → 건물 깊이 감소
+  // 대략적 계산: 사선 초과 높이 / 전체 높이 비율로 감소
+  const totalFloors = Math.floor(effectiveMaxHeight / floorHeight)
+  let upperFloorReduction = 0
+  if (totalFloors > fullFloors && totalFloors > 0) {
+    // 상층부 각 층의 북측 후퇴량 계산
+    let totalReduction = 0
+    let affectedFloors = 0
+    for (let f = fullFloors + 1; f <= totalFloors; f++) {
+      const floorTopHeight = f * floorHeight
+      if (floorTopHeight > 9) {
+        // 이 층의 상단 높이에서 필요한 북측 이격 = 높이/2
+        const requiredSetback = floorTopHeight / 2
+        // 실제 이격과의 차이 → 건물 깊이 감소
+        const additionalSetback = Math.max(0, requiredSetback - effectiveNorthSetback)
+        // 깊이 감소율 = 추가이격 / 대지깊이
+        const depthReduction = Math.min(additionalSetback / siteDepth, 0.5) // 최대 50%
+        totalReduction += depthReduction
+        affectedFloors++
+      }
+    }
+    upperFloorReduction = affectedFloors > 0 ? Math.round((totalReduction / affectedFloors) * 100) : 0
+  }
+  
+  // ── 실효 연면적 ──
+  const maxBuildingArea = siteArea * 0.5 // 건폐율 50% 근사
+  let effectiveGFA = 0
+  for (let f = 1; f <= totalFloors; f++) {
+    const floorTopHeight = f * floorHeight
+    if (floorTopHeight <= 9) {
+      effectiveGFA += maxBuildingArea // 전체 면적
+    } else {
+      const requiredSetback = floorTopHeight / 2
+      const additionalSetback = Math.max(0, requiredSetback - effectiveNorthSetback)
+      const depthReduction = Math.min(additionalSetback / siteDepth, 0.5)
+      effectiveGFA += maxBuildingArea * (1 - depthReduction)
+    }
+  }
+  effectiveGFA = Math.round(effectiveGFA)
+  
+  // ── 판정 ──
+  const isConstraining = effectiveMaxHeight < heightLimit || upperFloorReduction > 5
+  
+  // 요약
+  const parts: string[] = []
+  if (basicSetback.northSetbackApplied) {
+    parts.push(`정북사선: 경계 ${effectiveNorthSetback}m 이격 → 최대 ${Math.round(maxHeightAtNorth)}m`)
+  }
+  if (roadSlopeRatio > 0) {
+    parts.push(`도로사선 1:${roadSlopeRatio} → 최대 ${Math.round(maxHeightByRoad)}m`)
+  }
+  if (upperFloorReduction > 0) {
+    parts.push(`${reducedFloorStart}층부터 면적 약 ${upperFloorReduction}% 감소`)
+  }
+  
+  return {
+    northMaxHeight9m,
+    northMaxHeightFormula: '높이 9m 초과 시: 인접대지경계선에서 높이의 1/2 이상 이격',
+    effectiveNorthSetback,
+    maxHeightAtNorth: Math.round(maxHeightAtNorth * 10) / 10,
+    roadSlopeRatio,
+    maxHeightByRoad: Math.round(maxHeightByRoad * 10) / 10,
+    fullFloorMaxHeight,
+    reducedFloorStart,
+    upperFloorReduction,
+    effectiveMaxFloors,
+    effectiveGFA,
+    isConstraining,
+    summary: parts.join(' | ') || '사선제한 영향 없음',
+    legalBasis: '건축법 제61조 (일조 등의 확보를 위한 건축물의 높이 제한)',
+  }
 }
 
 // ============================================================

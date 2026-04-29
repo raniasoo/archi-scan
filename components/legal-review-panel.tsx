@@ -248,7 +248,82 @@ export function LegalReviewPanel({
         </CardContent>
       </Card>
 
-      {/* 5. 사업성 요약 */}
+      {/* 5. 일조권 사선제한 분석 (건축법 제61조) */}
+      {result.setback.sunlight && (
+        <Card className={`border-${result.setback.sunlight.isConstraining ? 'amber-500/30 bg-amber-500/5' : 'emerald-500/20 bg-emerald-500/5'}`}>
+          <CardHeader className="p-3 pb-2">
+            <CardTitle className="text-xs flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={result.setback.sunlight.isConstraining ? "text-amber-500" : "text-emerald-500"}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+              일조권 사선제한 분석
+              <Badge className={`${result.setback.sunlight.isConstraining ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'} text-[10px]`}>
+                {result.setback.sunlight.isConstraining ? '높이 제약' : '영향 미미'}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 space-y-3">
+            {/* 정북사선 */}
+            {result.setback.northSetbackApplied && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-medium text-amber-400">정북방향 높이제한 (건축법 제61조 ①)</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg bg-background/50 p-2 text-center">
+                    <p className="text-[9px] text-muted-foreground">9m 이하 이격</p>
+                    <p className="font-bold text-sm">{result.setback.sunlight.effectiveNorthSetback}m</p>
+                    <p className="text-[9px] text-muted-foreground">경계선에서</p>
+                  </div>
+                  <div className="rounded-lg bg-background/50 p-2 text-center">
+                    <p className="text-[9px] text-muted-foreground">북측 최대높이</p>
+                    <p className="font-bold text-sm">{result.setback.sunlight.maxHeightAtNorth}m</p>
+                    <p className="text-[9px] text-muted-foreground">
+                      ≒ {result.setback.sunlight.effectiveMaxFloors}층
+                    </p>
+                  </div>
+                </div>
+                <p className="text-[9px] text-muted-foreground italic">
+                  ※ 9m 초과 시 높이의 1/2 이상 인접대지 경계에서 이격 필요
+                </p>
+              </div>
+            )}
+
+            {/* 도로사선 */}
+            {result.setback.sunlight.roadSlopeRatio > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-medium text-blue-400">도로사선 제한 (건축법 제61조 ②)</p>
+                <div className="rounded-lg bg-background/50 p-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground">사선 비율</span>
+                    <span className="text-xs font-semibold">1 : {result.setback.sunlight.roadSlopeRatio}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-[10px] text-muted-foreground">도로사선 최대높이</span>
+                    <span className="text-xs font-semibold">{result.setback.sunlight.maxHeightByRoad}m</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 상층부 영향 */}
+            {result.setback.sunlight.upperFloorReduction > 0 && (
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-2">
+                <p className="text-[10px] text-amber-400 font-medium">상층부 면적 감소</p>
+                <p className="text-xs mt-0.5">
+                  {result.setback.sunlight.reducedFloorStart}층부터 북측 면적 약 {result.setback.sunlight.upperFloorReduction}% 감소
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  사선 반영 실효 연면적: {result.setback.sunlight.effectiveGFA.toLocaleString()}㎡
+                </p>
+              </div>
+            )}
+
+            {/* 법적 근거 */}
+            <p className="text-[9px] text-muted-foreground">
+              {result.setback.sunlight.legalBasis}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 6. 사업성 요약 */}
       <Card className="border-emerald-500/20 bg-emerald-500/5">
         <CardHeader className="p-3 pb-2">
           <CardTitle className="text-xs flex items-center gap-2">
