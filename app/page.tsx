@@ -84,7 +84,8 @@ import {
   Code,
   Table,
   Printer,
-  Clock
+  Clock,
+  TrendingUp
 } from "lucide-react"
 import { useSubscription } from "@/components/subscription-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
@@ -471,6 +472,14 @@ export default function ArchiScanPage() {
 
   // 공시지가 state
   // 건물관리번호 - 지적도 PNU 조회용 독립 state (molitSupplementData chain 우회)
+  
+  // 실거래가 시세 데이터
+  const [marketPrice, setMarketPrice] = useState<{
+    avgPricePerM2: number
+    suggestedSalePrice: number
+    transactionCount: number
+    loaded: boolean
+  }>({ avgPricePerM2: 0, suggestedSalePrice: 0, transactionCount: 0, loaded: false })
   const [siteBdMgtSn, setSiteBdMgtSn] = useState<string>('')
 
   const [landPriceData, setLandPriceData] = useState<{
@@ -908,6 +917,25 @@ export default function ArchiScanPage() {
         setSiteArea(prev => (!prev || prev === '' || Number(prev) === 0) ? String(Math.round(result.siteArea!)) : prev)
       }
     }).catch(() => setLandPriceData(prev => ({ ...prev, loading: false })))
+    
+    // 실거래가 자동 조회
+    const sgCd = data.sigunguCd || (data as any).sigunguCode
+    if (sgCd && sgCd.length >= 5) {
+      fetch(`/api/real-price?sigunguCd=${sgCd}`)
+        .then(r => r.json())
+        .then(result => {
+          if (result.avgPricePerM2 > 0) {
+            setMarketPrice({
+              avgPricePerM2: result.avgPricePerM2,
+              suggestedSalePrice: result.suggestedSalePrice,
+              transactionCount: result.transactionCount,
+              loaded: true,
+            })
+            console.log(`[market-price] 실거래가: ${(result.avgPricePerM2/10000).toFixed(0)}만원/㎡, 추천 분양가: ${(result.suggestedSalePrice/10000).toFixed(0)}만원/㎡ (${result.transactionCount}건)`)
+          }
+        })
+        .catch(() => {})
+    }
   }
 
 
@@ -2517,6 +2545,30 @@ export default function ArchiScanPage() {
               feasibilityResult={feasibilityResult}
               landPricePerM2={landPriceData.pricePerM2 || 5000000}
             />
+
+            {/* 주변 실거래가 정보 */}
+            {marketPrice.loaded && marketPrice.avgPricePerM2 > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-semibold text-foreground">주변 실거래가 시세</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">{marketPrice.transactionCount}건</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-secondary/30 p-3">
+                    <p className="text-[10px] text-muted-foreground">평균 거래가</p>
+                    <p className="text-sm font-bold text-foreground">{(marketPrice.avgPricePerM2 / 10000).toFixed(0)}만원<span className="text-[10px] font-normal text-muted-foreground">/㎡</span></p>
+                    <p className="text-[10px] text-muted-foreground">{(marketPrice.avgPricePerM2 * 3.3058 / 10000).toFixed(0)}만원/평</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/30 p-3">
+                    <p className="text-[10px] text-muted-foreground">추천 분양가</p>
+                    <p className="text-sm font-bold text-emerald-400">{(marketPrice.suggestedSalePrice / 10000).toFixed(0)}만원<span className="text-[10px] font-normal text-muted-foreground">/㎡</span></p>
+                    <p className="text-[10px] text-muted-foreground">실거래가 +15% 프리미엄</p>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">※ 최근 3개월 인근 아파트 실거래가 기준. 실제 분양가와 다를 수 있습니다.</p>
+              </div>
+            )}
 
             {/* 사업성 시나리오 슬라이더 */}
             <ScenarioSlider
