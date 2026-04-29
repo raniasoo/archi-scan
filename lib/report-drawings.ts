@@ -322,7 +322,7 @@ export function generatePerspectiveSvg(d: DrawingInput): string {
     const z = f * floorH + floorH * 0.15, wh = floorH * (f === 0 ? 0.75 : 0.6)
     for (let c = 0; c < cols; c++) {
       const wx = bx + winGap + c * (winW + winGap)
-      windows += `<polygon points="${pFace([[wx,bDepth,z],[wx+winW,bDepth,z],[wx+winW,bDepth,z+wh],[wx,bDepth,z+wh]])}" fill="#7dd3fc" opacity="0.35" stroke="#38bdf8" stroke-width="0.3"/>`
+      windows += `<polygon points="${pFace([[wx,bDepth,z],[wx+winW,bDepth,z],[wx+winW,bDepth,z+wh],[wx,bDepth,z+wh]])}" fill="#93c5fd" opacity="0.7" stroke="#2563eb" stroke-width="0.3"/>`
     }
   }
 
@@ -333,34 +333,34 @@ export function generatePerspectiveSvg(d: DrawingInput): string {
   // 높이 치수
   const [dbx,dby] = toP(bx-12,bDepth,0), [dtx,dty] = toP(bx-12,bDepth,totalH)
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">
-  <defs><linearGradient id="skyp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0c1222"/><stop offset="60%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient></defs>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;max-width:360px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
+  <defs><linearGradient id="skyp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e0f2fe"/><stop offset="60%" stop-color="#f0f9ff"/><stop offset="100%" stop-color="#f8fafc"/></linearGradient></defs>
   <rect width="${W}" height="${H}" fill="url(#skyp)"/>
   <!-- 지면 -->
-  <polygon points="${pFace([[0,-15,0],[W,-15,0],[W,80,0],[0,80,0]])}" fill="#1a2332"/>
+  <polygon points="${pFace([[0,-15,0],[W,-15,0],[W,80,0],[0,80,0]])}" fill="#e2e8f0"/>
   <!-- 도로 -->
-  <polygon points="${pFace([[20,-12,0],[W-20,-12,0],[W-20,-4,0],[20,-4,0]])}" fill="#374151" stroke="#4b5563" stroke-width="0.5"/>
+  <polygon points="${pFace([[20,-12,0],[W-20,-12,0],[W-20,-4,0],[20,-4,0]])}" fill="#94a3b8" stroke="#64748b" stroke-width="0.5"/>
   <!-- 대지 경계 -->
-  <polygon points="${pFace([[bx-8,bDepth-4,0],[bx+bw+8,bDepth-4,0],[bx+bw+8,bDepth+bd+8,0],[bx-8,bDepth+bd+8,0]])}" fill="#3b82f610" stroke="#3b82f6" stroke-width="0.6" stroke-dasharray="3 2" opacity="0.5"/>
+  <polygon points="${pFace([[bx-8,bDepth-4,0],[bx+bw+8,bDepth-4,0],[bx+bw+8,bDepth+bd+8,0],[bx-8,bDepth+bd+8,0]])}" fill="#dbeafe" stroke="#3b82f6" stroke-width="0.6" stroke-dasharray="3 2" opacity="0.5"/>
   <!-- 그림자 -->
-  <polygon points="${pFace([[bx-2,bDepth-2,0],[bx+bw+4,bDepth-2,0],[bx+bw+6,bDepth+bd+3,0],[bx-1,bDepth+bd+3,0]])}" fill="#000" opacity="0.12"/>
+  <polygon points="${pFace([[bx-2,bDepth-2,0],[bx+bw+4,bDepth-2,0],[bx+bw+6,bDepth+bd+3,0],[bx-1,bDepth+bd+3,0]])}" fill="#94a3b8" opacity="0.15"/>
   <!-- 건물 전면 -->
-  <polygon points="${pFace([[bx,bDepth,0],[bx+bw,bDepth,0],[bx+bw,bDepth,totalH],[bx,bDepth,totalH]])}" fill="#334155" stroke="#475569" stroke-width="0.8"/>
+  <polygon points="${pFace([[bx,bDepth,0],[bx+bw,bDepth,0],[bx+bw,bDepth,totalH],[bx,bDepth,totalH]])}" fill="#cbd5e1" stroke="#64748b" stroke-width="0.8"/>
   <!-- 건물 우측 -->
-  <polygon points="${pFace([[bx+bw,bDepth,0],[bx+bw,bDepth+bd,0],[bx+bw,bDepth+bd,totalH],[bx+bw,bDepth,totalH]])}" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+  <polygon points="${pFace([[bx+bw,bDepth,0],[bx+bw,bDepth+bd,0],[bx+bw,bDepth+bd,totalH],[bx+bw,bDepth,totalH]])}" fill="#94a3b8" stroke="#64748b" stroke-width="0.5"/>
   <!-- 건물 옥상 -->
-  <polygon points="${pFace([[bx,bDepth,totalH],[bx+bw,bDepth,totalH],[bx+bw,bDepth+bd,totalH],[bx,bDepth+bd,totalH]])}" fill="#475569" stroke="#64748b" stroke-width="0.5"/>
+  <polygon points="${pFace([[bx,bDepth,totalH],[bx+bw,bDepth,totalH],[bx+bw,bDepth+bd,totalH],[bx,bDepth+bd,totalH]])}" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.5"/>
   ${windows}
   ${door}
   <!-- 높이 치수 -->
-  <line x1="${dbx}" y1="${dby}" x2="${dtx}" y2="${dty}" stroke="#f59e0b" stroke-width="0.6"/>
-  <text x="${dtx-6}" y="${(dby+dty)/2}" text-anchor="end" font-size="5.5" fill="#f59e0b" font-weight="bold">${totalH.toFixed(1)}m</text>
-  <text x="${dtx-6}" y="${(dby+dty)/2+7}" text-anchor="end" font-size="4.5" fill="#94a3b8">${d.floors}F</text>
+  <line x1="${dbx}" y1="${dby}" x2="${dtx}" y2="${dty}" stroke="#ea580c" stroke-width="0.6"/>
+  <text x="${dtx-6}" y="${(dby+dty)/2}" text-anchor="end" font-size="5.5" fill="#ea580c" font-weight="bold">${totalH.toFixed(1)}m</text>
+  <text x="${dtx-6}" y="${(dby+dty)/2+7}" text-anchor="end" font-size="4.5" fill="#64748b">${d.floors}F</text>
   <!-- 방위 -->
-  <circle cx="${W-25}" cy="22" r="10" fill="#0f172a" stroke="#334155" stroke-width="0.8"/>
-  <text x="${W-25}" y="18" text-anchor="middle" font-size="7" fill="#60a5fa" font-weight="bold">N</text>
+  <circle cx="${W-25}" cy="22" r="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="0.8"/>
+  <text x="${W-25}" y="18" text-anchor="middle" font-size="7" fill="#2563eb" font-weight="bold">N</text>
   <!-- 정보 -->
-  <text x="${vpX}" y="18" text-anchor="middle" font-size="6" fill="#e2e8f0" font-weight="bold">${d.layoutName || '투시도'}</text>
-  <text x="${vpX}" y="${H-8}" text-anchor="middle" font-size="5" fill="#94a3b8">투시도 · ${d.layoutName} · ${d.floors}F · ${d.units}세대</text>
+  <text x="${vpX}" y="18" text-anchor="middle" font-size="6" fill="#1e293b" font-weight="bold">${d.layoutName || '투시도'}</text>
+  <text x="${vpX}" y="${H-8}" text-anchor="middle" font-size="5" fill="#64748b">투시도 · ${d.layoutName} · ${d.floors}F · ${d.units}세대</text>
 </svg>`
 }

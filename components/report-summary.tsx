@@ -298,8 +298,18 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   // DO NOT redefine here - this was causing data inconsistency between screens
   
   const layouts = allLayouts || [layout]
-  // 최종 선택안(layout)을 추천안으로 표시 - 사용자가 선택한 배치안 기준
-  const recommendedLayout = layout
+  // AI 추천: ROI 기준 최적 배치안 자동 선택 (사용자 선택과 무관)
+  let recommendedLayout = layout
+  if (layouts.length > 1) {
+    let bestROI = -Infinity
+    for (const l of layouts) {
+      const f = calculateFinancials(siteArea, l, landPricePerM2, externalFeasibility?.salesPricePerM2, externalFeasibility?.constructionCostPerM2)
+      if (f.roi > bestROI) {
+        bestROI = f.roi
+        recommendedLayout = l
+      }
+    }
+  }
   const isRecommended = layout.id === recommendedLayout.id
 
   // 섹션 번호 동적 계산 (단일 배치안: 4번 비교 섹션 없어서 5~9→4~8)
