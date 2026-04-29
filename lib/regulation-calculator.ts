@@ -311,10 +311,15 @@ function calcSunlightSetback(
   // 대지 형상 근사 (정방형)
   const siteDepth = Math.sqrt(siteArea)
   
-  // 북측 인접대지 경계선까지의 이격거리
-  // 후면 이격 + 사선제한 여유
-  const rearSetback = basicSetback.rear
-  const effectiveNorthSetback = Math.max(rearSetback, 1.5) // 최소 1.5m (건축법 제61조)
+  // 건물 배치 기반 실제 북측 이격거리 계산
+  // 건폐율 50% 기준 건물 깊이 → 남쪽 배치 시 북측 여유 계산
+  const coverageRatio = zoneCode.includes('commercial') ? 0.7 : 0.5
+  const buildingFootprint = siteArea * coverageRatio
+  const buildingDepth = Math.sqrt(buildingFootprint) // 정방형 근사
+  // 남쪽 배치: 전면이격 후 남쪽 붙이면 북측 여유 = 대지깊이 - 전면이격 - 건물깊이
+  const maxNorthSetback = Math.max(siteDepth - basicSetback.front - buildingDepth, basicSetback.rear)
+  // 최적 배치: 법정 후면 이격(1.5m)과 남쪽 배치 중 큰 값
+  const effectiveNorthSetback = Math.max(maxNorthSetback, basicSetback.rear, 1.5)
   
   // ── 정북방향 높이제한 (건축법 제61조 제1항) ──
   // 1) 높이 9m 이하 부분: 인접대지경계선에서 1.5m 이상 이격
