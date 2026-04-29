@@ -2,9 +2,11 @@
 // @version STABLE-v194 | @checkpoint release-candidate | 2026-04-10
 
 import { useRef, useState, useEffect } from "react"
-import { generateSitePlanSvg, generateSectionSvg } from "@/lib/report-drawings"
+import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg } from "@/lib/report-drawings"
 import { SitePlan } from "@/components/site-plan"
 import { SectionView } from "@/components/section-view"
+import { IsometricView } from "@/components/isometric-view"
+import { ElevationView } from "@/components/elevation-view"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
@@ -642,6 +644,26 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           units: layout.units, parking: layout.parking, type: layout.type,
           roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
           setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+          layoutName: layout.name, gfa,
+        })}
+      </div>
+      <div>
+        <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">아이소메트릭</p>
+        ${generateIsometricSvg({
+          siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+          units: layout.units, parking: layout.parking, type: layout.type,
+          roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
+          setbacks: { front: 1, side: 0.5, rear: 1 },
+          layoutName: layout.name, gfa,
+        })}
+      </div>
+      <div>
+        <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">입면도</p>
+        ${generateElevationSvg({
+          siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+          units: layout.units, parking: layout.parking, type: layout.type,
+          roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
+          setbacks: { front: 1, side: 0.5, rear: 1 },
           layoutName: layout.name, gfa,
         })}
       </div>
@@ -2596,6 +2618,32 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   layoutName={layout.name}
                   roadWidth={regulation?.roadWidth ?? 8}
                   hasDistrictPlan={false}
+                />
+              </div>
+              <div>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>아이소메트릭</p>
+                <IsometricView
+                  siteArea={siteArea}
+                  buildingCoverage={layout.coverage}
+                  floors={layout.floors}
+                  units={layout.units}
+                  parking={layout.parking}
+                  type={layout.type}
+                  layoutName={layout.name}
+                />
+              </div>
+              <div>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>입면도</p>
+                <ElevationView
+                  siteArea={siteArea}
+                  buildingCoverage={layout.coverage}
+                  floors={layout.floors}
+                  units={layout.units}
+                  parking={layout.parking}
+                  heightLimit={regulation?.maxHeight ?? 30}
+                  type={layout.type}
+                  layoutName={layout.name}
+                  roadWidth={regulation?.roadWidth ?? 8}
                 />
               </div>
             </div>

@@ -137,3 +137,157 @@ export function generateSectionSvg(d: DrawingInput): string {
   <text x="${W / 2}" y="${H - 5}" text-anchor="middle" font-size="5" fill="#94a3b8">지상 ${d.floors}층 (${totalH.toFixed(1)}m) + 지하 ${bsmtFloors}층 · 주차 ${d.parking}대</text>
 </svg>`
 }
+
+// ===== 아이소메트릭 뷰 SVG =====
+export function generateIsometricSvg(d: DrawingInput): string {
+  const W = 360, H = 300
+  const cx = W / 2, baseY = H * 0.75
+  const floorH = 3.3, gfH = 4.5
+  const totalH = gfH + (d.floors - 1) * floorH
+  const bldW = Math.sqrt(d.siteArea * d.buildingCoverage / 100) * 0.6
+  const bldD = bldW * 0.7
+  const vScale = Math.min((baseY - 30) / totalH, 3.5)
+  const hScale = Math.min((W - 80) / (bldW + bldD), 2.5)
+  const isoW = bldW * hScale, isoD = bldD * hScale * 0.5
+  const bldH = totalH * vScale
+
+  const isoX = (x: number, y: number) => cx + (x - y) * 0.5
+  const isoY = (x: number, y: number, z: number) => baseY + (x + y) * 0.3 - z
+
+  // 건물 꼭짓점
+  const bx0 = -isoW/2, bx1 = isoW/2, by0 = -isoD/2, by1 = isoD/2
+
+  // 3면 (좌, 우, 상단)
+  const leftFace = `${isoX(bx0,by0)},${isoY(bx0,by0,0)} ${isoX(bx0,by1)},${isoY(bx0,by1,0)} ${isoX(bx0,by1)},${isoY(bx0,by1,bldH)} ${isoX(bx0,by0)},${isoY(bx0,by0,bldH)}`
+  const rightFace = `${isoX(bx0,by1)},${isoY(bx0,by1,0)} ${isoX(bx1,by1)},${isoY(bx1,by1,0)} ${isoX(bx1,by1)},${isoY(bx1,by1,bldH)} ${isoX(bx0,by1)},${isoY(bx0,by1,bldH)}`
+  const topFace = `${isoX(bx0,by0)},${isoY(bx0,by0,bldH)} ${isoX(bx1,by0)},${isoY(bx1,by0,bldH)} ${isoX(bx1,by1)},${isoY(bx1,by1,bldH)} ${isoX(bx0,by1)},${isoY(bx0,by1,bldH)}`
+
+  // 1층 높이
+  const gfhPx = gfH * vScale
+
+  // 창문 패턴
+  let windows = ''
+  const winRows = Math.min(d.floors - 1, 12)
+  for (let i = 0; i < winRows; i++) {
+    const z = gfhPx + i * floorH * vScale + floorH * vScale * 0.3
+    const wh = floorH * vScale * 0.4
+    for (let j = 0; j < 4; j++) {
+      const t = 0.15 + j * 0.2
+      // 좌측면 창문
+      const wx = bx0, wy = by0 + (by1-by0) * t
+      windows += `<rect x="${isoX(wx,wy)-2}" y="${isoY(wx,wy,z+wh)-1}" width="4" height="${wh*0.6}" fill="#bae6fd" opacity="0.5" rx="0.5"/>`
+      // 우측면 창문
+      const rwx = bx0 + (bx1-bx0) * t, rwy = by1
+      windows += `<rect x="${isoX(rwx,rwy)-2}" y="${isoY(rwx,rwy,z+wh)-1}" width="4" height="${wh*0.6}" fill="#93c5fd" opacity="0.4" rx="0.5"/>`
+    }
+  }
+
+  // 대지
+  const siteR = Math.max(isoW, isoD) * 0.8
+  const site = `${isoX(-siteR,-siteR*0.6)},${isoY(-siteR,-siteR*0.6,0)} ${isoX(siteR,-siteR*0.6)},${isoY(siteR,-siteR*0.6,0)} ${isoX(siteR,siteR*0.6)},${isoY(siteR,siteR*0.6,0)} ${isoX(-siteR,siteR*0.6)},${isoY(-siteR,siteR*0.6,0)}`
+
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
+  <style>text{font-family:sans-serif;}</style>
+  <!-- 대지 -->
+  <polygon points="${site}" fill="#e8f5e9" stroke="#81c784" stroke-width="0.5" opacity="0.5"/>
+  <!-- 건물 좌측면 -->
+  <polygon points="${leftFace}" fill="#bbdefb" stroke="#1565c0" stroke-width="0.8"/>
+  <!-- 건물 우측면 -->
+  <polygon points="${rightFace}" fill="#90caf9" stroke="#1565c0" stroke-width="0.8"/>
+  <!-- 건물 상단면 -->
+  <polygon points="${topFace}" fill="#e3f2fd" stroke="#1565c0" stroke-width="0.6"/>
+  <!-- 1층 강조 (좌측) -->
+  <polygon points="${isoX(bx0,by0)},${isoY(bx0,by0,0)} ${isoX(bx0,by1)},${isoY(bx0,by1,0)} ${isoX(bx0,by1)},${isoY(bx0,by1,gfhPx)} ${isoX(bx0,by0)},${isoY(bx0,by0,gfhPx)}" fill="#fff3e0" stroke="#f57c00" stroke-width="0.5" opacity="0.7"/>
+  <!-- 창문 -->
+  ${windows}
+  <!-- 높이 치수 -->
+  <line x1="${isoX(bx1,by0)+5}" y1="${isoY(bx1,by0,0)}" x2="${isoX(bx1,by0)+5}" y2="${isoY(bx1,by0,bldH)}" stroke="#ef4444" stroke-width="0.4"/>
+  <text x="${isoX(bx1,by0)+12}" y="${isoY(bx1,by0,bldH/2)}" font-size="5" fill="#ef4444">${totalH.toFixed(1)}m</text>
+  <!-- 방위 -->
+  <g transform="translate(${W-25},25)">
+    <polygon points="0,-7 -2,0 0,-2 2,0" fill="#ef4444"/>
+    <text x="0" y="-9" text-anchor="middle" font-size="5" fill="#ef4444" font-weight="700">N</text>
+  </g>
+  <!-- 라벨 -->
+  <text x="${cx}" y="${H-8}" text-anchor="middle" font-size="5" fill="#94a3b8">${d.layoutName} · ${d.floors}층 · ${d.units}세대</text>
+</svg>`
+}
+
+// ===== 입면도 SVG =====
+export function generateElevationSvg(d: DrawingInput): string {
+  const W = 360, H = 280
+  const groundY = H * 0.75
+  const floorH = 3.3, gfH = 4.5
+  const totalH = gfH + (d.floors - 1) * floorH
+  const vScale = (groundY - 40) / Math.max(totalH, 20) * 0.85
+  const bldW = W * 0.5, bldH = totalH * vScale
+  const bldX = (W - bldW) / 2, bldY = groundY - bldH
+
+  // 층별 창문
+  let floorDetails = ''
+  for (let i = 0; i < d.floors; i++) {
+    const fh = i === 0 ? gfH : gfH + i * floorH
+    const y = groundY - fh * vScale
+    const rowH = (i === 0 ? gfH : floorH) * vScale
+    
+    // 층선
+    floorDetails += `<line x1="${bldX}" y1="${y}" x2="${bldX+bldW}" y2="${y}" stroke="#cbd5e1" stroke-width="0.3"/>`
+    
+    if (i === 0) {
+      // 1층: 상가 입구
+      const doorW = bldW * 0.12, doorH = rowH * 0.8
+      for (let j = 0; j < 4; j++) {
+        const dx = bldX + bldW * (0.1 + j * 0.22)
+        floorDetails += `<rect x="${dx}" y="${y + rowH * 0.1}" width="${doorW}" height="${doorH}" fill="#fef3c7" stroke="#d97706" stroke-width="0.4" rx="1"/>`
+      }
+      floorDetails += `<text x="${bldX+bldW/2}" y="${y+rowH/2+2}" text-anchor="middle" font-size="4.5" fill="#92400e">근린생활시설</text>`
+    } else {
+      // 주거층: 창문 그리드
+      const winW = bldW * 0.08, winH = rowH * 0.5
+      const cols = Math.min(6, Math.ceil(d.units / d.floors / 2))
+      for (let j = 0; j < cols; j++) {
+        const wx = bldX + bldW * (0.08 + j * (0.84 / cols))
+        floorDetails += `<rect x="${wx}" y="${y + rowH * 0.2}" width="${winW}" height="${winH}" fill="#bfdbfe" stroke="#60a5fa" stroke-width="0.3" rx="0.5"/>`
+      }
+    }
+  }
+
+  // 옥상
+  const roofY = bldY - 3 * vScale
+  const mechW = bldW * 0.25, mechH = 2.5 * vScale
+  
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
+  <style>text{font-family:sans-serif;}</style>
+  <!-- 하늘 그라데이션 -->
+  <defs><linearGradient id="elev-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e0f2fe"/><stop offset="100%" stop-color="#f8fafc"/></linearGradient></defs>
+  <rect width="${W}" height="${groundY}" fill="url(#elev-sky)"/>
+  <!-- 지반선 -->
+  <line x1="15" y1="${groundY}" x2="${W-15}" y2="${groundY}" stroke="#78716c" stroke-width="1.5"/>
+  <text x="12" y="${groundY+3}" text-anchor="end" font-size="4.5" fill="#78716c">GL</text>
+  <!-- 건물 외벽 -->
+  <rect x="${bldX}" y="${bldY}" width="${bldW}" height="${bldH}" fill="#f1f5f9" stroke="#475569" stroke-width="1"/>
+  <!-- 층별 디테일 -->
+  ${floorDetails}
+  <!-- 옥상 기계실 -->
+  <rect x="${bldX+bldW/2-mechW/2}" y="${bldY-mechH}" width="${mechW}" height="${mechH}" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.5"/>
+  <text x="${bldX+bldW/2}" y="${bldY-mechH/2+2}" text-anchor="middle" font-size="3.5" fill="#64748b">기계실</text>
+  <!-- 옥상 난간 -->
+  <line x1="${bldX}" y1="${bldY}" x2="${bldX}" y2="${bldY-2}" stroke="#94a3b8" stroke-width="0.5"/>
+  <line x1="${bldX+bldW}" y1="${bldY}" x2="${bldX+bldW}" y2="${bldY-2}" stroke="#94a3b8" stroke-width="0.5"/>
+  <line x1="${bldX}" y1="${bldY-2}" x2="${bldX+bldW}" y2="${bldY-2}" stroke="#94a3b8" stroke-width="0.5"/>
+  <!-- 높이 치수 -->
+  <line x1="${bldX-10}" y1="${groundY}" x2="${bldX-10}" y2="${bldY}" stroke="#ef4444" stroke-width="0.4"/>
+  <line x1="${bldX-13}" y1="${groundY}" x2="${bldX-7}" y2="${groundY}" stroke="#ef4444" stroke-width="0.3"/>
+  <line x1="${bldX-13}" y1="${bldY}" x2="${bldX-7}" y2="${bldY}" stroke="#ef4444" stroke-width="0.3"/>
+  <text x="${bldX-12}" y="${(groundY+bldY)/2}" text-anchor="middle" font-size="5" fill="#ef4444" transform="rotate(-90,${bldX-12},${(groundY+bldY)/2})">${totalH.toFixed(1)}m</text>
+  <!-- 폭 치수 -->
+  <line x1="${bldX}" y1="${groundY+8}" x2="${bldX+bldW}" y2="${groundY+8}" stroke="#3b82f6" stroke-width="0.4"/>
+  <text x="${bldX+bldW/2}" y="${groundY+14}" text-anchor="middle" font-size="5" fill="#3b82f6">${Math.sqrt(d.siteArea * d.buildingCoverage/100).toFixed(1)}m</text>
+  ${d.heightLimit > 0 && d.heightLimit < 200 ? `
+  <!-- 높이 제한 -->
+  <line x1="30" y1="${groundY - d.heightLimit * vScale}" x2="${W-30}" y2="${groundY - d.heightLimit * vScale}" stroke="#ef4444" stroke-width="0.5" stroke-dasharray="4 3" opacity="0.5"/>
+  <text x="${W-28}" y="${groundY - d.heightLimit * vScale - 2}" font-size="4" fill="#ef4444">높이제한 ${d.heightLimit}m</text>` : ''}
+  <!-- 정보 -->
+  <text x="${W/2}" y="${H-8}" text-anchor="middle" font-size="5" fill="#94a3b8">정면도 · ${d.layoutName} · 지상 ${d.floors}층</text>
+</svg>`
+}
