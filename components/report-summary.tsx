@@ -1633,6 +1633,89 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       pdf.text(`${layout.floors}F`, secBldX + secBldW + 2, bldTopY + 3)
 
       y = drawY + drawH + 4
+
+      // === 아이소메트릭 + 입면도 + 투시도: SVG → PNG → jsPDF 삽입 ===
+      try {
+        const svgToPng = async (svgStr: string, w: number, h: number): Promise<string> => {
+          return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas')
+            const scale = 2 // 고해상도
+            canvas.width = w * scale
+            canvas.height = h * scale
+            const ctx = canvas.getContext('2d')
+            if (!ctx) { reject('Canvas not supported'); return }
+            ctx.scale(scale, scale)
+
+            const img = new Image()
+            const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
+            const url = URL.createObjectURL(svgBlob)
+            img.onload = () => {
+              ctx.fillStyle = '#f8fafc'
+              ctx.fillRect(0, 0, w, h)
+              ctx.drawImage(img, 0, 0, w, h)
+              URL.revokeObjectURL(url)
+              resolve(canvas.toDataURL('image/png'))
+            }
+            img.onerror = () => { URL.revokeObjectURL(url); reject('SVG render failed') }
+            img.src = url
+          })
+        }
+
+        const drawingInput = {
+          siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+          units: layout.units, parking: layout.parking, type: layout.type,
+          roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
+          setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+          layoutName: layout.name, gfa,
+        }
+
+        const isoSvg = generateIsometricSvg(drawingInput)
+        const elevSvg = generateElevationSvg(drawingInput)
+        const perspSvg = generatePerspectiveSvg(drawingInput)
+
+        const imgW = 360, imgH = 300
+        const [isoPng, elevPng, perspPng] = await Promise.all([
+          svgToPng(isoSvg, imgW, imgH),
+          svgToPng(elevSvg, imgW, imgH),
+          svgToPng(perspSvg, imgW, imgH),
+        ])
+
+        // 아이소메트릭 + 입면도 (같은 행)
+        const imgDrawW = (contentWidth - 6) / 2
+        const imgDrawH = imgDrawW * (imgH / imgW)
+        checkPageBreak(imgDrawH + 20)
+
+        setKoreanFont("bold")
+        pdf.setFontSize(7)
+        pdf.setTextColor(30, 41, 59)
+        pdf.text("아이소메트릭", margin, y)
+        pdf.text("입면도", margin + imgDrawW + 6, y)
+        y += 2
+
+        pdf.addImage(isoPng, 'PNG', margin, y, imgDrawW, imgDrawH)
+        pdf.addImage(elevPng, 'PNG', margin + imgDrawW + 6, y, imgDrawW, imgDrawH)
+        y += imgDrawH + 4
+
+        // 투시도 (전체 너비)
+        const perspDrawW = contentWidth
+        const perspDrawH = perspDrawW * (imgH / imgW)
+        checkPageBreak(perspDrawH + 12)
+
+        setKoreanFont("bold")
+        pdf.setFontSize(7)
+        pdf.setTextColor(30, 41, 59)
+        pdf.text("투시도", margin, y)
+        y += 2
+
+        pdf.addImage(perspPng, 'PNG', margin, y, perspDrawW, perspDrawH)
+        y += perspDrawH + 4
+
+        console.log("[v0] PDF 도면 5종 삽입 완료")
+      } catch (drawErr) {
+        console.warn("[v0] PDF 도면 SVG→PNG 변환 실패:", drawErr)
+        // fallback: 도면 없이 진행
+      }
+
       pdf.setFontSize(5)
       pdf.setTextColor(148, 163, 184)
       pdf.text("※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.", margin, y)
