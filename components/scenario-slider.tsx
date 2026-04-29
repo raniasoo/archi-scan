@@ -38,7 +38,7 @@ export function ScenarioSlider({
     salesPricePerM2: baseSalePrice,
   }), [siteArea, gfa, units, floors, parking, landPricePerM2, baseSalePrice])
 
-  const isChanged = salePriceAdj !== 0 || constCostAdj !== 0 || landPriceAdj !== 0
+  const isChanged = salePriceAdj !== 0 || constCostAdj !== 0 || landPriceAdj !== 0 || interestRate > 0
 
   // 조정된 feasibility
   const scenario = useMemo(() => {
@@ -51,8 +51,16 @@ export function ScenarioSlider({
           constructionCostPerM2: baseConstCost * (1 + constCostAdj / 100),
           salesPricePerM2: baseSalePrice * (1 + salePriceAdj / 100),
         })
+    // 금리 적용 시 금융비용 추가
+    if (interestRate > 0) {
+      const financeCost = base.totalCost * (interestRate / 100) * 2.5 // 2.5년 사업기간
+      const adjTotalCost = base.totalCost + financeCost
+      const adjProfit = base.totalRevenue - adjTotalCost
+      const adjROI = adjTotalCost > 0 ? (adjProfit / adjTotalCost) * 100 : 0
+      return { ...base, totalCost: adjTotalCost, profit: adjProfit, roi: adjROI, financeCost }
+    }
     return { ...base, financeCost: 0 }
-  }, [siteArea, gfa, units, floors, parking, landPricePerM2, salePriceAdj, constCostAdj, landPriceAdj, baseFeasibility])
+  }, [siteArea, gfa, units, floors, parking, landPricePerM2, salePriceAdj, constCostAdj, landPriceAdj, interestRate, baseFeasibility])
 
   const roiDiff = scenario.roi - baseFeasibility.roi
   const profitDiff = scenario.profit - baseFeasibility.profit
@@ -62,9 +70,10 @@ export function ScenarioSlider({
     { label: "분양가", value: salePriceAdj, set: setSalePriceAdj, min: -20, max: 30, step: 1, color: "#3b82f6", unit: "%" },
     { label: "공사비", value: constCostAdj, set: setConstCostAdj, min: -15, max: 30, step: 1, color: "#f59e0b", unit: "%" },
     { label: "토지비", value: landPriceAdj, set: setLandPriceAdj, min: -20, max: 30, step: 1, color: "#8b5cf6", unit: "%" },
+    { label: "금리 (연)", value: interestRate, set: setInterestRate, min: 0, max: 8, step: 0.5, color: "#ef4444", unit: "%", isAbsolute: true },
   ]
 
-  const reset = () => { setSalePriceAdj(0); setConstCostAdj(0); setLandPriceAdj(0) }
+  const reset = () => { setSalePriceAdj(0); setConstCostAdj(0); setLandPriceAdj(0); setInterestRate(0) }
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -184,7 +193,7 @@ export function ScenarioSlider({
           <div className="flex items-start gap-1.5">
             <Info className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
             <p className="text-[10px] text-muted-foreground">
-              슬라이더를 움직여 분양가·공사비·토지비 변동에 따른 수익 변화를 확인하세요.
+              슬라이더를 움직여 분양가·공사비·토지비·금리 변동에 따른 수익 변화를 확인하세요.
             </p>
           </div>
         )}

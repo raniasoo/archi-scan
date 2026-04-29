@@ -172,11 +172,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // bdMgtSn이 있으면 직접 사용 (가장 정확한 PNU)
-  const pnu = (bdMgtSn && bdMgtSn.length >= 19)
-    ? bdMgtSn.slice(0, 19)
-    : buildPNU(sigunguCd, bjdongCd, bun || '0000', ji || '0000')
-  console.log(`[LandPrice] pnu=${pnu} (from ${bdMgtSn ? 'bdMgtSn' : 'sigunguCd/bjdongCd'})`)
+  // bdMgtSn이 있으면 직접 사용 — platGb 변환 포함 (bdMgtSn: 0=대지/1=산, PNU: 1=대지/2=산)
+  let pnu: string
+  if (bdMgtSn && bdMgtSn.length >= 19) {
+    const sigBjd = bdMgtSn.slice(0, 10)
+    const platGbCd = bdMgtSn.charAt(10) // 0=대지, 1=산
+    const pnuPlatGb = platGbCd === '1' ? '2' : '1' // 변환
+    const bunJi = bdMgtSn.slice(11, 19)
+    pnu = `${sigBjd}${pnuPlatGb}${bunJi}`
+    console.log(`[LandPrice] bdMgtSn=${bdMgtSn.slice(0,19)} → PNU=${pnu} (platGb ${platGbCd}→${pnuPlatGb})`)
+  } else {
+    pnu = buildPNU(sigunguCd, bjdongCd, bun || '0000', ji || '0000')
+  }
   console.log(`[LandPrice] PNU=${pnu}, year=${year}`)
 
   // 0순위: Vworld 직접 호출 (Seoul 리전 - 한국 IP)
@@ -185,6 +192,17 @@ export async function POST(req: NextRequest) {
     if (price) {
       console.log(`[LandPrice/Vworld] price=${price}`)
       return NextResponse.json({ success: true, isDemo: false, landPricePerM2: price, pnu, source: 'api', stdrYear: year, via: 'vworld-lp' })
+    }
+    // 변환된 PNU 실패 시 원본 PNU로 재시도
+    if (bdMgtSn && bdMgtSn.length >= 19) {
+      const rawPnu = bdMgtSn.slice(0, 19)
+      if (rawPnu !== pnu) {
+        console.log(`[LandPrice/Vworld] 1차 실패 → 원본 PNU ${rawPnu}로 재시도`)
+        const price2 = await fetchFromVworld(rawPnu, entX, entY)
+        if (price2) {
+          return NextResponse.json({ success: true, isDemo: false, landPricePerM2: price2, pnu: rawPnu, source: 'api', stdrYear: year, via: 'vworld-lp-raw' })
+        }
+      }
     }
   } catch (e: any) { console.warn('[LandPrice/Vworld]', e.message) }
 
