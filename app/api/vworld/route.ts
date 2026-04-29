@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
       // 면적 기반 동적 반경: √(면적) * 1.5 (최소 150m, 최대 500m)
       try {
         const dynamicRadius = siteArea ? Math.min(500, Math.max(150, Math.round(Math.sqrt(siteArea) * 1.5))) : 150
-        const overpassQuery = `[out:json][timeout:15];(way(around:${dynamicRadius},${entY},${entX})[building];relation(around:${dynamicRadius},${entY},${entX})[building];way(around:${dynamicRadius},${entY},${entX})[landuse];);out geom;`
+        const overpassQuery = `[out:json][timeout:15];(way(around:${dynamicRadius},${entY},${entX})[building];relation(around:${dynamicRadius},${entY},${entX})[building];);out geom;`
         console.log(`[vworld] Overpass 쿼리: radius=${dynamicRadius}m (면적=${siteArea}㎡), lat=${entY}, lng=${entX}`)
         const overpassRes = await fetch('https://overpass-api.de/api/interpreter', {
           method: 'POST',
@@ -251,16 +251,20 @@ export async function POST(req: NextRequest) {
           
           let bestGeom: {lat:number,lon:number}[] = []
           let bestScore = -Infinity
+          let bestArea = 0
           for (const el of elements) {
             const geom: {lat:number,lon:number}[] = el.geometry || []
             if (geom.length >= 4) {
               const elArea = calcPolyArea(geom)
               const dist = calcCentroidDist(geom)
-              // 점수: 면적이 siteArea에 가까울수록 + 좌표가 가까울수록 높음
+              // 점수: 거리(50m 이내 최우선) + 면적 유사도(siteArea 대비)
+              const distPenalty = dist < 50 ? 0 : (dist - 50) * 5
               const areaDiff = siteArea ? Math.abs(elArea - siteArea) / Math.max(siteArea, 1) : 0
-              const score = elArea - dist * 10 - areaDiff * 1000
+              // 너무 작은 구조물(50㎡ 미만) 제외
+              if (elArea < 50) continue
+              const score = 10000 - distPenalty - areaDiff * 3000
               console.log(`[vworld] Overpass id=${el.id} area=${Math.round(elArea)}㎡ dist=${Math.round(dist)}m score=${Math.round(score)}`)
-              if (score > bestScore) { bestScore = score; bestGeom = geom }
+              if (score > bestScore) { bestScore = score; bestGeom = geom; bestArea = elArea }
             }
           }
           if (bestGeom.length >= 3) {
