@@ -2,7 +2,7 @@
 // @version STABLE-v194 | @checkpoint release-candidate | 2026-04-10
 
 import { useRef, useState, useEffect } from "react"
-import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag } from "@/lib/report-drawings"
+import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag, svgToPngImgTag } from "@/lib/report-drawings"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
@@ -311,8 +311,43 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   const sn = (n: number) => layouts.length > 1 ? n : n <= 3 ? n : n - 1
 
   // Generate HTML report for download - properly formatted with Korean support
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     console.log("[v0] HTML 보고서 생성 시작")
+    
+    // 도면 SVG → PNG 변환 (모든 뷰어 호환)
+    const drawingInput = {
+      siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+      units: layout.units, parking: layout.parking, type: layout.type,
+      roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
+      setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+      layoutName: layout.name, gfa,
+    }
+    
+    let sitePlanImg = '', sectionImg = '', isoImg = '', elevImg = '', perspImg = ''
+    try {
+      console.log("[v0] 도면 SVG→PNG 변환 시작")
+      const results = await Promise.all([
+        svgToPngImgTag(generateSitePlanSvg(drawingInput)),
+        svgToPngImgTag(generateSectionSvg(drawingInput)),
+        svgToPngImgTag(generateIsometricSvg(drawingInput)),
+        svgToPngImgTag(generateElevationSvg(drawingInput)),
+        svgToPngImgTag(generatePerspectiveSvg(drawingInput)),
+      ])
+      sitePlanImg = results[0]
+      sectionImg = results[1]
+      isoImg = results[2]
+      elevImg = results[3]
+      perspImg = results[4]
+      console.log("[v0] 도면 PNG 변환 완료")
+    } catch (e) {
+      console.warn("[v0] 도면 PNG 변환 실패, base64 SVG fallback:", e)
+      sitePlanImg = svgToImgTag(generateSitePlanSvg(drawingInput))
+      sectionImg = svgToImgTag(generateSectionSvg(drawingInput))
+      isoImg = svgToImgTag(generateIsometricSvg(drawingInput))
+      elevImg = svgToImgTag(generateElevationSvg(drawingInput))
+      perspImg = svgToImgTag(generatePerspectiveSvg(drawingInput))
+    }
+    
     const htmlContent = `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -639,54 +674,24 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
       <div>
         <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">배치도</p>
-        ${svgToImgTag(generateSitePlanSvg({
-          siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
-          units: layout.units, parking: layout.parking, type: layout.type,
-          roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
-          setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-          layoutName: layout.name, gfa,
-        }))}
+        ${sitePlanImg}
       </div>
       <div>
         <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">단면도</p>
-        ${svgToImgTag(generateSectionSvg({
-          siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
-          units: layout.units, parking: layout.parking, type: layout.type,
-          roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
-          setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-          layoutName: layout.name, gfa,
-        }))}
+        ${sectionImg}
       </div>
       <div>
         <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">아이소메트릭</p>
-        ${svgToImgTag(generateIsometricSvg({
-          siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
-          units: layout.units, parking: layout.parking, type: layout.type,
-          roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
-          setbacks: { front: 1, side: 0.5, rear: 1 },
-          layoutName: layout.name, gfa,
-        }))}
+        ${isoImg}
       </div>
       <div>
         <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">입면도</p>
-        ${svgToImgTag(generateElevationSvg({
-          siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
-          units: layout.units, parking: layout.parking, type: layout.type,
-          roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
-          setbacks: { front: 1, side: 0.5, rear: 1 },
-          layoutName: layout.name, gfa,
-        }))}
+        ${elevImg}
       </div>
     </div>
     <div style="margin-top: 10px;">
       <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">투시도</p>
-      ${svgToImgTag(generatePerspectiveSvg({
-        siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
-        units: layout.units, parking: layout.parking, type: layout.type,
-        roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
-        setbacks: { front: 1, side: 0.5, rear: 1 },
-        layoutName: layout.name, gfa,
-      }))}
+      ${perspImg}
     </div>
     <p style="font-size: 7pt; color: #94a3b8; margin-top: 6px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
   </div>

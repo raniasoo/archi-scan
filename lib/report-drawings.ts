@@ -1,9 +1,46 @@
 /**
  * PDF 보고서용 도면 SVG 문자열 생성기
- * HTML 템플릿에 base64 img 태그로 삽입 (모든 뷰어 호환)
+ * HTML 템플릿에 PNG img 태그로 삽입 (모든 뷰어 호환)
  */
 
-/** SVG 문자열을 base64 <img> 태그로 변환 — 문서뷰어/PDF에서도 동작 */
+/** SVG → Canvas → PNG base64 <img> 태그 (async, 모든 뷰어 호환) */
+export async function svgToPngImgTag(svgStr: string, width = 720, height = 600): Promise<string> {
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas not supported')
+    
+    // 배경 채우기
+    ctx.fillStyle = '#f8fafc'
+    ctx.fillRect(0, 0, width, height)
+    
+    const img = new Image()
+    const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, width, height)
+        URL.revokeObjectURL(url)
+        resolve(canvas.toDataURL('image/png'))
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        reject(new Error('SVG render failed'))
+      }
+      img.src = url
+    })
+    
+    return `<img src="${dataUrl}" style="width:100%;max-width:360px;border-radius:6px;border:1px solid #e2e8f0;" />`
+  } catch {
+    // Fallback: base64 SVG (서버 환경 또는 Canvas 미지원 시)
+    return svgToImgTag(svgStr)
+  }
+}
+
+/** SVG → base64 SVG <img> 태그 (sync fallback) */
 export function svgToImgTag(svgStr: string): string {
   const encoded = typeof btoa !== 'undefined'
     ? btoa(unescape(encodeURIComponent(svgStr)))
