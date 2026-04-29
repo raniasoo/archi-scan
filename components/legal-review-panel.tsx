@@ -268,7 +268,7 @@ export function LegalReviewPanel({
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg bg-background/50 p-2 text-center">
                     <p className="text-[9px] text-muted-foreground">9m 이하 이격</p>
-                    <p className="font-bold text-sm">{result.setback.sunlight.effectiveNorthSetback}m</p>
+                    <p className="font-bold text-sm">{Math.round(result.setback.sunlight.effectiveNorthSetback * 10) / 10}m</p>
                     <p className="text-[9px] text-muted-foreground">경계선에서</p>
                   </div>
                   <div className="rounded-lg bg-background/50 p-2 text-center">
