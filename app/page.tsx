@@ -2547,6 +2547,7 @@ export default function ArchiScanPage() {
                       const exportData: ExportData = {
                         address,
                         siteArea: siteAreaNum,
+                        branding: branding || undefined,
                         layout: {
                           name: selectedLayoutData.name,
             type: selectedLayoutData.type,
@@ -2648,6 +2649,7 @@ export default function ArchiScanPage() {
                       const exportData: ExportData = {
                         address,
                         siteArea: siteAreaNum,
+                        branding: branding || undefined,
                         layout: {
                           name: selectedLayoutData.name,
             type: selectedLayoutData.type,
@@ -2749,6 +2751,7 @@ export default function ArchiScanPage() {
                       const exportData: ExportData = {
                         address,
                         siteArea: siteAreaNum,
+                        branding: branding || undefined,
                         layout: {
                           name: selectedLayoutData.name,
             type: selectedLayoutData.type,
@@ -2848,6 +2851,7 @@ export default function ArchiScanPage() {
                       const exportData: ExportData = {
                         address,
                         siteArea: siteAreaNum,
+                        branding: branding || undefined,
                         layout: {
                           name: selectedLayoutData.name,
             type: selectedLayoutData.type,

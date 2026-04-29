@@ -245,6 +245,15 @@ export interface ReportDisclaimer {
 interface BuildReportDataInput {
   address: string;
   siteArea: number;
+  branding?: {
+    brandName?: string;
+    brandTagline?: string;
+    representativeName?: string;
+    representativeTitle?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+  };
   regulation?: {
     zoneType?: string;
     roadWidth?: number;
@@ -397,8 +406,10 @@ export function buildReportDataV250(input: BuildReportDataInput): ReportDataV250
       siteAreaFormatted: formatArea(siteArea),
       selectedLayoutName: selectedLayout.name,
       createdDate: createdDate,
-      companyName: 'Archi-Scan',
-      contact: 'archiscan.official@gmail.com',
+      companyName: input.branding?.brandName || 'Archi-Scan',
+      contact: input.branding?.phone 
+        ? `${input.branding.representativeName || ''} ${input.branding.representativeTitle || ''} · ${input.branding.phone} · ${input.branding.email || ''}`
+        : 'archiscan.official@gmail.com',
     },
 
     summary: {
@@ -660,7 +671,7 @@ export function buildReportDataV250(input: BuildReportDataInput): ReportDataV250
     disclaimer: {
       mainText: '본 보고서는 개략적인 사전검토를 목적으로 작성된 참고자료이며, 실제 인허가 및 설계 결과와 상이할 수 있습니다.',
       expertAdvice: '사업 추진을 위한 의사결정 시에는 건축사, 감정평가사, 세무사, 법무사 등 해당 분야 전문가의 검토를 받으시기 바랍니다.',
-      copyright: `© ${new Date().getFullYear()} Archi-Scan. All rights reserved.`,
+      copyright: `© ${new Date().getFullYear()} ${input.branding?.brandName || 'Archi-Scan'}. All rights reserved.`,
     },
   };
 }

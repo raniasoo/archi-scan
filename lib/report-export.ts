@@ -28,6 +28,17 @@ export function generateFileName(address: string, extension: string): string {
 export interface ExportData {
   address: string;
   siteArea: number;
+  branding?: {
+    brandName?: string;
+    brandTagline?: string;
+    representativeName?: string;
+    representativeTitle?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    website?: string;
+    logoBase64?: string;
+  };
   layout: {
     name: string;
     type?: string;
@@ -101,6 +112,7 @@ function convertToV250(data: ExportData): ReportDataV250 {
   const input = {
     address: data.address,
     siteArea: data.siteArea || 0,
+    branding: data.branding,
     regulation: {
       ...data.regulation,
       districtPlan: data.regulation?.hasDistrictPlan ? '지구단위계획 적용' : undefined,
@@ -1233,6 +1245,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         <p>작성일자: ${report.cover.createdDate}</p>
       </div>
       <p class="company">${report.cover.companyName}</p>
+      <p style="font-size: 10px; color: #94a3b8; margin-top: 4px;">${report.cover.contact}</p>
     </div>
 
     <!-- 2. 종합 검토 결과 -->
@@ -2836,6 +2849,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         <p>작성일자: ${report.cover.createdDate}</p>
       </div>
       <p class="company">${report.cover.companyName}</p>
+      <p style="font-size: 10px; color: #94a3b8; margin-top: 4px;">${report.cover.contact}</p>
     </div>
 
     <!-- 2. 종합 검토 결과 -->
