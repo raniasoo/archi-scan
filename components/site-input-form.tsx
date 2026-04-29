@@ -248,12 +248,20 @@ export function SiteInputForm({
             if (raw.includes('제2종일반')) return 'residential-2'
             if (raw.includes('제3종일반')) return 'residential-3'
             if (raw.includes('준주거')) return 'semi-residential'
+            if (raw.includes('일반주거')) return 'residential-2'
+            if (raw.includes('전용주거')) return 'residential-exclusive-1'
+            if (raw.includes('주거')) return 'residential-2'
             if (raw.includes('근린상업')) return 'commercial-neighborhood'
             if (raw.includes('중심상업')) return 'commercial-central'
             if (raw.includes('일반상업')) return 'commercial-general'
+            if (raw.includes('상업')) return 'commercial-general'
             if (raw.includes('일반공업')) return 'industrial-general'
+            if (raw.includes('공업')) return 'industrial-general'
             if (raw.includes('자연녹지')) return 'green-natural'
             if (raw.includes('생산녹지')) return 'green-production'
+            if (raw.includes('녹지')) return 'green-natural'
+            if (raw.includes('계획관리')) return 'management-planned'
+            if (raw.includes('관리')) return 'management-planned'
             return ''
           }
           const fallbackZone = mapZ(fetchedData.zoneType)
@@ -515,13 +523,32 @@ export function SiteInputForm({
           if (raw.includes('제2종일반')) return 'residential-2'
           if (raw.includes('제3종일반')) return 'residential-3'
           if (raw.includes('준주거')) return 'semi-residential'
+          // "일반주거지역" (종 미구분) → 제2종일반 기본값
+          if (raw.includes('일반주거')) return 'residential-2'
+          // "전용주거지역" (종 미구분) → 제1종전용 기본값
+          if (raw.includes('전용주거')) return 'residential-exclusive-1'
+          // 주거지역 (종류 미구분)
+          if (raw.includes('주거')) return 'residential-2'
           if (raw.includes('근린상업')) return 'commercial-neighborhood'
           if (raw.includes('중심상업')) return 'commercial-central'
           if (raw.includes('일반상업')) return 'commercial-general'
+          if (raw.includes('유통상업')) return 'commercial-general'
+          // "상업지역" (종류 미구분)
+          if (raw.includes('상업')) return 'commercial-general'
           if (raw.includes('일반공업')) return 'industrial-general'
+          if (raw.includes('준공업')) return 'industrial-general'
+          // "공업지역" (종류 미구분)
+          if (raw.includes('공업')) return 'industrial-general'
           if (raw.includes('자연녹지')) return 'green-natural'
           if (raw.includes('생산녹지')) return 'green-production'
+          if (raw.includes('보전녹지')) return 'green-natural'
+          // "녹지지역" (종류 미구분)
+          if (raw.includes('녹지')) return 'green-natural'
           if (raw.includes('계획관리')) return 'management-planned'
+          if (raw.includes('생산관리')) return 'management-planned'
+          if (raw.includes('보전관리')) return 'management-planned'
+          // "관리지역" (종류 미구분)
+          if (raw.includes('관리')) return 'management-planned'
           return ''
         }
         const mappedZone = mapZone(molitZone)  // MOLIT 기반 초기값 (vworld-zone이 오면 덮어씀)
