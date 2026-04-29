@@ -5,6 +5,7 @@ import { useRef, useState, useEffect } from "react"
 import { generateSitePlanSvg, generateSectionSvg } from "@/lib/report-drawings"
 import { SitePlan } from "@/components/site-plan"
 import { SectionView } from "@/components/section-view"
+import { calculateFeasibility } from "@/lib/project-analysis-state"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -214,7 +215,23 @@ function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): Layout
 
 export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility }: ReportSummaryProps) {
   // molitData 우선 적용 — regulation race condition 방지
-  const effectiveZoneType = molitData?.zoneCode || regulation?.zoneType || 'residential-2'
+  // regulation 한도(buildingCoverageLimit/farLimit)에서 용도지역 역추정 (zone-lookup 미완료 시 안전장치)
+  const inferZoneFromLimits = (coverage?: number, far?: number): string => {
+    if (!coverage || !far) return ''
+    if (far >= 1300 && coverage >= 80) return 'commercial-general'
+    if (far >= 1400 && coverage >= 90) return 'commercial-central'
+    if (far >= 800 && coverage >= 70) return 'commercial-neighborhood'
+    if (far >= 400 && coverage >= 70) return 'semi-residential'
+    if (far >= 250 && coverage >= 60) return 'residential-3'
+    if (far >= 200 && coverage >= 60) return 'residential-2'
+    if (far >= 150 && coverage >= 50) return 'residential-1'
+    if (far >= 300 && coverage >= 70) return 'industrial-general'
+    return ''
+  }
+  const zoneFromMolit = molitData?.zoneCode || ''
+  const zoneFromRegulation = regulation?.zoneType || ''
+  const zoneFromLimits = inferZoneFromLimits(regulation?.maxCoverageRatio, regulation?.maxFloorAreaRatio)
+  const effectiveZoneType = zoneFromMolit || zoneFromRegulation || zoneFromLimits || 'residential-2'
   const effectiveRoadWidth = molitData?.roadWidth || regulation?.roadWidth || 8
   const effectiveMaxHeight = molitData?.heightLimit || regulation?.maxHeight || 30
   const effectiveMaxFloors = molitData?.heightLimit ? Math.floor(molitData.heightLimit / 3.3) : regulation?.maxFloors || 10
@@ -237,21 +254,25 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   const scenariosConfig = financialScenarios || EMPTY_SCENARIOS_CONFIG
   const printRef = useRef<HTMLDivElement>(null)
   
-  // Use centralized feasibility result if provided, otherwise calculate locally (fallback)
-  const localFinancials = calculateFinancials(siteArea, layout, landPricePerM2)
-  const financials = externalFeasibility ? {
-    gfa: gfa || localFinancials.gfa,
-    landCost: externalFeasibility.landCost,
-    constructionCost: externalFeasibility.constructionCost,
-    softCost: externalFeasibility.softCost,
-    totalInvestment: externalFeasibility.totalCost,
-    projectedRevenue: externalFeasibility.totalRevenue,
-    profit: externalFeasibility.profit,
-    roi: externalFeasibility.roi,
-    breakEvenRate: externalFeasibility.totalCost > 0 
-      ? (externalFeasibility.totalCost / externalFeasibility.totalRevenue * 100) 
+  // Use centralized feasibility result if provided, otherwise calculate with SAME formula as FinancialAnalysis
+  const centralFeasibility = externalFeasibility || calculateFeasibility({
+    siteArea, grossFloorArea: gfa || layout.gfa, unitCount: layout.units,
+    floorCount: layout.floors, parkingCount: layout.parking,
+    landPricePerM2: landPricePerM2 || 5000000,
+  })
+  const financials = {
+    gfa: gfa || centralFeasibility.grossFloorArea || layout.gfa,
+    landCost: centralFeasibility.landCost,
+    constructionCost: centralFeasibility.constructionCost,
+    softCost: centralFeasibility.softCost,
+    totalInvestment: centralFeasibility.totalCost,
+    projectedRevenue: centralFeasibility.totalRevenue,
+    profit: centralFeasibility.profit,
+    roi: centralFeasibility.roi,
+    breakEvenRate: centralFeasibility.totalCost > 0 
+      ? (centralFeasibility.totalCost / centralFeasibility.totalRevenue * 100) 
       : 0,
-  } : localFinancials
+  }
   const [mounted, setMounted] = useState(false)
   const [dateStr, setDateStr] = useState("")
   const [docNumber, setDocNumber] = useState("")
