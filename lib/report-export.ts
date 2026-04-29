@@ -136,8 +136,9 @@ function convertToV250(data: ExportData): ReportDataV250 {
         floorCount: l.floors,
         parkingCount: l.parking,
         landPricePerM2: data.feasibility?.landCost && data.siteArea
-          ? (data.feasibility.landCost * 1e8) / data.siteArea  // 억원→원 역산
+          ? (data.feasibility.landCost * 1e8) / data.siteArea
           : 5000000,
+        salesPricePerM2: data.feasibility?.avgSalePrice || undefined,
       });
       return {
         id: l.name === data.layout.name ? 'selected' : `layout-${i}`,

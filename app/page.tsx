@@ -629,11 +629,14 @@ export default function ArchiScanPage() {
       floorCount: layout.floors,
       parkingCount: layout.parking,
       landPricePerM2: landPriceData.pricePerM2 || 5000000,
+      salesPricePerM2: marketPrice.loaded && marketPrice.suggestedSalePrice > 0 
+        ? marketPrice.suggestedSalePrice 
+        : undefined, // undefined면 기본값 800만원/㎡
     })
     
     setFeasibilityResult(result)
     console.log('[v0] FeasibilityResult updated:', result)
-  }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2])
+  }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, marketPrice.suggestedSalePrice])
 
   const handleSiteInputComplete = () => {
     setCurrentStep("strategy")
@@ -2578,6 +2581,7 @@ export default function ArchiScanPage() {
               floors={selectedLayoutData.floors}
               parking={selectedLayoutData.parking}
               landPricePerM2={landPriceData.pricePerM2 || 5000000}
+              salesPricePerM2={marketPrice.loaded && marketPrice.suggestedSalePrice > 0 ? marketPrice.suggestedSalePrice : undefined}
               baseROI={feasibilityResult?.roi ?? 0}
               baseTotalCost={feasibilityResult?.totalCost ?? 0}
               baseProfit={feasibilityResult?.profit ?? 0}
@@ -2689,6 +2693,7 @@ export default function ArchiScanPage() {
                           totalRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : 0,
                           expectedProfit: feasibilityResult?.profit ? feasibilityResult.profit / 100000000 : 0,
                           roi: feasibilityResult?.roi ?? 0,
+                          avgSalePrice: feasibilityResult?.salesPricePerM2 || undefined,
                           breakEvenRate: feasibilityResult?.totalRevenue && feasibilityResult?.totalCost 
                             ? (feasibilityResult.totalCost / feasibilityResult.totalRevenue) * 100 
                             : 0,
@@ -2781,6 +2786,7 @@ export default function ArchiScanPage() {
                           totalRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : 0,
                           expectedProfit: feasibilityResult?.profit ? feasibilityResult.profit / 100000000 : 0,
                           roi: feasibilityResult?.roi ?? 0,
+                          avgSalePrice: feasibilityResult?.salesPricePerM2 || undefined,
                           breakEvenRate: feasibilityResult?.totalRevenue && feasibilityResult?.totalCost 
                             ? (feasibilityResult.totalCost / feasibilityResult.totalRevenue) * 100 
                             : 0,
@@ -2873,6 +2879,7 @@ export default function ArchiScanPage() {
                           totalRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : 0,
                           expectedProfit: feasibilityResult?.profit ? feasibilityResult.profit / 100000000 : 0,
                           roi: feasibilityResult?.roi ?? 0,
+                          avgSalePrice: feasibilityResult?.salesPricePerM2 || undefined,
                           breakEvenRate: feasibilityResult?.totalRevenue && feasibilityResult?.totalCost 
                             ? (feasibilityResult.totalCost / feasibilityResult.totalRevenue) * 100 
                             : 0,
@@ -2963,6 +2970,7 @@ export default function ArchiScanPage() {
                           totalRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : 0,
                           expectedProfit: feasibilityResult?.profit ? feasibilityResult.profit / 100000000 : 0,
                           roi: feasibilityResult?.roi ?? 0,
+                          avgSalePrice: feasibilityResult?.salesPricePerM2 || undefined,
                           breakEvenRate: feasibilityResult?.totalRevenue && feasibilityResult?.totalCost 
                             ? (feasibilityResult.totalCost / feasibilityResult.totalRevenue) * 100 
                             : 0,

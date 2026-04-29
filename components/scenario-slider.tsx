@@ -11,6 +11,7 @@ interface ScenarioSliderProps {
   floors: number
   parking: number
   landPricePerM2: number
+  salesPricePerM2?: number
   baseROI: number
   baseTotalCost: number
   baseProfit: number
@@ -18,19 +19,23 @@ interface ScenarioSliderProps {
 
 export function ScenarioSlider({
   siteArea, gfa, units, floors, parking,
-  landPricePerM2, baseROI, baseTotalCost, baseProfit,
+  landPricePerM2, salesPricePerM2, baseROI, baseTotalCost, baseProfit,
 }: ScenarioSliderProps) {
   const [salePriceAdj, setSalePriceAdj] = useState(0)
   const [constCostAdj, setConstCostAdj] = useState(0)
   const [landPriceAdj, setLandPriceAdj] = useState(0)
   const [interestRate, setInterestRate] = useState(0) // 금리 (연 %, 0=금융비 미적용)
 
+  const baseSalePrice = salesPricePerM2 || 8000000
+  const baseConstCost = 2500000
+
   // 기준 feasibility (0%일 때 위 사업성과 동일)
   const baseFeasibility = useMemo(() => calculateFeasibility({
     siteArea, grossFloorArea: gfa, unitCount: units,
     floorCount: floors, parkingCount: parking,
     landPricePerM2,
-  }), [siteArea, gfa, units, floors, parking, landPricePerM2])
+    salesPricePerM2: baseSalePrice,
+  }), [siteArea, gfa, units, floors, parking, landPricePerM2, baseSalePrice])
 
   const isChanged = salePriceAdj !== 0 || constCostAdj !== 0 || landPriceAdj !== 0 || interestRate > 0
 
@@ -42,8 +47,8 @@ export function ScenarioSlider({
           siteArea, grossFloorArea: gfa, unitCount: units,
           floorCount: floors, parkingCount: parking,
           landPricePerM2: landPricePerM2 * (1 + landPriceAdj / 100),
-          constructionCostPerM2: 2500000 * (1 + constCostAdj / 100),
-          salesPricePerM2: 8000000 * (1 + salePriceAdj / 100),
+          constructionCostPerM2: baseConstCost * (1 + constCostAdj / 100),
+          salesPricePerM2: baseSalePrice * (1 + salePriceAdj / 100),
         })
     // 금융비용 추가
     if (interestRate > 0) {
