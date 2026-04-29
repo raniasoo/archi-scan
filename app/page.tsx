@@ -105,6 +105,7 @@ import {
   type SiteInput,
   safeNumber,
 } from "@/lib/project-analysis-state"
+import { getRegionalPricing, getZoneMultiplier, getTierInfo, type RegionalPricing } from "@/lib/regional-pricing"
 import {
   DesignStrategy,
   STRATEGY_PARAMETERS,
@@ -481,6 +482,9 @@ export default function ArchiScanPage() {
     loaded: boolean
   }>({ avgPricePerM2: 0, suggestedSalePrice: 0, transactionCount: 0, loaded: false })
   const [siteBdMgtSn, setSiteBdMgtSn] = useState<string>('')
+  
+  // 지역별 분양가·공사비 (주소 기반 자동 적용)
+  const [regionalPricing, setRegionalPricing] = useState<RegionalPricing | null>(null)
 
   const [landPriceData, setLandPriceData] = useState<{
     pricePerM2: number
@@ -622,6 +626,17 @@ export default function ArchiScanPage() {
     }
     
     const siteAreaNum = safeNumber(siteArea, 660)
+    
+    // 분양가 우선순위: 실거래가 > 지역별 테이블 > 기본값
+    const effectiveSalesPrice = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
+      ? marketPrice.suggestedSalePrice
+      : regionalPricing 
+        ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || ''))
+        : undefined
+    
+    // 공사비: 지역별 테이블 > 기본값
+    const effectiveConstCost = regionalPricing?.constructionCostPerM2 || undefined
+    
     const result = calculateFeasibility({
       siteArea: siteAreaNum,
       grossFloorArea: layout.gfa,
@@ -629,14 +644,13 @@ export default function ArchiScanPage() {
       floorCount: layout.floors,
       parkingCount: layout.parking,
       landPricePerM2: landPriceData.pricePerM2 || 5000000,
-      salesPricePerM2: marketPrice.loaded && marketPrice.suggestedSalePrice > 0 
-        ? marketPrice.suggestedSalePrice 
-        : undefined, // undefined면 기본값 800만원/㎡
+      salesPricePerM2: effectiveSalesPrice,
+      constructionCostPerM2: effectiveConstCost,
     })
     
     setFeasibilityResult(result)
-    console.log('[v0] FeasibilityResult updated:', result)
-  }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, marketPrice.suggestedSalePrice])
+    console.log('[v0] FeasibilityResult updated:', result, '분양가:', (effectiveSalesPrice || 8000000) / 10000, '만/㎡')
+  }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, marketPrice.suggestedSalePrice, regionalPricing, regulation.zoneType])
 
   const handleSiteInputComplete = () => {
     setCurrentStep("strategy")
@@ -923,6 +937,14 @@ export default function ArchiScanPage() {
     
     // 실거래가 자동 조회
     const sgCd = data.sigunguCd || (data as any).sigunguCode
+    
+    // 지역별 공사비·분양가 테이블 자동 적용 (실거래가 보완용)
+    if (sgCd || roadAddr || address) {
+      const pricing = getRegionalPricing(sgCd, roadAddr || address)
+      setRegionalPricing(pricing)
+      console.log('[v0] 지역별 시세:', pricing.regionName, pricing.tier, '분양가:', pricing.salesPricePerM2 / 10000, '만/㎡, 공사비:', pricing.constructionCostPerM2 / 10000, '만/㎡')
+    }
+    
     if (sgCd && sgCd.length >= 5) {
       fetch(`/api/real-price?sigunguCd=${sgCd}`)
         .then(r => r.json())
@@ -2573,6 +2595,38 @@ export default function ArchiScanPage() {
               </div>
             )}
 
+            {/* 지역별 시세 적용 정보 */}
+            {regionalPricing && (
+              <div className={`rounded-xl border p-4 ${regionalPricing.confidence === 'high' ? 'border-emerald-500/20 bg-emerald-500/5' : regionalPricing.confidence === 'medium' ? 'border-blue-500/20 bg-blue-500/5' : 'border-amber-500/20 bg-amber-500/5'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground">지역별 단가 적용</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getTierInfo(regionalPricing.tier).bgColor} ${getTierInfo(regionalPricing.tier).color}`}>
+                      {regionalPricing.regionName} · {getTierInfo(regionalPricing.tier).label}
+                    </span>
+                  </div>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${regionalPricing.confidence === 'high' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                    {regionalPricing.confidence === 'high' ? '정확도 높음' : '추정치'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded-lg bg-secondary/30 p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground">공사비</p>
+                    <p className="font-bold text-foreground">{Math.round(regionalPricing.constructionCostPerM2 / 10000).toLocaleString()}만/㎡</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/30 p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground">지역 분양가</p>
+                    <p className="font-bold text-foreground">{Math.round(regionalPricing.salesPricePerM2 / 10000).toLocaleString()}만/㎡</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/30 p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground">토지비</p>
+                    <p className="font-bold text-foreground">{Math.round((landPriceData.pricePerM2 || 5000000) / 10000).toLocaleString()}만/㎡</p>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1.5">{regionalPricing.note} {marketPrice.loaded && marketPrice.suggestedSalePrice > 0 ? '· 분양가는 실거래가 기준 적용 중' : ''}</p>
+              </div>
+            )}
+
             {/* 사업성 시나리오 슬라이더 */}
             <ScenarioSlider
               siteArea={siteAreaNum}
@@ -2581,7 +2635,10 @@ export default function ArchiScanPage() {
               floors={selectedLayoutData.floors}
               parking={selectedLayoutData.parking}
               landPricePerM2={landPriceData.pricePerM2 || 5000000}
-              salesPricePerM2={marketPrice.loaded && marketPrice.suggestedSalePrice > 0 ? marketPrice.suggestedSalePrice : undefined}
+              salesPricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
+                ? marketPrice.suggestedSalePrice 
+                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined}
+              constructionCostPerM2={regionalPricing?.constructionCostPerM2 || undefined}
               baseROI={feasibilityResult?.roi ?? 0}
               baseTotalCost={feasibilityResult?.totalCost ?? 0}
               baseProfit={feasibilityResult?.profit ?? 0}
