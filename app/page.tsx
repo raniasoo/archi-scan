@@ -29,6 +29,7 @@ import { FinancialAnalysis } from "@/components/financial-analysis"
 import { ReportSummary } from "@/components/report-summary"
 import { ExcelImport, type ImportedReportData } from "@/components/excel-import"
 import { ProjectManager, type ProjectSnapshot } from "@/components/project-manager"
+import { saveProject as saveProjectToStorage, getRecentProjects, loadProject as loadProjectFromStorage, type ProjectListItem } from "@/lib/project-storage"
 import { SiteVisualsManager } from "@/components/site-visuals-manager"
 import { type SiteVisualsConfig, EMPTY_SITE_VISUALS } from "@/lib/site-visuals-config"
 import { type FinancialScenariosConfig, EMPTY_SCENARIOS_CONFIG } from "@/lib/financial-scenarios-config"
@@ -82,7 +83,8 @@ import {
   Settings2,
   Code,
   Table,
-  Printer
+  Printer,
+  Clock
 } from "lucide-react"
 import { useSubscription } from "@/components/subscription-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
@@ -490,6 +492,32 @@ export default function ArchiScanPage() {
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
   const [currentProjectName, setCurrentProjectName] = useState<string>("")
+  const [recentProjects, setRecentProjects] = useState<ProjectListItem[]>([])
+  
+  // 최근 프로젝트 목록 로드
+  useEffect(() => {
+    if (mounted) {
+      try { setRecentProjects(getRecentProjects(10)) } catch {}
+    }
+  }, [mounted, currentProjectId])
+  
+  // 자동 저장 — 배치안 생성 완료 시
+  useEffect(() => {
+    if (layouts.length > 0 && address && Number(siteArea) > 0) {
+      const snapshot = getCurrentSnapshot?.()
+      if (snapshot) {
+        try {
+          const saved = saveProjectToStorage(snapshot, currentProjectId || undefined, currentProjectName || `${address.split(' ').slice(-2).join(' ')}`)
+          if (!currentProjectId) {
+            setCurrentProjectId(saved.id)
+            setCurrentProjectName(saved.name)
+          }
+          setRecentProjects(getRecentProjects(10))
+          console.log('[auto-save] 프로젝트 자동 저장:', saved.name)
+        } catch {}
+      }
+    }
+  }, [layouts.length])
   const [canEdit, setCanEdit] = useState(true)
   const [showDashboard, setShowDashboard] = useState(false)
   
@@ -1595,6 +1623,39 @@ export default function ArchiScanPage() {
                   />
                 </CardContent>
               </Card>
+              
+              {/* 최근 프로젝트 */}
+              {recentProjects.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" /> 최근 프로젝트
+                  </p>
+                  <div className="space-y-1.5">
+                    {recentProjects.slice(0, 3).map(p => (
+                      <button key={p.id} onClick={() => {
+                        try {
+                          const proj = loadProjectFromStorage(p.id)
+                          if (proj?.data) {
+                            handleProjectLoad(proj.data)
+                            setCurrentProjectId(proj.id)
+                            setCurrentProjectName(proj.name)
+                          }
+                        } catch {}
+                      }}
+                        className="w-full text-left px-3 py-2 rounded-lg border border-border/50 bg-secondary/20 hover:bg-secondary/40 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-foreground truncate">{p.name}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                            {new Date(p.updatedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground truncate">{p.address} · {p.siteArea?.toLocaleString()}㎡</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
