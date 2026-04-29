@@ -2,7 +2,7 @@
 // @version STABLE-v194 | @checkpoint release-candidate | 2026-04-10
 
 import { useRef, useState, useEffect } from "react"
-import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg } from "@/lib/report-drawings"
+import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag } from "@/lib/report-drawings"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
@@ -639,54 +639,54 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
       <div>
         <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">배치도</p>
-        ${generateSitePlanSvg({
+        ${svgToImgTag(generateSitePlanSvg({
           siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
           units: layout.units, parking: layout.parking, type: layout.type,
           roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
           setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
           layoutName: layout.name, gfa,
-        })}
+        }))}
       </div>
       <div>
         <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">단면도</p>
-        ${generateSectionSvg({
+        ${svgToImgTag(generateSectionSvg({
           siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
           units: layout.units, parking: layout.parking, type: layout.type,
           roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
           setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
           layoutName: layout.name, gfa,
-        })}
+        }))}
       </div>
       <div>
         <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">아이소메트릭</p>
-        ${generateIsometricSvg({
+        ${svgToImgTag(generateIsometricSvg({
           siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
           units: layout.units, parking: layout.parking, type: layout.type,
           roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
           setbacks: { front: 1, side: 0.5, rear: 1 },
           layoutName: layout.name, gfa,
-        })}
+        }))}
       </div>
       <div>
         <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">입면도</p>
-        ${generateElevationSvg({
+        ${svgToImgTag(generateElevationSvg({
           siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
           units: layout.units, parking: layout.parking, type: layout.type,
           roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
           setbacks: { front: 1, side: 0.5, rear: 1 },
           layoutName: layout.name, gfa,
-        })}
+        }))}
       </div>
     </div>
     <div style="margin-top: 10px;">
       <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">투시도</p>
-      ${generatePerspectiveSvg({
+      ${svgToImgTag(generatePerspectiveSvg({
         siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
         units: layout.units, parking: layout.parking, type: layout.type,
         roadWidth: effectiveRoadWidth, heightLimit: effectiveMaxHeight,
         setbacks: { front: 1, side: 0.5, rear: 1 },
         layoutName: layout.name, gfa,
-      })}
+      }))}
     </div>
     <p style="font-size: 7pt; color: #94a3b8; margin-top: 6px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
   </div>

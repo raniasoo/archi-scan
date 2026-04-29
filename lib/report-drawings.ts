@@ -1,7 +1,15 @@
 /**
  * PDF 보고서용 도면 SVG 문자열 생성기
- * HTML 템플릿에 인라인 SVG로 삽입
+ * HTML 템플릿에 base64 img 태그로 삽입 (모든 뷰어 호환)
  */
+
+/** SVG 문자열을 base64 <img> 태그로 변환 — 문서뷰어/PDF에서도 동작 */
+export function svgToImgTag(svgStr: string): string {
+  const encoded = typeof btoa !== 'undefined'
+    ? btoa(unescape(encodeURIComponent(svgStr)))
+    : Buffer.from(svgStr).toString('base64')
+  return `<img src="data:image/svg+xml;base64,${encoded}" style="width:100%;max-width:360px;border-radius:6px;" />`
+}
 
 interface DrawingInput {
   siteArea: number

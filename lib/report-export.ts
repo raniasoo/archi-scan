@@ -5,7 +5,7 @@
 
 import * as XLSX from 'xlsx';
 import { type ReportDataV250, buildReportDataV250 } from './report-data-v250';
-import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg } from './report-drawings';
+import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag } from './report-drawings';
 import { calculateFeasibility } from './project-analysis-state';
 
 // ============================================
@@ -1606,11 +1606,11 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       layoutName: data.layout.name,
       gfa: data.layout.gfa,
     };
-    const sitePlanSvg = generateSitePlanSvg(drawingInput);
-    const sectionSvg = generateSectionSvg(drawingInput);
-    const isometricSvg = generateIsometricSvg(drawingInput);
-    const elevationSvg = generateElevationSvg(drawingInput);
-    const perspectiveSvg = generatePerspectiveSvg(drawingInput);
+    const sitePlanSvg = svgToImgTag(generateSitePlanSvg(drawingInput));
+    const sectionSvg = svgToImgTag(generateSectionSvg(drawingInput));
+    const isometricSvg = svgToImgTag(generateIsometricSvg(drawingInput));
+    const elevationSvg = svgToImgTag(generateElevationSvg(drawingInput));
+    const perspectiveSvg = svgToImgTag(generatePerspectiveSvg(drawingInput));
     const drawingSection = `
     <!-- 6. 설계 도면 -->
     <section class="pdf-section" style="page-break-before: always;">
@@ -1694,11 +1694,11 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
         layoutName: data.layout.name,
         gfa: data.layout.gfa,
       };
-      const sitePlanSvg = generateSitePlanSvg(drawingInput);
-      const sectionSvg = generateSectionSvg(drawingInput);
-      const isometricSvg = generateIsometricSvg(drawingInput);
-      const elevationSvg = generateElevationSvg(drawingInput);
-      const perspectiveSvg = generatePerspectiveSvg(drawingInput);
+      const sitePlanSvg = svgToImgTag(generateSitePlanSvg(drawingInput));
+      const sectionSvg = svgToImgTag(generateSectionSvg(drawingInput));
+      const isometricSvg = svgToImgTag(generateIsometricSvg(drawingInput));
+      const elevationSvg = svgToImgTag(generateElevationSvg(drawingInput));
+      const perspectiveSvg = svgToImgTag(generatePerspectiveSvg(drawingInput));
       const drawingSection = `
     <!-- 6. 설계 도면 -->
     <section class="pdf-section" style="page-break-before: always;">
