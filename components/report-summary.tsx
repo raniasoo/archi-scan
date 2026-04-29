@@ -222,9 +222,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     if (far >= 1400 && coverage >= 90) return 'commercial-central'
     if (far >= 800 && coverage >= 70) return 'commercial-neighborhood'
     if (far >= 400 && coverage >= 70) return 'semi-residential'
-    if (far >= 250 && coverage >= 60) return 'residential-3'
-    if (far >= 200 && coverage >= 60) return 'residential-2'
-    if (far >= 150 && coverage >= 50) return 'residential-1'
+    if (far >= 250 && coverage >= 50) return 'residential-3'
+    if (far >= 200 && coverage >= 50) return 'residential-2'
+    if (far >= 100 && coverage >= 50) return 'residential-1'
     if (far >= 300 && coverage >= 70) return 'industrial-general'
     return ''
   }

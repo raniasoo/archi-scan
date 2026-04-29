@@ -902,7 +902,14 @@ export default function ArchiScanPage() {
     }
 
     // 용도지역: vwZone 처리는 상단 early return에서 완료
-    setMolitSupplementData(prev => ({ ...prev, ...coords }))
+    // MOLIT 건축물대장 용도지역을 fallback으로 저장 (vworld-zone이 빈 값일 때 사용)
+    const molitMappedZone = mapZoneString(data.zoneType || '')
+    setMolitSupplementData(prev => ({ 
+      ...prev, 
+      ...coords,
+      // vworld-zone 결과가 아직 없으면 MOLIT zone을 fallback으로 저장
+      zoneCode: prev.zoneCode || molitMappedZone || prev.zoneCode,
+    }))
     
     // regulation의 접도/지구단위 즉시 업데이트 (zoneType은 applyZoneData에서 설정)
     const roadNameOnly = roadAddr.replace(/.*[구군시]\s*/,'')
