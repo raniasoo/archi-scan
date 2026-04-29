@@ -110,6 +110,7 @@ export interface FeasibilityResult {
   
   // 수익
   salesPricePerM2: number // ㎡당 분양가
+  constructionCostPerM2: number // ㎡당 공사비
   totalRevenue: number // 예상 매출
   
   // 손익
@@ -462,6 +463,7 @@ export function calculateFeasibility(input: FeasibilityInput): FeasibilityResult
     softCost,
     totalCost,
     salesPricePerM2,
+    constructionCostPerM2,
     totalRevenue,
     profit,
     roi,

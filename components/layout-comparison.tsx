@@ -11,11 +11,13 @@ interface LayoutComparisonProps {
   selectedLayout: number | null
   recommendedLayoutId?: number | null
   landPricePerM2?: number
+  salesPricePerM2?: number
+  constructionCostPerM2?: number
   onSelect: (id: number) => void
 }
 
 export function LayoutComparison({
-  layouts, siteArea, selectedLayout, recommendedLayoutId, landPricePerM2, onSelect,
+  layouts, siteArea, selectedLayout, recommendedLayoutId, landPricePerM2, salesPricePerM2, constructionCostPerM2, onSelect,
 }: LayoutComparisonProps) {
   const financials = useMemo(() => {
     try {
@@ -26,6 +28,8 @@ export function LayoutComparison({
         floorCount: l.floors || 1,
         parkingCount: l.parking || 0,
         landPricePerM2: landPricePerM2 || 5000000,
+        salesPricePerM2: salesPricePerM2 || undefined,
+        constructionCostPerM2: constructionCostPerM2 || undefined,
       }))
     } catch (e) {
       console.error('[LayoutComparison] calculateFeasibility error:', e)
@@ -36,7 +40,7 @@ export function LayoutComparison({
         landCost: 0, constructionCost: 0, softCost: 0, parkingCost: 0,
       }))
     }
-  }, [layouts, siteArea, landPricePerM2])
+  }, [layouts, siteArea, landPricePerM2, salesPricePerM2, constructionCostPerM2])
 
   if (!layouts.length) return null
 
