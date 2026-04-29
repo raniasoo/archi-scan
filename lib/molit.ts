@@ -1474,16 +1474,86 @@ export async function lookupSiteData(
       console.log(`[MOLIT] Using Juso-resolved data: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, bun=${bun}, ji=${ji}, platGbCd=${platGbCd}`)
     } else {
       // ========================================
-      // Step 2: Juso failed - STOP for road addresses (no fallback)
+      // Step 2: Juso failed — retry with shorter address variants
       // ========================================
       console.log(`[MOLIT] Juso resolution failed: ${jusoResult.status} - ${jusoResult.message}`)
       
       const parsed = parseAddress(normalizedAddress)
       
-      // For road addresses, we CANNOT do accurate parcel lookup without Juso
-      // STOP HERE - do not attempt MOLIT lookup with guessed data
-      if (parsed.type === 'road') {
-        console.log(`[MOLIT] Road address detected but Juso failed - STOPPING at stage=juso`)
+      // For road addresses: try shorter variants before giving up
+      if (parsed.type === 'road' && jusoResult.status === 'no-results') {
+        console.log(`[MOLIT] Road address no-results — trying shorter variants`)
+        
+        // Generate address variants for retry
+        const variants: string[] = []
+        
+        // Variant 1: Remove building name / extra text after the number
+        const numMatch = normalizedAddress.match(/^(.+\s+\d+(-\d+)?)\s+.+$/)
+        if (numMatch) variants.push(numMatch[1])
+        
+        // Variant 2: "시군구 + 도로명 + 번호" only (drop 시도)
+        const shortMatch = normalizedAddress.match(/([가-힣]+[구군시]\s+[가-힣]+(?:대로|로|길)\s*\d+(-\d+)?)/)
+        if (shortMatch) variants.push(shortMatch[1])
+        
+        // Variant 3: Remove sub-number (152-3 → 152)
+        const noSub = normalizedAddress.replace(/(\d+)-\d+/, '$1')
+        if (noSub !== normalizedAddress) variants.push(noSub)
+        
+        // Deduplicate and filter
+        const uniqueVariants = [...new Set(variants)].filter(v => v !== normalizedAddress && v.length >= 8)
+        
+        for (const variant of uniqueVariants) {
+          console.log(`[MOLIT] Juso retry with: "${variant}"`)
+          const retryResult = await resolveAddressWithJuso(variant)
+          if (retryResult.resolved) {
+            console.log(`[MOLIT] Juso retry SUCCESS: "${variant}"`)
+            sigunguCd = retryResult.resolved.sigunguCd
+            bjdongCd = retryResult.resolved.bjdongCd
+            bun = retryResult.resolved.bun
+            ji = retryResult.resolved.ji
+            lookupPath = 'juso-resolved'
+            
+            const resolvedAny = retryResult.resolved as unknown as Record<string, unknown>
+            if (resolvedAny['platGbCdFromBdMgtSn'] !== undefined) {
+              platGbCd = String(resolvedAny['platGbCdFromBdMgtSn'])
+            }
+            
+            diagnostics.lookupPath = 'juso-resolved'
+            diagnostics.jusoResult = {
+              success: true,
+              jibunAddr: retryResult.resolved.jibunAddr,
+              bdMgtSn: retryResult.resolved.bdMgtSn,
+              extractedCodes: { sigunguCd, bjdongCd, bun, ji },
+              retryVariant: variant,
+            }
+            if (retryResult.resolved.entX) diagnostics.jusoResult.entX = retryResult.resolved.entX
+            if (retryResult.resolved.entY) diagnostics.jusoResult.entY = retryResult.resolved.entY
+            if (retryResult.resolved.roadAddr) diagnostics.jusoResult.roadAddr = retryResult.resolved.roadAddr
+            diagnostics.stoppedAt = 'molit'
+            break
+          }
+        }
+        
+        // If all retries failed, stop
+        if (lookupPath !== 'juso-resolved') {
+          console.log(`[MOLIT] All Juso retries failed - STOPPING`)
+          diagnostics.lookupPath = 'juso-failed'
+          diagnostics.stoppedAt = 'juso'
+          diagnostics.apiResponse = { status: 'not-called', message: 'MOLIT 호출 중단 - Juso 주소 변환 실패 (재시도 포함)' }
+          
+          return {
+            success: false,
+            error: '입력하신 주소를 찾을 수 없습니다. 주소를 확인 후 다시 시도해주세요.',
+            diagnostics,
+            data: {
+              address: normalizedAddress,
+              dataSource: 'address',
+              fetchedAt: new Date().toISOString(),
+            },
+          }
+        }
+      } else if (parsed.type === 'road') {
+        console.log(`[MOLIT] Road address detected but Juso failed (${jusoResult.status}) - STOPPING at stage=juso`)
         
         diagnostics.lookupPath = 'juso-failed'
         diagnostics.stoppedAt = 'juso'
@@ -1493,8 +1563,6 @@ export async function lookupSiteData(
         let errorMsg = 'Juso 주소 변환에 실패하여 건축물대장 조회를 수행할 수 없습니다.'
         if (jusoResult.status === 'auth-error') {
           errorMsg = `Juso API 인증 오류: ${jusoResult.message}. JUSO_API_KEY를 juso.go.kr에서 발급받아 설정해주세요.`
-        } else if (jusoResult.status === 'no-results') {
-          errorMsg = '입력하신 주소를 찾을 수 없습니다. 주소를 확인 후 다시 시도해주세요.'
         } else if (jusoResult.status === 'key-missing') {
           errorMsg = 'Juso API 키가 설정되지 않았습니다. JUSO_API_KEY 환경변수를 설정해주세요.'
         }
