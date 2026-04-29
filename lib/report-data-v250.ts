@@ -374,6 +374,24 @@ export function buildReportDataV250(input: BuildReportDataInput): ReportDataV250
   const roi = safeNumber(feasibilityResult?.roi, 0);
   const verdict = getVerdict(roi);
 
+  // 용도지역 코드 결정 (3중 fallback: 직접 전달 → regulation limits 역추정 → 기본값)
+  const inferZoneFromLimits = (bcr?: number, far?: number): string => {
+    if (!bcr || !far) return '';
+    if (far >= 1300 && bcr >= 80) return 'commercial-general';
+    if (far >= 1400 && bcr >= 90) return 'commercial-central';
+    if (far >= 800 && bcr >= 70) return 'commercial-neighborhood';
+    if (far >= 400 && bcr >= 70) return 'semi-residential';
+    if (far >= 250 && bcr >= 50) return 'residential-3';
+    if (far >= 200 && bcr >= 60) return 'residential-2';
+    if (far >= 100 && bcr >= 50) return 'residential-1';
+    if (far >= 300 && bcr >= 70) return 'industrial-general';
+    return '';
+  };
+  const effectiveZoneCode = regulation?.zoneType 
+    || inferZoneFromLimits(regulation?.buildingCoverageLimit, regulation?.farLimit) 
+    || 'residential-2';
+  const effectiveZoneLabel = ZONE_LABELS[effectiveZoneCode] || effectiveZoneCode;
+
   // 비용 계산 (이미 억원 단위로 전달됨 - 변환 없이 그대로 사용)
   const landCost = safeNumber(feasibilityResult?.landCost, 0);
   const constructionCost = safeNumber(feasibilityResult?.constructionCost, 0);
@@ -458,7 +476,7 @@ export function buildReportDataV250(input: BuildReportDataInput): ReportDataV250
       address: address,
       siteArea: siteArea,
       siteAreaFormatted: formatArea(siteArea),
-      landUsePlan: (regulation?.zoneType ? ZONE_LABELS[regulation.zoneType] || regulation.zoneType : '제2종 일반주거지역'),
+      landUsePlan: effectiveZoneLabel,
       roadAccess: `${safeNumber(regulation?.roadWidth, 8)}m 이상 도로 접함`,
       heightLimit: safeNumber(regulation?.maxHeight, 30),
       heightLimitFormatted: `${safeNumber(regulation?.maxHeight, 30)}m`,
@@ -621,8 +639,8 @@ export function buildReportDataV250(input: BuildReportDataInput): ReportDataV250
       profitability: roi >= 20 ? 90 : roi >= 10 ? 70 : 50,
       marketability: 75,
       totalScore: Math.round((85 + (roi >= 20 ? 90 : roi >= 10 ? 70 : 50) + 75) / 3),
-      summaryText: `본 대상지는 ${regulation?.zoneType ? ZONE_LABELS[regulation.zoneType] || regulation.zoneType : '제3종 일반주거지역'}에 위치하며, ${selectedLayout.name} 배치안 적용 시 ${selectedLayout.units}세대 규모의 공동주택 개발이 가능합니다. ROI ${formatPercent(roi)} 수준으로 ${verdict.text}으로 분석됩니다.`,
-      summary: `본 대상지는 ${regulation?.zoneType ? ZONE_LABELS[regulation.zoneType] || regulation.zoneType : '제3종 일반주거지역'}에 위치하며, ${selectedLayout.name} 배치안 적용 시 ${selectedLayout.units}세대 규모의 공동주택 개발이 가능합니다. ROI ${formatPercent(roi)} 수준으로 ${verdict.text}으로 분석됩니다.`,
+      summaryText: `본 대상지는 ${effectiveZoneLabel}에 위치하며, ${selectedLayout.name} 배치안 적용 시 ${selectedLayout.units}세대 규모의 공동주택 개발이 가능합니다. ROI ${formatPercent(roi)} 수준으로 ${verdict.text}으로 분석됩니다.`,
+      summary: `본 대상지는 ${effectiveZoneLabel}에 위치하며, ${selectedLayout.name} 배치안 적용 시 ${selectedLayout.units}세대 규모의 공동주택 개발이 가능합니다. ROI ${formatPercent(roi)} 수준으로 ${verdict.text}으로 분석됩니다.`,
       recommendation: `${selectedLayout.name}은 법정 용적률 대비 ${formatPercent(selectedLayout.far / safeNumber(regulation?.farLimit, 250) * 100)} 활용률을 보이며, 세대당 1대 이상 주차 확보가 가능합니다.`,
       caution: '실제 사업 추진 시 정밀 설계, 지질조사, 인허가 협의 등 추가 검토가 필요합니다.',
       designFeatures: [
