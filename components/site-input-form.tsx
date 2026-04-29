@@ -237,7 +237,36 @@ export function SiteInputForm({
           }
         }
       })
-      .catch(e => console.warn('[site-input] zone-lookup 실패:', e))
+      .catch(e => {
+        console.warn('[site-input] zone-lookup 실패, MOLIT fallback 사용:', e)
+        // vworld-zone 실패 시 MOLIT 건축물대장의 용도지역을 사용
+        if (fetchedData?.zoneType) {
+          const mapZ = (raw: string): string => {
+            if (raw.includes('제1종전용')) return 'residential-exclusive-1'
+            if (raw.includes('제2종전용')) return 'residential-exclusive-2'
+            if (raw.includes('제1종일반')) return 'residential-1'
+            if (raw.includes('제2종일반')) return 'residential-2'
+            if (raw.includes('제3종일반')) return 'residential-3'
+            if (raw.includes('준주거')) return 'semi-residential'
+            if (raw.includes('근린상업')) return 'commercial-neighborhood'
+            if (raw.includes('중심상업')) return 'commercial-central'
+            if (raw.includes('일반상업')) return 'commercial-general'
+            if (raw.includes('일반공업')) return 'industrial-general'
+            if (raw.includes('자연녹지')) return 'green-natural'
+            if (raw.includes('생산녹지')) return 'green-production'
+            return ''
+          }
+          const fallbackZone = mapZ(fetchedData.zoneType)
+          if (fallbackZone) {
+            setAutoZoneCode(fallbackZone)
+            setSupplementData(prev => ({
+              ...prev!,
+              zoneType: prev?.zoneType || fallbackZone,
+            }))
+            console.log('[site-input] MOLIT fallback zone:', fallbackZone)
+          }
+        }
+      })
   }, [lookupState, resolvedJuso?.sigunguCd, autoZoneCode, fetchedData?.zoneType])
 
 
@@ -476,12 +505,26 @@ export function SiteInputForm({
           }, 300)
         }
 
-        // MOLIT 용도지역은 무시 - vworld-zone(LURIS/Vworld)만 사용
-        // MOLIT 건축물대장의 용도지역이 부정확한 사례가 많음 (예: 제1종전용 → 제2종일반)
+        // MOLIT 건축물대장 용도지역 → 코드 매핑 (vworld-zone이 더 정확하지만, fallback으로 사용)
         const molitZone = result.data.zoneType || ''
-        let mappedZone = '' // MOLIT zone 사용하지 않음
-
-        // 역추론은 page.tsx의 zone-lookup/LURIS에 위임 (이중 처리 방지)
+        const mapZone = (raw: string): string => {
+          if (!raw) return ''
+          if (raw.includes('제1종전용')) return 'residential-exclusive-1'
+          if (raw.includes('제2종전용')) return 'residential-exclusive-2'
+          if (raw.includes('제1종일반')) return 'residential-1'
+          if (raw.includes('제2종일반')) return 'residential-2'
+          if (raw.includes('제3종일반')) return 'residential-3'
+          if (raw.includes('준주거')) return 'semi-residential'
+          if (raw.includes('근린상업')) return 'commercial-neighborhood'
+          if (raw.includes('중심상업')) return 'commercial-central'
+          if (raw.includes('일반상업')) return 'commercial-general'
+          if (raw.includes('일반공업')) return 'industrial-general'
+          if (raw.includes('자연녹지')) return 'green-natural'
+          if (raw.includes('생산녹지')) return 'green-production'
+          if (raw.includes('계획관리')) return 'management-planned'
+          return ''
+        }
+        const mappedZone = mapZone(molitZone)  // MOLIT 기반 초기값 (vworld-zone이 오면 덮어씀)
 
         // 접도 현황 - 가능한 모든 주소 소스에서 추론 (stale closure 방지)
         const roadAddrSources = [
@@ -531,9 +574,9 @@ export function SiteInputForm({
         )
 
         // supplement 자동 입력 (MOLIT 조회 완료 시)
-        // zoneType은 vworld-zone(LURIS/Vworld)에서만 설정 — MOLIT 건축물대장은 부정확할 수 있음
+        // zoneType: MOLIT 기반 초기값 설정, vworld-zone 응답이 오면 덮어씀
         setSupplementData(prev => ({
-          zoneType: prev?.zoneType || '',  // zone은 vworld-zone 결과 대기
+          zoneType: prev?.zoneType || mappedZone || '',  // MOLIT fallback
           roadCondition: mappedRoadCondition,
           heightLimit: prev?.heightLimit ?? mappedHeightLimit,
           hasDistrictPlan: hasDistrict,
