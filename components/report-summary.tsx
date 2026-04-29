@@ -3,10 +3,6 @@
 
 import { useRef, useState, useEffect } from "react"
 import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg } from "@/lib/report-drawings"
-import { SitePlan } from "@/components/site-plan"
-import { SectionView } from "@/components/section-view"
-import { IsometricView } from "@/components/isometric-view"
-import { ElevationView } from "@/components/elevation-view"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
@@ -2611,64 +2607,43 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>배치도</p>
-                <SitePlan
-                  siteArea={siteArea}
-                  buildingCoverage={layout.coverage}
-                  floors={layout.floors}
-                  units={layout.units}
-                  parking={layout.parking}
-                  type={layout.type}
-                  setbacks={{
-                    front: regulation?.setbackFront ?? 1,
-                    side: regulation?.setbackSide ?? 0.5,
-                    rear: regulation?.setbackRear ?? 1,
-                  }}
-                  landscapingRatio={siteArea >= 200 ? 15 : 0}
-                  roadWidth={regulation?.roadWidth ?? 8}
-                  hasDistrictPlan={false}
-                  layoutName={layout.name}
-                />
+                <div dangerouslySetInnerHTML={{ __html: generateSitePlanSvg({
+                  siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+                  units: layout.units, parking: layout.parking, type: layout.type,
+                  roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
+                  setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+                  layoutName: layout.name, gfa,
+                }) }} />
               </div>
               <div>
                 <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>단면도</p>
-                <SectionView
-                  siteArea={siteArea}
-                  buildingCoverage={layout.coverage}
-                  floors={layout.floors}
-                  units={layout.units}
-                  parking={layout.parking}
-                  heightLimit={regulation?.maxHeight ?? 30}
-                  type={layout.type}
-                  layoutName={layout.name}
-                  roadWidth={regulation?.roadWidth ?? 8}
-                  hasDistrictPlan={false}
-                />
+                <div dangerouslySetInnerHTML={{ __html: generateSectionSvg({
+                  siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+                  units: layout.units, parking: layout.parking, type: layout.type,
+                  roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
+                  setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+                  layoutName: layout.name, gfa,
+                }) }} />
               </div>
               <div>
                 <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>아이소메트릭</p>
-                <IsometricView
-                  siteArea={siteArea}
-                  buildingCoverage={layout.coverage}
-                  floors={layout.floors}
-                  units={layout.units}
-                  parking={layout.parking}
-                  type={layout.type}
-                  layoutName={layout.name}
-                />
+                <div dangerouslySetInnerHTML={{ __html: generateIsometricSvg({
+                  siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+                  units: layout.units, parking: layout.parking, type: layout.type,
+                  roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
+                  setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+                  layoutName: layout.name, gfa,
+                }) }} />
               </div>
               <div>
                 <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>입면도</p>
-                <ElevationView
-                  siteArea={siteArea}
-                  buildingCoverage={layout.coverage}
-                  floors={layout.floors}
-                  units={layout.units}
-                  parking={layout.parking}
-                  heightLimit={regulation?.maxHeight ?? 30}
-                  type={layout.type}
-                  layoutName={layout.name}
-                  roadWidth={regulation?.roadWidth ?? 8}
-                />
+                <div dangerouslySetInnerHTML={{ __html: generateElevationSvg({
+                  siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+                  units: layout.units, parking: layout.parking, type: layout.type,
+                  roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
+                  setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+                  layoutName: layout.name, gfa,
+                }) }} />
               </div>
             </div>
             <div className="mt-3">
