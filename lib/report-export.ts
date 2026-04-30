@@ -12,14 +12,17 @@ import { calculateFeasibility } from './project-analysis-state';
 // 파일명 생성 헬퍼
 // ============================================
 
-export function generateFileName(address: string, extension: string): string {
+export function generateFileName(address: string, extension: string, layoutName?: string): string {
   const today = new Date();
-  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
   const safeAddress = address
     .replace(/[^\w\s가-힣]/g, '')
-    .replace(/\s+/g, '-')
-    .slice(0, 30);
-  return `Archi-Scan_개발사업사전검토보고서_${safeAddress}_${dateStr}.${extension}`;
+    .replace(/\s+/g, '_')
+    .slice(0, 20);
+  const safeLayout = layoutName
+    ? '_' + layoutName.replace(/[^\w가-힣]/g, '').slice(0, 10)
+    : '';
+  return `ArchiScan_${safeAddress}${safeLayout}_${dateStr}.${extension}`;
 }
 
 // ============================================
@@ -332,7 +335,7 @@ export function downloadExcel(data: ExportData): { success: boolean; error?: str
   XLSX.utils.book_append_sheet(workbook, riskSheet, '리스크');
 
   // 다운로드
-    const fileName = generateFileName(data.address, 'xlsx');
+    const fileName = generateFileName(data.address, 'xlsx', data.layout?.name);
     console.log('[v0] 엑셀 파일 생성:', fileName);
     XLSX.writeFile(workbook, fileName);
     console.log('[v0] downloadExcel 완료');
@@ -1718,7 +1721,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = generateFileName(data.address, 'html');
+    a.download = generateFileName(data.address, 'html', data.layout?.name);
     console.log('[v0] HTML 파일 생성:', a.download);
     document.body.appendChild(a);
     a.click();
@@ -2031,7 +2034,7 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     }
     
     // 다운로드
-    const fileName = generateFileName(data.address, 'pdf');
+    const fileName = generateFileName(data.address, 'pdf', data.layout?.name);
     pdf.save(fileName);
     
     // 정��
