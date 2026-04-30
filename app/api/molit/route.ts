@@ -218,22 +218,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         status: 'test',
         address: testAddr,
         success: result.success,
-        lookupPath: result.lookupPath,
-        totalCount: result.data?.totalCount || 0,
-        items: (result.data?.items || []).slice(0, 2).map((item: Record<string, unknown>) => ({
-          platPlc: item.platPlc,
-          bldNm: item.bldNm,
-          mainPurpsCdNm: item.mainPurpsCdNm,
-          platArea: item.platArea,
-          totArea: item.totArea,
-          grndFlrCnt: item.grndFlrCnt,
-        })),
-        jusoResult: result.jusoResult ? { 
-          success: result.jusoResult.success, 
-          roadAddr: result.jusoResult.roadAddr,
-          jibunAddr: result.jusoResult.jibunAddr,
-        } : null,
         error: result.error,
+        diagnostics: result.diagnostics,
+        itemCount: result.data?.items?.length || 0,
+        firstItem: result.data?.items?.[0] ? {
+          platPlc: result.data.items[0].platPlc,
+          bldNm: result.data.items[0].bldNm,
+          mainPurpsCdNm: result.data.items[0].mainPurpsCdNm,
+          platArea: result.data.items[0].platArea,
+          totArea: result.data.items[0].totArea,
+        } : null,
       })
     } catch (e) {
       return NextResponse.json({ status: 'test-error', error: String(e) })
