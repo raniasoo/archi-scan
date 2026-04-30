@@ -1282,9 +1282,20 @@ export function SiteInputForm({
               type="number"
               placeholder="예: 660"
               value={siteArea}
-              onChange={(e) => onSiteAreaChange(e.target.value)}
-              className="bg-secondary/50"
+              onChange={(e) => {
+                const v = e.target.value
+                onSiteAreaChange(v)
+              }}
+              min={50}
+              max={500000}
+              className={`bg-secondary/50 ${siteArea && (Number(siteArea) < 50 || Number(siteArea) > 500000) ? 'border-red-500 focus:ring-red-500' : ''}`}
             />
+            {siteArea && Number(siteArea) > 0 && Number(siteArea) < 50 && (
+              <p className="text-xs text-red-500 mt-1">대지면적이 너무 작습니다 (최소 50㎡)</p>
+            )}
+            {siteArea && Number(siteArea) > 500000 && (
+              <p className="text-xs text-red-500 mt-1">대지면적이 너무 큽니다 (최대 500,000㎡)</p>
+            )}
           </div>
 
           {/* Fetched Data Summary */}
