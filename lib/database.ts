@@ -74,7 +74,36 @@ export async function getOrCreateUser(): Promise<User> {
   try {
     const supabase = createClient()
     
-    // Check localStorage for existing user ID
+    // 1. Supabase Auth 사용자 확인
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    
+    if (authUser) {
+      // Auth 사용자가 있으면 users 테이블에서 조회/생성
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
+      
+      if (existingUser) return existingUser as User
+
+      // 첫 로그인 — users 테이블에 삽입
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert({
+          id: authUser.id,
+          email: authUser.email,
+          name: authUser.user_metadata?.full_name || null,
+          subscription_tier: 'free',
+          usage_count: 0
+        })
+        .select()
+        .single()
+      
+      if (!error && newUser) return newUser as User
+    }
+
+    // 2. 비로그인 — localStorage fallback
     let userId = typeof window !== 'undefined' ? localStorage.getItem('archiscan_user_id') : null
     
     if (userId && userId !== 'local-user') {
@@ -84,12 +113,10 @@ export async function getOrCreateUser(): Promise<User> {
         .eq('id', userId)
         .single()
       
-      if (!error && existingUser) {
-        return existingUser as User
-      }
+      if (!error && existingUser) return existingUser as User
     }
     
-    // Create new anonymous user
+    // 3. 새 익명 사용자
     const { data: newUser, error } = await supabase
       .from('users')
       .insert({
@@ -102,10 +129,7 @@ export async function getOrCreateUser(): Promise<User> {
       .single()
     
     if (error) {
-      console.error('[v0] Supabase error creating user:', error.message, error.code, error.details)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('archiscan_user_id', 'local-user')
-      }
+      if (typeof window !== 'undefined') localStorage.setItem('archiscan_user_id', 'local-user')
       return FALLBACK_USER
     }
     
@@ -118,6 +142,25 @@ export async function getOrCreateUser(): Promise<User> {
     console.error('[v0] getOrCreateUser error:', err)
     return FALLBACK_USER
   }
+}
+
+// 클라우드 프로젝트 목록 조회
+export async function loadCloudProjects(): Promise<Project[]> {
+  try {
+    const supabase = createClient()
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) return []
+
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (error) { console.error('[v0] loadCloudProjects error:', error); return [] }
+    return (data || []) as Project[]
+  } catch { return [] }
 }
 
 // Projects
