@@ -11,6 +11,16 @@ interface ProjectComparisonProps {
 }
 
 export function ProjectComparison({ onClose, onLoadProject }: ProjectComparisonProps) {
+  const zoneLabel = (z: string) => {
+    const map: Record<string, string> = {
+      'residential-exclusive-1': '제1종 전용주거지역', 'residential-exclusive-2': '제2종 전용주거지역',
+      'residential-1': '제1종 일반주거지역', 'residential-2': '제2종 일반주거지역', 'residential-3': '제3종 일반주거지역',
+      'semi-residential': '준주거지역', 'commercial-general': '일반상업지역', 'commercial-neighborhood': '근린상업지역',
+      'commercial-central': '중심상업지역', 'industrial': '공업지역', 'industrial-general': '일반공업지역',
+      'green-natural': '자연녹지지역', 'green-production': '생산녹지지역', 'green-conservation': '보전녹지지역',
+    }
+    return map[z] || z || '-'
+  }
   const [projects, setProjects] = useState<SavedProject[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [sortKey, setSortKey] = useState<'roi' | 'siteArea' | 'totalInvestment' | 'name'>('roi')
@@ -122,7 +132,7 @@ export function ProjectComparison({ onClose, onLoadProject }: ProjectComparisonP
               <tbody>
                 {[
                   { label: '대지면적', get: (p: SavedProject) => `${(p.data.siteArea || 0).toLocaleString()}㎡`, key: 'siteArea' as const },
-                  { label: '용도지역', get: (p: SavedProject) => p.data.zoneType || '-' },
+                  { label: '용도지역', get: (p: SavedProject) => zoneLabel(p.data.zoneType || '') },
                   { label: '선택 배치안', get: (p: SavedProject) => {
                     const sel = p.data.layouts?.find(l => l.id === p.data.selectedLayoutId)
                     return sel?.name || '-'

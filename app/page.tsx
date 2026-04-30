@@ -3476,9 +3476,11 @@ export default function ArchiScanPage() {
       {showComparisonModal && layouts.length > 0 && (() => {
         const fins = layouts.map(l => {
           try {
-            const effectiveSalesPrice = marketPrice.suggestedSalePrice
-              ? Math.round(marketPrice.suggestedSalePrice * getZoneMultiplier(regulation.zoneType || ''))
-              : regionalPricing?.salesPricePerM2 || undefined
+            const effectiveSalesPrice = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
+              ? marketPrice.suggestedSalePrice
+              : regionalPricing
+                ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || ''))
+                : undefined
             return calculateFeasibility({
               siteArea: siteAreaNum || 1, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
               floorCount: l.floors || 1, parkingCount: l.parking || 0,
