@@ -3473,14 +3473,29 @@ export default function ArchiScanPage() {
       </main>
 
       {/* 배치안 비교 모달 */}
-      {showComparisonModal && layouts.length > 0 && (
+      {showComparisonModal && layouts.length > 0 && (() => {
+        const fins = layouts.map(l => {
+          try {
+            const effectiveSalesPrice = marketPrice.suggestedSalePrice
+              ? Math.round(marketPrice.suggestedSalePrice * getZoneMultiplier(regulation.zoneType || ''))
+              : regionalPricing?.salesPricePerM2 || undefined
+            return calculateFeasibility({
+              siteArea: siteAreaNum || 1, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
+              floorCount: l.floors || 1, parkingCount: l.parking || 0,
+              landPricePerM2: landPriceData.pricePerM2 || 5000000,
+              salesPricePerM2: effectiveSalesPrice,
+              constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
+            })
+          } catch { return { roi: 0, profit: 0, totalCost: 0 } }
+        })
+        return (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setShowComparisonModal(false)}>
-          <div className="bg-background w-full max-w-2xl max-h-[85vh] rounded-t-2xl sm:rounded-2xl overflow-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-background w-full max-w-3xl max-h-[85vh] rounded-t-2xl sm:rounded-2xl overflow-auto" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-border bg-background/95 backdrop-blur">
               <h3 className="font-bold text-sm">배치안 비교 분석</h3>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => {
-                  const text = layouts.map(l => `${l.name}: ${l.floors}층 ${l.units}세대 ROI ${(l.roi||0).toFixed(1)}%`).join('\n')
+                  const text = layouts.map((l, i) => `${l.name}: ${l.floors}층 ${l.units}세대 ROI ${(fins[i]?.roi||0).toFixed(1)}% 수익 ${((fins[i]?.profit||0)/1e8).toFixed(1)}억`).join('\n')
                   const summary = `[Archi-Scan 비교분석]\n${address}\n대지면적 ${siteAreaNum.toLocaleString()}㎡\n\n${text}`
                   if (navigator.share) { navigator.share({ title: '배치안 비교', text: summary }) }
                   else { navigator.clipboard.writeText(summary); toast.success('비교 내용 복사 완료') }
@@ -3492,42 +3507,34 @@ export default function ArchiScanPage() {
             </div>
             <div className="p-4">
               <p className="text-xs text-muted-foreground mb-3">{address} · {siteAreaNum.toLocaleString()}㎡ · {new Date().toLocaleDateString('ko-KR')}</p>
-              <div className="overflow-x-auto -mx-2">
-                <table className="w-full text-[11px] sm:text-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs" style={{ minWidth: '640px' }}>
                   <thead>
                     <tr className="border-b-2 border-border">
-                      <th className="px-2 py-2 text-left font-semibold bg-muted/50">배치안</th>
-                      <th className="px-2 py-2 text-center font-semibold bg-muted/50">층수</th>
-                      <th className="px-2 py-2 text-center font-semibold bg-muted/50">세대</th>
-                      <th className="px-2 py-2 text-center font-semibold bg-muted/50">연면적</th>
-                      <th className="px-2 py-2 text-center font-semibold bg-muted/50">건폐율</th>
-                      <th className="px-2 py-2 text-center font-semibold bg-muted/50">용적률</th>
-                      <th className="px-2 py-2 text-center font-semibold bg-muted/50">주차</th>
-                      <th className="px-2 py-2 text-center font-semibold bg-muted/50">총사업비</th>
-                      <th className="px-2 py-2 text-center font-semibold bg-muted/50">수익</th>
-                      <th className="px-2 py-2 text-center font-semibold bg-muted/50">ROI</th>
+                      {['배치안','층수','세대','연면적','건폐율','용적률','주차','총사업비','예상수익','ROI'].map(h => (
+                        <th key={h} className="px-2 py-2 text-center font-semibold bg-muted/50 whitespace-nowrap">{h}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {layouts.map((l, i) => {
-                      const roi = l.roi || 0
-                      const roiColor = roi >= 15 ? 'text-emerald-500' : roi >= 5 ? 'text-blue-500' : roi >= 0 ? 'text-amber-500' : 'text-red-500'
-                      const isRecommended = l.recommendation?.isRecommended
+                      const f = fins[i] || { roi: 0, profit: 0, totalCost: 0 }
+                      const roiColor = f.roi >= 15 ? 'text-emerald-500' : f.roi >= 5 ? 'text-blue-500' : f.roi >= 0 ? 'text-amber-500' : 'text-red-500'
+                      const isRec = l.recommendation?.isRecommended
                       return (
-                        <tr key={i} className={`border-b border-border/50 ${isRecommended ? 'bg-primary/5' : ''}`}>
-                          <td className="px-2 py-2.5 font-medium text-left">
-                            {l.name}
-                            {isRecommended && <span className="ml-1 text-[9px] text-primary">추천</span>}
+                        <tr key={i} className={`border-b border-border/50 ${isRec ? 'bg-primary/5' : ''}`}>
+                          <td className="px-2 py-2.5 font-medium whitespace-nowrap">
+                            {l.name}{isRec && <span className="ml-1 text-[9px] text-primary">추천</span>}
                           </td>
                           <td className="px-2 py-2.5 text-center">{l.floors}층</td>
-                          <td className="px-2 py-2.5 text-center">{l.units}</td>
-                          <td className="px-2 py-2.5 text-center">{l.gfa?.toLocaleString()}㎡</td>
+                          <td className="px-2 py-2.5 text-center">{l.units}세대</td>
+                          <td className="px-2 py-2.5 text-center whitespace-nowrap">{l.gfa?.toLocaleString()}㎡</td>
                           <td className="px-2 py-2.5 text-center">{(l.buildingCoverage || l.coverage)?.toFixed(1)}%</td>
-                          <td className="px-2 py-2.5 text-center">{l.far?.toFixed(1)}%</td>
+                          <td className="px-2 py-2.5 text-center">{((l.gfa / siteAreaNum) * 100).toFixed(1)}%</td>
                           <td className="px-2 py-2.5 text-center">{l.parking}대</td>
-                          <td className="px-2 py-2.5 text-center">{((l.totalCost || 0) / 100000000).toFixed(1)}억</td>
-                          <td className="px-2 py-2.5 text-center">{((l.profit || 0) / 100000000).toFixed(1)}억</td>
-                          <td className={`px-2 py-2.5 text-center font-bold ${roiColor}`}>{roi.toFixed(1)}%</td>
+                          <td className="px-2 py-2.5 text-center whitespace-nowrap">{(f.totalCost / 1e8).toFixed(1)}억</td>
+                          <td className="px-2 py-2.5 text-center whitespace-nowrap">{(f.profit / 1e8).toFixed(1)}억</td>
+                          <td className={`px-2 py-2.5 text-center font-bold whitespace-nowrap ${roiColor}`}>{f.roi.toFixed(1)}%</td>
                         </tr>
                       )
                     })}
@@ -3535,10 +3542,12 @@ export default function ArchiScanPage() {
                 </table>
               </div>
               {(() => {
-                const best = layouts.reduce((a, b) => (a.roi || 0) > (b.roi || 0) ? a : b)
+                const bestIdx = fins.reduce((bi, f, i) => f.roi > (fins[bi]?.roi || -Infinity) ? i : bi, 0)
+                const best = layouts[bestIdx]
+                const bestF = fins[bestIdx]
                 return (
                   <div className="mt-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <p className="text-xs font-medium"><span className="text-emerald-500">추천:</span> {best.name} (ROI {(best.roi || 0).toFixed(1)}%, 수익 {((best.profit || 0) / 100000000).toFixed(1)}억원)</p>
+                    <p className="text-xs font-medium"><span className="text-emerald-500">추천:</span> {best?.name} (ROI {(bestF?.roi||0).toFixed(1)}%, 수익 {((bestF?.profit||0)/1e8).toFixed(1)}억원)</p>
                   </div>
                 )
               })()}
@@ -3546,7 +3555,8 @@ export default function ArchiScanPage() {
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
       
       {/* 모바일 하단 단계 네비게이션 */}
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur border-t border-border/50 px-2 py-1.5 safe-area-bottom">
