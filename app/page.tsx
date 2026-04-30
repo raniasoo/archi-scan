@@ -21,6 +21,7 @@ import { SiteInputForm } from "@/components/site-input-form"
 import type { SupplementData } from "@/components/manual-supplement-form"
 import { LayoutCard } from "@/components/layout-card"
 import { LayoutComparison } from "@/components/layout-comparison"
+import { ProjectComparison } from "@/components/project-comparison"
 import { BuildingVolume3D } from "@/components/building-volume-3d"
 import { FloorPlan } from "@/components/floor-plan"
 import { generateFloorPlanDXF, downloadDXF } from "@/lib/dxf-generator"
@@ -507,6 +508,7 @@ export default function ArchiScanPage() {
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
   const [currentProjectName, setCurrentProjectName] = useState<string>("")
   const [recentProjects, setRecentProjects] = useState<ProjectListItem[]>([])
+  const [showProjectComparison, setShowProjectComparison] = useState(false)
   
   // 최근 프로젝트 목록 로드
   useEffect(() => {
@@ -1700,9 +1702,36 @@ export default function ArchiScanPage() {
               {/* 최근 프로젝트 */}
               {recentProjects.length > 0 && (
                 <div className="mt-4">
-                  <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" /> 최근 프로젝트
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" /> 최근 프로젝트
+                    </p>
+                    {recentProjects.length >= 2 && (
+                      <button onClick={() => setShowProjectComparison(prev => !prev)}
+                        className="text-xs text-primary hover:underline flex items-center gap-1">
+                        {showProjectComparison ? '비교 닫기' : '프로젝트 비교'}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {showProjectComparison && (
+                    <div className="mb-3">
+                      <ProjectComparison
+                        onClose={() => setShowProjectComparison(false)}
+                        onLoadProject={(id) => {
+                          try {
+                            const proj = loadProjectFromStorage(id)
+                            if (proj?.data) {
+                              handleProjectLoad(proj.data)
+                              setCurrentProjectId(proj.id)
+                              setCurrentProjectName(proj.name)
+                              setShowProjectComparison(false)
+                            }
+                          } catch {}
+                        }}
+                      />
+                    </div>
+                  )}
                   <div className="space-y-1.5">
                     {recentProjects.slice(0, 3).map(p => (
                       <button key={p.id} onClick={() => {
