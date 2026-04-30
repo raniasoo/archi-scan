@@ -2002,20 +2002,59 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
 export function openPrintPreview(data: ExportData): { success: boolean; error?: string } {
   try {
     const report = convertToV250(data);
-    const htmlContent = generateFullHtmlReport(report, data.address);
+    let htmlContent = generateFullHtmlReport(report, data.address);
     
-    // 새 창에서 열고 인쇄
+    // 도면 SVG 삽입 (HTML 다운로드와 동일)
+    try {
+      const drawingInput = {
+        siteArea: data.siteArea,
+        buildingCoverage: data.layout.buildingCoverage,
+        floors: data.layout.floors,
+        units: data.layout.units,
+        parking: data.layout.parking,
+        type: data.layout.type || 'tower',
+        roadWidth: data.regulation?.roadWidth || 8,
+        heightLimit: data.regulation?.maxHeight || 30,
+        setbacks: { front: data.regulation?.hasDistrictPlan ? 2 : 1, side: 0.5, rear: 1 },
+        layoutName: data.layout.name,
+        gfa: data.layout.gfa,
+      };
+      const drawingSection = `
+    <section class="pdf-section" style="page-break-before: always;">
+      <div class="print-title-group">
+        <h2 class="section-title">6. 설계 도면</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div><p style="font-weight:600;font-size:11px;margin-bottom:6px;color:#1e293b;">배치도</p>${generateSitePlanSvg(drawingInput)}</div>
+        <div><p style="font-weight:600;font-size:11px;margin-bottom:6px;color:#1e293b;">단면도</p>${generateSectionSvg(drawingInput)}</div>
+        <div><p style="font-weight:600;font-size:11px;margin-bottom:6px;color:#1e293b;">아이소메트릭</p>${generateIsometricSvg(drawingInput)}</div>
+        <div><p style="font-weight:600;font-size:11px;margin-bottom:6px;color:#1e293b;">입면도</p>${generateElevationSvg(drawingInput)}</div>
+      </div>
+      <div style="margin-top:12px;"><p style="font-weight:600;font-size:11px;margin-bottom:6px;color:#1e293b;">투시도</p>${generatePerspectiveSvg(drawingInput)}</div>
+      <p style="font-size:9px;color:#94a3b8;margin-top:8px;text-align:center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
+    </section>`;
+      htmlContent = htmlContent.replace('<!-- 6. 사업성 검토 -->', drawingSection + '\n    <!-- 7. 사업성 검토 -->');
+      htmlContent = htmlContent.replace('>6. 사업성 검토<', '>7. 사업성 검토<');
+      htmlContent = htmlContent.replace('>7. AI 분석<', '>8. AI 분석<');
+      htmlContent = htmlContent.replace('>8. 시나리오<', '>9. 시나리오<');
+      htmlContent = htmlContent.replace('>9. 리스크 및 고려사항<', '>10. 리스크 및 고려사항<');
+      htmlContent = htmlContent.replace('>10. 결론 및 제안<', '>11. 결론 및 제안<');
+    } catch (e) { console.warn('[print] 도면 삽입 실패:', e); }
+    
+    // 인쇄 도구바 삽입
+    const toolbar = `<div id="print-toolbar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#1e293b;padding:10px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+      <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">🖨️ 인쇄하기</button>
+      <button onclick="window.close()" style="background:#475569;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;">닫기</button>
+      <span style="color:#94a3b8;font-size:12px;margin-left:auto;">Archi-Scan 보고서 인쇄 미리보기</span>
+    </div>
+    <style>@media print { #print-toolbar { display:none !important; } body { padding-top:0 !important; } }</style>
+    <style>body { padding-top: 52px; }</style>`;
+    htmlContent = htmlContent.replace('<body', toolbar + '<body');
+    
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (printWindow) {
       printWindow.document.write(htmlContent);
       printWindow.document.close();
-      
-      // 로드 완료 후 인쇄 다이얼로그 열기
-      printWindow.onload = () => {
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-      };
       return { success: true };
     } else {
       return { success: false, error: '팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.' };
