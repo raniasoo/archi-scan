@@ -1696,27 +1696,9 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       <div class="print-title-group">
         <h2 class="section-title">6. 설계 도면</h2>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-        <div>
-          <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">배치도</p>
-          ${svgToImgTag(generateSitePlanSvg(drawingInput))}
-        </div>
-        <div>
-          <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">단면도</p>
-          ${svgToImgTag(generateSectionSvg(drawingInput))}
-        </div>
-        <div>
-          <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">아이소메트릭</p>
-          ${svgToImgTag(generateIsometricSvg(drawingInput))}
-        </div>
-        <div>
-          <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">입면도</p>
-          ${svgToImgTag(generateElevationSvg(drawingInput))}
-        </div>
-      </div>
-      <div style="margin-top: 12px;">
-        <p style="font-weight: 600; font-size: 11px; margin-bottom: 6px; color: #1e293b;">투시도</p>
-        ${svgToImgTag(generatePerspectiveSvg(drawingInput))}
+      <div style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: center;">
+        <p style="font-size: 13px; font-weight: 600; color: #334155; margin: 0 0 6px 0;">설계 도면 5종 (배치도 · 단면도 · 아이소메트릭 · 입면도 · 투시도)</p>
+        <p style="font-size: 11px; color: #64748b; margin: 0;">도면은 HTML 보고서 다운로드에서 확인하실 수 있습니다.</p>
       </div>
       <p style="font-size: 9px; color: #94a3b8; margin-top: 8px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
     </section>
