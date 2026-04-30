@@ -1592,7 +1592,7 @@ export default function ArchiScanPage() {
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 md:px-6 py-6 md:py-8">
+      <main className="mx-auto max-w-7xl px-4 md:px-6 py-6 md:py-8 pb-16 md:pb-8">
         {/* Mobile Step Indicator */}
         <div className="xl:hidden mb-6">
           <div className="flex items-center justify-between bg-secondary/50 rounded-lg p-3">
@@ -3352,6 +3352,31 @@ export default function ArchiScanPage() {
           comparisonCurrentPlan={selectedLayoutData?.name}
         />
       </main>
+      
+      {/* 모바일 하단 단계 네비게이션 */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur border-t border-border/50 px-2 py-1.5 safe-area-bottom">
+        <div className="flex items-center justify-between gap-1 max-w-lg mx-auto">
+          {steps.map((step, index) => {
+            const isActive = currentStep === step.id
+            const isPast = steps.findIndex(s => s.id === currentStep) > index
+            const isFuture = !isActive && !isPast
+            return (
+              <button key={step.id}
+                onClick={() => {
+                  if (isPast || isActive) setCurrentStep(step.id as AppStep)
+                }}
+                disabled={isFuture}
+                className={`flex-1 flex flex-col items-center gap-0.5 py-1 rounded-lg transition-colors ${
+                  isActive ? 'bg-primary/10 text-primary' : isPast ? 'text-muted-foreground' : 'text-muted-foreground/40'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-primary' : isPast ? 'bg-muted-foreground/50' : 'bg-muted-foreground/20'}`} />
+                <span className="text-[9px] font-medium leading-none">{step.label.replace(/ /g, '\n').split('\n')[0]}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {/* Modals */}
       <UpgradeModal 
