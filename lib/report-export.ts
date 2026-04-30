@@ -1079,24 +1079,28 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     
     /* 표지 - 블루 테마 (A4 1페이지 고정) */
     .cover { 
-      height: 297mm; /* A4 높이 고정 */
-      max-height: 297mm;
+      height: 297mm; max-height: 297mm;
       display: flex; flex-direction: column; justify-content: center; 
-      text-align: center; padding: 60px 40px;
-      background: linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 50%, #164e63 100%);
-      color: #ffffff;
-      page-break-after: always;
-      break-after: page;
-      overflow: visible;
+      text-align: center; padding: 60px 50px;
+      background: linear-gradient(160deg, #0f172a 0%, #1e3a5f 35%, #0c4a6e 65%, #134e4a 100%);
+      color: #fff; page-break-after: always; break-after: page;
+      overflow: visible; position: relative;
     }
-    .cover .doc-number { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 40px; line-height: 1.5; padding-bottom: 4px; }
-    .cover .english-title { font-size: 14px; color: #5eead4; letter-spacing: 2px; margin-bottom: 16px; line-height: 1.5; padding-bottom: 4px; display: block; }
-    .cover h1 { font-size: 36px; color: #ffffff; margin-bottom: 60px; font-weight: 700; line-height: 1.45; padding-bottom: 6px; display: block; }
-    .cover .address { font-size: 20px; color: rgba(255,255,255,0.9); margin-bottom: 8px; line-height: 1.45; padding-bottom: 5px; display: block; }
-    .cover .project-type { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 60px; line-height: 1.5; padding-bottom: 4px; }
-    .cover .meta-info { font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6; }
-    .cover .meta-info p { margin: 4px 0; padding-bottom: 3px; }
-    .cover .company { margin-top: 60px; font-size: 14px; color: #5eead4; font-weight: 600; line-height: 1.5; padding-bottom: 4px; display: block; }
+    .cover::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(94,234,212,0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 80%, rgba(56,189,248,0.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .cover .doc-number { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 48px; letter-spacing: 1px; }
+    .cover .english-title { font-size: 12px; color: #5eead4; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 12px; display: block; }
+    .cover h1 { font-size: 38px; color: #fff; margin-bottom: 20px; font-weight: 800; line-height: 1.4; display: block; }
+    .cover .cover-divider { width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #5eead4, transparent); margin: 0 auto 24px; }
+    .cover .address { font-size: 18px; color: rgba(255,255,255,0.9); margin-bottom: 6px; font-weight: 500; display: block; }
+    .cover .project-type { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 56px; }
+    .cover .meta-info { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+    .cover .meta-info p { margin: 2px 0; }
+    .cover .company { margin-top: 48px; font-size: 15px; color: #5eead4; font-weight: 700; letter-spacing: 1px; display: block; }
     
     /* 섹션 - 화이트 테마 */
     .section { padding: 16px 0; border-bottom: 1px solid #e5e7eb; background: #ffffff; overflow: visible; }
@@ -1282,6 +1286,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       <p class="doc-number">${report.cover.documentNumber}</p>
       <p class="english-title">${report.cover.englishSubtitle}</p>
       <h1>${report.cover.koreanTitle}</h1>
+      <div class="cover-divider"></div>
       <p class="address">${report.cover.address}</p>
       <p class="project-type">${report.cover.projectType}</p>
       <div class="meta-info">
@@ -2265,24 +2270,28 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     
     /* 표지 - 블루 테마 (A4 1페이지 고정) */
     .cover { 
-      height: 297mm; /* A4 높이 고정 */
-      max-height: 297mm;
+      height: 297mm; max-height: 297mm;
       display: flex; flex-direction: column; justify-content: center; 
-      text-align: center; padding: 60px 40px;
-      background: linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 50%, #164e63 100%);
-      color: #ffffff;
-      page-break-after: always;
-      break-after: page;
-      overflow: visible;
+      text-align: center; padding: 60px 50px;
+      background: linear-gradient(160deg, #0f172a 0%, #1e3a5f 35%, #0c4a6e 65%, #134e4a 100%);
+      color: #fff; page-break-after: always; break-after: page;
+      overflow: visible; position: relative;
     }
-    .cover .doc-number { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 40px; line-height: 1.5; padding-bottom: 4px; }
-    .cover .english-title { font-size: 14px; color: #5eead4; letter-spacing: 2px; margin-bottom: 16px; line-height: 1.5; padding-bottom: 4px; display: block; }
-    .cover h1 { font-size: 36px; color: #ffffff; margin-bottom: 60px; font-weight: 700; line-height: 1.45; padding-bottom: 6px; display: block; }
-    .cover .address { font-size: 20px; color: rgba(255,255,255,0.9); margin-bottom: 8px; line-height: 1.45; padding-bottom: 5px; display: block; }
-    .cover .project-type { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 60px; line-height: 1.5; padding-bottom: 4px; }
-    .cover .meta-info { font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6; }
-    .cover .meta-info p { margin: 4px 0; padding-bottom: 3px; }
-    .cover .company { margin-top: 60px; font-size: 14px; color: #5eead4; font-weight: 600; line-height: 1.5; padding-bottom: 4px; display: block; }
+    .cover::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(94,234,212,0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 80%, rgba(56,189,248,0.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .cover .doc-number { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 48px; letter-spacing: 1px; }
+    .cover .english-title { font-size: 12px; color: #5eead4; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 12px; display: block; }
+    .cover h1 { font-size: 38px; color: #fff; margin-bottom: 20px; font-weight: 800; line-height: 1.4; display: block; }
+    .cover .cover-divider { width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #5eead4, transparent); margin: 0 auto 24px; }
+    .cover .address { font-size: 18px; color: rgba(255,255,255,0.9); margin-bottom: 6px; font-weight: 500; display: block; }
+    .cover .project-type { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 56px; }
+    .cover .meta-info { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+    .cover .meta-info p { margin: 2px 0; }
+    .cover .company { margin-top: 48px; font-size: 15px; color: #5eead4; font-weight: 700; letter-spacing: 1px; display: block; }
     
     /* 섹션 - 화이트 테마 */
     .section { padding: 16px 0; border-bottom: 1px solid #e5e7eb; background: #ffffff; overflow: visible; }
@@ -3017,6 +3026,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       <p class="doc-number">${report.cover.documentNumber}</p>
       <p class="english-title">${report.cover.englishSubtitle}</p>
       <h1>${report.cover.koreanTitle}</h1>
+      <div class="cover-divider"></div>
       <p class="address">${report.cover.address}</p>
       <p class="project-type">${report.cover.projectType}</p>
       <div class="meta-info">
