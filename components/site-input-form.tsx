@@ -892,17 +892,20 @@ export function SiteInputForm({
                 />
                 {/* 주소 자동완성 드롭다운 */}
                 {showSuggestions && suggestions.length > 0 && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl max-h-60 overflow-y-auto">
                     {suggestions.map((s, i) => (
                       <button
                         key={i}
                         type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent/50 border-b border-border/30 last:border-0 flex flex-col gap-0.5"
+                        className="w-full text-left px-3 py-3 hover:bg-accent/50 border-b border-border/20 last:border-0 flex items-start gap-2.5 min-h-[48px] active:bg-accent/70"
                         onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s.roadAddr) }}
                       >
-                        <span className="font-medium text-foreground">{s.roadAddr}</span>
-                        {s.bdNm && <span className="text-xs text-muted-foreground">{s.bdNm}</span>}
-                        {s.jibunAddr && <span className="text-xs text-muted-foreground/70">{s.jibunAddr}</span>}
+                        <MapPin className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className="text-sm font-medium text-foreground leading-tight">{s.roadAddr}</span>
+                          {s.bdNm && <span className="text-xs font-semibold text-primary/80">{s.bdNm}</span>}
+                          {s.jibunAddr && <span className="text-[11px] text-muted-foreground truncate">{s.jibunAddr}</span>}
+                        </div>
                       </button>
                     ))}
                   </div>
