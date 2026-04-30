@@ -408,8 +408,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       }
       
       /* ===== 섹션 5,6,7,8,9 압축 레이아웃 ===== */
-      .pdf-section-5, .pdf-section-6, .pdf-section-7,
-      .pdf-section-8, .pdf-section-9 {
+      .pdf-section, .pdf-section, .pdf-section,
+      .pdf-section, .pdf-section {
         padding: 2px 0 !important;
       }
       
@@ -845,7 +845,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       }
 
       /* ===== 결론/면책 - 빈 공간 완전 제거 (모바일 최적화) ===== */
-      .pdf-section-5, .pdf-section-6, .pdf-section-7, .pdf-section-8, .pdf-section-9 {
+      .pdf-section, .pdf-section, .pdf-section, .pdf-section, .pdf-section {
         display: block !important;
         min-height: auto !important;
         height: auto !important;
@@ -1356,7 +1356,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </div>
 
 <!-- 3. 법규 검토 -->
-    <section class="pdf-section pdf-section-3">
+    <section class="pdf-section pdf-section">
       <div class="print-title-group">
         <h2 class="section-title">3. 법규 검토</h2>
       </div>
@@ -1416,7 +1416,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </div>
 
 <!-- 5. 규모 산정 및 계획 구성 -->
-    <section class="pdf-section pdf-section-5">
+    <section class="pdf-section pdf-section">
       <div class="print-title-group">
         <h2 class="section-title">5. 규모 산정 및 계획 구성</h2>
       </div>
@@ -1454,10 +1454,10 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       </div>
     </section>
 
-    <!-- 6. 사업성 검토 -->
-    <section class="pdf-section pdf-section-6">
+    <!-- 7. 사업성 검토 -->
+    <section class="pdf-section pdf-section">
       <div class="print-title-group">
-        <h2 class="section-title">6. 사업성 검토</h2>
+        <h2 class="section-title">7. 사업성 검토</h2>
       </div>
       <div class="print-cost-block">
         <table>
@@ -1479,9 +1479,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </section>
 
     <!-- 7. AI 분석 -->
-    <section class="pdf-section pdf-section-7 pdf-card-group">
+    <section class="pdf-section pdf-section pdf-card-group">
 
-      <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
+      <h2 class="section-title" style="margin-bottom:12px;">8. AI 분석</h2>
 
       <div class="ai-score-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
         <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
@@ -1504,9 +1504,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </section>
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
-    <section class="pdf-section pdf-section-8">
+    <section class="pdf-section pdf-section">
       <div class="print-title-group">
-        <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
+        <h2 class="section-title">9. 시나리오 및 사업기간 분석</h2>
       </div>
       <div class="print-roi-block pdf-card-group">
         <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
@@ -1548,9 +1548,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     <!-- 8 + 9 + Footer 그룹 - 마지막 페이지 -->
     <div class="print-final-page-group">
       <!-- 9. 리스크 및 고려사항 -->
-      <section class="pdf-section pdf-section-9">
+      <section class="pdf-section pdf-section">
         <div class="print-title-group">
-          <h2 class="section-title">9. 리스크 및 고려사항</h2>
+          <h2 class="section-title">10. 리스크 및 고려사항</h2>
         </div>
         <div class="print-risk-block">
           <div class="risk-grid">
@@ -1583,9 +1583,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       </section>
 
       <!-- 10. 결론 및 제안 -->
-      <section class="pdf-section pdf-section-10">
+      <section class="pdf-section pdf-section">
         <div class="print-conclusion-group">
-          <h2 class="section-title">10. 결론 및 제안</h2>
+          <h2 class="section-title">11. 결론 및 제안</h2>
           <p style="color: #374151; line-height: 1.8; margin-top: 12px;">${report.conclusion.finalParagraph}</p>
           <div class="verdict-box">
             <p style="font-size: 16px; color: #065f46;">${report.conclusion.summaryBox}</p>
@@ -1652,12 +1652,11 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </section>
 
     <!-- 7. 사업성 검토 -->`;
-    htmlContent = htmlContent.replace('<!-- 6. 사업성 검토 -->', drawingSection);
-    htmlContent = htmlContent.replace('>6. 사업성 검토<', '>7. 사업성 검토<');
-    htmlContent = htmlContent.replace('>7. AI 분석<', '>8. AI 분석<');
+    htmlContent = htmlContent.replace('<!-- 7. 사업성 검토 -->', drawingSection + '\n    <!-- 7. 사업성 검토 -->');
+    htmlContent = htmlContent.replace('>8. AI 분석<', '>8. AI 분석<');
     htmlContent = htmlContent.replace('>8. 시나리오<', '>9. 시나리오<');
-    htmlContent = htmlContent.replace('>9. 리스크 및 고려사항<', '>10. 리스크 및 고려사항<');
-    htmlContent = htmlContent.replace('>10. 결론 및 제안<', '>11. 결론 및 제안<');
+    htmlContent = htmlContent.replace('>10. 리스크 및 고려사항<', '>10. 리스크 및 고려사항<');
+    htmlContent = htmlContent.replace('>11. 결론 및 제안<', '>11. 결론 및 제안<');
   } catch (e) { console.warn('[report-export] HTML 도면 삽입 실패:', e); }
 
   const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
@@ -1766,13 +1765,8 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     </section>
 
     <!-- 7. 사업성 검토 -->`;
-      htmlContent = htmlContent.replace('<!-- 6. 사업성 검토 -->', drawingSection);
+      htmlContent = htmlContent.replace('<!-- 7. 사업성 검토 -->', drawingSection + '\n    <!-- 7. 사업성 검토 -->');
       // 섹션 번호 +1
-      htmlContent = htmlContent.replace('>6. 사업성 검토<', '>7. 사업성 검토<');
-      htmlContent = htmlContent.replace('>7. AI 분석<', '>8. AI 분석<');
-      htmlContent = htmlContent.replace('>8. 시나리오<', '>9. 시나리오<');
-      htmlContent = htmlContent.replace('>9. 리스크 및 고려사항<', '>10. 리스크 및 고려사항<');
-      htmlContent = htmlContent.replace('>10. 결론 및 제안<', '>11. 결론 및 제안<');
     } catch (e) { console.warn('[report-export] 도면 삽입 실패:', e); }
     
     // 동적으로 jsPDF와 html2canvas 로드
@@ -2033,12 +2027,7 @@ export function openPrintPreview(data: ExportData): { success: boolean; error?: 
       <div style="margin-top:12px;"><p style="font-weight:600;font-size:11px;margin-bottom:6px;color:#1e293b;">투시도</p>${generatePerspectiveSvg(drawingInput)}</div>
       <p style="font-size:9px;color:#94a3b8;margin-top:8px;text-align:center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
     </section>`;
-      htmlContent = htmlContent.replace('<!-- 6. 사업성 검토 -->', drawingSection + '\n    <!-- 7. 사업성 검토 -->');
-      htmlContent = htmlContent.replace('>6. 사업성 검토<', '>7. 사업성 검토<');
-      htmlContent = htmlContent.replace('>7. AI 분석<', '>8. AI 분석<');
-      htmlContent = htmlContent.replace('>8. 시나리오<', '>9. 시나리오<');
-      htmlContent = htmlContent.replace('>9. 리스크 및 고려사항<', '>10. 리스크 및 고려사항<');
-      htmlContent = htmlContent.replace('>10. 결론 및 제안<', '>11. 결론 및 제안<');
+      htmlContent = htmlContent.replace('<!-- 7. 사업성 검토 -->', drawingSection + '\n    <!-- 7. 사업성 검토 -->');
     } catch (e) { console.warn('[print] 도면 삽입 실패:', e); }
     
     // 인쇄 도구바 삽입
@@ -2526,8 +2515,8 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       }
       
       /* ===== 섹션 5,6,7,8,9 압축 레이아웃 ===== */
-      .pdf-section-5, .pdf-section-6, .pdf-section-7,
-      .pdf-section-8, .pdf-section-9 {
+      .pdf-section, .pdf-section, .pdf-section,
+      .pdf-section, .pdf-section {
         padding: 2px 0 !important;
       }
       
@@ -2871,7 +2860,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       }
 
       /* ===== 결론/면책 - 빈 공간 완전 제거 (모바일) ===== */
-      .pdf-section-5, .pdf-section-6, .pdf-section-7, .pdf-section-8, .pdf-section-9 {
+      .pdf-section, .pdf-section, .pdf-section, .pdf-section, .pdf-section {
         display: block !important;
         min-height: auto !important;
         height: auto !important;
@@ -3079,7 +3068,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     </div>
 
 <!-- 3. 법규 검토 -->
-    <section class="pdf-section pdf-section-3">
+    <section class="pdf-section pdf-section">
       <div class="print-title-group">
         <h2 class="section-title">3. 법규 검토</h2>
       </div>
@@ -3161,7 +3150,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     </div>
 
     <!-- 5. 규모 산정 및 계획 구성 -->
-    <section class="pdf-section pdf-section-5">
+    <section class="pdf-section pdf-section">
       <div class="print-title-group">
         <h2 class="section-title">5. 규모 산정 및 계획 구성</h2>
       </div>
@@ -3199,10 +3188,10 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       </div>
     </section>
 
-    <!-- 6. 사업성 검토 -->
-    <section class="pdf-section pdf-section-6">
+    <!-- 7. 사업성 검토 -->
+    <section class="pdf-section pdf-section">
       <div class="print-title-group">
-        <h2 class="section-title">6. 사업성 검토</h2>
+        <h2 class="section-title">7. 사업성 검토</h2>
       </div>
       <div class="print-cost-block">
         <table>
@@ -3224,8 +3213,8 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     </section>
 
     <!-- 7. AI 분석 -->
-    <section class="pdf-section pdf-section-7 pdf-card-group">
-      <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
+    <section class="pdf-section pdf-section pdf-card-group">
+      <h2 class="section-title" style="margin-bottom:12px;">8. AI 분석</h2>
       <div class="ai-score-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
         <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
           <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
@@ -3247,9 +3236,9 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     </section>
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
-    <section class="pdf-section pdf-section-8">
+    <section class="pdf-section pdf-section">
       <div class="print-title-group">
-        <h2 class="section-title">8. 시나리오 및 사업기간 분석</h2>
+        <h2 class="section-title">9. 시나리오 및 사업기간 분석</h2>
       </div>
       <div class="print-roi-block pdf-card-group">
         <div class="summary-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
@@ -3283,9 +3272,9 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     <!-- 8 + 9 + Footer 그룹 - 마지막 페이지 -->
     <div class="print-final-page-group">
       <!-- 9. 리스크 및 고려사항 -->
-      <section class="pdf-section pdf-section-9">
+      <section class="pdf-section pdf-section">
         <div class="print-title-group">
-          <h2 class="section-title">9. 리스크 및 고려사항</h2>
+          <h2 class="section-title">10. 리스크 및 고려사항</h2>
         </div>
         <div class="print-risk-block">
           <div class="risk-grid">
@@ -3318,9 +3307,9 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       </section>
 
       <!-- 10. 결론 및 제안 -->
-      <section class="pdf-section pdf-section-10">
+      <section class="pdf-section pdf-section">
         <div class="print-conclusion-group">
-          <h2 class="section-title">10. 결론 및 제안</h2>
+          <h2 class="section-title">11. 결론 및 제안</h2>
           <p style="color: #374151; line-height: 1.8; margin-top: 12px;">${report.conclusion.finalParagraph}</p>
           <div class="verdict-box">
             <p style="font-size: 16px; color: #065f46;">${report.conclusion.summaryBox}</p>
