@@ -2,7 +2,7 @@
 // @version STABLE-v195-png-fix | @checkpoint release-candidate | 2026-04-30
 
 import { useRef, useState, useEffect } from "react"
-import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag, svgToPngImgTag } from "@/lib/report-drawings"
+import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag } from "@/lib/report-drawings"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
@@ -314,7 +314,34 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   const handleDownloadReport = async () => {
     console.log("[v0] HTML 보고서 생성 시작")
     
-    // 도면 SVG → PNG 변환 (모든 뷰어 호환)
+    // 도면 SVG → PNG 변환 (인라인 — tree-shaking 방지)
+    const convertSvgToPng = async (svgStr: string): Promise<string> => {
+      const W = 720, H = 600
+      const canvas = document.createElement("canvas")
+      canvas.width = W; canvas.height = H
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return `<div style="width:100%;height:200px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;">도면은 앱에서 확인하세요</div>`
+      ctx.fillStyle = "#f8fafc"
+      ctx.fillRect(0, 0, W, H)
+      // SVG에 명시적 크기 주입
+      let fixed = svgStr.replace(/<svg\s/, `<svg width="${W}" height="${H}" `)
+      fixed = fixed.replace(/style="[^"]*"/g, (m) => {
+        const cleaned = m.replace(/width[^;]*;?/g, "").replace(/max-width[^;]*;?/g, "")
+        return cleaned === 'style=""' ? "" : cleaned
+      })
+      const blob = new Blob([fixed], { type: "image/svg+xml;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const img = new Image(); img.width = W; img.height = H
+      const dataUrl = await new Promise<string>((resolve) => {
+        const timer = setTimeout(() => { URL.revokeObjectURL(url); resolve("") }, 5000)
+        img.onload = () => { clearTimeout(timer); ctx.drawImage(img, 0, 0, W, H); URL.revokeObjectURL(url); resolve(canvas.toDataURL("image/png")) }
+        img.onerror = () => { clearTimeout(timer); URL.revokeObjectURL(url); resolve("") }
+        img.src = url
+      })
+      if (!dataUrl) return `<div style="width:100%;height:200px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;">도면은 앱에서 확인하세요</div>`
+      return `<img src="${dataUrl}" style="width:100%;max-width:360px;border-radius:6px;border:1px solid #e2e8f0;" />`
+    }
+
     const drawingInput = {
       siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
       units: layout.units, parking: layout.parking, type: layout.type,
@@ -325,24 +352,20 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     
     let sitePlanImg = '', sectionImg = '', isoImg = '', elevImg = '', perspImg = ''
     try {
-      console.log("[v0] 도면 SVG→PNG 변환 시작")
       const results = await Promise.all([
-        svgToPngImgTag(generateSitePlanSvg(drawingInput)),
-        svgToPngImgTag(generateSectionSvg(drawingInput)),
-        svgToPngImgTag(generateIsometricSvg(drawingInput)),
-        svgToPngImgTag(generateElevationSvg(drawingInput)),
-        svgToPngImgTag(generatePerspectiveSvg(drawingInput)),
+        convertSvgToPng(generateSitePlanSvg(drawingInput)),
+        convertSvgToPng(generateSectionSvg(drawingInput)),
+        convertSvgToPng(generateIsometricSvg(drawingInput)),
+        convertSvgToPng(generateElevationSvg(drawingInput)),
+        convertSvgToPng(generatePerspectiveSvg(drawingInput)),
       ])
-      sitePlanImg = results[0]
-      sectionImg = results[1]
-      isoImg = results[2]
-      elevImg = results[3]
-      perspImg = results[4]
-      console.log("[v0] 도면 PNG 변환 완료")
-    } catch (e) {
-      console.warn("[v0] 도면 PNG 변환 실패, base64 SVG fallback:", e)
+      sitePlanImg = results[0]; sectionImg = results[1]; isoImg = results[2]; elevImg = results[3]; perspImg = results[4]
+    } catch {
       sitePlanImg = svgToImgTag(generateSitePlanSvg(drawingInput))
       sectionImg = svgToImgTag(generateSectionSvg(drawingInput))
+      isoImg = svgToImgTag(generateIsometricSvg(drawingInput))
+      elevImg = svgToImgTag(generateElevationSvg(drawingInput))
+      perspImg = svgToImgTag(generatePerspectiveSvg(drawingInput))
       isoImg = svgToImgTag(generateIsometricSvg(drawingInput))
       elevImg = svgToImgTag(generateElevationSvg(drawingInput))
       perspImg = svgToImgTag(generatePerspectiveSvg(drawingInput))
