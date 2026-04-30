@@ -247,6 +247,19 @@ export function downloadExcel(data: ExportData): { success: boolean; error?: str
   compareSheet['!cols'] = [{ wch: 18 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 8 }];
   XLSX.utils.book_append_sheet(workbook, compareSheet, '배치안비교');
 
+  // 2.5. 법규검토 시트
+  const regData = [
+    ['=== 법규 검토 ==='],
+    [''],
+    ['검토 항목', '법정 한도', '적용 계획', '적정 여부'],
+    ...report.regulationReview.items.map((item: { category: string; limit: string; planned: string; status: string }) => [
+      item.category, item.limit, item.planned, item.status
+    ]),
+  ];
+  const regSheet = XLSX.utils.aoa_to_sheet(regData);
+  regSheet['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(workbook, regSheet, '법규검토');
+
   // 3. 사업성 시트
   const feasibilityData = [
     ['=== 사업성 검토 ==='],
