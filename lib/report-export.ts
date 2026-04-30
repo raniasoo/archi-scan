@@ -1058,7 +1058,24 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     }
     .scenario-compact { margin-top: 12px; }
     
-    \${printCss}
+    /* 워터마크 — 사전검토용 표시 */
+    .page { position: relative; }
+    .page::after {
+      content: '사전검토용';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-35deg);
+      font-size: 72px;
+      font-weight: 800;
+      color: rgba(148, 163, 184, 0.06);
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 0;
+      letter-spacing: 12px;
+    }
+    .cover::after { content: none; }
+    
+    ${printCss}
     
     /* 표지 - 블루 테마 (A4 1페이지 고정) */
     .cover { 
