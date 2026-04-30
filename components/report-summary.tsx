@@ -1,5 +1,5 @@
 "use client"
-// @version STABLE-v194 | @checkpoint release-candidate | 2026-04-10
+// @version STABLE-v195-png-fix | @checkpoint release-candidate | 2026-04-30
 
 import { useRef, useState, useEffect } from "react"
 import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag, svgToPngImgTag } from "@/lib/report-drawings"
