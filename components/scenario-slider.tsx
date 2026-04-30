@@ -36,7 +36,8 @@ export function ScenarioSlider({
     floorCount: floors, parkingCount: parking,
     landPricePerM2,
     salesPricePerM2: baseSalePrice,
-  }), [siteArea, gfa, units, floors, parking, landPricePerM2, baseSalePrice])
+    constructionCostPerM2: baseConstCost,
+  }), [siteArea, gfa, units, floors, parking, landPricePerM2, baseSalePrice, baseConstCost])
 
   const isChanged = salePriceAdj !== 0 || constCostAdj !== 0 || landPriceAdj !== 0 || interestRate > 0
 
