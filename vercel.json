@@ -3,7 +3,7 @@
     "icn1"
   ],
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "next build --webpack",
+  "buildCommand": "rm -rf .next node_modules/.cache && next build --webpack",
   "headers": [
     {
       "source": "/(.*)",
