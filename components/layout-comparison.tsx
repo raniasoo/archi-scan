@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo } from "react"
-import { CheckCircle2, Sparkles, TrendingUp } from "lucide-react"
+import { CheckCircle2, Sparkles, TrendingUp, BarChart3 } from "lucide-react"
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 import type { LayoutOption } from "@/app/page"
 
@@ -102,6 +103,53 @@ export function LayoutComparison({
           })}
         </div>
       </div>
+
+      {/* 다차원 비교 레이더 차트 */}
+      {layouts.length >= 2 && (
+        <div className="rounded-xl border border-border/50 bg-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-foreground">다차원 비교</span>
+          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <RadarChart data={(() => {
+              const dims = [
+                { name: "ROI", key: "roi" },
+                { name: "세대수", key: "units" },
+                { name: "AI점수", key: "score" },
+                { name: "연면적", key: "gfa" },
+                { name: "주차", key: "parking" },
+              ]
+              return dims.map(d => {
+                const vals = layouts.map((l, i) => {
+                  if (d.key === "roi") return Math.max(0, financials[i]?.roi || 0)
+                  if (d.key === "units") return l.units || 0
+                  if (d.key === "score") return l.scores?.overall || 0
+                  if (d.key === "gfa") return l.gfa || 0
+                  if (d.key === "parking") return l.parking || 0
+                  return 0
+                })
+                const mx = Math.max(...vals, 1)
+                const row: Record<string, string | number> = { dim: d.name }
+                layouts.forEach((l, i) => { row[l.name] = Math.round((vals[i] / mx) * 100) })
+                return row
+              })
+            })()}>
+              <PolarGrid stroke="hsl(var(--border))" />
+              <PolarAngleAxis dataKey="dim" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              {layouts.map((l, i) => (
+                <Radar key={l.id} name={l.name} dataKey={l.name}
+                  stroke={["#2563eb", "#059669", "#d97706", "#8b5cf6", "#ec4899"][i % 5]}
+                  fill={["#2563eb", "#059669", "#d97706", "#8b5cf6", "#ec4899"][i % 5]}
+                  fillOpacity={selectedLayout === l.id ? 0.25 : 0.08}
+                  strokeWidth={selectedLayout === l.id ? 2.5 : 1}
+                />
+              ))}
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* 상세 비교 테이블 */}
       <div className="overflow-x-auto rounded-xl border border-border/50">
