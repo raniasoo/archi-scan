@@ -1417,6 +1417,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         <p>작성일자: ${report.cover.createdDate}</p>
       </div>
       <p class="company">${report.cover.companyName}</p>
+      ${report.cover.website ? `<p style="font-size: 11px; color: #3b82f6; margin-top: 6px;"><a href="${report.cover.website}" style="color: #3b82f6; text-decoration: none;">${report.cover.website}</a></p>` : ''}
       <p style="font-size: 10px; color: #94a3b8; margin-top: 4px;">${report.cover.contact}</p>
     </div>
 
@@ -1785,7 +1786,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       <div class="disclaimer print-footer">
         <p>${report.disclaimer.mainText}</p>
         <p>${report.disclaimer.expertAdvice}</p>
-        <p>${report.disclaimer.copyright}</p>
+        <p>${report.disclaimer.copyright}${report.cover.website ? ` · <a href="${report.cover.website}" style="color: #3b82f6; text-decoration: none;">${report.cover.website}</a>` : ''}</p>
       </div>
     </div>
   </div>
@@ -3194,6 +3195,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         <p>작성일자: ${report.cover.createdDate}</p>
       </div>
       <p class="company">${report.cover.companyName}</p>
+      ${report.cover.website ? `<p style="font-size: 11px; color: #3b82f6; margin-top: 6px;"><a href="${report.cover.website}" style="color: #3b82f6; text-decoration: none;">${report.cover.website}</a></p>` : ''}
       <p style="font-size: 10px; color: #94a3b8; margin-top: 4px;">${report.cover.contact}</p>
     </div>
 
@@ -3584,7 +3586,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       <div class="disclaimer print-footer">
         <p>${report.disclaimer.mainText}</p>
         <p>${report.disclaimer.expertAdvice}</p>
-        <p>${report.disclaimer.copyright}</p>
+        <p>${report.disclaimer.copyright}${report.cover.website ? ` · <a href="${report.cover.website}" style="color: #3b82f6; text-decoration: none;">${report.cover.website}</a>` : ''}</p>
       </div>
     </div>
   </div>
