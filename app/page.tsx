@@ -482,7 +482,8 @@ export default function ArchiScanPage() {
     suggestedSalePrice: number
     transactionCount: number
     loaded: boolean
-  }>({ avgPricePerM2: 0, suggestedSalePrice: 0, transactionCount: 0, loaded: false })
+    transactions: Array<{ name: string; area: number; pricePerM2: number; dealDate: string }>
+  }>({ avgPricePerM2: 0, suggestedSalePrice: 0, transactionCount: 0, loaded: false, transactions: [] })
   const [siteBdMgtSn, setSiteBdMgtSn] = useState<string>('')
   
   // 지역별 분양가·공사비 (주소 기반 자동 적용)
@@ -977,6 +978,7 @@ export default function ArchiScanPage() {
               suggestedSalePrice: result.suggestedSalePrice,
               transactionCount: result.transactionCount,
               loaded: true,
+              transactions: (result.transactions || []).slice(0, 30),
             })
             console.log(`[market-price] 실거래가: ${(result.avgPricePerM2/10000).toFixed(0)}만원/㎡, 추천 분양가: ${(result.suggestedSalePrice/10000).toFixed(0)}만원/㎡ (${result.transactionCount}건)`)
           }
@@ -2660,7 +2662,28 @@ export default function ArchiScanPage() {
                     <p className="text-[10px] text-muted-foreground">실거래가 +15% 프리미엄</p>
                   </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2">※ 최근 3개월 인근 아파트 실거래가 기준. 실제 분양가와 다를 수 있습니다.</p>
+                {/* 최근 실거래 내역 */}
+                {marketPrice.transactions.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-border/30">
+                    <p className="text-[10px] font-medium text-muted-foreground mb-2">최근 거래 내역</p>
+                    <div className="space-y-1">
+                      {marketPrice.transactions.slice(0, 5).map((t, i) => {
+                        const maxPrice = Math.max(...marketPrice.transactions.slice(0, 5).map(x => x.pricePerM2))
+                        const pct = maxPrice > 0 ? (t.pricePerM2 / maxPrice) * 100 : 0
+                        return (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="text-[9px] text-muted-foreground w-16 truncate">{t.name}</span>
+                            <div className="flex-1 h-3 bg-secondary/30 rounded overflow-hidden">
+                              <div className="h-full bg-blue-500/40 rounded" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-[9px] font-medium text-foreground w-16 text-right">{(t.pricePerM2 / 10000).toFixed(0)}만/㎡</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                <p className="text-[10px] text-muted-foreground mt-2">※ 최근 6개월 인근 아파트 실거래가 기준. 실제 분양가와 다를 수 있습니다.</p>
               </div>
             )}
 
