@@ -1600,6 +1600,16 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
             `).join('')}
           </tbody>
         </table>
+        <div style="margin-top: 16px;">
+          <h4 class="section-subtitle" style="margin-bottom: 8px;">예상 사업 일정</h4>
+          <div style="display: flex; gap: 2px; height: 28px; border-radius: 6px; overflow: hidden; font-size: 9px; font-weight: 600;">
+            <div style="flex: 2; background: #dbeafe; color: #1e40af; display: flex; align-items: center; justify-content: center;">사업기획<br/>2-3개월</div>
+            <div style="flex: 3; background: #bae6fd; color: #0369a1; display: flex; align-items: center; justify-content: center;">인허가<br/>4-6개월</div>
+            <div style="flex: 8; background: #99f6e4; color: #0f766e; display: flex; align-items: center; justify-content: center;">시공<br/>18-24개월</div>
+            <div style="flex: 3; background: #fde68a; color: #92400e; display: flex; align-items: center; justify-content: center;">분양/입주<br/>3-6개월</div>
+          </div>
+          <p style="font-size: 9px; color: #94a3b8; margin-top: 4px; text-align: center;">※ 실제 일정은 규모·인허가 조건에 따라 달라질 수 있습니다.</p>
+        </div>
       </div>
     </section>
 
@@ -3362,6 +3372,16 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
             `).join('')}
           </tbody>
         </table>
+        <div style="margin-top: 16px;">
+          <h4 class="section-subtitle" style="margin-bottom: 8px;">예상 사업 일정</h4>
+          <div style="display: flex; gap: 2px; height: 28px; border-radius: 6px; overflow: hidden; font-size: 9px; font-weight: 600;">
+            <div style="flex: 2; background: #dbeafe; color: #1e40af; display: flex; align-items: center; justify-content: center;">사업기획<br/>2-3개월</div>
+            <div style="flex: 3; background: #bae6fd; color: #0369a1; display: flex; align-items: center; justify-content: center;">인허가<br/>4-6개월</div>
+            <div style="flex: 8; background: #99f6e4; color: #0f766e; display: flex; align-items: center; justify-content: center;">시공<br/>18-24개월</div>
+            <div style="flex: 3; background: #fde68a; color: #92400e; display: flex; align-items: center; justify-content: center;">분양/입주<br/>3-6개월</div>
+          </div>
+          <p style="font-size: 9px; color: #94a3b8; margin-top: 4px; text-align: center;">※ 실제 일정은 규모·인허가 조건에 따라 달라질 수 있습니다.</p>
+        </div>
       </div>
     </section>
 
