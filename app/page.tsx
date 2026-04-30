@@ -2841,7 +2841,7 @@ export default function ArchiScanPage() {
                   size="sm" 
                   className="gap-1.5 whitespace-nowrap flex-shrink-0"
                   disabled={downloadingHtml}
-                  onClick={() => {
+                  onClick={async () => {
                     setDownloadingHtml(true);
                     setDownloadError(null);
                     try {
@@ -2904,7 +2904,7 @@ export default function ArchiScanPage() {
                           construction: ["공사비 상승 리스크", "공사기간 지연 가능성", "하자보수 책임"],
                         },
                       };
-                      const result = downloadHtml(exportData);
+                      const result = await downloadHtml(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || 'HTML 다운로드 중 오류가 발생했습니다.');
                       }

@@ -335,8 +335,40 @@ export function downloadExcel(data: ExportData): { success: boolean; error?: str
 // HTML 다운로드 (v0 250 양식 - 전체 보고서)
 // ============================================
 
-export function downloadHtml(data: ExportData): { success: boolean; error?: string } {
+export async function downloadHtml(data: ExportData): Promise<{ success: boolean; error?: string }> {
   console.log('[v0] downloadHtml 시작');
+  
+  // SVG→Canvas→PNG 변환 함수 (인라인 — 문서뷰어 호환)
+  const svgToPng = async (svgStr: string): Promise<string> => {
+    try {
+      const W = 720, H = 600
+      const canvas = document.createElement("canvas")
+      canvas.width = W; canvas.height = H
+      const ctx = canvas.getContext("2d")
+      if (!ctx) throw new Error("no ctx")
+      ctx.fillStyle = "#f8fafc"
+      ctx.fillRect(0, 0, W, H)
+      let fixed = svgStr.replace(/<svg\s/, `<svg width="${W}" height="${H}" `)
+      fixed = fixed.replace(/style="[^"]*"/g, (m) => {
+        const cleaned = m.replace(/width[^;]*;?/g, "").replace(/max-width[^;]*;?/g, "")
+        return cleaned === 'style=""' ? "" : cleaned
+      })
+      const blob = new Blob([fixed], { type: "image/svg+xml;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const img = new Image(); img.width = W; img.height = H
+      const dataUrl = await new Promise<string>((resolve) => {
+        const timer = setTimeout(() => { URL.revokeObjectURL(url); resolve("") }, 5000)
+        img.onload = () => { clearTimeout(timer); ctx.drawImage(img, 0, 0, W, H); URL.revokeObjectURL(url); resolve(canvas.toDataURL("image/png")) }
+        img.onerror = () => { clearTimeout(timer); URL.revokeObjectURL(url); resolve("") }
+        img.src = url
+      })
+      if (!dataUrl) throw new Error("empty")
+      return `<img src="${dataUrl}" style="width:100%;max-width:360px;border-radius:6px;border:1px solid #e2e8f0;" />`
+    } catch {
+      return svgToImgTag(svgStr)
+    }
+  }
+
   try {
     const report = convertToV250(data);
     console.log('[v0] report 데이터 변환 완료');
@@ -1606,11 +1638,11 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       layoutName: data.layout.name,
       gfa: data.layout.gfa,
     };
-    const sitePlanSvg = svgToImgTag(generateSitePlanSvg(drawingInput));
-    const sectionSvg = svgToImgTag(generateSectionSvg(drawingInput));
-    const isometricSvg = svgToImgTag(generateIsometricSvg(drawingInput));
-    const elevationSvg = svgToImgTag(generateElevationSvg(drawingInput));
-    const perspectiveSvg = svgToImgTag(generatePerspectiveSvg(drawingInput));
+    const sitePlanSvg = await svgToPng(generateSitePlanSvg(drawingInput));
+    const sectionSvg = await svgToPng(generateSectionSvg(drawingInput));
+    const isometricSvg = await svgToPng(generateIsometricSvg(drawingInput));
+    const elevationSvg = await svgToPng(generateElevationSvg(drawingInput));
+    const perspectiveSvg = await svgToPng(generatePerspectiveSvg(drawingInput));
     const drawingSection = `
     <!-- 6. 설계 도면 -->
     <section class="pdf-section" style="page-break-before: always;">
@@ -1694,11 +1726,11 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
         layoutName: data.layout.name,
         gfa: data.layout.gfa,
       };
-      const sitePlanSvg = svgToImgTag(generateSitePlanSvg(drawingInput));
-      const sectionSvg = svgToImgTag(generateSectionSvg(drawingInput));
-      const isometricSvg = svgToImgTag(generateIsometricSvg(drawingInput));
-      const elevationSvg = svgToImgTag(generateElevationSvg(drawingInput));
-      const perspectiveSvg = svgToImgTag(generatePerspectiveSvg(drawingInput));
+      const sitePlanSvg = await svgToPng(generateSitePlanSvg(drawingInput));
+      const sectionSvg = await svgToPng(generateSectionSvg(drawingInput));
+      const isometricSvg = await svgToPng(generateIsometricSvg(drawingInput));
+      const elevationSvg = await svgToPng(generateElevationSvg(drawingInput));
+      const perspectiveSvg = await svgToPng(generatePerspectiveSvg(drawingInput));
       const drawingSection = `
     <!-- 6. 설계 도면 -->
     <section class="pdf-section" style="page-break-before: always;">
