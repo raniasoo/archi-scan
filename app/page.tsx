@@ -2909,7 +2909,22 @@ export default function ArchiScanPage() {
                           units: l.units,
                           parking: l.parking,
                           gfa: l.gfa ?? 0,
-                          roi: l.id === selectedLayoutData.id ? feasibilityResult?.roi : undefined,
+                          roi: (() => {
+                            if (l.id === selectedLayoutData.id) return feasibilityResult?.roi || 0
+                            try {
+                              const effectiveSP = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
+                                ? marketPrice.suggestedSalePrice
+                                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined
+                              const f = calculateFeasibility({
+                                siteArea: siteAreaNum, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
+                                floorCount: l.floors || 1, parkingCount: l.parking || 0,
+                                landPricePerM2: landPriceData.pricePerM2 || 5000000,
+                                salesPricePerM2: effectiveSP,
+                                constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
+                              })
+                              return f.roi
+                            } catch { return 0 }
+                          })(),
                           isRecommended: l.id === selectedLayoutData.id,
                         })),
                         feasibility: {
@@ -3002,7 +3017,22 @@ export default function ArchiScanPage() {
                           units: l.units,
                           parking: l.parking,
                           gfa: l.gfa ?? 0,
-                          roi: l.id === selectedLayoutData.id ? feasibilityResult?.roi : undefined,
+                          roi: (() => {
+                            if (l.id === selectedLayoutData.id) return feasibilityResult?.roi || 0
+                            try {
+                              const effectiveSP = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
+                                ? marketPrice.suggestedSalePrice
+                                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined
+                              const f = calculateFeasibility({
+                                siteArea: siteAreaNum, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
+                                floorCount: l.floors || 1, parkingCount: l.parking || 0,
+                                landPricePerM2: landPriceData.pricePerM2 || 5000000,
+                                salesPricePerM2: effectiveSP,
+                                constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
+                              })
+                              return f.roi
+                            } catch { return 0 }
+                          })(),
                           isRecommended: l.id === selectedLayoutData.id,
                         })),
                         feasibility: {
@@ -3095,7 +3125,22 @@ export default function ArchiScanPage() {
                           units: l.units,
                           parking: l.parking,
                           gfa: l.gfa ?? 0,
-                          roi: l.id === selectedLayoutData.id ? feasibilityResult?.roi : undefined,
+                          roi: (() => {
+                            if (l.id === selectedLayoutData.id) return feasibilityResult?.roi || 0
+                            try {
+                              const effectiveSP = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
+                                ? marketPrice.suggestedSalePrice
+                                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined
+                              const f = calculateFeasibility({
+                                siteArea: siteAreaNum, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
+                                floorCount: l.floors || 1, parkingCount: l.parking || 0,
+                                landPricePerM2: landPriceData.pricePerM2 || 5000000,
+                                salesPricePerM2: effectiveSP,
+                                constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
+                              })
+                              return f.roi
+                            } catch { return 0 }
+                          })(),
                           isRecommended: l.id === selectedLayoutData.id,
                         })),
                         feasibility: {
@@ -3186,7 +3231,22 @@ export default function ArchiScanPage() {
                           units: l.units,
                           parking: l.parking,
                           gfa: l.gfa ?? 0,
-                          roi: l.id === selectedLayoutData.id ? feasibilityResult?.roi : undefined,
+                          roi: (() => {
+                            if (l.id === selectedLayoutData.id) return feasibilityResult?.roi || 0
+                            try {
+                              const effectiveSP = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
+                                ? marketPrice.suggestedSalePrice
+                                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined
+                              const f = calculateFeasibility({
+                                siteArea: siteAreaNum, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
+                                floorCount: l.floors || 1, parkingCount: l.parking || 0,
+                                landPricePerM2: landPriceData.pricePerM2 || 5000000,
+                                salesPricePerM2: effectiveSP,
+                                constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
+                              })
+                              return f.roi
+                            } catch { return 0 }
+                          })(),
                           isRecommended: l.id === selectedLayoutData.id,
                         })),
                         feasibility: {

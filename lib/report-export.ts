@@ -210,17 +210,25 @@ function convertToV250(data: ExportData): ReportDataV250 {
       gfa: data.layout.gfa || 0,
     },
     allLayouts: data.allLayouts?.map((l, i) => {
-      const layoutFeas = calculateFeasibility({
-        siteArea: data.siteArea,
-        grossFloorArea: l.gfa || Math.round(data.siteArea * (l.buildingCoverage / 100) * l.floors),
-        unitCount: l.units,
-        floorCount: l.floors,
-        parkingCount: l.parking,
-        landPricePerM2: data.feasibility?.landCost && data.siteArea
-          ? (data.feasibility.landCost * 1e8) / data.siteArea
-          : 5000000,
-        salesPricePerM2: data.feasibility?.avgSalePrice || undefined,
-      });
+      // ROI가 이미 계산되어 전달된 경우 재계산하지 않음
+      const preCalcRoi = l.roi
+      let layoutRoi = preCalcRoi ?? 0
+      if (preCalcRoi === undefined || preCalcRoi === null) {
+        try {
+          const layoutFeas = calculateFeasibility({
+            siteArea: data.siteArea,
+            grossFloorArea: l.gfa || Math.round(data.siteArea * (l.buildingCoverage / 100) * l.floors),
+            unitCount: l.units,
+            floorCount: l.floors,
+            parkingCount: l.parking,
+            landPricePerM2: data.feasibility?.landCost && data.siteArea
+              ? (data.feasibility.landCost * 1e8) / data.siteArea
+              : 5000000,
+            salesPricePerM2: data.feasibility?.avgSalePrice || undefined,
+          });
+          layoutRoi = layoutFeas.roi
+        } catch { layoutRoi = 0 }
+      }
       return {
         id: l.name === data.layout.name ? 'selected' : `layout-${i}`,
         name: l.name || `배치안 ${i + 1}`,
@@ -230,7 +238,7 @@ function convertToV250(data: ExportData): ReportDataV250 {
         buildingCoverage: l.buildingCoverage || 0,
         far: 0,
         gfa: l.gfa || 0,
-        roi: l.name === data.layout.name ? (data.feasibility?.roi || 0) : layoutFeas.roi,
+        roi: layoutRoi,
         isRecommended: l.isRecommended || l.name === data.layout.name,
       };
     }),
