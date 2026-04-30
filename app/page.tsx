@@ -40,7 +40,7 @@ import { ScenarioSelector } from "@/components/scenario-selector"
 import { DebugPanel } from "@/components/debug-panel"
 import { ReleaseChecklistPanel } from "@/components/release-checklist-panel"
 import { QAInspectionPanel } from "@/components/qa-inspection-panel"
-import { downloadExcel, downloadHtml, downloadPdf, openPrintPreview, generateFileName, type ExportData } from "@/lib/report-export"
+import { downloadExcel, downloadHtml, downloadPdf, openPrintPreview, downloadComparisonHtml, generateFileName, type ExportData } from "@/lib/report-export"
 import { VersionHistoryManager } from "@/components/version-history-manager"
 import { ApprovalWorkflowManager } from "@/components/approval-workflow-manager"
 import { CollaborationManager } from "@/components/collaboration-manager"
@@ -1970,6 +1970,24 @@ export default function ArchiScanPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <Brain className="h-5 w-5 text-primary" />
                   <h2 className="text-xl md:text-2xl font-bold text-foreground">AI 배치안 비교</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto gap-1 text-xs"
+                    onClick={() => {
+                      const compLayouts = layouts.map(l => ({
+                        name: l.name, type: l.type || 'tower', floors: l.floors, units: l.units,
+                        gfa: l.gfa, coverage: l.buildingCoverage || l.coverage, far: l.far,
+                        parking: l.parking, roi: l.roi || 0, totalCost: l.totalCost || 0,
+                        profit: l.profit || 0, scores: l.scores ? { overall: l.scores.overall } : undefined,
+                      }))
+                      downloadComparisonHtml(address, siteAreaNum, compLayouts)
+                      toast.success('비교 보고서 다운로드 완료')
+                    }}
+                  >
+                    <Table className="h-3.5 w-3.5" />
+                    비교표 다운로드
+                  </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {address} | 건폐율 {regulation.maxCoverageRatio}% / 용적률 {regulation.maxFloorAreaRatio}% | 

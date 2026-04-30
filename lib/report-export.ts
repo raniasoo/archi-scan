@@ -3451,6 +3451,71 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
 }
 
 // ============================================
+// 배치안 비교 보고서 다운로드
+// ============================================
+
+export function downloadComparisonHtml(
+  address: string,
+  siteArea: number,
+  layouts: Array<{ name: string; type: string; floors: number; units: number; gfa: number; coverage: number; far: number; parking: number; roi: number; totalCost: number; profit: number; scores?: { overall: number } }>
+): { success: boolean; error?: string } {
+  try {
+    const date = new Date().toLocaleDateString('ko-KR');
+    const rows = layouts.map(l => `
+      <tr>
+        <td style="font-weight:600;">${l.name}</td>
+        <td>${l.floors}층</td>
+        <td>${l.units}세대</td>
+        <td>${l.gfa.toLocaleString()}㎡</td>
+        <td>${l.coverage.toFixed(1)}%</td>
+        <td>${l.far.toFixed(1)}%</td>
+        <td>${l.parking}대</td>
+        <td>${(l.totalCost / 100000000).toFixed(1)}억</td>
+        <td>${(l.profit / 100000000).toFixed(1)}억</td>
+        <td style="font-weight:700; color:${l.roi >= 15 ? '#059669' : l.roi >= 5 ? '#2563eb' : l.roi >= 0 ? '#d97706' : '#dc2626'};">${l.roi.toFixed(1)}%</td>
+        <td>${l.scores?.overall?.toFixed(0) || '-'}</td>
+      </tr>`).join('');
+
+    const best = layouts.reduce((a, b) => a.roi > b.roi ? a : b);
+
+    const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>배치안 비교 — ${address}</title>
+    <style>
+      body { font-family: 'Noto Sans KR', sans-serif; padding: 40px; color: #1e293b; max-width: 1100px; margin: 0 auto; }
+      h1 { font-size: 22px; margin-bottom: 4px; }
+      .meta { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th { background: #f1f5f9; padding: 10px 8px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 600; }
+      td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; }
+      tr:hover { background: #f8fafc; }
+      .best { background: #ecfdf5; border-left: 3px solid #059669; padding: 14px; border-radius: 8px; margin-top: 20px; }
+      .footer { margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: center; }
+    </style></head><body>
+    <h1>배치안 비교 분석</h1>
+    <p class="meta">${address} · 대지면적 ${siteArea.toLocaleString()}㎡ · ${date}</p>
+    <table>
+      <thead><tr><th>배치안</th><th>층수</th><th>세대</th><th>연면적</th><th>건폐율</th><th>용적률</th><th>주차</th><th>총사업비</th><th>예상수익</th><th>ROI</th><th>AI점수</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="best">
+      <strong>추천 배치안:</strong> ${best.name} (ROI ${best.roi.toFixed(1)}%, 예상수익 ${(best.profit / 100000000).toFixed(1)}억원)
+    </div>
+    <p class="footer">Archi-Scan · 사전검토용 비교 보고서 · ${date}</p>
+    </body></html>`;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = generateFileName(address, 'html', '비교분석');
+    a.click();
+    URL.revokeObjectURL(url);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: String(e) };
+  }
+}
+
+// ============================================
 // Export: ReportDataV250 빌더 (직접 사용 가능)
 // ============================================
 
