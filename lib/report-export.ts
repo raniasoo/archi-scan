@@ -1694,32 +1694,32 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       // SVG → Canvas → PNG 변환 (html2canvas 호환)
       const svgToPngDataUrl = async (svgStr: string): Promise<string> => {
         try {
-          const W = 720, H = 600;
+          const W = 720, H = 500;
           const c = document.createElement('canvas'); c.width = W; c.height = H;
           const ctx = c.getContext('2d');
           if (!ctx) return svgToImgTag(svgStr);
           ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, W, H);
-          const fixed = svgStr.replace(/<svg\s/, `<svg width="${W}" height="${H}" `);
-          const blob = new Blob([fixed], { type: 'image/svg+xml;charset=utf-8' });
-          const url = URL.createObjectURL(blob);
-          const img = new Image(); img.width = W; img.height = H;
+          // SVG에 명시적 크기 설정
+          let fixed = svgStr;
+          if (!fixed.includes('width=')) fixed = fixed.replace(/<svg/, `<svg width="${W}" height="${H}"`);
+          // data URI 방식 (Blob URL보다 안정적)
+          const encoded = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fixed);
+          const img = new Image();
           const dataUrl = await new Promise<string>((res) => {
-            const t = setTimeout(() => { URL.revokeObjectURL(url); res(''); }, 5000);
-            img.onload = () => { clearTimeout(t); ctx.drawImage(img, 0, 0, W, H); URL.revokeObjectURL(url); res(c.toDataURL('image/png')); };
-            img.onerror = () => { clearTimeout(t); URL.revokeObjectURL(url); res(''); };
-            img.src = url;
+            const t = setTimeout(() => res(''), 8000);
+            img.onload = () => { clearTimeout(t); try { ctx.drawImage(img, 0, 0, W, H); res(c.toDataURL('image/png')); } catch { res(''); } };
+            img.onerror = () => { clearTimeout(t); res(''); };
+            img.src = encoded;
           });
-          if (dataUrl) return `<img src="${dataUrl}" style="width:100%;max-width:360px;border-radius:6px;border:1px solid #e2e8f0;" />`;
+          if (dataUrl) return `<img src="${dataUrl}" style="width:100%;max-width:340px;border-radius:6px;border:1px solid #e2e8f0;" />`;
           return svgToImgTag(svgStr);
         } catch { return svgToImgTag(svgStr); }
       };
-      const pngImgs = await Promise.all([
-        svgToPngDataUrl(generateSitePlanSvg(drawingInput)),
-        svgToPngDataUrl(generateSectionSvg(drawingInput)),
-        svgToPngDataUrl(generateIsometricSvg(drawingInput)),
-        svgToPngDataUrl(generateElevationSvg(drawingInput)),
-        svgToPngDataUrl(generatePerspectiveSvg(drawingInput)),
-      ]);
+      // 순차 변환 (동시 변환 시 Canvas 충돌 방지)
+      const pngImgs: string[] = [];
+      for (const gen of [generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg]) {
+        pngImgs.push(await svgToPngDataUrl(gen(drawingInput)));
+      }
       
       const drawingSection = `
     <!-- 6. 설계 도면 -->
