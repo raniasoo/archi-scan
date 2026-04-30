@@ -1716,13 +1716,38 @@ export async function lookupSiteData(
     }
     
     // All endpoints returned empty
+    console.log(`[MOLIT] All endpoints returned empty (path: ${lookupPath})`)
+    
+    // Fallback 1: ji가 '0000'이 아니면 ji='0000'으로 재시도
+    if (ji !== '0000') {
+      console.log(`[MOLIT] Retry with ji=0000 (was ${ji})`)
+      const retryResult = await fetchBuildingMultiEndpoint({ sigunguCd, bjdongCd, bun, ji: '0000' }, platGbCd)
+      if (retryResult.data) {
+        const siteData = extractSiteData(retryResult.data, normalizedAddress)
+        siteData.dataSource = 'building'
+        if (!siteData.sigunguCd) siteData.sigunguCd = sigunguCd
+        if (!siteData.bjdongCd) siteData.bjdongCd = bjdongCd
+        if (!siteData.bun) siteData.bun = bun
+        if (!siteData.ji) siteData.ji = '0000'
+        const diagJ = diagnostics.jusoResult as Record<string, unknown> | undefined
+        if (diagJ?.entX) siteData.entX = diagJ.entX as number
+        if (diagJ?.entY) siteData.entY = diagJ.entY as number
+        if (diagJ?.bdMgtSn) siteData.bdMgtSn = diagJ.bdMgtSn as string
+        diagnostics.apiResponse = { status: 'success-with-data', totalCount: retryResult.totalCount, message: 'ji=0000 재시도 성공' }
+        diagnostics.stoppedAt = 'complete'
+        if ((!siteData.siteArea || siteData.siteArea <= 0) && siteData.bdMgtSn) {
+          const vwA = await fetchVworldPnuArea(siteData.bdMgtSn)
+          if (vwA && vwA.area > 0) siteData.siteArea = vwA.area
+        }
+        return { success: true, data: siteData, diagnostics, rawData: { building: retryResult.data } }
+      }
+    }
+    
     diagnostics.apiResponse = {
       status: result.apiStatus,
       message: result.message,
       totalCount: result.totalCount,
     }
-    
-    console.log(`[MOLIT] All endpoints returned empty (path: ${lookupPath})`)
     
     // Vworld PNU fallback: MOLIT 0건이지만 bdMgtSn 있으면 대지면적 보완
     const diagJusoEmpty = diagnostics.jusoResult as Record<string, unknown> | undefined
@@ -1738,8 +1763,10 @@ export async function lookupSiteData(
     }
     
     return {
-      success: false,
-      error: '해당 주소로 조회 가능한 건축물대장 정보를 찾지 못했습니다. 주소를 더 정확히 입력하거나 다른 주소로 다시 시도해주세요.',
+      success: !!vworldSiteArea,
+      error: vworldSiteArea 
+        ? undefined
+        : '해당 주소로 조회 가능한 건축물대장 정보를 찾지 못했습니다. 주소를 더 정확히 입력하거나 다른 주소로 다시 시도해주세요.',
       diagnostics,
       data: {
         address: normalizedAddress,
