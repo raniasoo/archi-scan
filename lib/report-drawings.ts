@@ -1,3 +1,5 @@
+// @version v2-png-fix-20260430
+export const DRAWING_VERSION = "v2-png-20260430";
 /**
  * PDF 보고서용 도면 SVG 문자열 생성기
  * HTML 템플릿에 PNG img 태그로 삽입 (모든 뷰어 호환)
