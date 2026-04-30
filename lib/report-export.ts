@@ -70,6 +70,38 @@ export function generateFileName(address: string, extension: string, layoutName?
   return `ArchiScan_${safeAddress}${safeLayout}_${dateStr}.${extension}`;
 }
 
+// 모바일 호환 다운로드 헬퍼
+function mobileDownload(content: string, fileName: string, mimeType: string = 'text/html;charset=utf-8'): void {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  
+  // 모바일 감지
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    // 모바일: 새 창에서 열기 (가장 안정적)
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.open();
+      newWindow.document.write(content);
+      newWindow.document.close();
+    } else {
+      // 팝업 차단 시 직접 이동
+      window.location.href = url;
+    }
+  } else {
+    // 데스크톱: 표준 다운로드
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 // ============================================
 // Export 입력 데이터 타입 (기존 호환성 유지)
 // ============================================
@@ -1776,16 +1808,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
   } catch (e) { console.warn('[report-export] HTML 도면 삽입 실패:', e); }
 
   const finalHtml = translateHtml(htmlContent, (data.lang || 'ko') as ReportLang);
-  const blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = generateFileName(data.address, 'html', data.layout?.name);
-    console.log('[v0] HTML 파일 생성:', a.download);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const fileName = generateFileName(data.address, 'html', data.layout?.name);
+    console.log('[v0] HTML 파일 생성:', fileName);
+    mobileDownload(finalHtml, fileName);
     console.log('[v0] downloadHtml 완료');
     return { success: true };
   } catch (error) {
@@ -3549,13 +3574,7 @@ export function downloadComparisonHtml(
     <p class="footer">Archi-Scan · 사전검토용 비교 보고서 · ${date}</p>
     </body></html>`;
 
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = generateFileName(address, 'html', '비교분석');
-    a.click();
-    URL.revokeObjectURL(url);
+    mobileDownload(html, generateFileName(address, 'html', '비교분석'));
     return { success: true };
   } catch (e) {
     return { success: false, error: String(e) };
