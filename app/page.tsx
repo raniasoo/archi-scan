@@ -59,6 +59,7 @@ import { PerspectiveView } from "@/components/perspective-view"
 import { ScenarioSlider } from "@/components/scenario-slider"
 import { BrandingEditor } from "@/components/branding-editor"
 import { type BrandingConfig, loadBrandingConfig } from "@/lib/branding-config"
+import { toast } from "sonner"
 import { StrategySelection } from "@/components/strategy-selection"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
@@ -87,7 +88,9 @@ import {
   Table,
   Printer,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Share2,
+  Copy
 } from "lucide-react"
 import { useSubscription } from "@/components/subscription-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
@@ -3153,6 +3156,24 @@ export default function ArchiScanPage() {
                 >
                   <Printer className="h-4 w-4" />
                   인쇄
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={async () => {
+                    if (!selectedLayoutData || !feasibilityResult) return
+                    const summary = `[Archi-Scan 사전검토]\n${address}\n배치안: ${selectedLayoutData.name}\nROI: ${feasibilityResult.roi?.toFixed(1)}%\n총사업비: ${(feasibilityResult.totalCost / 100000000).toFixed(1)}억원\n예상수익: ${(feasibilityResult.profit / 100000000).toFixed(1)}억원\n세대수: ${selectedLayoutData.units}세대\n연면적: ${(selectedLayoutData.gfa).toLocaleString()}㎡`
+                    if (navigator.share) {
+                      try { await navigator.share({ title: 'Archi-Scan 보고서', text: summary }) } catch {}
+                    } else {
+                      await navigator.clipboard.writeText(summary)
+                      toast.success('보고서 요약이 클립보드에 복사되었습니다')
+                    }
+                  }}
+                >
+                  <Share2 className="h-4 w-4" />
+                  공유
                 </Button>
               </div>
               
