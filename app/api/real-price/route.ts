@@ -38,10 +38,10 @@ export async function GET(request: Request) {
 
   const lawdCd = sigunguCd.slice(0, 5)
   
-  // 최근 3개월 조회
+  // 실거래 데이터는 1-2개월 지연 → 전월부터 6개월 조회
   const now = new Date()
   const months: string[] = []
-  for (let i = 0; i < 3; i++) {
+  for (let i = 1; i <= 6; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     months.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
@@ -95,6 +95,8 @@ export async function GET(request: Request) {
     } catch (e) {
       console.warn(`[real-price] ${dealYmd} 조회 실패:`, e)
     }
+    // 충분한 데이터 확보 시 조기 종료 (20건 이상)
+    if (allTransactions.length >= 20) break
   }
 
   if (allTransactions.length === 0) {
@@ -107,7 +109,7 @@ export async function GET(request: Request) {
       priceRange: { min: 0, max: 0 },
       suggestedSalePrice: 8000000, // 기본값 유지
       transactions: [],
-      message: '최근 3개월 실거래 데이터가 없습니다. 기본 분양가(800만원/㎡)를 사용합니다.',
+      message: '최근 6개월 실거래 데이터가 없습니다. 기본 분양가(800만원/㎡)를 사용합니다.',
     })
   }
 
