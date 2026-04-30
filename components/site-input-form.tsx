@@ -2,6 +2,7 @@
 // @version STABLE-v215 | Critical: Supplement data syncs to parent regulation state
 
 import { useState, useEffect, useRef } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -506,6 +507,10 @@ export function SiteInputForm({
         // Auto-fill site area if available
         if (result.data.siteArea && result.data.siteArea > 0) {
           onSiteAreaChange(String(Math.round(result.data.siteArea)))
+          toast.success(`대지면적 ${Math.round(result.data.siteArea).toLocaleString()}㎡ 자동입력`, {
+            description: result.data.buildingName || result.data.roadAddress || '',
+            duration: 3000,
+          })
         } else {
           setTimeout(() => {
             const areaInput = document.getElementById('siteArea') as HTMLInputElement | null
@@ -664,6 +669,12 @@ export function SiteInputForm({
         
         setLookupState(classifiedStatus)
         setLookupError(AUTO_LOOKUP_MESSAGES[classifiedStatus])
+        
+        if (classifiedStatus === 'success-empty') {
+          toast.info('건축물대장 데이터 없음', { description: '대지면적을 수동으로 입력해주세요.', duration: 4000 })
+        } else if (classifiedStatus !== 'upstream-error') {
+          toast.error('자동조회 실패', { description: AUTO_LOOKUP_MESSAGES[classifiedStatus]?.slice(0, 50), duration: 4000 })
+        }
         
         console.log(`[MOLIT] classifiedAs=${classifiedStatus} jusoSucceeded=${jusoSucceeded} hasUpstreamError=${hasUpstreamError}`)
         

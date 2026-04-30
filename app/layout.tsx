@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from '@/components/ui/sonner'
 import { SubscriptionProvider } from '@/components/subscription-provider'
 import './globals.css'
 
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body className={`${notoSansKr.className} antialiased bg-background`}>
         <SubscriptionProvider>
           {children}
+          <Toaster position="top-center" richColors closeButton />
         </SubscriptionProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
