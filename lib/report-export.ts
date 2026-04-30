@@ -252,8 +252,8 @@ export function downloadExcel(data: ExportData): { success: boolean; error?: str
     ['=== 법규 검토 ==='],
     [''],
     ['검토 항목', '법정 한도', '적용 계획', '적정 여부'],
-    ...report.regulationReview.items.map((item: { category: string; limit: string; planned: string; status: string }) => [
-      item.category, item.limit, item.planned, item.status
+    ...report.regulationReview.items.map((item: { name: string; legalLimit: string; appliedPlan: string; status: string }) => [
+      item.name, item.legalLimit, item.appliedPlan, item.status
     ]),
   ];
   const regSheet = XLSX.utils.aoa_to_sheet(regData);
@@ -267,7 +267,7 @@ export function downloadExcel(data: ExportData): { success: boolean; error?: str
     ['구분', '금액', '비고'],
     ['토지비', report.feasibility.landCostFormatted, ''],
     ['공사비', report.feasibility.constructionCostFormatted, ''],
-    ['기타���������용', report.feasibility.indirectCostFormatted, '설계비, 인허가, 금융비용 등'],
+    ['기타비용', report.feasibility.indirectCostFormatted, '설계비, 인허가, 금융비용 등'],
     ['총사업비', report.feasibility.totalCostFormatted, ''],
     [''],
     ['총분양수입', report.feasibility.totalRevenueFormatted, ''],
