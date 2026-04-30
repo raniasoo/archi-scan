@@ -1293,6 +1293,39 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       <p style="font-size: 10px; color: #94a3b8; margin-top: 4px;">${report.cover.contact}</p>
     </div>
 
+    <!-- Executive Summary -->
+    <div class="page" style="page-break-before: always; padding: 40px 30px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <p style="font-size: 10px; color: #64748b; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 4px;">EXECUTIVE SUMMARY</p>
+        <h2 style="font-size: 22px; font-weight: 800; color: #1e293b; margin: 0;">핵심 요약</h2>
+        <p style="font-size: 11px; color: #94a3b8; margin-top: 4px;">${report.cover.address}</p>
+      </div>
+      <div style="text-align: center; padding: 20px; background: ${report.summary.roi >= 15 ? 'linear-gradient(135deg, #d1fae5, #a7f3d0)' : report.summary.roi >= 5 ? 'linear-gradient(135deg, #dbeafe, #bfdbfe)' : report.summary.roi >= 0 ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'linear-gradient(135deg, #fee2e2, #fecaca)'}; border-radius: 12px; margin-bottom: 16px;">
+        <p style="font-size: 11px; color: #64748b; margin: 0 0 4px 0;">투자수익률 (ROI)</p>
+        <p style="font-size: 42px; font-weight: 900; color: ${report.summary.roi >= 15 ? '#059669' : report.summary.roi >= 5 ? '#2563eb' : report.summary.roi >= 0 ? '#d97706' : '#dc2626'}; margin: 0; line-height: 1.1;">${report.summary.roiFormatted}</p>
+        <p style="font-size: 12px; font-weight: 600; color: #475569; margin: 6px 0 0 0;">${report.summary.verdict}</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">배치안</p><p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${report.summary.selectedLayoutName}</p></div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">총사업비</p><p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${report.summary.totalCostFormatted}</p></div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">예상수익</p><p style="font-size: 14px; font-weight: 700; color: #0d9488; margin: 0;">${report.summary.expectedProfitFormatted}</p></div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">세대수</p><p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${report.summary.units}세대</p></div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">연면적</p><p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${report.planning.gfaFormatted}</p></div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">손익분기 분양률</p><p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${report.feasibility.breakEvenRateFormatted}</p></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px;">
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: #64748b; margin: 0 0 2px 0;">법규 부합성</p><p style="font-size: 20px; font-weight: 800; color: #0369a1; margin: 0;">${report.aiAnalysis.legalCompliance}</p></div>
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: #64748b; margin: 0 0 2px 0;">사업성</p><p style="font-size: 20px; font-weight: 800; color: #0369a1; margin: 0;">${report.aiAnalysis.profitability}</p></div>
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: #64748b; margin: 0 0 2px 0;">상품성</p><p style="font-size: 20px; font-weight: 800; color: #0369a1; margin: 0;">${report.aiAnalysis.marketability}</p></div>
+        <div style="background: #0d9488; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: rgba(255,255,255,0.8); margin: 0 0 2px 0;">종합 점수</p><p style="font-size: 20px; font-weight: 800; color: #fff; margin: 0;">${report.aiAnalysis.totalScore}</p></div>
+      </div>
+      <div style="background: #f1f5f9; border-radius: 8px; padding: 14px;">
+        <p style="font-size: 11px; font-weight: 700; color: #334155; margin: 0 0 8px 0;">핵심 포인트</p>
+        ${report.summary.keyPoints.slice(0, 3).map((p: string) => `<p style="font-size: 11px; color: #475569; margin: 0 0 4px 0; padding-left: 12px; position: relative;"><span style="position: absolute; left: 0;">•</span>${p}</p>`).join('')}
+      </div>
+    </div>
+
+
     <!-- 2. 종합 검토 결과 -->
     <div class="section pdf-section">
       <h2 class="section-title">종합 검토 결과</h2>
