@@ -61,6 +61,7 @@ import { BrandingEditor } from "@/components/branding-editor"
 import { type BrandingConfig, loadBrandingConfig } from "@/lib/branding-config"
 import { toast } from "sonner"
 import { optimizeLayout, type OptimizationReport } from "@/lib/layout-optimizer"
+import { AuthButton } from "@/components/auth-button"
 import { StrategySelection } from "@/components/strategy-selection"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
@@ -1468,6 +1469,7 @@ export default function ArchiScanPage() {
               <button onClick={() => setShowBrandingEditor(true)} className="p-2 rounded-lg hover:bg-secondary transition-colors" title="보고서 브랜딩 설정">
                 <Settings2 className="h-4 w-4 text-muted-foreground" />
               </button>
+              <AuthButton />
             </div>
 
             {/* Action Buttons - scrollable on mobile */}
