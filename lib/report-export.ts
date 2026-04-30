@@ -7,6 +7,51 @@ import * as XLSX from 'xlsx';
 import { type ReportDataV250, buildReportDataV250 } from './report-data-v250';
 import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag } from './report-drawings';
 import { calculateFeasibility } from './project-analysis-state';
+import { getLabels, type ReportLang } from './report-i18n';
+
+// 다국어 HTML 변환
+function translateHtml(html: string, lang: ReportLang): string {
+  if (lang === 'ko') return html;
+  const ko = getLabels('ko');
+  const en = getLabels('en');
+  let result = html;
+  // 섹션 제목 치환
+  const replacements: [string, string][] = [
+    [ko.docTitle, en.docTitle],
+    [ko.execSummaryTag, en.execSummaryTag],
+    [ko.execSummary, en.execSummary],
+    ['대상지 분석', en.siteAnalysis],
+    ['법규 검토', en.regulationReview],
+    ['배치안 비교 검토', en.layoutComparison],
+    ['규모 산정 및 계획 구성', en.planning],
+    ['설계 도면', en.drawings],
+    ['사업성 검토', en.feasibility],
+    ['AI 분석', en.aiAnalysis],
+    ['시나리오 및 사업기간 분석', en.scenarios],
+    ['리스크 및 고려사항', en.risks],
+    ['결론 및 제안', en.conclusion],
+    ['예상 사업 일정', en.timeline],
+    ['사업기획', en.planning_phase],
+    ['인허가', en.permit_phase],
+    ['시공', en.construction_phase],
+    ['분양/입주', en.sales_phase],
+    ['법규 부합성', en.legalCompliance],
+    ['사업성', en.profitability],
+    ['상품성', en.marketability],
+    ['종합 점수', en.totalScore],
+    ['총사업비', en.totalCost],
+    ['예상수익', en.expectedProfit],
+    ['세대수', en.units],
+    ['연면적', en.gfa],
+    ['손익분기 분양률', en.breakEven],
+    ['사전검토용', 'PRELIMINARY'],
+    [ko.disclaimer, en.disclaimer],
+  ];
+  for (const [k, v] of replacements) {
+    result = result.split(k).join(v);
+  }
+  return result;
+}
 
 // ============================================
 // 파일명 생성 헬퍼
@@ -32,6 +77,7 @@ export function generateFileName(address: string, extension: string, layoutName?
 export interface ExportData {
   address: string;
   siteArea: number;
+  lang?: 'ko' | 'en';
   branding?: {
     brandName?: string;
     brandTagline?: string;
@@ -1729,7 +1775,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     htmlContent = htmlContent.replace('>11. 결론 및 제안<', '>11. 결론 및 제안<');
   } catch (e) { console.warn('[report-export] HTML 도면 삽입 실패:', e); }
 
-  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const finalHtml = translateHtml(htmlContent, (data.lang || 'ko') as ReportLang);
+  const blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
