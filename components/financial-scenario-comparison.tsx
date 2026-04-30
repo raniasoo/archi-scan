@@ -481,6 +481,55 @@ export function FinancialScenarioComparison({
         )}
 
         {/* Summary Note */}
+        {/* 민감도 분석 */}
+        {baseFinancials && (
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">민감도 분석 (±10% 변동 시 ROI 영향)</span>
+            </div>
+            <div className="space-y-2">
+              {(() => {
+                const baseROI = baseFinancials.roi
+                const vars = [
+                  { name: '분양가', key: 'salePriceChange' as const },
+                  { name: '공사비', key: 'constructionCostChange' as const },
+                  { name: '토지비', key: 'landCostChange' as const },
+                ]
+                return vars.map(v => {
+                  const upAdj = { salePriceChange: 0, constructionCostChange: 0, landCostChange: 0, otherCostChange: 0, [v.key]: 10 }
+                  const downAdj = { salePriceChange: 0, constructionCostChange: 0, landCostChange: 0, otherCostChange: 0, [v.key]: -10 }
+                  const upResult = calculateScenario(v.name, baseFinancials, upAdj)
+                  const downResult = calculateScenario(v.name, baseFinancials, downAdj)
+                  const upDelta = upResult.roi - baseROI
+                  const downDelta = downResult.roi - baseROI
+                  const maxDelta = Math.max(Math.abs(upDelta), Math.abs(downDelta), 1)
+                  const scale = 40 / maxDelta
+                  return (
+                    <div key={v.key} className="flex items-center gap-2">
+                      <span className="text-xs w-14 text-right text-muted-foreground">{v.name}</span>
+                      <div className="flex-1 flex items-center h-5">
+                        <div className="w-1/2 flex justify-end">
+                          {downDelta < 0 && <div className="h-4 rounded-l bg-red-400/60" style={{ width: `${Math.abs(downDelta) * scale}%` }} />}
+                          {downDelta >= 0 && <div className="h-4 rounded-l bg-emerald-400/60" style={{ width: `${downDelta * scale}%` }} />}
+                        </div>
+                        <div className="w-px h-5 bg-border" />
+                        <div className="w-1/2 flex">
+                          {upDelta >= 0 && <div className="h-4 rounded-r bg-emerald-400/60" style={{ width: `${upDelta * scale}%` }} />}
+                          {upDelta < 0 && <div className="h-4 rounded-r bg-red-400/60" style={{ width: `${Math.abs(upDelta) * scale}%` }} />}
+                        </div>
+                      </div>
+                      <span className="text-[10px] w-24 text-muted-foreground">
+                        {downDelta >= 0 ? '+' : ''}{downDelta.toFixed(1)} ~ {upDelta >= 0 ? '+' : ''}{upDelta.toFixed(1)}%p
+                      </span>
+                    </div>
+                  )
+                })
+              })()}
+            </div>
+          </div>
+        )}
+
         <div className="mt-4 pt-4 border-t">
           <div className="flex items-start gap-2 text-xs text-muted-foreground">
             <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
