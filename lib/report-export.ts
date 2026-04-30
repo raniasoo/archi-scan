@@ -575,7 +575,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       .verdict-box,
       .conclusion-box,
       .opinion-box,
-      .ai-analysis-summary {
+      .ai-analysis-summary,
+      .section-subtitle + div,
+      .section-subtitle + table {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }
@@ -2657,7 +2659,9 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       .verdict-box,
       .conclusion-box,
       .opinion-box,
-      .ai-analysis-summary {
+      .ai-analysis-summary,
+      .section-subtitle + div,
+      .section-subtitle + table {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }
