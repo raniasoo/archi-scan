@@ -60,6 +60,7 @@ import { ScenarioSlider } from "@/components/scenario-slider"
 import { BrandingEditor } from "@/components/branding-editor"
 import { type BrandingConfig, loadBrandingConfig } from "@/lib/branding-config"
 import { toast } from "sonner"
+import { optimizeLayout, type OptimizationReport } from "@/lib/layout-optimizer"
 import { StrategySelection } from "@/components/strategy-selection"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
@@ -509,6 +510,7 @@ export default function ArchiScanPage() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [siteVisuals, setSiteVisuals] = useState<SiteVisualsConfig>(EMPTY_SITE_VISUALS)
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
+  const [optimizationResult, setOptimizationResult] = useState<OptimizationReport | null>(null)
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
   const [currentProjectName, setCurrentProjectName] = useState<string>("")
   const [recentProjects, setRecentProjects] = useState<ProjectListItem[]>([])
@@ -1988,6 +1990,29 @@ export default function ArchiScanPage() {
                     <Table className="h-3.5 w-3.5" />
                     비교표 다운로드
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-auto gap-1 text-xs"
+                    onClick={() => {
+                      const result = optimizeLayout({
+                        siteArea: siteAreaNum,
+                        maxCoverage: regulation.maxCoverageRatio,
+                        maxFAR: regulation.maxFloorAreaRatio,
+                        maxFloors: regulation.maxFloors || 20,
+                        maxHeight: regulation.maxHeight || 60,
+                        parkingRatio: regulation.parkingRatio || 1.0,
+                        landCostPerM2: landPriceData.pricePerM2 || 5000000,
+                        constructionCostPerM2: regionalPricing?.constructionCostPerM2 || 2500000,
+                        salesPricePerM2: marketPrice.suggestedSalePrice || regionalPricing?.salesPricePerM2 || 5000000,
+                      })
+                      setOptimizationResult(result)
+                      toast.success(`${result.searchSpace}개 조합 탐색 완료 — 최적 ROI ${result.best.roi}%`)
+                    }}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    AI 최적화
+                  </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {address} | 건폐율 {regulation.maxCoverageRatio}% / 용적률 {regulation.maxFloorAreaRatio}% | 
@@ -2098,6 +2123,44 @@ export default function ArchiScanPage() {
                     </p>
                   )}
                 </div>
+
+                {/* AI 최적화 결과 */}
+                {optimizationResult && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">AI 최적화 결과</span>
+                      <span className="text-[10px] text-muted-foreground ml-auto">{optimizationResult.searchSpace}개 조합 탐색</span>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
+                      <div className="rounded-lg bg-background p-2">
+                        <p className="text-[9px] text-muted-foreground">건폐율</p>
+                        <p className="text-sm font-bold">{optimizationResult.best.coverage}%</p>
+                      </div>
+                      <div className="rounded-lg bg-background p-2">
+                        <p className="text-[9px] text-muted-foreground">층수</p>
+                        <p className="text-sm font-bold">{optimizationResult.best.floors}층</p>
+                      </div>
+                      <div className="rounded-lg bg-background p-2">
+                        <p className="text-[9px] text-muted-foreground">세대</p>
+                        <p className="text-sm font-bold">{optimizationResult.best.units}</p>
+                      </div>
+                      <div className="rounded-lg bg-background p-2">
+                        <p className="text-[9px] text-muted-foreground">연면적</p>
+                        <p className="text-sm font-bold">{optimizationResult.best.gfa.toLocaleString()}㎡</p>
+                      </div>
+                      <div className="rounded-lg bg-background p-2">
+                        <p className="text-[9px] text-muted-foreground">예상수익</p>
+                        <p className="text-sm font-bold text-emerald-500">{(optimizationResult.best.profit / 100000000).toFixed(1)}억</p>
+                      </div>
+                      <div className="rounded-lg bg-primary/10 p-2 border border-primary/20">
+                        <p className="text-[9px] text-primary">최적 ROI</p>
+                        <p className="text-sm font-bold text-primary">{optimizationResult.best.roi}%</p>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-2">{optimizationResult.improvement} · 세대크기 {optimizationResult.best.unitSize}㎡ 기준</p>
+                  </div>
+                )}
 
                 {/* 비교표 뷰 */}
                 {layoutViewMode === "compare" && layouts.length > 0 && (
