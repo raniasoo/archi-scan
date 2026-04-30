@@ -14,6 +14,13 @@ export const metadata: Metadata = {
   title: 'Archi-Scan | AI 건축 배치안 생성기',
   description: '대지 분석부터 사업성 검토까지, AI 기반 건축 기획 솔루션',
   generator: 'v0.app',
+  manifest: '/manifest.json',
+  themeColor: '#0d9488',
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+  },
   icons: {
     icon: [
       {
@@ -44,6 +51,7 @@ export default function RootLayout({
         <SubscriptionProvider>
           {children}
           <Toaster position="top-center" richColors closeButton />
+          <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}` }} />
         </SubscriptionProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
