@@ -206,7 +206,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 // Health check
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const testAddr = request.nextUrl.searchParams.get('test')
+  
+  // ?test=주소 파라미터가 있으면 실제 조회 테스트
+  if (testAddr && testAddr.length > 3) {
+    try {
+      const { lookupSiteData } = await import('@/lib/molit')
+      const result = await lookupSiteData(testAddr)
+      return NextResponse.json({
+        status: 'test',
+        address: testAddr,
+        success: result.success,
+        lookupPath: result.lookupPath,
+        totalCount: result.data?.totalCount || 0,
+        items: (result.data?.items || []).slice(0, 2).map((item: Record<string, unknown>) => ({
+          platPlc: item.platPlc,
+          bldNm: item.bldNm,
+          mainPurpsCdNm: item.mainPurpsCdNm,
+          platArea: item.platArea,
+          totArea: item.totArea,
+          grndFlrCnt: item.grndFlrCnt,
+        })),
+        jusoResult: result.jusoResult ? { 
+          success: result.jusoResult.success, 
+          roadAddr: result.jusoResult.roadAddr,
+          jibunAddr: result.jusoResult.jibunAddr,
+        } : null,
+        error: result.error,
+      })
+    } catch (e) {
+      return NextResponse.json({ status: 'test-error', error: String(e) })
+    }
+  }
+
   return NextResponse.json({
     status: 'ok',
     configured: isMolitConfigured(),
