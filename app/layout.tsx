@@ -16,6 +16,19 @@ export const metadata: Metadata = {
   generator: 'v0.app',
   manifest: '/manifest.json',
   themeColor: '#0d9488',
+  keywords: ['건축설계', '배치안', '사업성검토', 'AI건축', '개발사업', '사전검토', 'ROI분석'],
+  openGraph: {
+    title: 'Archi-Scan | AI 건축 배치안 생성기',
+    description: '주소 입력만으로 건축 배치안 자동 생성, 법규 검토, 사업성 분석까지. AI 기반 건축 기획 솔루션.',
+    type: 'website',
+    locale: 'ko_KR',
+    siteName: 'Archi-Scan',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Archi-Scan | AI 건축 배치안 생성기',
+    description: '주소 입력만으로 건축 배치안 자동 생성, 법규 검토, 사업성 분석까지.',
+  },
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
