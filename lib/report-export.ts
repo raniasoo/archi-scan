@@ -1470,7 +1470,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 
       <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
 
-      <div class="pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
+      <div class="ai-score-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
         <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
           <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
           <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
@@ -1785,6 +1785,25 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     iframeDoc.open();
     iframeDoc.write(htmlContent);
     iframeDoc.close();
+    
+    // PDF 전용 스타일 주입 (html2canvas 렌더링 최적화)
+    const pdfStyle = iframeDoc.createElement('style');
+    pdfStyle.textContent = `
+      .page { padding: 24px 30px !important; }
+      .pdf-section { padding: 6px 0 !important; margin-bottom: 4px !important; }
+      .section-title { font-size: 15px !important; margin-bottom: 8px !important; }
+      .summary-card { padding: 8px 6px !important; }
+      .summary-card .label { font-size: 10px !important; margin-bottom: 3px !important; }
+      .summary-card .value { font-size: 13px !important; }
+      table { font-size: 12px !important; }
+      table td, table th { padding: 6px 8px !important; }
+      .verdict-box { padding: 14px !important; margin-top: 8px !important; }
+      .risk-grid { gap: 8px !important; }
+      .risk-category { padding: 10px !important; }
+      .key-points { margin-top: 14px !important; }
+      .conclusion-box { padding: 14px !important; margin-top: 8px !important; }
+    `;
+    iframeDoc.head.appendChild(pdfStyle);
     
     // 렌더링 대기
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -3155,7 +3174,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     <!-- 7. AI 분석 -->
     <section class="pdf-section pdf-section-7 pdf-card-group">
       <h2 class="section-title" style="margin-bottom:12px;">7. AI 분석</h2>
-      <div class="pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
+      <div class="ai-score-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
         <div style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
           <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
           <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
