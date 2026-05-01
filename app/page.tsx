@@ -28,6 +28,7 @@ import { generateFloorPlanDXF, downloadDXF } from "@/lib/dxf-generator"
 import { fetchLandPrice, formatLandPricePerM2, formatLandCost } from "@/lib/land-price"
 import { FinancialAnalysis } from "@/components/financial-analysis"
 import { ReportSummary } from "@/components/report-summary"
+import { LandingPage } from "@/components/landing-page"
 import { ExcelImport, type ImportedReportData } from "@/components/excel-import"
 import { ProjectManager, type ProjectSnapshot } from "@/components/project-manager"
 import { saveProject as saveProjectToStorage, getRecentProjects, loadProject as loadProjectFromStorage, type ProjectListItem } from "@/lib/project-storage"
@@ -423,6 +424,7 @@ type AppStep = "input" | "strategy" | "regulation" | "layouts" | "floorplan" | "
 
 export default function ArchiScanPage() {
   const [mounted, setMounted] = useState(false) // v2
+  const [showLanding, setShowLanding] = useState(true)
   
   const { 
     isProUser, 
@@ -555,6 +557,10 @@ export default function ArchiScanPage() {
     setMounted(true)
     // Initialize user
     getOrCreateUser().then(setCurrentUser)
+
+    // 랜딩 페이지 스킵 여부 (이전 방문자 또는 세션 존재 시)
+    const hasUsed = localStorage.getItem('archi-scan-session') || localStorage.getItem('archi-scan-visited')
+    if (hasUsed) setShowLanding(false)
 
     // 저장된 프로젝트 상태 복원
     try {
@@ -1330,6 +1336,16 @@ export default function ArchiScanPage() {
           <p className="text-muted-foreground">로딩 중...</p>
         </div>
       </div>
+    )
+  }
+
+  // 랜딩 페이지 표시 (첫 방문자)
+  if (showLanding) {
+    return (
+      <LandingPage onStart={() => {
+        localStorage.setItem('archi-scan-visited', 'true')
+        setShowLanding(false)
+      }} />
     )
   }
 
