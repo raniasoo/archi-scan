@@ -92,6 +92,8 @@ const MOLIT_ATCH_JIBUN_ENDPOINT = {
 // JUSO key: 44 chars from juso.go.kr (dev key with 'dev' prefix)
 const HARDCODED_MOLIT_KEY = '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba5d56d21444098'
 const HARDCODED_JUSO_KEY = 'devU01TX0FVVEgyMDI2MDQyMjIwMDgxNjExNzk4MjA='
+const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
+const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
 
 function getApiKey(): string {
   // HARDCODED_MOLIT_KEY 고정 사용 (Vercel 환경변수 값과 무관하게 정상 작동 보장)
@@ -971,6 +973,39 @@ async function fetchZoneType(sigunguCd: string, bjdongCd: string, bun: string, j
   } catch (e) {
     console.warn('[MOLIT] 지역지구 조회 실패 (무시):', e)
   }
+  
+  // VWorld 토지이용계획 fallback
+  try {
+    const pnu = `${sigunguCd}${bjdongCd}1${bun}${ji}`
+    console.log(`[VWORLD-ZONE] 토지이용계획 조회 시도: PNU=${pnu}`)
+    const params = new URLSearchParams({
+      service: 'data', request: 'GetFeature', data: 'LT_C_LHBLPN',
+      key: VWORLD_KEY, domain: VWORLD_DOMAIN, attribute: 'true',
+      page: '1', size: '10', crs: 'EPSG:4326', format: 'json',
+      attrFilter: `pnu:=:${pnu}`,
+    })
+    const res = await fetch(`https://api.vworld.kr/req/data?${params}`, {
+      signal: AbortSignal.timeout(5000),
+      headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const features = data?.response?.result?.featureCollection?.features || []
+      for (const feat of features) {
+        const prpNm = feat?.properties?.prposAreaDstrcCodeNm?.trim() || ''
+        if (prpNm.includes('주거') || prpNm.includes('상업') || prpNm.includes('공업') || prpNm.includes('녹지') || prpNm.includes('관리')) {
+          console.log(`[VWORLD-ZONE] 용도지역 발견: ${prpNm}`)
+          return prpNm
+        }
+      }
+      if (features.length > 0) {
+        console.log(`[VWORLD-ZONE] ${features.length}건 중 용도지역 없음`)
+      }
+    }
+  } catch (e) {
+    console.warn('[VWORLD-ZONE] 토지이용계획 조회 실패 (무시):', e)
+  }
+  
   return undefined
 }
 
@@ -1848,8 +1883,6 @@ export async function lookupSiteData(
 // ============================================
 // Vworld PNU Fallback (MOLIT 0건 또는 siteArea null 시)
 // ============================================
-const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
 
 async function fetchVworldPnuArea(bdMgtSn: string): Promise<{ area: number; address?: string } | null> {
   if (!bdMgtSn || bdMgtSn.length < 19) return null
