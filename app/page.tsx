@@ -2005,7 +2005,7 @@ export default function ArchiScanPage() {
                     }}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
-                    AI 최적화
+                    수익성 시뮬레이션
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -2118,7 +2118,7 @@ export default function ArchiScanPage() {
                   )}
                 </div>
 
-                {/* AI 최적화 결과 */}
+                {/* 수익성 극대화 시뮬레이션 결과 */}
                 {optimizationResult && (() => {
                   const current = recommendedLayout || layouts[0]
                   const currentROI = current ? (feasibilityResult?.roi ?? 0) : 0
@@ -2127,12 +2127,12 @@ export default function ArchiScanPage() {
                   <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold text-foreground">AI 최적화 결과</span>
+                      <span className="text-sm font-semibold text-foreground">수익성 극대화 시뮬레이션</span>
                       <span className="text-[10px] text-muted-foreground ml-auto">{optimizationResult.searchSpace}개 조합 탐색</span>
                     </div>
                     <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
                       현재 대지의 법규 조건(건폐율·용적률·높이) 안에서 건폐율 × 층수 × 세대크기를 조합하여
-                      <strong className="text-foreground"> 수익률(ROI)이 가장 높은 최적 배치안</strong>을 자동으로 탐색한 결과입니다.
+                      <strong className="text-foreground"> 수익률(ROI)이 가장 높은 조합</strong>을 탐색한 결과입니다. 현재 AI 추천 배치안과 비교하여 참고하세요.
                       {optimizationResult.best.roi <= 0 && ' 현재 토지 단가 대비 분양가가 낮아 수익 확보가 어려운 대지입니다.'}
                     </p>
 
@@ -2144,7 +2144,7 @@ export default function ArchiScanPage() {
                             <tr className="border-b border-border/50">
                               <th className="text-left py-1.5 px-2 text-muted-foreground font-medium">항목</th>
                               <th className="text-center py-1.5 px-2 text-muted-foreground font-medium">현재 ({current.name})</th>
-                              <th className="text-center py-1.5 px-2 text-primary font-semibold">AI 최적화</th>
+                              <th className="text-center py-1.5 px-2 text-primary font-semibold">ROI 극대화</th>
                               <th className="text-center py-1.5 px-2 text-muted-foreground font-medium">차이</th>
                             </tr>
                           </thead>
@@ -2176,11 +2176,41 @@ export default function ArchiScanPage() {
                     )}
 
                     <p className="text-[10px] text-muted-foreground">{optimizationResult.improvement} · 세대크기 {optimizationResult.best.unitSize}㎡ ({optimizationResult.best.unitSize <= 59 ? '소형' : optimizationResult.best.unitSize <= 84 ? '중형' : '대형'}) 기준</p>
+
+                    {/* 장점과 단점 분석 */}
+                    {roiGap !== 0 && (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5">
+                          <p className="text-[10px] font-semibold text-emerald-500 mb-1.5">장점</p>
+                          <ul className="space-y-1 text-[10px] text-muted-foreground">
+                            {roiGap > 0 && <li>• ROI {roiGap.toFixed(1)}%p 개선 가능</li>}
+                            {optimizationResult.best.units > (current?.units || 0) && <li>• 세대수 증가 → 분양 수익 증가</li>}
+                            {optimizationResult.best.gfa > (current?.gfa || 0) && <li>• 연면적 증가 → 공간 활용도 향상</li>}
+                            {optimizationResult.best.unitSize <= 59 && <li>• 소형 세대 → 초기 분양률 유리</li>}
+                            {optimizationResult.best.unitSize >= 84 && <li>• 중대형 세대 → 세대당 단가 높음</li>}
+                          </ul>
+                        </div>
+                        <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-2.5">
+                          <p className="text-[10px] font-semibold text-amber-500 mb-1.5">고려사항</p>
+                          <ul className="space-y-1 text-[10px] text-muted-foreground">
+                            <li>• ROI만 고려 (건축적 품질 미반영)</li>
+                            {optimizationResult.best.unitSize <= 59 && <li>• 소형 위주 → 가족 수요 부적합</li>}
+                            {optimizationResult.best.coverage > 50 && <li>• 높은 건폐율 → 조경/이격 여유 감소</li>}
+                            {optimizationResult.best.floors >= 6 && <li>• 6층 이상 → 일조권/사선제한 검토 필요</li>}
+                            <li>• 인허가·민원 등 현실 변수 미반영</li>
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
                     {roiGap > 0 && (
-                      <p className="text-[10px] text-emerald-500 mt-1">💡 AI 최적화 조건으로 변경하면 ROI를 {roiGap.toFixed(1)}%p 높일 수 있습니다.</p>
+                      <p className="text-[10px] text-emerald-500 mt-2">💡 ROI 극대화 조건 적용 시 {roiGap.toFixed(1)}%p 높일 수 있습니다. 위 고려사항을 검토한 후 설계사와 상의하세요.</p>
                     )}
                     {roiGap <= 0 && optimizationResult.best.roi > 0 && (
-                      <p className="text-[10px] text-blue-400 mt-1">현재 배치안이 이미 최적에 가깝습니다.</p>
+                      <p className="text-[10px] text-blue-400 mt-2">✅ 현재 AI 추천 배치안이 이미 수익성과 건축 품질을 균형 있게 반영하고 있습니다.</p>
+                    )}
+                    {optimizationResult.best.roi <= 0 && (
+                      <p className="text-[10px] text-amber-400 mt-2">⚠️ 어떤 조합으로도 수익 확보가 어렵습니다. 토지 매입가 재협상 또는 용도변경을 검토하세요.</p>
                     )}
                   </div>
                   )
