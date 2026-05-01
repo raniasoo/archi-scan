@@ -219,6 +219,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         address: testAddr,
         success: result.success,
         error: result.error,
+        zoneType: result.data?.zoneType || null,
+        siteArea: result.data?.siteArea || null,
         diagnostics: result.diagnostics,
         itemCount: result.data?.items?.length || 0,
         firstItem: result.data?.items?.[0] ? {

@@ -1714,7 +1714,7 @@ export async function lookupSiteData(
       
       // 지역지구 API로 용도지역 조회
       if (!siteData.zoneType) {
-        const zoneResult = await fetchZoneType(sigunguCd, bjdongCd, bun, ji, molitKey)
+        const zoneResult = await fetchZoneType(sigunguCd, bjdongCd, bun, ji, getApiKey())
         if (zoneResult) siteData.zoneType = zoneResult
       }
       // JUSO에서 받은 건물 입구 좌표 추가 (diagnostics 통해 접근, 스코프 안전)
@@ -1766,7 +1766,7 @@ export async function lookupSiteData(
         siteData.dataSource = 'building'
         // 지역지구 API로 용도지역 조회 (재시도 경로)
         if (!siteData.zoneType) {
-          const zoneResult = await fetchZoneType(sigunguCd, bjdongCd, bun, ji !== '0000' ? ji : '0000', molitKey)
+          const zoneResult = await fetchZoneType(sigunguCd, bjdongCd, bun, ji !== '0000' ? ji : '0000', getApiKey())
           if (zoneResult) siteData.zoneType = zoneResult
         }
         if (!siteData.sigunguCd) siteData.sigunguCd = sigunguCd
