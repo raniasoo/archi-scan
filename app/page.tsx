@@ -1448,7 +1448,7 @@ export default function ArchiScanPage() {
 
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="mx-auto max-w-7xl px-4 md:px-6 py-4 overflow-x-hidden">
+        <div className="mx-auto max-w-7xl px-4 md:px-6 py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 md:gap-4 shrink-0">
               <button 
