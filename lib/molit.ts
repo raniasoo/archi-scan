@@ -2001,10 +2001,53 @@ export async function lookupSiteData(
               const lng = parseFloat(point.x)
               const lat = parseFloat(point.y)
               console.log(`[VWORLD-GEO] 좌표 확보: lng=${lng}, lat=${lat}`)
+              
+              // 좌표 기반 용도지역 조회
               const coordZone = await fetchZoneTypeByCoord(lng, lat)
               if (coordZone) {
                 vworldZoneType = coordZone
                 console.log(`[MOLIT] 좌표 기반 용도지역 보완 성공 (0건 경로): ${coordZone}`)
+              }
+              
+              // 좌표 기반 대지면적 조회 (LP_PA_CBND_BUBUN + geomFilter)
+              if (!vworldSiteArea) {
+                try {
+                  const areaParams = new URLSearchParams({
+                    service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
+                    key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+                    geometry: 'true', attribute: 'true',
+                    page: '1', size: '1', crs: 'EPSG:4326', format: 'json',
+                    geomFilter: `POINT(${lng} ${lat})`,
+                  })
+                  const areaRes = await fetch(`https://api.vworld.kr/req/data?${areaParams}`, {
+                    signal: AbortSignal.timeout(8000),
+                    headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+                  })
+                  if (areaRes.ok) {
+                    const areaData = await areaRes.json()
+                    const features = areaData?.response?.result?.featureCollection?.features || []
+                    if (features.length > 0) {
+                      const geom = features[0]?.geometry
+                      const rawCoords = geom?.type === 'Polygon' ? geom.coordinates?.[0]
+                        : geom?.type === 'MultiPolygon' ? geom.coordinates?.[0]?.[0] : null
+                      if (rawCoords && rawCoords.length >= 3) {
+                        const lats = rawCoords.map((c: number[]) => c[1])
+                        const cLat = (Math.min(...lats) + Math.max(...lats)) / 2
+                        let pa = 0
+                        for (let i = 0; i < rawCoords.length - 1; i++) {
+                          pa += (rawCoords[i][0] - rawCoords[i+1][0]) * (rawCoords[i][1] + rawCoords[i+1][1])
+                        }
+                        const calcArea = Math.abs(pa / 2) * 111319 * 111319 * Math.cos(cLat * Math.PI / 180)
+                        if (calcArea > 10) {
+                          vworldSiteArea = Math.round(calcArea)
+                          console.log(`[MOLIT] 좌표 기반 대지면적 보완 성공 (0건 경로): ${vworldSiteArea}㎡`)
+                        }
+                      }
+                    }
+                  }
+                } catch (e) {
+                  console.warn('[VWORLD-GEO] 좌표 기반 면적 조회 실패:', e)
+                }
               }
             }
           }
