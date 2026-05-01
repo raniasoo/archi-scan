@@ -1797,6 +1797,16 @@ export async function lookupSiteData(
         }
       }
       
+      // VWorld 용도지역 전용 조회: MOLIT 데이터는 있지만 zoneType이 없는 경우
+      if (!siteData.zoneType?.trim() && siteData.bdMgtSn) {
+        console.log('[MOLIT] zoneType 없음 → VWorld LP_PA_CBND_BUBUN 용도지역 조회')
+        const vwZone = await fetchVworldPnuArea(siteData.bdMgtSn)
+        if (vwZone?.zoneType) {
+          siteData.zoneType = vwZone.zoneType
+          console.log(`[MOLIT] VWorld 용도지역 보완 성공: ${vwZone.zoneType}`)
+        }
+      }
+      
       return {
         success: true,
         data: siteData,
