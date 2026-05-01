@@ -41,17 +41,20 @@ export function ScenarioSlider({
 
   const isChanged = salePriceAdj !== 0 || constCostAdj !== 0 || landPriceAdj !== 0 || interestRate > 0
 
-  // 조정된 feasibility
+  // 조정된 feasibility — 슬라이더 0%일 때 사업성 탭의 값을 그대로 사용
   const scenario = useMemo(() => {
-    const base = (salePriceAdj === 0 && constCostAdj === 0 && landPriceAdj === 0)
-      ? baseFeasibility
-      : calculateFeasibility({
-          siteArea, grossFloorArea: gfa, unitCount: units,
-          floorCount: floors, parkingCount: parking,
-          landPricePerM2: landPricePerM2 * (1 + landPriceAdj / 100),
-          constructionCostPerM2: baseConstCost * (1 + constCostAdj / 100),
-          salesPricePerM2: baseSalePrice * (1 + salePriceAdj / 100),
-        })
+    const noAdj = salePriceAdj === 0 && constCostAdj === 0 && landPriceAdj === 0 && interestRate === 0
+    if (noAdj) {
+      // 슬라이더 미조정 → 사업성 탭에서 전달받은 값 직접 사용 (ROI 일치 보장)
+      return { ...baseFeasibility, roi: baseROI, totalCost: baseTotalCost || baseFeasibility.totalCost, profit: baseProfit, financeCost: 0 }
+    }
+    const base = calculateFeasibility({
+      siteArea, grossFloorArea: gfa, unitCount: units,
+      floorCount: floors, parkingCount: parking,
+      landPricePerM2: landPricePerM2 * (1 + landPriceAdj / 100),
+      constructionCostPerM2: baseConstCost * (1 + constCostAdj / 100),
+      salesPricePerM2: baseSalePrice * (1 + salePriceAdj / 100),
+    })
     // 금리 적용 시 금융비용 추가
     if (interestRate > 0) {
       const financeCost = base.totalCost * (interestRate / 100) * 2.5 // 2.5년 사업기간
@@ -61,10 +64,10 @@ export function ScenarioSlider({
       return { ...base, totalCost: adjTotalCost, profit: adjProfit, roi: adjROI, financeCost }
     }
     return { ...base, financeCost: 0 }
-  }, [siteArea, gfa, units, floors, parking, landPricePerM2, salePriceAdj, constCostAdj, landPriceAdj, interestRate, baseFeasibility])
+  }, [siteArea, gfa, units, floors, parking, landPricePerM2, salePriceAdj, constCostAdj, landPriceAdj, interestRate, baseFeasibility, baseROI, baseTotalCost, baseProfit])
 
-  const roiDiff = scenario.roi - baseFeasibility.roi
-  const profitDiff = scenario.profit - baseFeasibility.profit
+  const roiDiff = scenario.roi - baseROI
+  const profitDiff = scenario.profit - baseProfit
   const roiColor = scenario.roi >= 15 ? "text-emerald-400" : scenario.roi >= 5 ? "text-blue-400" : scenario.roi >= 0 ? "text-orange-400" : "text-red-400"
 
   const sliders = [
