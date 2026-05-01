@@ -1555,9 +1555,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
   </style>
 </head>
 <body>
-  <div class="page">
-    <!-- 1. 표지 -->
-    <div class="cover">
+  <!-- 1. 표지 -->
+  <div class="cover">
       <p class="doc-number">${report.cover.documentNumber}</p>
       <p class="english-title">${report.cover.englishSubtitle}</p>
       <h1>${report.cover.koreanTitle}</h1>
@@ -1574,8 +1573,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       <p style="font-size: 10px; color: #94a3b8; margin-top: 4px;">${report.cover.contact}</p>
     </div>
 
-    <!-- Executive Summary -->
-    <div class="page" style="page-break-before: always; padding: 40px 30px;">
+  <!-- Executive Summary -->
+  <div class="page" style="page-break-before: always; padding: 40px 30px;">
       <div style="text-align: center; margin-bottom: 24px;">
         <p style="font-size: 10px; color: #64748b; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 4px;">EXECUTIVE SUMMARY</p>
         <h2 style="font-size: 22px; font-weight: 800; color: #1e293b; margin: 0;">핵심 요약</h2>
@@ -1942,7 +1941,6 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         <p>${report.disclaimer.copyright}${report.cover.website ? ` · <a href="${report.cover.website}" style="color: #3b82f6; text-decoration: none;">${report.cover.website}</a>` : ''}</p>
       </div>
     </div>
-  </div>
 </body>
 </html>`;
 
@@ -3357,9 +3355,8 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
   </style>
 </head>
 <body>
-  <div class="page">
-    <!-- 1. 표지 -->
-    <div class="cover">
+  <!-- 1. 표지 -->
+  <div class="cover">
       <p class="doc-number">${report.cover.documentNumber}</p>
       <p class="english-title">${report.cover.englishSubtitle}</p>
       <h1>${report.cover.koreanTitle}</h1>
@@ -3376,8 +3373,8 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       <p style="font-size: 10px; color: #94a3b8; margin-top: 4px;">${report.cover.contact}</p>
     </div>
 
-    <!-- Executive Summary -->
-    <div class="page" style="page-break-before: always; padding: 40px 30px;">
+  <!-- Executive Summary -->
+  <div class="page" style="page-break-before: always; padding: 40px 30px;">
       <div style="text-align: center; margin-bottom: 24px;">
         <p style="font-size: 10px; color: #64748b; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 4px;">EXECUTIVE SUMMARY</p>
         <h2 style="font-size: 22px; font-weight: 800; color: #1e293b; margin: 0;">핵심 요약</h2>
@@ -3766,7 +3763,6 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         <p>${report.disclaimer.copyright}${report.cover.website ? ` · <a href="${report.cover.website}" style="color: #3b82f6; text-decoration: none;">${report.cover.website}</a>` : ''}</p>
       </div>
     </div>
-  </div>
 </body>
 </html>`;
 }
