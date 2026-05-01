@@ -82,9 +82,9 @@ export function LayoutComparison({
             const barPct = maxAbsROI > 0 ? Math.min(100, (Math.abs(f.roi) / maxAbsROI) * 100) : 10
             const isSelected = selectedLayout === layout.id
             return (
-              <button key={layout.id} onClick={() => onSelect(layout.id)} className={`w-full flex items-center gap-3 ${isSelected ? "opacity-100" : "opacity-70"} hover:opacity-100 transition-opacity`}>
+              <button key={layout.id} onClick={() => onSelect(layout.id)} className={`w-full flex items-center gap-2 ${isSelected ? "opacity-100" : "opacity-70"} hover:opacity-100 transition-opacity`}>
                 <div className="w-20 text-right text-xs font-medium text-muted-foreground truncate">{layout.name}</div>
-                <div className="flex-1 h-6 bg-secondary/30 rounded-md overflow-hidden relative">
+                <div className="flex-1 h-6 bg-secondary/30 rounded-md overflow-hidden">
                   <div
                     className="h-full rounded-md transition-all duration-500 flex items-center justify-end pr-2"
                     style={{
@@ -94,9 +94,9 @@ export function LayoutComparison({
                   >
                     <span className="text-[10px] font-bold text-white whitespace-nowrap">{f.roi.toFixed(1)}%</span>
                   </div>
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground whitespace-nowrap">
-                    {f.profit >= 0 ? "+" : ""}{(f.profit / 1e8).toFixed(1)}억
-                  </div>
+                </div>
+                <div className="w-14 text-right text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                  {f.profit >= 0 ? "+" : ""}{(f.profit / 1e8).toFixed(1)}억
                 </div>
               </button>
             )

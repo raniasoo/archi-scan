@@ -208,16 +208,11 @@ function mobileDownload(content: string, fileName: string, mimeType: string = 't
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
   if (isMobile) {
-    // 모바일: 새 창에서 열기 (가장 안정적)
-    const newWindow = window.open('', '_blank');
-    if (newWindow) {
-      newWindow.document.open();
-      newWindow.document.write(content);
-      newWindow.document.close();
-    } else {
-      // 팝업 차단 시 직접 이동
-      window.location.href = url;
-    }
+    // 모바일: Blob URL로 열기 (viewport 메타 태그 정상 적용)
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+    // 메모리 정리 (10초 후)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
   } else {
     // 데스크톱: 표준 다운로드
     const a = document.createElement('a');
