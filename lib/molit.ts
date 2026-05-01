@@ -1678,6 +1678,37 @@ export async function lookupSiteData(
       
       const siteData = mapBuildingToSiteData(result.data)
       siteData.dataSource = 'building'
+      
+      // 지역지구 API로 용도지역 조회 (건축물대장에서 용도지역 가져오기)
+      try {
+        const jijiguUrl = `https://apis.data.go.kr/1613000${MOLIT_ENDPOINTS.buildingJijuk}?serviceKey=${encodeURIComponent(molitKey)}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=20&pageNo=1&resultType=json`
+        console.log('[MOLIT] 지역지구 조회 시도...')
+        const jijiguRes = await fetch(jijiguUrl, { signal: AbortSignal.timeout(5000) })
+        if (jijiguRes.ok) {
+          const jijiguJson = await jijiguRes.json()
+          const items = jijiguJson?.response?.body?.items?.item
+          if (items) {
+            const arr = Array.isArray(items) ? items : [items]
+            // '용도지역' 또는 '용도' 포함 항목에서 지역명 추출
+            const zoneItem = arr.find((it: Record<string, string>) => 
+              (it.jijiguGbCdNm || '').includes('용도지역') || (it.jijiguGbCdNm || '').includes('용도')
+            )
+            if (zoneItem?.jijiguCdNm) {
+              siteData.zoneType = zoneItem.jijiguCdNm
+              console.log(`[MOLIT] 용도지역 발견: ${zoneItem.jijiguCdNm}`)
+            } else if (arr.length > 0) {
+              // 첫 번째 항목이라도 사용
+              const first = arr[0]
+              if (first?.jijiguCdNm && (first.jijiguCdNm.includes('주거') || first.jijiguCdNm.includes('상업') || first.jijiguCdNm.includes('공업') || first.jijiguCdNm.includes('녹지'))) {
+                siteData.zoneType = first.jijiguCdNm
+                console.log(`[MOLIT] 용도지역 (첫 항목): ${first.jijiguCdNm}`)
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[MOLIT] 지역지구 조회 실패 (무시):', e)
+      }
       // JUSO에서 받은 건물 입구 좌표 추가 (diagnostics 통해 접근, 스코프 안전)
       const diagJuso = diagnostics.jusoResult as Record<string, unknown> | undefined
       if (diagJuso?.entX) siteData.entX = diagJuso.entX as number
