@@ -2121,11 +2121,16 @@ export default function ArchiScanPage() {
                 {/* AI 최적화 결과 */}
                 {optimizationResult && (
                   <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-4">
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-2">
                       <Sparkles className="h-4 w-4 text-primary" />
                       <span className="text-sm font-semibold text-foreground">AI 최적화 결과</span>
                       <span className="text-[10px] text-muted-foreground ml-auto">{optimizationResult.searchSpace}개 조합 탐색</span>
                     </div>
+                    <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+                      현재 대지의 법규 조건(건폐율·용적률·높이) 안에서 건폐율 × 층수 × 세대크기를 조합하여
+                      <strong className="text-foreground"> 수익률(ROI)이 가장 높은 최적 배치안</strong>을 자동으로 탐색한 결과입니다.
+                      {optimizationResult.best.roi <= 0 && ' 현재 토지 단가 대비 분양가가 낮아 수익 확보가 어려운 대지입니다.'}
+                    </p>
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
                       <div className="rounded-lg bg-background p-2">
                         <p className="text-[9px] text-muted-foreground">건폐율</p>
@@ -2145,14 +2150,17 @@ export default function ArchiScanPage() {
                       </div>
                       <div className="rounded-lg bg-background p-2">
                         <p className="text-[9px] text-muted-foreground">예상수익</p>
-                        <p className="text-sm font-bold text-emerald-500">{(optimizationResult.best.profit / 100000000).toFixed(1)}억</p>
+                        <p className={`text-sm font-bold ${optimizationResult.best.profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{(optimizationResult.best.profit / 100000000).toFixed(1)}억</p>
                       </div>
                       <div className="rounded-lg bg-primary/10 p-2 border border-primary/20">
                         <p className="text-[9px] text-primary">최적 ROI</p>
-                        <p className="text-sm font-bold text-primary">{optimizationResult.best.roi}%</p>
+                        <p className={`text-sm font-bold ${optimizationResult.best.roi >= 0 ? 'text-primary' : 'text-red-500'}`}>{optimizationResult.best.roi}%</p>
                       </div>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-2">{optimizationResult.improvement} · 세대크기 {optimizationResult.best.unitSize}㎡ 기준</p>
+                    <p className="text-[10px] text-muted-foreground mt-2">{optimizationResult.improvement} · 세대크기 {optimizationResult.best.unitSize}㎡ ({optimizationResult.best.unitSize <= 59 ? '소형' : optimizationResult.best.unitSize <= 84 ? '중형' : '대형'}) 기준</p>
+                    {optimizationResult.best.roi > 0 && (
+                      <p className="text-[10px] text-emerald-500 mt-1">💡 위 조건으로 배치하면 현재 배치안 대비 수익성을 높일 수 있습니다.</p>
+                    )}
                   </div>
                 )}
 
