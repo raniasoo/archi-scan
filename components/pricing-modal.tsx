@@ -12,11 +12,11 @@ interface PricingModalProps {
 }
 
 export function PricingModal({ open, onOpenChange }: PricingModalProps) {
-  const { isProUser, setShowUpgradeModal } = useSubscription()
+  const { isProUser, handlePayment, isPaymentLoading } = useSubscription()
 
-  const handleSelectPro = () => {
+  const handleSelectPro = async () => {
+    await handlePayment()
     onOpenChange(false)
-    setShowUpgradeModal(true)
   }
 
   return (
@@ -140,9 +140,10 @@ export function PricingModal({ open, onOpenChange }: PricingModalProps) {
               ) : (
                 <Button 
                   onClick={handleSelectPro}
+                  disabled={isPaymentLoading}
                   className="w-full mt-6 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
                 >
-                  프로로 업그레이드
+                  {isPaymentLoading ? '처리 중...' : '프로로 업그레이드'}
                 </Button>
               )}
             </CardContent>
