@@ -2119,7 +2119,11 @@ export default function ArchiScanPage() {
                 </div>
 
                 {/* AI 최적화 결과 */}
-                {optimizationResult && (
+                {optimizationResult && (() => {
+                  const current = recommendedLayout || layouts[0]
+                  const currentROI = current ? (feasibilityResult?.roi ?? 0) : 0
+                  const roiGap = optimizationResult.best.roi - currentROI
+                  return (
                   <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Sparkles className="h-4 w-4 text-primary" />
@@ -2131,38 +2135,56 @@ export default function ArchiScanPage() {
                       <strong className="text-foreground"> 수익률(ROI)이 가장 높은 최적 배치안</strong>을 자동으로 탐색한 결과입니다.
                       {optimizationResult.best.roi <= 0 && ' 현재 토지 단가 대비 분양가가 낮아 수익 확보가 어려운 대지입니다.'}
                     </p>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
-                      <div className="rounded-lg bg-background p-2">
-                        <p className="text-[9px] text-muted-foreground">건폐율</p>
-                        <p className="text-sm font-bold">{optimizationResult.best.coverage}%</p>
+
+                    {/* 현재 vs 최적화 비교 테이블 */}
+                    {current && (
+                      <div className="overflow-x-auto mb-3">
+                        <table className="w-full text-[11px]">
+                          <thead>
+                            <tr className="border-b border-border/50">
+                              <th className="text-left py-1.5 px-2 text-muted-foreground font-medium">항목</th>
+                              <th className="text-center py-1.5 px-2 text-muted-foreground font-medium">현재 ({current.name})</th>
+                              <th className="text-center py-1.5 px-2 text-primary font-semibold">AI 최적화</th>
+                              <th className="text-center py-1.5 px-2 text-muted-foreground font-medium">차이</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[
+                              { label: '건폐율', cur: `${(current.buildingCoverage || current.coverage)?.toFixed(0)}%`, opt: `${optimizationResult.best.coverage}%` },
+                              { label: '층수', cur: `${current.floors}층`, opt: `${optimizationResult.best.floors}층` },
+                              { label: '세대수', cur: `${current.units}세대`, opt: `${optimizationResult.best.units}세대`, diff: optimizationResult.best.units - current.units },
+                              { label: '연면적', cur: `${current.gfa?.toLocaleString()}㎡`, opt: `${optimizationResult.best.gfa.toLocaleString()}㎡` },
+                              { label: '예상수익', cur: `${(feasibilityResult?.profit ? feasibilityResult.profit / 1e8 : 0).toFixed(1)}억`, opt: `${(optimizationResult.best.profit / 1e8).toFixed(1)}억`, diff: optimizationResult.best.profit / 1e8 - (feasibilityResult?.profit ? feasibilityResult.profit / 1e8 : 0), isMoney: true },
+                              { label: 'ROI', cur: `${currentROI.toFixed(1)}%`, opt: `${optimizationResult.best.roi.toFixed(1)}%`, diff: roiGap, isPercent: true },
+                            ].map((row, i) => (
+                              <tr key={i} className={`border-b border-border/30 ${row.label === 'ROI' ? 'bg-primary/5' : ''}`}>
+                                <td className="py-1.5 px-2 font-medium">{row.label}</td>
+                                <td className="py-1.5 px-2 text-center text-muted-foreground">{row.cur}</td>
+                                <td className="py-1.5 px-2 text-center font-semibold">{row.opt}</td>
+                                <td className={`py-1.5 px-2 text-center font-medium ${
+                                  row.diff !== undefined ? (row.diff > 0 ? 'text-emerald-500' : row.diff < 0 ? 'text-red-500' : 'text-muted-foreground') : 'text-muted-foreground'
+                                }`}>
+                                  {row.diff !== undefined 
+                                    ? `${row.diff > 0 ? '▲' : row.diff < 0 ? '▼' : '-'} ${Math.abs(row.diff).toFixed(row.isPercent ? 1 : row.isMoney ? 1 : 0)}${row.isPercent ? '%p' : row.isMoney ? '억' : ''}`
+                                    : '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                      <div className="rounded-lg bg-background p-2">
-                        <p className="text-[9px] text-muted-foreground">층수</p>
-                        <p className="text-sm font-bold">{optimizationResult.best.floors}층</p>
-                      </div>
-                      <div className="rounded-lg bg-background p-2">
-                        <p className="text-[9px] text-muted-foreground">세대</p>
-                        <p className="text-sm font-bold">{optimizationResult.best.units}</p>
-                      </div>
-                      <div className="rounded-lg bg-background p-2">
-                        <p className="text-[9px] text-muted-foreground">연면적</p>
-                        <p className="text-sm font-bold">{optimizationResult.best.gfa.toLocaleString()}㎡</p>
-                      </div>
-                      <div className="rounded-lg bg-background p-2">
-                        <p className="text-[9px] text-muted-foreground">예상수익</p>
-                        <p className={`text-sm font-bold ${optimizationResult.best.profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{(optimizationResult.best.profit / 100000000).toFixed(1)}억</p>
-                      </div>
-                      <div className="rounded-lg bg-primary/10 p-2 border border-primary/20">
-                        <p className="text-[9px] text-primary">최적 ROI</p>
-                        <p className={`text-sm font-bold ${optimizationResult.best.roi >= 0 ? 'text-primary' : 'text-red-500'}`}>{optimizationResult.best.roi}%</p>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-2">{optimizationResult.improvement} · 세대크기 {optimizationResult.best.unitSize}㎡ ({optimizationResult.best.unitSize <= 59 ? '소형' : optimizationResult.best.unitSize <= 84 ? '중형' : '대형'}) 기준</p>
-                    {optimizationResult.best.roi > 0 && (
-                      <p className="text-[10px] text-emerald-500 mt-1">💡 위 조건으로 배치하면 현재 배치안 대비 수익성을 높일 수 있습니다.</p>
+                    )}
+
+                    <p className="text-[10px] text-muted-foreground">{optimizationResult.improvement} · 세대크기 {optimizationResult.best.unitSize}㎡ ({optimizationResult.best.unitSize <= 59 ? '소형' : optimizationResult.best.unitSize <= 84 ? '중형' : '대형'}) 기준</p>
+                    {roiGap > 0 && (
+                      <p className="text-[10px] text-emerald-500 mt-1">💡 AI 최적화 조건으로 변경하면 ROI를 {roiGap.toFixed(1)}%p 높일 수 있습니다.</p>
+                    )}
+                    {roiGap <= 0 && optimizationResult.best.roi > 0 && (
+                      <p className="text-[10px] text-blue-400 mt-1">현재 배치안이 이미 최적에 가깝습니다.</p>
                     )}
                   </div>
-                )}
+                  )
+                })()}
 
                 {/* 비교표 뷰 */}
                 {layoutViewMode === "compare" && layouts.length > 0 && (
