@@ -1789,6 +1789,10 @@ export async function lookupSiteData(
         const vwArea = await fetchVworldPnuArea(siteData.bdMgtSn)
         if (vwArea && vwArea.area > 0) {
           siteData.siteArea = vwArea.area
+          if (vwArea.zoneType && !siteData.zoneType?.trim()) {
+            siteData.zoneType = vwArea.zoneType
+            console.log(`[MOLIT] Vworld PNU 용도지역 보완: ${vwArea.zoneType}`)
+          }
           console.log(`[MOLIT] Vworld PNU 대지면적 보완: ${vwArea.area}㎡`)
         }
       }
@@ -1846,12 +1850,17 @@ export async function lookupSiteData(
     const diagJusoEmpty = diagnostics.jusoResult as Record<string, unknown> | undefined
     const emptyBdMgtSn = (diagJusoEmpty?.bdMgtSn as string) || ''
     let vworldSiteArea: number | undefined
+    let vworldZoneType: string | undefined
     if (emptyBdMgtSn.length >= 19) {
       console.log('[MOLIT] MOLIT 0건 → Vworld PNU fallback 시도:', emptyBdMgtSn)
       const vwArea = await fetchVworldPnuArea(emptyBdMgtSn)
       if (vwArea && vwArea.area > 0) {
         vworldSiteArea = vwArea.area
         console.log(`[MOLIT] Vworld PNU 대지면적 보완 성공: ${vwArea.area}㎡`)
+      }
+      if (vwArea?.zoneType) {
+        vworldZoneType = vwArea.zoneType
+        console.log(`[MOLIT] Vworld PNU 용도지역 발견: ${vwArea.zoneType}`)
       }
     }
     
@@ -1869,6 +1878,7 @@ export async function lookupSiteData(
         bun,
         ji,
         siteArea: vworldSiteArea,
+        zoneType: vworldZoneType || undefined,
         bdMgtSn: emptyBdMgtSn || undefined,
         entX: (diagJusoEmpty?.entX as number) || undefined,
         entY: (diagJusoEmpty?.entY as number) || undefined,
@@ -1898,7 +1908,7 @@ export async function lookupSiteData(
 // Vworld PNU Fallback (MOLIT 0건 또는 siteArea null 시)
 // ============================================
 
-async function fetchVworldPnuArea(bdMgtSn: string): Promise<{ area: number; address?: string } | null> {
+async function fetchVworldPnuArea(bdMgtSn: string): Promise<{ area: number; address?: string; zoneType?: string } | null> {
   if (!bdMgtSn || bdMgtSn.length < 19) return null
   // bdMgtSn 대지구분: 0=대지, 1=산 → PNU 대지구분: 1=대지, 2=산
   const sigBjd = bdMgtSn.slice(0, 10) // 시군구+법정동
@@ -1921,7 +1931,7 @@ async function fetchVworldPnuArea(bdMgtSn: string): Promise<{ area: number; addr
   return null
 }
 
-async function fetchVworldPnuAreaByPnu(pnu: string): Promise<{ area: number; address?: string } | null> {
+async function fetchVworldPnuAreaByPnu(pnu: string): Promise<{ area: number; address?: string; zoneType?: string } | null> {
   try {
     const params = new URLSearchParams({
       service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
@@ -1938,6 +1948,8 @@ async function fetchVworldPnuAreaByPnu(pnu: string): Promise<{ area: number; add
     if (!features.length) return null
     const geom = features[0]?.geometry
     const props = features[0]?.properties || {}
+    // 속성 전체 로깅 (디버그용)
+    console.log(`[MOLIT-VWORLD] LP_PA_CBND_BUBUN props:`, JSON.stringify(Object.keys(props)))
     // 면적 계산 (Shoelace formula)
     const rawCoords = geom?.type === 'Polygon' ? geom.coordinates?.[0]
       : geom?.type === 'MultiPolygon' ? geom.coordinates?.[0]?.[0] : null
@@ -1950,7 +1962,53 @@ async function fetchVworldPnuAreaByPnu(pnu: string): Promise<{ area: number; add
     }
     const areaM2 = Math.abs(pa / 2) * 111319 * 111319 * Math.cos(cLat * Math.PI / 180)
     console.log(`[MOLIT-VWORLD] PNU ${pnu} 면적: ${Math.round(areaM2)}㎡ (${props.addr || ''})`)
-    return { area: Math.round(areaM2), address: props.addr }
+    
+    // LP_PA_CBND_BUBUN에서 용도지역 속성 추출 시도
+    const zoneFromProps = (props.lndcgrCodeNm || props.jimokNm || props.jiyukNm || '').trim()
+    let zoneType: string | undefined
+    if (zoneFromProps && (zoneFromProps.includes('주거') || zoneFromProps.includes('상업') || zoneFromProps.includes('공업') || zoneFromProps.includes('녹지'))) {
+      zoneType = zoneFromProps
+      console.log(`[MOLIT-VWORLD] 용도지역 속성 직접 추출: ${zoneType}`)
+    }
+    
+    // LP_PA_CBND_BUBUN에 용도지역이 없으면, 같은 PNU로 용도지역 전용 레이어 조회
+    if (!zoneType) {
+      try {
+        // LT_C_AISRESC (용도지역지구) 조회
+        const zoneParams = new URLSearchParams({
+          service: 'data', request: 'GetFeature', data: 'LT_C_AISRESC',
+          key: VWORLD_KEY, domain: VWORLD_DOMAIN, attribute: 'true',
+          page: '1', size: '10', crs: 'EPSG:4326', format: 'json',
+          attrFilter: `pnu:=:${pnu}`,
+        })
+        console.log(`[MOLIT-VWORLD] LT_C_AISRESC 용도지역 조회: PNU=${pnu}`)
+        const zoneRes = await fetch(`https://api.vworld.kr/req/data?${zoneParams}`, {
+          signal: AbortSignal.timeout(5000),
+          headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+        })
+        if (zoneRes.ok) {
+          const zoneData = await zoneRes.json()
+          const zoneStatus = zoneData?.response?.status
+          const zoneFeatures = zoneData?.response?.result?.featureCollection?.features || []
+          console.log(`[MOLIT-VWORLD] LT_C_AISRESC: status=${zoneStatus}, features=${zoneFeatures.length}`)
+          for (const feat of zoneFeatures) {
+            const zp = feat?.properties || {}
+            // 용도지역 필드 탐색
+            const zName = (zp.prposAreaDstrcCodeNm || zp.uname || zp.jimokNm || zp.name || '').trim()
+            console.log(`[MOLIT-VWORLD] LT_C_AISRESC props: ${JSON.stringify(Object.keys(zp))} → ${zName}`)
+            if (zName && (zName.includes('주거') || zName.includes('상업') || zName.includes('공업') || zName.includes('녹지') || zName.includes('관리'))) {
+              zoneType = zName
+              console.log(`[MOLIT-VWORLD] 용도지역 발견 (LT_C_AISRESC): ${zoneType}`)
+              break
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[MOLIT-VWORLD] LT_C_AISRESC 조회 실패:', e)
+      }
+    }
+    
+    return { area: Math.round(areaM2), address: props.addr, zoneType }
   } catch (e) {
     console.warn('[MOLIT-VWORLD] PNU 면적 조회 실패:', e)
     return null
