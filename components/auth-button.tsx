@@ -120,15 +120,15 @@ export function AuthButton() {
   const avatar = user.user_metadata?.avatar_url
 
   return (
-    <div className="relative">
+    <div className="relative z-[50]">
       <button
-        onClick={() => setShowMenu(!showMenu)}
-        className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs hover:bg-muted transition-colors"
+        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+        className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs hover:bg-muted transition-colors min-h-[40px] min-w-[40px] touch-manipulation"
       >
         {avatar ? (
           <img src={avatar} alt="" className="h-5 w-5 rounded-full" />
         ) : (
-          <User className="h-3.5 w-3.5 text-muted-foreground" />
+          <User className="h-4 w-4 text-muted-foreground" />
         )}
         <span className="max-w-[80px] truncate">{displayName}</span>
         <ChevronDown className="h-3 w-3 text-muted-foreground" />
@@ -136,18 +136,19 @@ export function AuthButton() {
 
       {showMenu && (
         <>
-          <div className="fixed inset-0 z-[60]" onClick={() => setShowMenu(false)} />
+          <div className="fixed inset-0 z-[60]" onClick={() => setShowMenu(false)} onTouchEnd={(e) => { e.preventDefault(); setShowMenu(false) }} />
           <div className="absolute right-0 top-full mt-1 z-[70] w-48 rounded-lg border border-border bg-background shadow-lg p-1">
             <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border mb-1">
               {user.email}
             </div>
             <button
-              onClick={async () => { 
+              onClick={async (e) => { 
+                e.stopPropagation()
                 setShowMenu(false)
                 await signOut()
                 window.location.reload()
               }}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-destructive hover:bg-destructive/10 transition-colors"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors touch-manipulation min-h-[44px]"
             >
               <LogOut className="h-3.5 w-3.5" />
               로그아웃
