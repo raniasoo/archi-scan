@@ -1162,7 +1162,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #ffffff; color: #1f2937; line-height: 1.6;
+      background: #f1f5f9; color: #1f2937; line-height: 1.6;
+      width: 100%; min-width: 320px;
     }
     .page { max-width: 900px; margin: 0 auto; padding: 40px; background: #ffffff; }
     
@@ -1330,7 +1331,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     
     /* 표지 - 블루 테마 (A4 1페이지 고정) */
     .cover { 
-      height: 297mm; max-height: 297mm;
+      height: 297mm; max-height: 297mm; width: 100%;
       display: flex; flex-direction: column; justify-content: center; 
       text-align: center; padding: 60px 50px;
       background: linear-gradient(160deg, #0f172a 0%, #1e3a5f 35%, #0c4a6e 65%, #134e4a 100%);
@@ -2377,7 +2378,8 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #ffffff; color: #1f2937; line-height: 1.6;
+      background: #f1f5f9; color: #1f2937; line-height: 1.6;
+      width: 100%; min-width: 320px;
     }
     .page { max-width: 900px; margin: 0 auto; padding: 40px; background: #ffffff; }
     
@@ -2526,7 +2528,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     
     /* 표지 - 블루 테마 (A4 1페이지 고정) */
     .cover { 
-      height: 297mm; max-height: 297mm;
+      height: 297mm; max-height: 297mm; width: 100%;
       display: flex; flex-direction: column; justify-content: center; 
       text-align: center; padding: 60px 50px;
       background: linear-gradient(160deg, #0f172a 0%, #1e3a5f 35%, #0c4a6e 65%, #134e4a 100%);

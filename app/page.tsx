@@ -92,8 +92,7 @@ import {
   Clock,
   TrendingUp,
   Share2,
-  Copy,
-  Globe
+  Copy
 } from "lucide-react"
 import { useSubscription } from "@/components/subscription-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
@@ -550,7 +549,6 @@ export default function ArchiScanPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [downloadingHtml, setDownloadingHtml] = useState(false)
   const [downloadingExcel, setDownloadingExcel] = useState(false)
-  const [reportLang, setReportLang] = useState<'ko' | 'en'>('ko')
   const [downloadError, setDownloadError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -2902,13 +2900,7 @@ export default function ArchiScanPage() {
                   <Settings2 className="h-3.5 w-3.5" />
                   보고서 브랜딩 설정
                 </button>
-                <button 
-                  onClick={() => setReportLang(reportLang === 'ko' ? 'en' : 'ko')} 
-                  className="mt-1.5 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                >
-                  <Globe className="h-3.5 w-3.5" />
-                  {reportLang === 'ko' ? '🇰🇷 한글 → 🇺🇸 English' : '🇺🇸 English → 🇰🇷 한글'}
-                </button>
+
               </div>
               <div className="flex flex-col gap-2 w-full md:w-auto">
                 <Button variant="outline" onClick={() => setCurrentStep("input")} className="gap-2 w-full md:w-auto">
@@ -2959,7 +2951,6 @@ export default function ArchiScanPage() {
                       }
                       const exportData: ExportData = {
                         address,
-                        lang: reportLang,
                         siteArea: siteAreaNum,
                         branding: branding || undefined,
                         layout: {
@@ -3068,7 +3059,6 @@ export default function ArchiScanPage() {
                       }
                       const exportData: ExportData = {
                         address,
-                        lang: reportLang,
                         siteArea: siteAreaNum,
                         branding: branding || undefined,
                         layout: {
@@ -3177,7 +3167,6 @@ export default function ArchiScanPage() {
                       }
                       const exportData: ExportData = {
                         address,
-                        lang: reportLang,
                         siteArea: siteAreaNum,
                         branding: branding || undefined,
                         layout: {
@@ -3284,7 +3273,6 @@ export default function ArchiScanPage() {
                       }
                       const exportData: ExportData = {
                         address,
-                        lang: reportLang,
                         siteArea: siteAreaNum,
                         branding: branding || undefined,
                         layout: {
