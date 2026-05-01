@@ -1023,6 +1023,63 @@ async function fetchZoneType(sigunguCd: string, bjdongCd: string, bun: string, j
   return undefined
 }
 
+// VWorld 좌표 기반 용도지역 조회 (5단계 fallback)
+async function fetchZoneTypeByCoord(lng: number, lat: number): Promise<string | undefined> {
+  if (!lng || !lat) return undefined
+  console.log(`[VWORLD-COORD] 좌표 기반 용도지역 조회: lng=${lng}, lat=${lat}`)
+  
+  // 용도지역 관련 레이어 목록 (우선순위순)
+  const layers = [
+    { data: 'LT_C_UQ111', field: 'uname' },           // 국토이용계획 용도지역
+    { data: 'LT_C_UQ112', field: 'uname' },           // 국토이용계획 용도지구
+    { data: 'LT_C_AISRESC', field: 'prposAreaDstrcCodeNm' }, // 토지이용규제
+  ]
+  
+  for (const layer of layers) {
+    try {
+      const params = new URLSearchParams({
+        service: 'data', request: 'GetFeature', data: layer.data,
+        key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+        attribute: 'true', geometry: 'false',
+        page: '1', size: '10', crs: 'EPSG:4326', format: 'json',
+        geomFilter: `POINT(${lng} ${lat})`,
+      })
+      const res = await fetch(`https://api.vworld.kr/req/data?${params}`, {
+        signal: AbortSignal.timeout(5000),
+        headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+      })
+      if (!res.ok) continue
+      const data = await res.json()
+      const features = data?.response?.result?.featureCollection?.features || []
+      console.log(`[VWORLD-COORD] ${layer.data}: status=${data?.response?.status}, features=${features.length}`)
+      
+      for (const feat of features) {
+        const props = feat?.properties || {}
+        // 해당 레이어의 대표 필드 + 범용 필드 모두 탐색
+        const candidates = [
+          props[layer.field], props.uname, props.prposAreaDstrcCodeNm,
+          props.lndcgrCodeNm, props.jimokNm, props.name,
+        ]
+        for (const raw of candidates) {
+          const val = (raw || '').trim()
+          if (val && (val.includes('주거') || val.includes('상업') || val.includes('공업') || val.includes('녹지') || val.includes('관리'))) {
+            console.log(`[VWORLD-COORD] 용도지역 발견: ${val} (${layer.data})`)
+            return val
+          }
+        }
+        // 첫 feature의 전체 속성 로깅 (디버그)
+        if (features.indexOf(feat) === 0) {
+          console.log(`[VWORLD-COORD] ${layer.data} props keys:`, JSON.stringify(Object.keys(props)))
+        }
+      }
+    } catch (e) {
+      console.warn(`[VWORLD-COORD] ${layer.data} 조회 실패:`, e)
+    }
+  }
+  
+  return undefined
+}
+
 function mapBuildingToSiteData(building: MolitBuildingBasicItem): MolitSiteData {
   // Calculate total parking
   const parkingCount = 
@@ -1804,6 +1861,15 @@ export async function lookupSiteData(
         if (vwZone?.zoneType) {
           siteData.zoneType = vwZone.zoneType
           console.log(`[MOLIT] VWorld 용도지역 보완 성공: ${vwZone.zoneType}`)
+        }
+      }
+      
+      // 5단계: 좌표 기반 VWorld 공간 쿼리 (PNU 기반 모두 실패 시)
+      if (!siteData.zoneType?.trim() && siteData.entX && siteData.entY) {
+        const coordZone = await fetchZoneTypeByCoord(siteData.entX, siteData.entY)
+        if (coordZone) {
+          siteData.zoneType = coordZone
+          console.log(`[MOLIT] 좌표 기반 용도지역 보완 성공: ${coordZone}`)
         }
       }
       
