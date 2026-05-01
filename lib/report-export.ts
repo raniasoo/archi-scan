@@ -1329,6 +1329,29 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     
     ${printCss}
     
+
+    /* ===== 화면(모바일) 반응형 ===== */
+    @media screen {
+      .cover { 
+        height: auto !important; max-height: none !important;
+        min-height: 100vh; min-height: 100dvh;
+        padding: 40px 24px !important;
+      }
+      .page { 
+        max-width: 100% !important; 
+        padding: 24px 16px !important; 
+      }
+    }
+    @media screen and (min-width: 768px) {
+      .page { 
+        max-width: 900px !important; 
+        padding: 40px !important; 
+      }
+      .cover {
+        padding: 60px 50px !important;
+      }
+    }
+
     /* 표지 - 블루 테마 (A4 1페이지 고정) */
     .cover { 
       height: 297mm; max-height: 297mm; width: 100%;
@@ -1346,7 +1369,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     }
     .cover .doc-number { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 48px; letter-spacing: 1px; }
     .cover .english-title { font-size: 12px; color: #5eead4; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 12px; display: block; }
-    .cover h1 { font-size: 38px; color: #fff; margin-bottom: 20px; font-weight: 800; line-height: 1.4; display: block; }
+    .cover h1 { font-size: clamp(26px, 6vw, 38px); color: #fff; margin-bottom: 20px; font-weight: 800; line-height: 1.3; display: block; word-break: keep-all; }
     .cover .cover-divider { width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #5eead4, transparent); margin: 0 auto 24px; }
     .cover .address { font-size: 18px; color: rgba(255,255,255,0.9); margin-bottom: 6px; font-weight: 500; display: block; }
     .cover .project-type { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 56px; }
@@ -2526,6 +2549,29 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     }
     .scenario-compact { margin-top: 12px; }
     
+
+    /* ===== 화면(모바일) 반응형 ===== */
+    @media screen {
+      .cover { 
+        height: auto !important; max-height: none !important;
+        min-height: 100vh; min-height: 100dvh;
+        padding: 40px 24px !important;
+      }
+      .page { 
+        max-width: 100% !important; 
+        padding: 24px 16px !important; 
+      }
+    }
+    @media screen and (min-width: 768px) {
+      .page { 
+        max-width: 900px !important; 
+        padding: 40px !important; 
+      }
+      .cover {
+        padding: 60px 50px !important;
+      }
+    }
+
     /* 표지 - 블루 테마 (A4 1페이지 고정) */
     .cover { 
       height: 297mm; max-height: 297mm; width: 100%;
@@ -2543,7 +2589,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     }
     .cover .doc-number { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 48px; letter-spacing: 1px; }
     .cover .english-title { font-size: 12px; color: #5eead4; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 12px; display: block; }
-    .cover h1 { font-size: 38px; color: #fff; margin-bottom: 20px; font-weight: 800; line-height: 1.4; display: block; }
+    .cover h1 { font-size: clamp(26px, 6vw, 38px); color: #fff; margin-bottom: 20px; font-weight: 800; line-height: 1.3; display: block; word-break: keep-all; }
     .cover .cover-divider { width: 60px; height: 2px; background: linear-gradient(90deg, transparent, #5eead4, transparent); margin: 0 auto 24px; }
     .cover .address { font-size: 18px; color: rgba(255,255,255,0.9); margin-bottom: 6px; font-weight: 500; display: block; }
     .cover .project-type { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 56px; }
