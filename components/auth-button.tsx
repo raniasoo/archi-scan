@@ -136,13 +136,17 @@ export function AuthButton() {
 
       {showMenu && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-          <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-lg border border-border bg-background shadow-lg p-1">
+          <div className="fixed inset-0 z-[60]" onClick={() => setShowMenu(false)} />
+          <div className="absolute right-0 top-full mt-1 z-[70] w-48 rounded-lg border border-border bg-background shadow-lg p-1">
             <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border mb-1">
               {user.email}
             </div>
             <button
-              onClick={() => { signOut(); setShowMenu(false) }}
+              onClick={async () => { 
+                setShowMenu(false)
+                await signOut()
+                window.location.reload()
+              }}
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-destructive hover:bg-destructive/10 transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
