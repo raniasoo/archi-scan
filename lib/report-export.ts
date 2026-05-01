@@ -2130,18 +2130,68 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       .summary-card { padding: 8px 6px !important; }
       .summary-card .label { font-size: 10px !important; margin-bottom: 3px !important; }
       .summary-card .value { font-size: 13px !important; }
-      table { font-size: 12px !important; }
+      table { font-size: 12px !important; width: 100% !important; border-collapse: collapse !important; }
       table td, table th { padding: 6px 8px !important; }
       .verdict-box { padding: 14px !important; margin-top: 8px !important; }
       .risk-grid { gap: 8px !important; }
       .risk-category { padding: 10px !important; }
       .key-points { margin-top: 14px !important; }
       .conclusion-box { padding: 14px !important; margin-top: 8px !important; }
+      
+      /* AI 점수 카드 - html2canvas Grid 렌더링 강화 */
+      .ai-score-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 8px !important;
+        width: 100% !important;
+        margin: 12px 0 !important;
+      }
+      .ai-score-card {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 14px 8px !important;
+        border-radius: 8px !important;
+        min-height: 80px !important;
+        box-sizing: border-box !important;
+      }
+      .ai-score-value {
+        font-size: 22px !important;
+        font-weight: 800 !important;
+        display: block !important;
+      }
+      .ai-score-label {
+        font-size: 11px !important;
+        display: block !important;
+        margin-bottom: 4px !important;
+      }
+      
+      /* Executive Summary 카드 그리드 */
+      .exec-summary-grid, .summary-grid, .score-grid {
+        display: grid !important;
+        gap: 8px !important;
+      }
+      
+      /* 섹션 간 여백 최소화 */
+      section { margin-bottom: 8px !important; }
+      h2 { margin-top: 12px !important; margin-bottom: 8px !important; }
+      
+      /* 워터마크 위치 고정 */
+      .watermark {
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) rotate(-30deg) !important;
+        opacity: 0.06 !important;
+        pointer-events: none !important;
+      }
     `;
     iframeDoc.head.appendChild(pdfStyle);
     
-    // 렌더링 대기
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // 렌더링 대기 (폰트/이미지 로딩 보장)
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     // PDF 생성
     const pdf = new jsPDF({
