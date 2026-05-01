@@ -1865,11 +1865,48 @@ export async function lookupSiteData(
       }
       
       // 5단계: 좌표 기반 VWorld 공간 쿼리 (PNU 기반 모두 실패 시)
-      if (!siteData.zoneType?.trim() && siteData.entX && siteData.entY) {
-        const coordZone = await fetchZoneTypeByCoord(siteData.entX, siteData.entY)
-        if (coordZone) {
-          siteData.zoneType = coordZone
-          console.log(`[MOLIT] 좌표 기반 용도지역 보완 성공: ${coordZone}`)
+      if (!siteData.zoneType?.trim()) {
+        let lng = siteData.entX
+        let lat = siteData.entY
+        
+        // JUSO에서 좌표가 없으면 VWorld 지오코딩으로 확보
+        if (!lng || !lat) {
+          const addr = siteData.roadAddress || siteData.address || ''
+          if (addr) {
+            try {
+              console.log(`[VWORLD-GEO] 지오코딩 시도: ${addr}`)
+              const geoParams = new URLSearchParams({
+                service: 'address', request: 'getcoord', version: '2.0',
+                crs: 'EPSG:4326', refine: 'true', simple: 'false',
+                format: 'json', type: 'ROAD',
+                key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+                address: addr,
+              })
+              const geoRes = await fetch(`https://api.vworld.kr/req/address?${geoParams}`, {
+                signal: AbortSignal.timeout(5000),
+                headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+              })
+              if (geoRes.ok) {
+                const geoData = await geoRes.json()
+                const point = geoData?.response?.result?.point
+                if (point?.x && point?.y) {
+                  lng = parseFloat(point.x)
+                  lat = parseFloat(point.y)
+                  console.log(`[VWORLD-GEO] 좌표 확보: lng=${lng}, lat=${lat}`)
+                }
+              }
+            } catch (e) {
+              console.warn('[VWORLD-GEO] 지오코딩 실패:', e)
+            }
+          }
+        }
+        
+        if (lng && lat) {
+          const coordZone = await fetchZoneTypeByCoord(lng, lat)
+          if (coordZone) {
+            siteData.zoneType = coordZone
+            console.log(`[MOLIT] 좌표 기반 용도지역 보완 성공: ${coordZone}`)
+          }
         }
       }
       
