@@ -956,15 +956,15 @@ async function fetchZoneType(sigunguCd: string, bjdongCd: string, bun: string, j
         const zoneItem = arr.find((it: Record<string, string>) => 
           (it.jijiguGbCdNm || '').includes('용도지역') || (it.jijiguGbCdNm || '').includes('용도')
         )
-        if (zoneItem?.jijiguCdNm) {
-          console.log(`[MOLIT] 용도지역 발견: ${zoneItem.jijiguCdNm}`)
-          return zoneItem.jijiguCdNm
+        if (zoneItem?.jijiguCdNm?.trim()) {
+          console.log(`[MOLIT] 용도지역 발견: ${zoneItem.jijiguCdNm.trim()}`)
+          return zoneItem.jijiguCdNm.trim()
         }
         // 첫 번째 항목에서 시도
         const first = arr[0]
-        if (first?.jijiguCdNm && (first.jijiguCdNm.includes('주거') || first.jijiguCdNm.includes('상업') || first.jijiguCdNm.includes('공업') || first.jijiguCdNm.includes('녹지'))) {
-          console.log(`[MOLIT] 용도지역 (첫 항목): ${first.jijiguCdNm}`)
-          return first.jijiguCdNm
+        if (first?.jijiguCdNm?.trim() && (first.jijiguCdNm.includes('주거') || first.jijiguCdNm.includes('상업') || first.jijiguCdNm.includes('공업') || first.jijiguCdNm.includes('녹지'))) {
+          console.log(`[MOLIT] 용도지역 (첫 항목): ${first.jijiguCdNm.trim()}`)
+          return first.jijiguCdNm.trim()
         }
       }
     }
@@ -1028,7 +1028,7 @@ function mapBuildingToSiteData(building: MolitBuildingBasicItem): MolitSiteData 
     parkingCount: parkingCount > 0 ? parkingCount : undefined,
     
     // Zoning
-    zoneType: building.jiyukCdNm || undefined,
+    zoneType: building.jiyukCdNm?.trim() || undefined,
     district: building.jiguCdNm || undefined,
     area: building.guyukCdNm || undefined,
     
@@ -1713,7 +1713,7 @@ export async function lookupSiteData(
       siteData.dataSource = 'building'
       
       // 지역지구 API로 용도지역 조회
-      if (!siteData.zoneType) {
+      if (!siteData.zoneType?.trim()) {
         const zoneResult = await fetchZoneType(sigunguCd, bjdongCd, bun, ji, getApiKey())
         if (zoneResult) siteData.zoneType = zoneResult
       }
