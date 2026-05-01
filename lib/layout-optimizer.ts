@@ -1,7 +1,10 @@
 /**
  * AI Layout Optimizer
  * ROI 최대화를 위한 배치안 파라미터 자동 탐색
+ * calculateFeasibility()와 동일한 공식 사용
  */
+
+import { calculateFeasibility } from './project-analysis-state'
 
 export interface OptimizationConstraints {
   siteArea: number
@@ -70,28 +73,32 @@ export function optimizeLayout(constraints: OptimizationConstraints): Optimizati
         // 세대수
         const netArea = gfa * 0.72 // 코어 효율 72%
         const units = Math.max(Math.floor(netArea / unitSize), floors)
-        if (units < 5) continue
+        if (units < 3) continue
 
         // 주차
         const parking = Math.ceil(units * parkingRatio)
 
-        // 사업비
-        const landCost = siteArea * landCostPerM2
-        const constructionCost = gfa * constructionCostPerM2
-        const indirectCost = (landCost + constructionCost) * 0.15
-        const totalCost = landCost + constructionCost + indirectCost
+        // calculateFeasibility와 동일한 공식 사용 (ROI 일치 보장)
+        try {
+          const feas = calculateFeasibility({
+            siteArea,
+            grossFloorArea: Math.round(gfa),
+            unitCount: units,
+            floorCount: floors,
+            parkingCount: parking,
+            landPricePerM2: landCostPerM2,
+            constructionCostPerM2,
+            salesPricePerM2,
+          })
 
-        // 수익
-        const totalRevenue = gfa * 0.72 * salesPricePerM2 // 분양면적 = 연면적 × 72%
-
-        const profit = totalRevenue - totalCost
-        const roi = totalCost > 0 ? (profit / totalCost) * 100 : 0
-
-        results.push({
-          coverage, floors, units, gfa: Math.round(gfa),
-          parking, totalCost, totalRevenue,
-          profit, roi: Math.round(roi * 10) / 10, unitSize
-        })
+          results.push({
+            coverage, floors, units, gfa: Math.round(gfa),
+            parking, totalCost: feas.totalCost, totalRevenue: feas.totalRevenue,
+            profit: feas.profit, roi: Math.round(feas.roi * 10) / 10, unitSize
+          })
+        } catch {
+          // 계산 실패 시 건너뜀
+        }
       }
     }
   }
