@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { LogIn, LogOut, User, ChevronDown, Mail, X, Eye, EyeOff } from "lucide-react"
@@ -40,13 +41,16 @@ export function AuthButton() {
   if (!user) {
     return (
       <>
-        <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShowLoginModal(true)}>
-          <LogIn className="h-3.5 w-3.5" />로그인
-        </Button>
+        <button 
+          onClick={() => setShowLoginModal(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-primary/50 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors touch-manipulation min-h-[40px]"
+        >
+          <LogIn className="h-4 w-4" />로그인
+        </button>
 
-        {showLoginModal && (
-          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 pt-12 sm:pt-4 overflow-y-auto" onClick={() => setShowLoginModal(false)}>
-            <div className="bg-background w-full max-w-sm rounded-2xl shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        {showLoginModal && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 pt-16 sm:pt-4 overflow-y-auto" onClick={() => setShowLoginModal(false)}>
+            <div className="bg-background w-full max-w-sm rounded-2xl shadow-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 py-4 border-b border-border">
                 <h3 className="font-bold text-sm">{isSignUp ? "회원가입" : "로그인"}</h3>
                 <button onClick={() => setShowLoginModal(false)} className="p-1 rounded hover:bg-muted"><X className="h-4 w-4" /></button>
@@ -110,7 +114,8 @@ export function AuthButton() {
                 </p>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </>
     )
