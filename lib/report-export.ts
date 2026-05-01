@@ -15,11 +15,23 @@ function translateHtml(html: string, lang: ReportLang): string {
   const ko = getLabels('ko');
   const en = getLabels('en');
   let result = html;
-  // 섹션 제목 치환
+  // 전체 번역 맵 (긴 문자열 우선 치환)
   const replacements: [string, string][] = [
+    // 표지 & 문서 제목
     [ko.docTitle, en.docTitle],
+    ['공동주택 개발사업', 'Residential Development'],
+    ['개발사업 사전검토', 'Preliminary Feasibility Review'],
     [ko.execSummaryTag, en.execSummaryTag],
     [ko.execSummary, en.execSummary],
+    // 종합 검토 결과
+    ['종합 검토 결과', 'Summary Results'],
+    ['선정 배치안', 'Selected Layout'],
+    ['사업 추진 가능', 'Feasible'],
+    ['조건부 가능', 'Conditionally Feasible'],
+    ['추가 검토 필요', 'Further Review Required'],
+    ['추천 판정', 'Verdict'],
+    // 섹션 제목
+    ['검토 개요', 'Review Overview'],
     ['대상지 분석', en.siteAnalysis],
     ['법규 검토', en.regulationReview],
     ['배치안 비교 검토', en.layoutComparison],
@@ -31,21 +43,91 @@ function translateHtml(html: string, lang: ReportLang): string {
     ['리스크 및 고려사항', en.risks],
     ['결론 및 제안', en.conclusion],
     ['예상 사업 일정', en.timeline],
+    // 타임라인
     ['사업기획', en.planning_phase],
     ['인허가', en.permit_phase],
     ['시공', en.construction_phase],
     ['분양/입주', en.sales_phase],
+    // AI 점수
     ['법규 부합성', en.legalCompliance],
-    ['사업성', en.profitability],
     ['상품성', en.marketability],
     ['종합 점수', en.totalScore],
+    // 핵심 지표 (긴 것 먼저)
+    ['손익분기 분양률', en.breakEven],
+    ['투자수익률 (ROI)', en.roi],
+    ['투자수익률', 'ROI'],
     ['총사업비', en.totalCost],
     ['예상수익', en.expectedProfit],
     ['세대수', en.units],
     ['연면적', en.gfa],
-    ['손익분기 분양률', en.breakEven],
+    ['예상 분양수입', 'Expected Sales Revenue'],
+    ['예상 토지비', 'Est. Land Cost'],
+    ['예상 공사비', 'Est. Construction Cost'],
+    ['예상 간접비', 'Est. Indirect Cost'],
+    ['예상수익', 'Expected Profit'],
+    // 대상지 분석
+    ['소재지', 'Location'],
+    ['대지면적', 'Site Area'],
+    ['토지이용계획', 'Land Use Plan'],
+    ['접도현황', 'Road Access'],
+    ['높이제한', 'Height Limit'],
+    ['지구단위계획', 'District Plan'],
+    ['해당 없음', 'N/A'],
+    ['해당없음', 'N/A'],
+    // 검토 개요
+    ['검토 기준일', 'Review Date'],
+    ['검토 범위', 'Review Scope'],
+    ['토지이용계획 및 건축법규 검토, 배치대안 수립 및 규모 검토, 개략 사업수지 분석, 사업 타당성 종합 평가', 
+     'Land use & building regulation review, layout alternatives, scale review, preliminary P&L analysis, overall feasibility assessment'],
+    // 법규 검토
+    ['건폐율', 'Building Coverage Ratio'],
+    ['용적률', 'Floor Area Ratio'],
+    ['허용 건폐율', 'Max BCR'],
+    ['허용 용적률', 'Max FAR'],
+    ['적합', 'Compliant'],
+    ['부적합', 'Non-compliant'],
+    ['일조권 사선제한', 'Sunlight Right Setback'],
+    ['정북방향 인접대지 이격거리', 'North-facing Setback'],
+    ['도로사선제한', 'Road Setback'],
+    ['주차대수', 'Parking Spaces'],
+    ['조경면적', 'Landscaping Area'],
+    ['층수 제한', 'Floor Limit'],
+    // 배치안 비교
+    ['배치안', 'Layout'],
+    ['배치안명', 'Layout Name'],
+    // 규모 산정
+    ['지상층수', 'Above-ground Floors'],
+    ['지하층수', 'Underground Floors'],
+    ['전용면적', 'Exclusive Area'],
+    ['공용면적', 'Common Area'],
+    ['전용률', 'Exclusive Ratio'],
+    ['주차대수', 'Parking'],
+    // 사업성
+    ['사업성', en.profitability],
+    ['분양가 단가', 'Unit Sale Price'],
+    ['공사비 단가', 'Construction Unit Cost'],
+    ['토지비', 'Land Cost'],
+    ['공사비', 'Construction Cost'],
+    ['간접비', 'Indirect Cost'],
+    ['분양수입', 'Sales Revenue'],
+    ['사업이익', 'Project Profit'],
+    // 리스크
+    ['토지 리스크', 'Land Risk'],
+    ['인허가 리스크', 'Permit Risk'],
+    ['시장 리스크', 'Market Risk'],
+    ['공사 리스크', 'Construction Risk'],
+    // 핵심 포인트
+    ['핵심 포인트', en.keyPoints],
+    // 워터마크
     ['사전검토용', 'PRELIMINARY'],
+    // 푸터
     [ko.disclaimer, en.disclaimer],
+    // 작성일자
+    ['작성일자', 'Date'],
+    ['검토 배치안', 'Layout Plan'],
+    // 기타
+    ['억원', 'M KRW'],
+    ['만원', '0K KRW'],
   ];
   for (const [k, v] of replacements) {
     result = result.split(k).join(v);
