@@ -974,32 +974,46 @@ async function fetchZoneType(sigunguCd: string, bjdongCd: string, bun: string, j
     console.warn('[MOLIT] 지역지구 조회 실패 (무시):', e)
   }
   
-  // VWorld 토지이용계획 fallback
+  // VWorld 토지이용계획 fallback — 여러 PNU 형식과 레이어 시도
   try {
-    const pnu = `${sigunguCd}${bjdongCd}1${bun}${ji}`
-    console.log(`[VWORLD-ZONE] 토지이용계획 조회 시도: PNU=${pnu}`)
-    const params = new URLSearchParams({
-      service: 'data', request: 'GetFeature', data: 'LT_C_LHBLPN',
-      key: VWORLD_KEY, domain: VWORLD_DOMAIN, attribute: 'true',
-      page: '1', size: '10', crs: 'EPSG:4326', format: 'json',
-      attrFilter: `pnu:=:${pnu}`,
-    })
-    const res = await fetch(`https://api.vworld.kr/req/data?${params}`, {
-      signal: AbortSignal.timeout(5000),
-      headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
-    })
-    if (res.ok) {
-      const data = await res.json()
-      const features = data?.response?.result?.featureCollection?.features || []
-      for (const feat of features) {
-        const prpNm = feat?.properties?.prposAreaDstrcCodeNm?.trim() || ''
-        if (prpNm.includes('주거') || prpNm.includes('상업') || prpNm.includes('공업') || prpNm.includes('녹지') || prpNm.includes('관리')) {
-          console.log(`[VWORLD-ZONE] 용도지역 발견: ${prpNm}`)
-          return prpNm
-        }
-      }
-      if (features.length > 0) {
-        console.log(`[VWORLD-ZONE] ${features.length}건 중 용도지역 없음`)
+    // PNU 후보: platGb=1(대지), platGb=2(산) 모두 시도
+    const pnuCandidates = [
+      `${sigunguCd}${bjdongCd}1${bun}${ji}`,
+      `${sigunguCd}${bjdongCd}2${bun}${ji}`,
+    ]
+    // 레이어 후보
+    const layers = ['LT_C_LHBLPN', 'LT_C_LANDINFOBASIC']
+    
+    for (const pnu of pnuCandidates) {
+      for (const layer of layers) {
+        try {
+          console.log(`[VWORLD-ZONE] ${layer} 조회: PNU=${pnu}`)
+          const params = new URLSearchParams({
+            service: 'data', request: 'GetFeature', data: layer,
+            key: VWORLD_KEY, domain: VWORLD_DOMAIN, attribute: 'true',
+            page: '1', size: '10', crs: 'EPSG:4326', format: 'json',
+            attrFilter: `pnu:=:${pnu}`,
+          })
+          const res = await fetch(`https://api.vworld.kr/req/data?${params}`, {
+            signal: AbortSignal.timeout(5000),
+            headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+          })
+          if (res.ok) {
+            const data = await res.json()
+            const status = data?.response?.status
+            const features = data?.response?.result?.featureCollection?.features || []
+            console.log(`[VWORLD-ZONE] ${layer} status=${status}, features=${features.length}`)
+            for (const feat of features) {
+              const props = feat?.properties || {}
+              // 여러 필드명에서 용도지역 탐색
+              const zoneName = (props.prposAreaDstrcCodeNm || props.lndcgrCodeNm || props.jimokNm || '').trim()
+              if (zoneName && (zoneName.includes('주거') || zoneName.includes('상업') || zoneName.includes('공업') || zoneName.includes('녹지') || zoneName.includes('관리'))) {
+                console.log(`[VWORLD-ZONE] 용도지역 발견: ${zoneName} (${layer})`)
+                return zoneName
+              }
+            }
+          }
+        } catch { /* 개별 시도 실패 무시 */ }
       }
     }
   } catch (e) {
