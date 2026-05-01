@@ -128,6 +128,53 @@ function translateHtml(html: string, lang: ReportLang): string {
     // 기타
     ['억원', 'M KRW'],
     ['만원', '0K KRW'],
+    // 배치안 타입명
+    ['판상형 배치안', 'Flat-type Layout'],
+    ['타워형 배치안', 'Tower-type Layout'],
+    ['고밀도 타워형', 'High-Density Tower'],
+    ['파노라마 타워형', 'Panorama Tower'],
+    ['수익형 타워', 'Revenue Tower'],
+    ['주차 최적 ㄱ자형', 'Parking-opt. L-shape'],
+    ['주차 최적', 'Parking Optimized'],
+    ['ㄱ자형', 'L-shaped'],
+    ['판상형', 'Flat-type'],
+    ['타워형', 'Tower-type'],
+    // 추천 판정 문구
+    ['추진 판정', 'Verdict'],
+    // 동적 문장 (핵심 포인트 등)
+    ['적용으로 법정 한도 내 최적 규모 확보', 'applied for optimal scale within legal limits'],
+    ['이상 주차 확보', 'parking spaces secured'],
+    ['세대당 1대 이상 주차 확보', '1+ parking per unit secured'],
+    ['사업 추진 가능 수준', 'indicates project feasibility'],
+    ['로 사업 추진 가능 수준', 'indicates project feasibility'],
+    // 표 헤더
+    ['검토항목', 'Review Item'],
+    ['법적기준', 'Legal Standard'],
+    ['계획값', 'Planned Value'],
+    ['적합여부', 'Compliance'],
+    ['구분', 'Category'],
+    ['항목', 'Item'],
+    ['금액', 'Amount'],
+    ['비율', 'Ratio'],
+    ['비고', 'Notes'],
+    ['용도지역', 'Zoning'],
+    // 민감도/시나리오
+    ['민감도 분석', 'Sensitivity Analysis'],
+    ['낙관', 'Optimistic'],
+    ['기본', 'Base'],
+    ['비관', 'Pessimistic'],
+    ['분양가 변동', 'Sale Price Change'],
+    ['공사비 변동', 'Construction Cost Change'],
+    // 결론
+    ['종합 의견', 'Overall Opinion'],
+    ['제안 사항', 'Recommendations'],
+    // 법규 상세
+    ['건축선 후퇴', 'Building Line Setback'],
+    ['정북방향', 'True North'],
+    ['인접대지', 'Adjacent Land'],
+    ['이격거리', 'Setback Distance'],
+    ['최고높이', 'Max Height'],
+    ['이상 도로 접함', 'road frontage'],
   ];
   for (const [k, v] of replacements) {
     result = result.split(k).join(v);
