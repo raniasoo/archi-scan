@@ -45,12 +45,18 @@ export async function GET(req: NextRequest) {
 
     const url = `https://api.vworld.kr/req/image?${params}`
     
+    // 5초 타임아웃
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    
     const res = await fetch(url, {
       headers: {
         'Referer': `https://${VWORLD_DOMAIN}`,
         'Origin': `https://${VWORLD_DOMAIN}`,
       },
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
 
     if (!res.ok) {
       // VWorld 실패 시 OpenStreetMap 정적 타일 fallback
@@ -69,7 +75,8 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[map-image] 오류:', error)
-    return NextResponse.json({ error: '지도 이미지 생성 실패' }, { status: 500 })
+    // 타임아웃 또는 기타 에러 시 OSM fallback redirect
+    const osmUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=${zoom}&size=${width}x${height}&maptype=mapnik&markers=${lat},${lng},red-pushpin`
+    return NextResponse.redirect(osmUrl, 302)
   }
 }
