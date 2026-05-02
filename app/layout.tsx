@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { GoogleAnalytics } from '@/components/google-analytics'
 import { Toaster } from '@/components/ui/sonner'
 import { SubscriptionProvider } from '@/components/subscription-provider'
 import './globals.css'
@@ -23,11 +24,18 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'ko_KR',
     siteName: 'Archi-Scan',
+    images: [{
+      url: '/api/og',
+      width: 1200,
+      height: 630,
+      alt: 'Archi-Scan - AI 건축 배치안 생성기',
+    }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Archi-Scan | AI 건축 배치안 생성기',
     description: '주소 입력만으로 건축 배치안 자동 생성, 법규 검토, 사업성 분석까지.',
+    images: ['/api/og'],
   },
   other: {
     'mobile-web-app-capable': 'yes',
@@ -67,6 +75,7 @@ export default function RootLayout({
           <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}` }} />
         </SubscriptionProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
+        <GoogleAnalytics />
       </body>
     </html>
   )
