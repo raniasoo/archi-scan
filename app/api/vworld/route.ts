@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     try {
       const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C+%EA%B0%95%EB%82%A8%EA%B5%AC+%ED%85%8C%ED%97%A4%EB%9E%80%EB%A1%9C+152&format=json&countrycodes=kr&limit=3&polygon_geojson=1`
       const res = await fetch(nominatimUrl, { 
-        headers: { 'User-Agent': 'ArchiScan/1.0 (https://v0-archi-scan-layout-generator.vercel.app)' },
+        headers: { 'User-Agent': 'ArchiScan/1.0 (https://archiscan.kr)' },
         signal: AbortSignal.timeout(8000)
       })
       const text = await res.text()
@@ -59,15 +59,15 @@ export async function GET(req: NextRequest) {
   const geoParams = new URLSearchParams({
     service: 'address', request: 'getcoord', version: '2.0',
     crs: 'EPSG:4326', address: testAddress, type: 'road', format: 'json',
-    key: apiKey, domain: 'v0-archi-scan-layout-generator.vercel.app',
+    key: apiKey, domain: 'archiscan.kr',
   })
   
   try {
     console.log('[vworld-diag] Testing geocode API...')
     const res = await fetch(`https://api.vworld.kr/req/address?${geoParams}`, {
       headers: {
-        'Referer': 'https://v0-archi-scan-layout-generator.vercel.app',
-        'Origin': 'https://v0-archi-scan-layout-generator.vercel.app',
+        'Referer': 'https://archiscan.kr',
+        'Origin': 'https://archiscan.kr',
       },
       signal: AbortSignal.timeout(8000),
     })
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     if (pnuFromBdMgtSn) {
       try {
         const vwKey = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-        const vwDomain = 'v0-archi-scan-layout-generator.vercel.app'
+        const vwDomain = 'archiscan.kr'
         const params = new URLSearchParams({
           service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
           key: vwKey, domain: vwDomain, geometry: 'true', attribute: 'true',
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
       // 1-1: Vworld LP_PA_CBND_BUBUN 직접 조회 (Seoul 리전 - 한국 IP)
       try {
         const vwKey = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-        const vwDomain = 'v0-archi-scan-layout-generator.vercel.app'
+        const vwDomain = 'archiscan.kr'
         const vwUrl = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN&key=${vwKey}&domain=${vwDomain}&geometry=true&attribute=true&page=1&size=1&crs=EPSG:4326&geomFilter=POINT(${entX}%20${entY})&format=json`
         console.log('[vworld] Vworld 직접 LP_PA_CBND_BUBUN 조회')
         const vwRes = await fetch(vwUrl, {
@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
       // 1-1b: Vworld BBOX fallback (POINT 실패 시 약간 넓은 영역으로 재시도)
       try {
         const vwKey = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-        const vwDomain = 'v0-archi-scan-layout-generator.vercel.app'
+        const vwDomain = 'archiscan.kr'
         const buf = 0.0003 // ~30m buffer
         const bboxStr = `${entX - buf},${entY - buf},${entX + buf},${entY + buf}`
         const bboxUrl = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN&key=${vwKey}&domain=${vwDomain}&geometry=true&attribute=true&page=1&size=5&crs=EPSG:4326&geomFilter=BOX(${bboxStr})&format=json`
@@ -285,7 +285,7 @@ export async function POST(req: NextRequest) {
       try {
         const revUrl = `https://nominatim.openstreetmap.org/reverse?lat=${entY}&lon=${entX}&format=json&polygon_geojson=1&zoom=18`
         const revRes = await fetch(revUrl, {
-          headers: { 'User-Agent': 'ArchiScan/1.0 (https://v0-archi-scan-layout-generator.vercel.app)' },
+          headers: { 'User-Agent': 'ArchiScan/1.0 (https://archiscan.kr)' },
           signal: AbortSignal.timeout(8000),
         })
         if (revRes.ok) {
@@ -325,7 +325,7 @@ export async function POST(req: NextRequest) {
       try {
         const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&countrycodes=kr&limit=3&polygon_geojson=1`
         const nominatimRes = await fetch(nominatimUrl, {
-          headers: { 'User-Agent': 'ArchiScan/1.0 (https://v0-archi-scan-layout-generator.vercel.app)' },
+          headers: { 'User-Agent': 'ArchiScan/1.0 (https://archiscan.kr)' },
           signal: AbortSignal.timeout(8000),
         })
         if (nominatimRes.ok) {

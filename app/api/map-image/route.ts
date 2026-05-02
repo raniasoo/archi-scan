@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
+const VWORLD_DOMAIN = 'archiscan.kr'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)

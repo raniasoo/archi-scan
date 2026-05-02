@@ -43,7 +43,7 @@ export async function fetchParcelPolygon(
       request: 'GetFeature',
       data: 'LP_PA_CBND_BUBUN',
       key: apiKey,
-      domain: 'v0-archi-scan-layout-generator.vercel.app',
+      domain: 'archiscan.kr',
       geometry: 'true',
       attribute: 'true',
       page: '1',
@@ -57,8 +57,8 @@ export async function fetchParcelPolygon(
     const res = await fetch(url, {
       headers: { 
         'Accept': 'application/json',
-        'Referer': 'https://v0-archi-scan-layout-generator.vercel.app',
-        'Origin': 'https://v0-archi-scan-layout-generator.vercel.app',
+        'Referer': 'https://archiscan.kr',
+        'Origin': 'https://archiscan.kr',
       },
       signal: AbortSignal.timeout(10000),
     })
@@ -148,13 +148,13 @@ export async function geocodeAddress(
       type: 'road',
       format: 'json',
       key: apiKey,
-      domain: 'v0-archi-scan-layout-generator.vercel.app',
+      domain: 'archiscan.kr',
     })
 
     const res = await fetch(`https://api.vworld.kr/req/address?${params}`, {
       headers: {
-        'Referer': 'https://v0-archi-scan-layout-generator.vercel.app',
-        'Origin': 'https://v0-archi-scan-layout-generator.vercel.app',
+        'Referer': 'https://archiscan.kr',
+        'Origin': 'https://archiscan.kr',
       },
       signal: AbortSignal.timeout(8000),
     })
@@ -173,12 +173,12 @@ export async function geocodeAddress(
         type: 'parcel',
         format: 'json',
         key: apiKey,
-        domain: 'v0-archi-scan-layout-generator.vercel.app',
+        domain: 'archiscan.kr',
       })
       const res2 = await fetch(`https://api.vworld.kr/req/address?${params2}`, {
         headers: {
-          'Referer': 'https://v0-archi-scan-layout-generator.vercel.app',
-          'Origin': 'https://v0-archi-scan-layout-generator.vercel.app',
+          'Referer': 'https://archiscan.kr',
+          'Origin': 'https://archiscan.kr',
         },
         signal: AbortSignal.timeout(8000),
       })

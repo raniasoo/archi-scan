@@ -9,7 +9,7 @@ export const maxDuration = 30
 
 export async function GET() {
   const results: Record<string, unknown> = {}
-  const baseUrl = 'https://v0-archi-scan-layout-generator.vercel.app'
+  const baseUrl = 'https://archiscan.kr'
 
   // ============================================================
   // 테스트 1: 지적도 실제 지형 (Overpass 폴리곤)

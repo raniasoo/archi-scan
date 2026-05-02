@@ -93,7 +93,7 @@ const MOLIT_ATCH_JIBUN_ENDPOINT = {
 const HARDCODED_MOLIT_KEY = '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba5d56d21444098'
 const HARDCODED_JUSO_KEY = 'devU01TX0FVVEgyMDI2MDQyMjIwMDgxNjExNzk4MjA='
 const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
+const VWORLD_DOMAIN = 'archiscan.kr'
 
 function getApiKey(): string {
   // HARDCODED_MOLIT_KEY 고정 사용 (Vercel 환경변수 값과 무관하게 정상 작동 보장)
