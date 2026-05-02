@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs"
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -14,4 +16,14 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+// Sentry가 설정된 경우에만 래핑
+const sentryConfig = process.env.NEXT_PUBLIC_SENTRY_DSN ? withSentryConfig(nextConfig, {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  disableLogger: true,
+  hideSourceMaps: true,
+  automaticVercelMonitors: true,
+}) : nextConfig
+
+export default sentryConfig
