@@ -33,6 +33,7 @@ import { ExcelImport, type ImportedReportData } from "@/components/excel-import"
 import { ProjectManager, type ProjectSnapshot } from "@/components/project-manager"
 import { saveProject as saveProjectToStorage, getRecentProjects, loadProject as loadProjectFromStorage, deleteProject as deleteProjectFromStorage, type ProjectListItem } from "@/lib/project-storage"
 import { SiteVisualsManager } from "@/components/site-visuals-manager"
+import { SiteMapPreview } from "@/components/site-map-preview"
 import { type SiteVisualsConfig, EMPTY_SITE_VISUALS } from "@/lib/site-visuals-config"
 import { type FinancialScenariosConfig, EMPTY_SCENARIOS_CONFIG } from "@/lib/financial-scenarios-config"
 import { ARCHISCAN_COPY, getStrategyName } from "@/constants/archiscan-copy"
@@ -448,6 +449,7 @@ export default function ArchiScanPage() {
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
+  const [siteCoords, setSiteCoords] = useState<{ lng: number, lat: number } | null>(null)
   const [show3DVolume, setShow3DVolume] = useState(false)
   const [showBrandingEditor, setShowBrandingEditor] = useState(false)
   const [branding, setBranding] = useState<BrandingConfig | null>(null)
@@ -961,6 +963,11 @@ export default function ArchiScanPage() {
       additionalNotes: hasDistrict ? '지구단위계획 적용' : prev.additionalNotes,
     }))
 
+    // 좌표 저장 (지도 미리보기용)
+    if (data.entX && data.entY) {
+      setSiteCoords({ lng: data.entX, lat: data.entY })
+    }
+    
     // 공시지가 자동 조회
     setLandPriceData(prev => ({ ...prev, loading: true }))
     fetchLandPrice({
@@ -1761,6 +1768,17 @@ export default function ArchiScanPage() {
                   />
                 </CardContent>
               </Card>
+              
+              {/* 대상지 위치 지도 */}
+              {siteCoords && (
+                <div className="mt-4">
+                  <SiteMapPreview
+                    lng={siteCoords.lng}
+                    lat={siteCoords.lat}
+                    address={address}
+                  />
+                </div>
+              )}
               
               {/* 최근 프로젝트 */}
               {recentProjects.length > 0 && (
