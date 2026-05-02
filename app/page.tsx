@@ -3466,12 +3466,48 @@ export default function ArchiScanPage() {
                   className="gap-1"
                   onClick={async () => {
                     if (!selectedLayoutData || !feasibilityResult) return
-                    const summary = `[Archi-Scan 사전검토]\n${address}\n배치안: ${selectedLayoutData.name}\nROI: ${feasibilityResult.roi?.toFixed(1)}%\n총사업비: ${(feasibilityResult.totalCost / 100000000).toFixed(1)}억원\n예상수익: ${(feasibilityResult.profit / 100000000).toFixed(1)}억원\n세대수: ${selectedLayoutData.units}세대\n연면적: ${(selectedLayoutData.gfa).toLocaleString()}㎡`
-                    if (navigator.share) {
-                      try { await navigator.share({ title: 'Archi-Scan 보고서', text: summary }) } catch {}
-                    } else {
-                      await navigator.clipboard.writeText(summary)
-                      toast.success('보고서 요약이 클립보드에 복사되었습니다')
+                    try {
+                      toast.loading('공유 링크 생성 중...', { id: 'share' })
+                      const res = await fetch('/api/share', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          address,
+                          siteArea: siteAreaNum,
+                          zoneType: regulation?.zoneName || '',
+                          layoutName: selectedLayoutData.name,
+                          snapshotData: {
+                            floors: selectedLayoutData.floors,
+                            units: selectedLayoutData.units,
+                            coverage: selectedLayoutData.coverage,
+                            far: selectedLayoutData.far || Math.round((selectedLayoutData.gfa / siteAreaNum) * 100),
+                            floorAreaRatio: selectedLayoutData.far || Math.round((selectedLayoutData.gfa / siteAreaNum) * 100),
+                            gfa: selectedLayoutData.gfa,
+                            feasibility: feasibilityResult,
+                            roi: feasibilityResult?.roi,
+                            totalProjectCost: feasibilityResult?.totalCost,
+                            expectedProfit: feasibilityResult?.profit,
+                          },
+                        }),
+                      })
+                      const result = await res.json()
+                      if (result.success) {
+                        const shareUrl = `${window.location.origin}${result.shareUrl}`
+                        const summary = `[Archi-Scan 사전검토]\n${address}\n배치안: ${selectedLayoutData.name}\nROI: ${feasibilityResult.roi?.toFixed(1)}%\n\n${shareUrl}`
+                        if (navigator.share) {
+                          await navigator.share({ title: 'Archi-Scan 보고서', text: summary, url: shareUrl })
+                        } else {
+                          await navigator.clipboard.writeText(shareUrl)
+                          toast.success('공유 링크가 복사되었습니다', { id: 'share' })
+                        }
+                      } else {
+                        // fallback: 텍스트 공유
+                        const summary = `[Archi-Scan 사전검토]\n${address}\n배치안: ${selectedLayoutData.name}\nROI: ${feasibilityResult.roi?.toFixed(1)}%`
+                        if (navigator.share) { await navigator.share({ title: 'Archi-Scan 보고서', text: summary }) }
+                        else { await navigator.clipboard.writeText(summary); toast.success('보고서 요약이 복사되었습니다', { id: 'share' }) }
+                      }
+                    } catch {
+                      toast.dismiss('share')
                     }
                   }}
                 >
