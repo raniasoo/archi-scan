@@ -200,30 +200,35 @@ export function generateFileName(address: string, extension: string, layoutName?
 }
 
 // 모바일 호환 다운로드 헬퍼
-function mobileDownload(content: string, fileName: string, mimeType: string = 'text/html;charset=utf-8'): void {
-  const blob = new Blob([content], { type: mimeType });
+function mobileDownload(content: string | Blob, fileName: string, mimeType: string = 'text/html;charset=utf-8'): void {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   
-  // 모바일 감지
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  // iOS 감지
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   
-  if (isMobile) {
-    // 모바일: Blob URL로 열기 (viewport 메타 태그 정상 적용)
-    const blobUrl = URL.createObjectURL(blob);
-    window.open(blobUrl, '_blank');
-    // 메모리 정리 (10초 후)
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  if (isIOS && typeof navigator.share === 'function') {
+    // iOS: Web Share API로 파일 공유 (다운로드 보장)
+    const file = new File([blob], fileName, { type: blob.type });
+    navigator.share({ files: [file], title: fileName }).catch(() => {
+      // 공유 실패 시 새 탭에서 열기
+      window.open(url, '_blank');
+    });
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   } else {
-    // 데스크톱: 표준 다운로드
+    // Android/데스크톱: 표준 다운로드 링크
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName;
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    // 약간의 딜레이 후 정리
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 10000);
   }
-  
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 // ============================================
@@ -2353,11 +2358,12 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       }
     }
     
-    // 다운로드
+    // 다운로드 (모바일 호환)
     const fileName = generateFileName(data.address, 'pdf', data.layout?.name);
-    pdf.save(fileName);
+    const pdfBlob = pdf.output('blob');
+    mobileDownload(pdfBlob, fileName, 'application/pdf');
     
-    // 정��
+    // 정리
     document.body.removeChild(iframe);
     
     return { success: true };
