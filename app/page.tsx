@@ -32,6 +32,7 @@ import { LandingPage } from "@/components/landing-page"
 import { ExcelImport, type ImportedReportData } from "@/components/excel-import"
 import { ProjectManager, type ProjectSnapshot } from "@/components/project-manager"
 import { saveProject as saveProjectToStorage, getRecentProjects, loadProject as loadProjectFromStorage, deleteProject as deleteProjectFromStorage, type ProjectListItem } from "@/lib/project-storage"
+import { saveProjectToCloud } from "@/lib/cloud-storage"
 import { SiteVisualsManager } from "@/components/site-visuals-manager"
 import { SiteMapPreview } from "@/components/site-map-preview"
 import { type SiteVisualsConfig, EMPTY_SITE_VISUALS } from "@/lib/site-visuals-config"
@@ -531,7 +532,7 @@ export default function ArchiScanPage() {
     }
   }, [mounted, currentProjectId])
   
-  // 자동 저장 — 배치안 생성 완료 시
+  // 자동 저장 — 배치안 생성 완료 시 (localStorage + Cloud)
   useEffect(() => {
     if (layouts.length > 0 && address && Number(siteArea) > 0) {
       const snapshot = getCurrentSnapshot?.()
@@ -544,6 +545,17 @@ export default function ArchiScanPage() {
           }
           setRecentProjects(getRecentProjects(10))
           console.log('[auto-save] 프로젝트 자동 저장:', saved.name)
+          
+          // 클라우드 저장 (로그인 사용자만, 비동기)
+          saveProjectToCloud({
+            name: saved.name,
+            address,
+            siteArea: Number(siteArea),
+            zoneType: regulation?.zoneName,
+            snapshotData: snapshot,
+          }).then(r => {
+            if (r.success) console.log('[cloud-save] 클라우드 저장 완료:', r.id)
+          }).catch(() => {})
         } catch {}
       }
     }
