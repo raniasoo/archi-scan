@@ -1862,24 +1862,26 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 
       <h2 class="section-title" style="margin-bottom:12px;">8. AI 분석</h2>
 
-      <div class="ai-score-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
-        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
-          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
-          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
-        </div>
-        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
-          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">사업성</p>
-          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</p>
-        </div>
-        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
-          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">상품성</p>
-          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</p>
-        </div>
-        <div class="ai-score-card highlight-card" style="text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px;">
-          <p style="font-size:11px; color:#064e3b; margin-bottom:6px; font-weight:600;">종합 점수</p>
-          <p style="font-size:26px; font-weight:700; color:#065f46;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</p>
-        </div>
-      </div>
+      <table style="width:100%; border-collapse:separate; border-spacing:8px 8px; margin:12px 0;" cellpadding="0">
+        <tr>
+          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
+            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">법규 부합성</p>
+            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
+          </td>
+          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
+            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">사업성</p>
+            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</p>
+          </td>
+          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
+            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">상품성</p>
+            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</p>
+          </td>
+          <td style="width:25%; text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px; vertical-align:middle;">
+            <p style="font-size:11px; color:#064e3b; margin:0 0 6px 0; font-weight:600;">종합 점수</p>
+            <p style="font-size:26px; font-weight:700; color:#065f46; margin:0;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</p>
+          </td>
+        </tr>
+      </table>
     </section>
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
@@ -3743,24 +3745,26 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     <!-- 7. AI 분석 -->
     <section class="pdf-section pdf-section pdf-card-group">
       <h2 class="section-title" style="margin-bottom:12px;">8. AI 분석</h2>
-      <div class="ai-score-grid pdf-card-group" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
-        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
-          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">법규 부합성</p>
-          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
-        </div>
-        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
-          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">사업성</p>
-          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</p>
-        </div>
-        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
-          <p style="font-size:11px; color:#64748b; margin-bottom:6px;">상품성</p>
-          <p style="font-size:22px; font-weight:700; color:#0f766e;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</p>
-        </div>
-        <div class="ai-score-card highlight-card" style="text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px;">
-          <p style="font-size:11px; color:#064e3b; margin-bottom:6px; font-weight:600;">종합 점수</p>
-          <p style="font-size:26px; font-weight:700; color:#065f46;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</p>
-        </div>
-      </div>
+      <table style="width:100%; border-collapse:separate; border-spacing:8px 8px; margin:12px 0;" cellpadding="0">
+        <tr>
+          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
+            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">법규 부합성</p>
+            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
+          </td>
+          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
+            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">사업성</p>
+            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</p>
+          </td>
+          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
+            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">상품성</p>
+            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</p>
+          </td>
+          <td style="width:25%; text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px; vertical-align:middle;">
+            <p style="font-size:11px; color:#064e3b; margin:0 0 6px 0; font-weight:600;">종합 점수</p>
+            <p style="font-size:26px; font-weight:700; color:#065f46; margin:0;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</p>
+          </td>
+        </tr>
+      </table>
     </section>
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
