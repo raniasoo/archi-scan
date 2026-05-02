@@ -199,16 +199,66 @@ export function generateFileName(address: string, extension: string, layoutName?
   return `ArchiScan_${safeAddress}${safeLayout}_${dateStr}.${extension}`;
 }
 
+// 인앱 브라우저 감지 (카카오톡, 라인, 인스타그램, 페이스북 등)
+function isInAppBrowser(): string | null {
+  const ua = navigator.userAgent || '';
+  if (/KAKAOTALK/i.test(ua)) return '카카오톡';
+  if (/Line\//i.test(ua)) return '라인';
+  if (/FBAN|FBAV/i.test(ua)) return '페이스북';
+  if (/Instagram/i.test(ua)) return '인스타그램';
+  if (/NAVER/i.test(ua)) return '네이버';
+  return null;
+}
+
 // 모바일 호환 다운로드 헬퍼
 function mobileDownload(content: string | Blob, fileName: string, mimeType: string = 'text/html;charset=utf-8'): void {
   const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   
+  // 인앱 브라우저 감지
+  const inAppName = isInAppBrowser();
+  if (inAppName) {
+    // 인앱 브라우저: 다운로드 제한됨 → 안내 + 대안 시도
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    
+    if (isAndroid) {
+      // Android: intent scheme으로 외부 브라우저 열기 시도
+      try {
+        const currentUrl = window.location.href;
+        window.location.href = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
+      } catch { /* ignore */ }
+    }
+    
+    // 안내 메시지 (toast가 없으면 alert)
+    const msg = `${inAppName} 브라우저에서는 파일 다운로드가 제한됩니다.\n\n` +
+      (isAndroid 
+        ? '우측 상단 ⋮ 메뉴 → "다른 브라우저로 열기"를 눌러주세요.'
+        : '하단 공유 버튼(□↑) → "Safari로 열기"를 눌러주세요.');
+    
+    // toast 시도 (sonner)
+    try {
+      const { toast } = require('sonner');
+      toast.info(msg, { duration: 8000 });
+    } catch {
+      alert(msg);
+    }
+    
+    // 그래도 다운로드 시도는 함 (일부 인앱에서 작동할 수 있음)
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 30000);
+    return;
+  }
+  
   // iOS 감지
   const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   
   if (isIOS && typeof navigator.share === 'function') {
-    // iOS: Web Share API로 파일 공유 (다운로드 보장)
+    // iOS Safari: Web Share API로 파일 공유 (다운로드 보장)
     const file = new File([blob], fileName, { type: blob.type });
     navigator.share({ files: [file], title: fileName }).catch(() => {
       // 공유 실패 시 새 탭에서 열기
@@ -216,14 +266,13 @@ function mobileDownload(content: string | Blob, fileName: string, mimeType: stri
     });
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   } else {
-    // Android/데스크톱: 표준 다운로드 링크
+    // Android Chrome / 데스크톱: 표준 다운로드 링크
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName;
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    // 약간의 딜레이 후 정리
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);

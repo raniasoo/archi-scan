@@ -425,6 +425,7 @@ type AppStep = "input" | "strategy" | "regulation" | "layouts" | "floorplan" | "
 export default function ArchiScanPage() {
   const [mounted, setMounted] = useState(false) // v2
   const [showLanding, setShowLanding] = useState(true)
+  const [inAppBrowser, setInAppBrowser] = useState<string | null>(null)
   
   const { 
     isProUser, 
@@ -555,6 +556,13 @@ export default function ArchiScanPage() {
 
   useEffect(() => {
     setMounted(true)
+    // 인앱 브라우저 감지
+    const ua = navigator.userAgent || ''
+    if (/KAKAOTALK/i.test(ua)) setInAppBrowser('카카오톡')
+    else if (/Line\//i.test(ua)) setInAppBrowser('라인')
+    else if (/FBAN|FBAV/i.test(ua)) setInAppBrowser('페이스북')
+    else if (/Instagram/i.test(ua)) setInAppBrowser('인스타그램')
+    else if (/NAVER/i.test(ua)) setInAppBrowser('네이버')
     // Initialize user
     getOrCreateUser().then(setCurrentUser)
 
@@ -1362,6 +1370,26 @@ export default function ArchiScanPage() {
   return (
     <ErrorBoundary>
     <div className="min-h-screen bg-background">
+      {/* 인앱 브라우저 안내 배너 */}
+      {inAppBrowser && (
+        <div className="bg-amber-500/90 text-white text-center py-2 px-4 text-xs flex items-center justify-center gap-2 z-50 relative">
+          <span>⚠️ {inAppBrowser} 브라우저에서는 PDF 다운로드가 제한됩니다.</span>
+          <button
+            onClick={() => {
+              const isAndroid = /Android/i.test(navigator.userAgent)
+              if (isAndroid) {
+                try { window.location.href = `intent://${window.location.href.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end` } catch {}
+              } else {
+                alert('하단 공유 버튼(□↑) → "Safari로 열기"를 눌러주세요.')
+              }
+            }}
+            className="underline font-semibold whitespace-nowrap"
+          >
+            외부 브라우저로 열기
+          </button>
+          <button onClick={() => setInAppBrowser(null)} className="ml-1 opacity-70">✕</button>
+        </div>
+      )}
       {/* 3D 볼륨 모델 모달 */}
       {show3DVolume && selectedLayoutData && (
         <BuildingVolume3D
