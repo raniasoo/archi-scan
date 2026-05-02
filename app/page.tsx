@@ -31,7 +31,7 @@ import { ReportSummary } from "@/components/report-summary"
 import { LandingPage } from "@/components/landing-page"
 import { ExcelImport, type ImportedReportData } from "@/components/excel-import"
 import { ProjectManager, type ProjectSnapshot } from "@/components/project-manager"
-import { saveProject as saveProjectToStorage, getRecentProjects, loadProject as loadProjectFromStorage, type ProjectListItem } from "@/lib/project-storage"
+import { saveProject as saveProjectToStorage, getRecentProjects, loadProject as loadProjectFromStorage, deleteProject as deleteProjectFromStorage, type ProjectListItem } from "@/lib/project-storage"
 import { SiteVisualsManager } from "@/components/site-visuals-manager"
 import { type SiteVisualsConfig, EMPTY_SITE_VISUALS } from "@/lib/site-visuals-config"
 import { type FinancialScenariosConfig, EMPTY_SCENARIOS_CONFIG } from "@/lib/financial-scenarios-config"
@@ -520,6 +520,7 @@ export default function ArchiScanPage() {
   const [currentProjectName, setCurrentProjectName] = useState<string>("")
   const [recentProjects, setRecentProjects] = useState<ProjectListItem[]>([])
   const [showProjectComparison, setShowProjectComparison] = useState(false)
+  const [showAllProjectsList, setShowAllProjectsList] = useState(false)
   
   // 최근 프로젝트 목록 로드
   useEffect(() => {
@@ -1593,21 +1594,29 @@ export default function ArchiScanPage() {
 
             {/* 자동저장 표시 + 새 프로젝트 */}
             {address && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (confirm('현재 작업을 지우고 새 프로젝트를 시작할까요?')) {
-                    localStorage.removeItem('archi-scan-session')
-                    window.location.reload()
-                  }
-                }}
-                className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                title="새 프로젝트 시작"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                <span className="hidden sm:inline">새 프로젝트</span>
-              </Button>
+              <div className="flex items-center gap-1">
+                {currentProjectId && (
+                  <span className="text-[10px] text-emerald-500/70 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                    저장됨
+                  </span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm('현재 작업을 지우고 새 프로젝트를 시작할까요?')) {
+                      localStorage.removeItem('archi-scan-session')
+                      window.location.reload()
+                    }
+                  }}
+                  className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                  title="새 프로젝트 시작"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <span className="hidden sm:inline">새 프로젝트</span>
+                </Button>
+              </div>
             )}
             </div>
 
@@ -1787,28 +1796,55 @@ export default function ArchiScanPage() {
                     </div>
                   )}
                   <div className="space-y-1.5">
-                    {recentProjects.slice(0, 3).map(p => (
-                      <button key={p.id} onClick={() => {
-                        try {
-                          const proj = loadProjectFromStorage(p.id)
-                          if (proj?.data) {
-                            handleProjectLoad(proj.data)
-                            setCurrentProjectId(proj.id)
-                            setCurrentProjectName(proj.name)
-                          }
-                        } catch {}
-                      }}
-                        className="w-full text-left px-3 py-2 rounded-lg border border-border/50 bg-secondary/20 hover:bg-secondary/40 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-foreground truncate">{p.name}</span>
-                          <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                            {new Date(p.updatedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground truncate">{p.address} · {p.siteArea?.toLocaleString()}㎡</p>
-                      </button>
+                    {recentProjects.slice(0, showAllProjectsList ? 10 : 3).map(p => (
+                      <div key={p.id} className="flex items-center gap-1">
+                        <button onClick={() => {
+                          try {
+                            const proj = loadProjectFromStorage(p.id)
+                            if (proj?.data) {
+                              handleProjectLoad(proj.data)
+                              setCurrentProjectId(proj.id)
+                              setCurrentProjectName(proj.name)
+                            }
+                          } catch {}
+                        }}
+                          className="flex-1 text-left px-3 py-2 rounded-lg border border-border/50 bg-secondary/20 hover:bg-secondary/40 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-foreground truncate">{p.name}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                              {new Date(p.updatedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground truncate">{p.address} · {p.siteArea?.toLocaleString()}㎡</p>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (confirm(`"${p.name}" 프로젝트를 삭제할까요?`)) {
+                              deleteProjectFromStorage(p.id)
+                              if (currentProjectId === p.id) {
+                                setCurrentProjectId(null)
+                                setCurrentProjectName("")
+                              }
+                              setRecentProjects(getRecentProjects(10))
+                            }
+                          }}
+                          className="shrink-0 p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          title="프로젝트 삭제"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        </button>
+                      </div>
                     ))}
+                    {recentProjects.length > 3 && (
+                      <button
+                        onClick={() => setShowAllProjectsList(prev => !prev)}
+                        className="w-full text-center py-1.5 text-xs text-primary hover:underline"
+                      >
+                        {showAllProjectsList ? '접기' : `전체 ${recentProjects.length}개 보기`}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
