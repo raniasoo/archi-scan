@@ -966,6 +966,15 @@ export default function ArchiScanPage() {
     // 좌표 저장 (지도 미리보기용)
     if (data.entX && data.entY) {
       setSiteCoords({ lng: data.entX, lat: data.entY })
+    } else {
+      // JUSO 개발 키에서 좌표 미반환 시 VWorld 지오코딩으로 변환
+      const geoAddr = roadAddr || address
+      if (geoAddr) {
+        fetch(`/api/geocode?address=${encodeURIComponent(geoAddr)}`)
+          .then(r => r.json())
+          .then(g => { if (g.success && g.lng && g.lat) setSiteCoords({ lng: g.lng, lat: g.lat }) })
+          .catch(() => {})
+      }
     }
     
     // 공시지가 자동 조회
