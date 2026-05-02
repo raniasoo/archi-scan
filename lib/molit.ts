@@ -1486,6 +1486,41 @@ interface ManualParcelOverride {
  * @param address - The address to lookup
  * @param manualParcel - Optional manual parcel override for retry
  */
+// 좌표 확보 헬퍼 — entX/entY가 없으면 VWorld 지오코딩으로 확보
+async function ensureCoordinates(siteData: any): Promise<any> {
+  if (siteData.entX && siteData.entY) return siteData
+  
+  const addr = siteData.roadAddress || siteData.address || siteData.platPlc || ''
+  if (!addr) return siteData
+  
+  try {
+    console.log(`[COORD-ENSURE] 좌표 미확보 → VWorld 지오코딩: ${addr}`)
+    const geoParams = new URLSearchParams({
+      service: 'address', request: 'getcoord', version: '2.0',
+      crs: 'EPSG:4326', refine: 'true', simple: 'false',
+      format: 'json', type: 'ROAD',
+      key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+      address: addr,
+    })
+    const geoRes = await fetch(`https://api.vworld.kr/req/address?${geoParams}`, {
+      signal: AbortSignal.timeout(5000),
+      headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+    })
+    if (geoRes.ok) {
+      const geoData = await geoRes.json()
+      const point = geoData?.response?.result?.point
+      if (point?.x && point?.y) {
+        siteData.entX = parseFloat(point.x)
+        siteData.entY = parseFloat(point.y)
+        console.log(`[COORD-ENSURE] 좌표 확보 성공: lng=${siteData.entX}, lat=${siteData.entY}`)
+      }
+    }
+  } catch (e) {
+    console.warn('[COORD-ENSURE] 좌표 확보 실패 (무시):', e)
+  }
+  return siteData
+}
+
 export async function lookupSiteData(
   address: string, 
   manualParcel?: ManualParcelOverride
@@ -1912,7 +1947,7 @@ export async function lookupSiteData(
       
       return {
         success: true,
-        data: siteData,
+        data: await ensureCoordinates(siteData),
         diagnostics,
         rawData: {
           building: result.data,
@@ -1949,7 +1984,7 @@ export async function lookupSiteData(
           const vwA = await fetchVworldPnuArea(siteData.bdMgtSn)
           if (vwA && vwA.area > 0) siteData.siteArea = vwA.area
         }
-        return { success: true, data: siteData, diagnostics, rawData: { building: retryResult.data } }
+        return { success: true, data: await ensureCoordinates(siteData), diagnostics, rawData: { building: retryResult.data } }
       }
     }
     
@@ -2057,13 +2092,7 @@ export async function lookupSiteData(
       }
     }
     
-    return {
-      success: !!vworldSiteArea,
-      error: vworldSiteArea 
-        ? undefined
-        : '해당 주소로 조회 가능한 건축물대장 정보를 찾지 못했습니다. 주소를 더 정확히 입력하거나 다른 주소로 다시 시도해주세요.',
-      diagnostics,
-      data: {
+    const emptyData = {
         address: normalizedAddress,
         roadAddress: (diagJusoEmpty?.roadAddr as string) || (diagJusoEmpty?.rawResponse as any)?.roadAddr,
         sigunguCode: sigunguCd,
@@ -2077,7 +2106,15 @@ export async function lookupSiteData(
         entY: (diagJusoEmpty?.entY as number) || undefined,
         dataSource: 'address' as const,
         fetchedAt: new Date().toISOString(),
-      },
+      }
+    
+    return {
+      success: !!vworldSiteArea,
+      error: vworldSiteArea 
+        ? undefined
+        : '해당 주소로 조회 가능한 건축물대장 정보를 찾지 못했습니다. 주소를 더 정확히 입력하거나 다른 주소로 다시 시도해주세요.',
+      diagnostics,
+      data: await ensureCoordinates(emptyData),
     }
   } catch (error) {
     console.error('[MOLIT] API call error:', error)
