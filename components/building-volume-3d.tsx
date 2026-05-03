@@ -59,6 +59,7 @@ export function BuildingVolume3D({
   const rotation     = useRef({ x: 0.45, y: 0.6 })
   const zoom         = useRef(1)
   const [loaded, setLoaded]       = useState(false)
+  const [compassAngle, setCompassAngle] = useState(0)
   const [blockInfo, setBlockInfo] = useState<{ label: string; floors: number }[]>([])
   const [error, setError]         = useState<string | null>(null)
 
@@ -244,6 +245,7 @@ export function BuildingVolume3D({
       window.addEventListener('resize', onResize)
 
       // Render loop
+      let lastCompassUpdate = 0
       const animate = () => {
         if (!mounted) return
         animId = requestAnimationFrame(animate)
@@ -254,6 +256,12 @@ export function BuildingVolume3D({
         cam.position.set(d * Math.cos(rx) * Math.sin(ry), d * Math.sin(rx), d * Math.cos(rx) * Math.cos(ry))
         cam.lookAt(0, floors * floorHeight * 0.35, 0)
         renderer.render(scene, cam)
+        // 나침반 각도 업데이트 (10fps)
+        const now = Date.now()
+        if (now - lastCompassUpdate > 100) {
+          lastCompassUpdate = now
+          setCompassAngle(-ry * 180 / Math.PI)
+        }
       }
       animate()
       frameRef.current = animId
@@ -364,13 +372,15 @@ export function BuildingVolume3D({
           className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
           onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU} onWheel={onW}
         />
-        {/* 지도 스타일 나침반 (우측 상단) */}
+        {/* 지도 스타일 나침반 — 모델 회전에 연동 */}
         <div className="absolute top-3 right-3 pointer-events-none">
           <svg width="56" height="56" viewBox="0 0 56 56">
             <circle cx="28" cy="28" r="26" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
-            <polygon points="28,5 23,25 28,21 33,25" fill="#ef4444"/>
-            <polygon points="28,51 23,31 28,35 33,31" fill="#94a3b8"/>
-            <text x="28" y="17" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#ffffff">N</text>
+            <g transform={`rotate(${compassAngle}, 28, 28)`}>
+              <polygon points="28,5 23,25 28,21 33,25" fill="#ef4444"/>
+              <polygon points="28,51 23,31 28,35 33,31" fill="#94a3b8"/>
+              <text x="28" y="17" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#ffffff">N</text>
+            </g>
           </svg>
         </div>
       </div>

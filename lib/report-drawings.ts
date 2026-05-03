@@ -237,10 +237,10 @@ export function generateIsometricSvg(d: DrawingInput): string {
   const floorH = 3.3, gfH = 4.5
   const totalH = gfH + (d.floors - 1) * floorH
   const rawBldW = Math.sqrt(d.siteArea * d.buildingCoverage / 100) * 0.6
-  const bldW = Math.max(40, rawBldW) // 최소 40px 보장
+  const bldW = Math.max(60, rawBldW) // 최소 60px 보장
   const bldD = bldW * 0.7
-  const vScale = Math.min((baseY - 30) / totalH, 8)
-  const hScale = Math.min((W - 40) / (bldW + bldD), 5)
+  const vScale = Math.min((baseY - 30) / totalH, 12)
+  const hScale = Math.min((W - 30) / (bldW + bldD), 7)
   const isoW = bldW * hScale, isoD = bldD * hScale * 0.5
   const bldH = totalH * vScale
 
@@ -399,8 +399,8 @@ export function generatePerspectiveSvg(d: DrawingInput): string {
 
   function toP(x3d: number, y3d: number, z3d: number): [number, number] {
     const depth = Math.max(0.3, 1 - y3d * 0.008)
-    const px = vpX + (x3d - vpX) * depth * 0.45
-    const pz = groundY - z3d * depth * 0.45
+    const px = vpX + (x3d - vpX) * depth * 0.8
+    const pz = groundY - z3d * depth * 0.8
     const py = pz + (vpY - pz) * (1 - depth) * 0.3
     return [vpX + (px - vpX), py]
   }

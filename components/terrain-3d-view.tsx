@@ -33,8 +33,8 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
 </head><body>
 <canvas id="c"></canvas>
-<div id="info">${(address||'대상지').replace(/'/g,"\\'")} · 3D 지형</div>
-<div id="loading">3D 지형 로딩중...</div>
+<div id="info">${(address||'대상지').replace(/'/g,"\\'")} · 3D 지적도</div>
+<div id="loading">3D 지적도 로딩중...</div>
 <script>
 (async function(){
   const LAT=${lat}, LNG=${lng};
@@ -181,8 +181,8 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   texture.minFilter=THREE.LinearFilter;
   
   var mat=new THREE.MeshStandardMaterial({
-    vertexColors:true,
-    roughness:0.9,
+    map:texture,
+    roughness:0.7,
     metalness:0.0,
     side:THREE.DoubleSide,
   });
@@ -208,13 +208,13 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   scene.add(sphere);
   
   // 6) 조명
-  var amb=new THREE.AmbientLight(0xffffff,0.5);
+  var amb=new THREE.AmbientLight(0xffffff,0.35);
   scene.add(amb);
-  var dir=new THREE.DirectionalLight(0xffffff,0.8);
-  dir.position.set(50,100,50);
+  var dir=new THREE.DirectionalLight(0xffffff,1.2);
+  dir.position.set(80,150,30);
   dir.castShadow=true;
   scene.add(dir);
-  var hemi=new THREE.HemisphereLight(0x87CEEB,0x8B7355,0.3);
+  var hemi=new THREE.HemisphereLight(0x87CEEB,0x8B7355,0.4);
   scene.add(hemi);
   
   // 7) 마우스/터치 컨트롤 (간단한 궤도 카메라)
@@ -296,7 +296,7 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
       <div className="flex items-center justify-between px-3 py-2 bg-secondary/30 border-b border-border/40">
         <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
           <Box className="h-3.5 w-3.5 text-primary" />
-          <span>3D 지형도</span>
+          <span>3D 지적도</span>
           <span className="text-[10px] text-muted-foreground">(드래그: 회전 / 핀치: 줌)</span>
         </div>
         <button onClick={() => setExpanded(!expanded)} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
@@ -304,7 +304,7 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
         </button>
       </div>
       <div className={`relative ${expanded ? 'h-[400px] sm:h-[500px]' : 'h-[260px] sm:h-[320px]'} transition-all`}>
-        <iframe key={expanded ? 'exp' : 'col'} src={blobUrl} className="w-full h-full border-0" title="3D 지형도" />
+        <iframe key={expanded ? 'exp' : 'col'} src={blobUrl} className="w-full h-full border-0" title="3D 지적도" />
       </div>
     </div>
   )
