@@ -91,8 +91,10 @@ function PerspCar({ x, depth, color = "#475569" }: { x: number; depth: number; c
 
 export function PerspectiveView({ siteArea, buildingCoverage, floors, units, type, layoutName, zoneType }: PerspectiveViewProps) {
   const W = 400, H = 400
-  const floorH = 3.3 // 층고 (m)
+  const floorH = Math.max(25, Math.min(45, 200 / Math.max(floors, 2))) // 층고 (px 스케일로 변환)
   const totalH = floors * floorH
+  const realFloorH = 3.3, realGfH = 4.5
+  const realTotalH = realGfH + (floors - 1) * realFloorH // 실제 미터 단위
 
   // 건물 크기 — 화면 꽉 차게 (VP 기준 70% 점유)
   const buildingArea = siteArea * (buildingCoverage / 100)
@@ -304,7 +306,7 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, typ
           <line x1={dimTopX - 4} y1={dimTopY} x2={dimTopX + 4} y2={dimTopY} stroke="#f59e0b" strokeWidth="0.8" />
           <text x={dimTopX - 8} y={(dimBotY + dimTopY) / 2} fontSize="7" fill="#f59e0b"
             textAnchor="end" dominantBaseline="middle" fontWeight="bold">
-            {(totalH).toFixed(1)}m
+            {realTotalH.toFixed(1)}m
           </text>
           <text x={dimTopX - 8} y={(dimBotY + dimTopY) / 2 + 9} fontSize="6" fill="#94a3b8"
             textAnchor="end" dominantBaseline="middle">
@@ -340,7 +342,7 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, typ
       <p className="text-[10px] text-muted-foreground text-center">
         투시도 · {type === 'tower' ? '타워형' : type === 'courtyard' ? '중정형' :
         type === 'lshape' ? 'ㄱ자형' : type === 'linear' ? '판상형' : '클러스터형'}
-        {zoneType ? ` · ${zoneType}` : ''}
+        {zoneType ? ` · ${({'residential-exclusive-1':'제1종 전용주거','residential-exclusive-2':'제2종 전용주거','residential-general-1':'제1종 일반주거','residential-general-2':'제2종 일반주거','residential-general-3':'제3종 일반주거','semi-residential':'준주거','general-commercial':'일반상업','neighborhood-commercial':'근린상업','central-commercial':'중심상업','distribution-commercial':'유통상업','exclusive-industrial':'전용공업','general-industrial':'일반공업','semi-industrial':'준공업','natural-green':'자연녹지','production-green':'생산녹지','conservation-green':'보전녹지','conservation-management':'보전관리','production-management':'생산관리','planning-management':'계획관리','rural-village':'농림','natural-environment':'자연환경보전'} as Record<string,string>)[zoneType] || zoneType}` : ''}
       </p>
     </div>
   )

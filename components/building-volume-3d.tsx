@@ -366,11 +366,11 @@ export function BuildingVolume3D({
         />
         {/* 지도 스타일 나침반 (우측 상단) */}
         <div className="absolute top-3 right-3 pointer-events-none">
-          <svg width="44" height="44" viewBox="0 0 44 44">
-            <circle cx="22" cy="22" r="20" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
-            <polygon points="22,4 18,20 22,17 26,20" fill="#ef4444"/>
-            <polygon points="22,40 18,24 22,27 26,24" fill="#94a3b8"/>
-            <text x="22" y="14" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff">N</text>
+          <svg width="56" height="56" viewBox="0 0 56 56">
+            <circle cx="28" cy="28" r="26" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
+            <polygon points="28,5 23,25 28,21 33,25" fill="#ef4444"/>
+            <polygon points="28,51 23,31 28,35 33,31" fill="#94a3b8"/>
+            <text x="28" y="17" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#ffffff">N</text>
           </svg>
         </div>
       </div>

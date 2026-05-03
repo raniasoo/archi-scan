@@ -236,10 +236,11 @@ export function generateIsometricSvg(d: DrawingInput): string {
   const cx = W / 2, baseY = H * 0.75
   const floorH = 3.3, gfH = 4.5
   const totalH = gfH + (d.floors - 1) * floorH
-  const bldW = Math.sqrt(d.siteArea * d.buildingCoverage / 100) * 0.6
+  const rawBldW = Math.sqrt(d.siteArea * d.buildingCoverage / 100) * 0.6
+  const bldW = Math.max(40, rawBldW) // 최소 40px 보장
   const bldD = bldW * 0.7
-  const vScale = Math.min((baseY - 30) / totalH, 3.5)
-  const hScale = Math.min((W - 80) / (bldW + bldD), 2.5)
+  const vScale = Math.min((baseY - 30) / totalH, 8)
+  const hScale = Math.min((W - 40) / (bldW + bldD), 5)
   const isoW = bldW * hScale, isoD = bldD * hScale * 0.5
   const bldH = totalH * vScale
 
@@ -388,11 +389,12 @@ export function generateElevationSvg(d: DrawingInput): string {
 export function generatePerspectiveSvg(d: DrawingInput): string {
   const W = 360, H = 300
   const vpX = W/2, vpY = 60, groundY = 260
-  const floorH = 3.3, totalH = d.floors * floorH
+  const floorH = Math.max(15, Math.min(30, 120 / Math.max(d.floors, 2)))
+  const totalH = d.floors * floorH
   const buildingArea = d.siteArea * (d.buildingCoverage / 100)
   const sideM = Math.sqrt(buildingArea)
-  const bw = Math.min(sideM * 1.6, 140)
-  const bd = Math.min(sideM * 0.6, 50)
+  const bw = Math.max(140, Math.min(sideM * 2.5, 240))
+  const bd = Math.max(30, Math.min(sideM * 0.8, 60))
   const bx = vpX - bw / 2, bDepth = 15
 
   function toP(x3d: number, y3d: number, z3d: number): [number, number] {
@@ -422,7 +424,9 @@ export function generatePerspectiveSvg(d: DrawingInput): string {
   const doorW = bw * 0.1, doorH = floorH * 0.85, doorX = bx + bw/2 - doorW/2
   const door = `<polygon points="${pFace([[doorX,bDepth,0],[doorX+doorW,bDepth,0],[doorX+doorW,bDepth,doorH],[doorX,bDepth,doorH]])}" fill="#fbbf24" opacity="0.5" stroke="#f59e0b" stroke-width="0.5"/>`
 
-  // 높이 치수
+  // 높이 치수 (실제 미터 단위)
+  const realFloorH = 3.3, realGfH = 4.5
+  const realTotalH = realGfH + (d.floors - 1) * realFloorH
   const [dbx,dby] = toP(bx-12,bDepth,0), [dtx,dty] = toP(bx-12,bDepth,totalH)
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;max-width:360px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
@@ -446,7 +450,7 @@ export function generatePerspectiveSvg(d: DrawingInput): string {
   ${door}
   <!-- 높이 치수 -->
   <line x1="${dbx}" y1="${dby}" x2="${dtx}" y2="${dty}" stroke="#ea580c" stroke-width="0.6"/>
-  <text x="${dtx-6}" y="${(dby+dty)/2}" text-anchor="end" font-size="5.5" fill="#ea580c" font-weight="bold">${totalH.toFixed(1)}m</text>
+  <text x="${dtx-6}" y="${(dby+dty)/2}" text-anchor="end" font-size="5.5" fill="#ea580c" font-weight="bold">${realTotalH.toFixed(1)}m</text>
   <text x="${dtx-6}" y="${(dby+dty)/2+7}" text-anchor="end" font-size="4.5" fill="#64748b">${d.floors}F</text>
   <!-- 방위 -->
   <circle cx="${W-25}" cy="22" r="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="0.8"/>
