@@ -121,6 +121,49 @@ export function BuildingVolume3D({
       grid.position.y = 0.02
       scene.add(grid)
 
+      // 방위 표시 (N 화살표)
+      const compassR = siteSize * 1.2
+      const arrowLen = siteSize * 0.25
+      // 화살표 기둥
+      const nArrowPts = [
+        new THREE.Vector3(0, 0.3, -compassR),
+        new THREE.Vector3(0, 0.3, -compassR - arrowLen)
+      ]
+      scene.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(nArrowPts),
+        new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 })
+      ))
+      // 화살표 머리 (삼각형)
+      const ahSize = arrowLen * 0.35
+      const arrowHeadPts = [
+        new THREE.Vector3(0, 0.3, -compassR - arrowLen),
+        new THREE.Vector3(-ahSize * 0.5, 0.3, -compassR - arrowLen + ahSize),
+        new THREE.Vector3(ahSize * 0.5, 0.3, -compassR - arrowLen + ahSize),
+        new THREE.Vector3(0, 0.3, -compassR - arrowLen),
+      ]
+      const ahGeo = new THREE.BufferGeometry().setFromPoints(arrowHeadPts)
+      scene.add(new THREE.Mesh(ahGeo, new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide })))
+      // N 글자 (원판 + 텍스트)
+      const nCircle = new THREE.Mesh(
+        new THREE.CircleGeometry(ahSize * 0.8, 16),
+        new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide })
+      )
+      nCircle.position.set(0, 0.3, -compassR - arrowLen - ahSize * 1.2)
+      nCircle.rotation.x = -Math.PI / 2
+      scene.add(nCircle)
+      // 나머지 방위 (S/E/W 짧은 선)
+      const compassDirs = [[0, compassR, 'S'], [compassR, 0, 'E'], [-compassR, 0, 'W']]
+      compassDirs.forEach(([dx, dz]) => {
+        const cPts = [
+          new THREE.Vector3(dx * 0.9, 0.3, dz * 0.9),
+          new THREE.Vector3(dx, 0.3, dz)
+        ]
+        scene.add(new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(cPts),
+          new THREE.LineBasicMaterial({ color: 0x334155 })
+        ))
+      })
+
       // Site floor
       const siteFloor = new THREE.Mesh(
         new THREE.PlaneGeometry(siteSize, siteSize),
@@ -371,6 +414,7 @@ export function BuildingVolume3D({
           <span className="flex items-center gap-1"><span className="w-3 h-px bg-amber-400 inline-block"/>이격거리</span>
           <span className="flex items-center gap-1"><span className="w-3 h-px bg-emerald-400 inline-block"/>최상층</span>
           <span className="flex items-center gap-1"><span className="w-3 h-px bg-cyan-400 inline-block"/>5층 단위</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500 rounded-full inline-block"/>N(북)</span>
           {(layoutType === 'courtyard' || layoutType === 'cluster') && (
             <span className="flex items-center gap-1"><span className="w-3 h-px bg-green-500 inline-block"/>중정/조경</span>
           )}

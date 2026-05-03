@@ -81,8 +81,8 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   scene.fog=new THREE.Fog(0x1e293b,200,500);
   
   var camera=new THREE.PerspectiveCamera(50,W/H,0.1,1000);
-  camera.position.set(0,55,120);
-  camera.lookAt(0,10,0);
+  camera.position.set(0,45,130);
+  camera.lookAt(0,15,0);
   
   var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
   renderer.setSize(W,H);
@@ -93,13 +93,29 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   var geo=new THREE.PlaneGeometry(120,120,GRID-1,GRID-1);
   var verts=geo.attributes.position.array;
   
-  // 표고 적용 (높이 과장: 강하게 — 지형 구분이 명확하도록)
-  var exaggeration=eRange<3?15:eRange<8?12:eRange<15?8:5;
+  // 표고 적용 (높이 과장: 극대화)
+  var exaggeration=eRange<3?20:eRange<8?15:eRange<20?10:7;
+  var maxZ=0;
   for(var i=0;i<GRID*GRID;i++){
     var norm=(elevations[i]-minE)/eRange;
-    verts[i*3+2]=norm*exaggeration*12; // Z축을 위로 (기존 8→12)
+    var z=norm*exaggeration*15;
+    verts[i*3+2]=z;
+    if(z>maxZ)maxZ=z;
   }
   geo.computeVertexNormals();
+  
+  // 높이별 색상 (초록→노랑→갈색→흰색)
+  var colors=new Float32Array(GRID*GRID*3);
+  for(var i=0;i<GRID*GRID;i++){
+    var h=verts[i*3+2]/Math.max(maxZ,1);
+    var r,g,b;
+    if(h<0.25){r=0.18+h*1.2;g=0.45+h*0.8;b=0.15;}
+    else if(h<0.5){var t=(h-0.25)*4;r=0.48+t*0.4;g=0.65-t*0.15;b=0.15-t*0.05;}
+    else if(h<0.75){var t=(h-0.5)*4;r=0.88-t*0.1;g=0.5-t*0.15;b=0.1+t*0.15;}
+    else{var t=(h-0.75)*4;r=0.78+t*0.15;g=0.35+t*0.15;b=0.25+t*0.2;}
+    colors[i*3]=r;colors[i*3+1]=g;colors[i*3+2]=b;
+  }
+  geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
   
   // 4) 지도 텍스처 (VWorld 타일)
   var texCanvas=document.createElement('canvas');
@@ -163,9 +179,9 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   texture.minFilter=THREE.LinearFilter;
   
   var mat=new THREE.MeshStandardMaterial({
-    map:texture,
-    roughness:0.8,
-    metalness:0.1,
+    vertexColors:true,
+    roughness:0.9,
+    metalness:0.0,
     side:THREE.DoubleSide,
   });
   
@@ -178,7 +194,7 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   var markerGeo=new THREE.CylinderGeometry(0.3,0.3,15,8);
   var markerMat=new THREE.MeshStandardMaterial({color:0xef4444,emissive:0x991b1b});
   var marker=new THREE.Mesh(markerGeo,markerMat);
-  var centerElev=(elevations[Math.floor(GRID*GRID/2)]-minE)/eRange*exaggeration*12;
+  var centerElev=(elevations[Math.floor(GRID*GRID/2)]-minE)/eRange*exaggeration*15;
   marker.position.set(0,centerElev+8,0);
   scene.add(marker);
   
