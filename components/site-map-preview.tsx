@@ -17,26 +17,22 @@ export function SiteMapPreview({ lng, lat, address, className = "" }: SiteMapPre
   const [mode, setMode] = useState<MapMode>('cadastral')
   const [origin, setOrigin] = useState('')
 
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
+  useEffect(() => { setOrigin(window.location.origin) }, [])
 
   const mapHtml = useMemo(() => {
     if (!origin) return ''
     
-    // 타일 프록시 URL (절대 경로 — Blob iframe에서도 작동)
-    const tile = (layer: string) =>
-      `${origin}/api/tile?layer=${layer}&z={z}&x={x}&y={y}`
+    // VWorld XYZ 타일 (공개 접근)
+    const vwBase = 'https://xdworld.vworld.kr/2d/Base/service/{z}/{x}/{y}.png'
+    const vwSatellite = 'https://xdworld.vworld.kr/2d/Satellite/service/{z}/{x}/{y}.jpeg'
+    const vwHybrid = 'https://xdworld.vworld.kr/2d/Hybrid/service/{z}/{x}/{y}.png'
+    const osmBase = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+    
+    // 지적도는 프록시 경유 (인증 필요)
+    const cadastral = `${origin}/api/tile?layer=lt_c_cadastral&z={z}&x={x}&y={y}`
 
-    const baseLayer = mode === 'map'
-      ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-      : mode === 'satellite'
-        ? tile('Satellite')
-        : tile('Base')
-
-    const cadastralLayer = tile('lt_c_cadastral')
-    const hybridLayer = tile('Hybrid')
-    const safeAddress = (address || '대상지').replace(/'/g, "\\'").replace(/"/g, '&quot;')
+    const baseLayer = mode === 'map' ? osmBase : mode === 'satellite' ? vwSatellite : vwBase
+    const safeAddr = (address || '대상지').replace(/'/g, "\\'").replace(/"/g, '&quot;')
 
     return `<!DOCTYPE html>
 <html><head>
@@ -57,17 +53,32 @@ export function SiteMapPreview({ lng, lat, address, className = "" }: SiteMapPre
 <script>
   var map = L.map('map',{zoomControl:true}).setView([${lat},${lng}],18);
   
-  L.tileLayer('${baseLayer}',{maxZoom:19,attribution:'VWorld | OSM'}).addTo(map);
+  // 기본 레이어
+  var base = L.tileLayer('${baseLayer}',{maxZoom:19,attribution:'VWorld | OSM'});
+  base.on('tileerror', function(){
+    // VWorld 실패 시 OSM으로 fallback
+    base.setUrl('${osmBase}');
+  });
+  base.addTo(map);
   
-  ${mode !== 'map' ? `L.tileLayer('${cadastralLayer}',{maxZoom:19,opacity:${mode === 'cadastral' ? 0.65 : 0.45}}).addTo(map);` : ''}
-  ${mode === 'satellite' ? `L.tileLayer('${hybridLayer}',{maxZoom:19}).addTo(map);` : ''}
+  // 지적도 오버레이
+  ${mode !== 'map' ? `
+  var cad = L.tileLayer('${cadastral}',{maxZoom:19,opacity:${mode === 'cadastral' ? 0.65 : 0.45}});
+  cad.addTo(map);
+  ` : ''}
   
+  // 위성 모드 하이브리드
+  ${mode === 'satellite' ? `
+  L.tileLayer('${vwHybrid}',{maxZoom:19}).addTo(map);
+  ` : ''}
+  
+  // 마커
   var icon = L.divIcon({
     html:'<div style="width:28px;height:28px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 3px 12px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;background:white;border-radius:50%"></div></div>',
     iconSize:[28,28],iconAnchor:[14,14],className:''
   });
   L.marker([${lat},${lng}],{icon:icon}).addTo(map)
-    .bindPopup('<div style="font-size:12px;font-weight:600;max-width:200px">${safeAddress}</div>');
+    .bindPopup('<div style="font-size:12px;font-weight:600;max-width:200px">${safeAddr}</div>');
 <\/script>
 </body></html>`
   }, [lat, lng, mode, address, origin])
@@ -78,13 +89,9 @@ export function SiteMapPreview({ lng, lat, address, className = "" }: SiteMapPre
     return URL.createObjectURL(blob)
   }, [mapHtml])
 
-  const modeLabels: Record<MapMode, string> = {
-    cadastral: '지적도',
-    satellite: '위성+지적',
-    map: '일반',
-  }
-
   if (!blobUrl) return null
+
+  const modeLabels: Record<MapMode, string> = { cadastral: '지적도', satellite: '위성+지적', map: '일반' }
 
   return (
     <div className={`rounded-xl border border-border/60 bg-card overflow-hidden ${className}`}>
@@ -95,15 +102,9 @@ export function SiteMapPreview({ lng, lat, address, className = "" }: SiteMapPre
         </div>
         <div className="flex items-center gap-1">
           {(Object.keys(modeLabels) as MapMode[]).map(m => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${
-                mode === m ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-              }`}
-            >
-              {modeLabels[m]}
-            </button>
+            <button key={m} onClick={() => setMode(m)}
+              className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${mode === m ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+            >{modeLabels[m]}</button>
           ))}
           <button onClick={() => setExpanded(!expanded)} className="ml-1 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
             <Maximize2 className="h-3 w-3" />
