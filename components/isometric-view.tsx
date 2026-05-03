@@ -90,12 +90,20 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, type,
   const W = 520, H = 440
   const cx = W / 2, cy = H * 0.62
 
-  // 건물 크기를 뷰포트에 꽉 차게 스케일 (핵심: 최소 100px 보장)
-  const baseSize = Math.max(100, Math.min(140, 140))
+  // 건물 크기 (고정 큰 값으로 설정)
+  const baseSize = 200
   const siteW = baseSize, siteD = baseSize * 0.8
-  const floorH = Math.min(12, Math.max(7, 150 / Math.max(floors, 2)))
+  const floorH = Math.min(14, Math.max(8, 180 / Math.max(floors, 2)))
   const buildH = floors * floorH
   const bldRatio = Math.sqrt(buildingCoverage / 100) * 0.9
+
+  // viewBox 동적 계산: 건물 영역에 맞게 줌
+  const projW = (siteW * bldRatio + siteD * bldRatio * 0.8) * 0.866 + 60
+  const projH = buildH + siteD * bldRatio * 0.5 + 80
+  const vbW = Math.max(projW * 1.6, 200)
+  const vbH = Math.max(projH * 1.4, 200)
+  const vbX = cx - vbW / 2
+  const vbY = cy - vbH * 0.55
 
   const getBlocks = () => {
     const bW = siteW * bldRatio, bD = siteD * bldRatio
@@ -151,7 +159,7 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, type,
 
   return (
     <div className="w-full">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full bg-slate-950 rounded-lg border border-slate-800">
+      <svg viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`} className="w-full bg-slate-950 rounded-lg border border-slate-800" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="iso-sky2" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#0a0f1e" /><stop offset="60%" stopColor="#0f172a" /><stop offset="100%" stopColor="#1e293b" />

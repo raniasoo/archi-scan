@@ -80,9 +80,7 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   scene.background=new THREE.Color(0x1e293b);
   scene.fog=new THREE.Fog(0x1e293b,200,500);
   
-  var camera=new THREE.PerspectiveCamera(50,W/H,0.1,1000);
-  camera.position.set(0,45,130);
-  camera.lookAt(0,15,0);
+  var camera=new THREE.PerspectiveCamera(45,W/H,0.1,2000);
   
   var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
   renderer.setSize(W,H);
@@ -93,8 +91,8 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   var geo=new THREE.PlaneGeometry(120,120,GRID-1,GRID-1);
   var verts=geo.attributes.position.array;
   
-  // 표고 적용 (높이 과장: 극대화)
-  var exaggeration=eRange<3?20:eRange<8?15:eRange<20?10:7;
+  // 표고 적용 (높이 과장: 극대화 — 반드시 시각적으로 보이도록)
+  var exaggeration=eRange<3?25:eRange<8?18:eRange<20?12:8;
   var maxZ=0;
   for(var i=0;i<GRID*GRID;i++){
     var norm=(elevations[i]-minE)/eRange;
@@ -103,6 +101,10 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
     if(z>maxZ)maxZ=z;
   }
   geo.computeVertexNormals();
+  
+  // 카메라 위치: maxZ 위에서 비스듬히 내려보기
+  camera.position.set(80, maxZ+60, 120);
+  camera.lookAt(0, maxZ*0.3, 0);
   
   // 높이별 색상 (초록→노랑→갈색→흰색)
   var colors=new Float32Array(GRID*GRID*3);

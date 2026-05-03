@@ -94,13 +94,13 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, typ
   const floorH = 3.3 // 층고 (m)
   const totalH = floors * floorH
 
-  // 건물 크기 — 화면에 꽉 차게 (최소 크기 강력 보장)
+  // 건물 크기 — 화면 꽉 차게 (VP 기준 70% 점유)
   const buildingArea = siteArea * (buildingCoverage / 100)
   const sideM = Math.sqrt(buildingArea)
 
-  // 항상 화면의 60%+ 차지하도록 강제 스케일
-  const bw = Math.max(180, Math.min(sideM * 2.5, 280))
-  const bd = Math.max(50, Math.min(sideM * 1.0, 100))
+  // VP_X=200이므로 건물폭은 좌우로 140px씩 = 280px
+  const bw = 280
+  const bd = 70
   const bx = VP_X - bw / 2              // 건물 시작 X
   const bDepth = 20                      // 건물의 깊이 위치
 

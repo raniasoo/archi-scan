@@ -121,48 +121,7 @@ export function BuildingVolume3D({
       grid.position.y = 0.02
       scene.add(grid)
 
-      // 방위 표시 (N 화살표)
-      const compassR = siteSize * 1.2
-      const arrowLen = siteSize * 0.25
-      // 화살표 기둥
-      const nArrowPts = [
-        new THREE.Vector3(0, 0.3, -compassR),
-        new THREE.Vector3(0, 0.3, -compassR - arrowLen)
-      ]
-      scene.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(nArrowPts),
-        new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 })
-      ))
-      // 화살표 머리 (삼각형)
-      const ahSize = arrowLen * 0.35
-      const arrowHeadPts = [
-        new THREE.Vector3(0, 0.3, -compassR - arrowLen),
-        new THREE.Vector3(-ahSize * 0.5, 0.3, -compassR - arrowLen + ahSize),
-        new THREE.Vector3(ahSize * 0.5, 0.3, -compassR - arrowLen + ahSize),
-        new THREE.Vector3(0, 0.3, -compassR - arrowLen),
-      ]
-      const ahGeo = new THREE.BufferGeometry().setFromPoints(arrowHeadPts)
-      scene.add(new THREE.Mesh(ahGeo, new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide })))
-      // N 글자 (원판 + 텍스트)
-      const nCircle = new THREE.Mesh(
-        new THREE.CircleGeometry(ahSize * 0.8, 16),
-        new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide })
-      )
-      nCircle.position.set(0, 0.3, -compassR - arrowLen - ahSize * 1.2)
-      nCircle.rotation.x = -Math.PI / 2
-      scene.add(nCircle)
-      // 나머지 방위 (S/E/W 짧은 선)
-      const compassDirs = [[0, compassR, 'S'], [compassR, 0, 'E'], [-compassR, 0, 'W']]
-      compassDirs.forEach(([dx, dz]) => {
-        const cPts = [
-          new THREE.Vector3(dx * 0.9, 0.3, dz * 0.9),
-          new THREE.Vector3(dx, 0.3, dz)
-        ]
-        scene.add(new THREE.Line(
-          new THREE.BufferGeometry().setFromPoints(cPts),
-          new THREE.LineBasicMaterial({ color: 0x334155 })
-        ))
-      })
+      // (방위 표시는 2D HTML 오버레이로 처리)
 
       // Site floor
       const siteFloor = new THREE.Mesh(
@@ -405,6 +364,15 @@ export function BuildingVolume3D({
           className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
           onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU} onWheel={onW}
         />
+        {/* 지도 스타일 나침반 (우측 상단) */}
+        <div className="absolute top-3 right-3 pointer-events-none">
+          <svg width="44" height="44" viewBox="0 0 44 44">
+            <circle cx="22" cy="22" r="20" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
+            <polygon points="22,4 18,20 22,17 26,20" fill="#ef4444"/>
+            <polygon points="22,40 18,24 22,27 26,24" fill="#94a3b8"/>
+            <text x="22" y="14" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff">N</text>
+          </svg>
+        </div>
       </div>
 
       {/* Legend */}
@@ -414,7 +382,6 @@ export function BuildingVolume3D({
           <span className="flex items-center gap-1"><span className="w-3 h-px bg-amber-400 inline-block"/>이격거리</span>
           <span className="flex items-center gap-1"><span className="w-3 h-px bg-emerald-400 inline-block"/>최상층</span>
           <span className="flex items-center gap-1"><span className="w-3 h-px bg-cyan-400 inline-block"/>5층 단위</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500 rounded-full inline-block"/>N(북)</span>
           {(layoutType === 'courtyard' || layoutType === 'cluster') && (
             <span className="flex items-center gap-1"><span className="w-3 h-px bg-green-500 inline-block"/>중정/조경</span>
           )}
