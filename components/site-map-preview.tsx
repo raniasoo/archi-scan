@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { MapPin, Maximize2 } from "lucide-react"
 
 interface SiteMapPreviewProps {
@@ -12,74 +12,68 @@ interface SiteMapPreviewProps {
 
 type MapMode = 'cadastral' | 'satellite' | 'map'
 
-const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-
 export function SiteMapPreview({ lng, lat, address, className = "" }: SiteMapPreviewProps) {
   const [expanded, setExpanded] = useState(false)
   const [mode, setMode] = useState<MapMode>('cadastral')
+  const [origin, setOrigin] = useState('')
 
-  // Leaflet + VWorld 타일을 사용하는 HTML 생성
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
+
   const mapHtml = useMemo(() => {
-    const height = expanded ? '100%' : '100%'
-    // VWorld 타일 URL
-    const baseLayers: Record<MapMode, { url: string; label: string }> = {
-      cadastral: {
-        url: `https://api.vworld.kr/req/wmts/get?service=WMTS&request=GetTile&version=1.0.0&layer=Base&style=default&tilematrixset=EPSG:3857&TileMatrix={z}&TileRow={y}&TileCol={x}&format=image/png&key=${VWORLD_KEY}&domain=v0-archi-scan-layout-generator.vercel.app`,
-        label: '지적도',
-      },
-      satellite: {
-        url: `https://api.vworld.kr/req/wmts/get?service=WMTS&request=GetTile&version=1.0.0&layer=Satellite&style=default&tilematrixset=EPSG:3857&TileMatrix={z}&TileRow={y}&TileCol={x}&format=image/jpeg&key=${VWORLD_KEY}&domain=v0-archi-scan-layout-generator.vercel.app`,
-        label: '위성',
-      },
-      map: {
-        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        label: '일반',
-      },
-    }
+    if (!origin) return ''
+    
+    // 타일 프록시 URL (절대 경로 — Blob iframe에서도 작동)
+    const tile = (layer: string) =>
+      `${origin}/api/tile?layer=${layer}&z={z}&x={x}&y={y}`
 
-    const cadastralOverlay = `https://api.vworld.kr/req/wmts/get?service=WMTS&request=GetTile&version=1.0.0&layer=lt_c_cadastral&style=default&tilematrixset=EPSG:3857&TileMatrix={z}&TileRow={y}&TileCol={x}&format=image/png&key=${VWORLD_KEY}&domain=v0-archi-scan-layout-generator.vercel.app`
-    const hybridOverlay = `https://api.vworld.kr/req/wmts/get?service=WMTS&request=GetTile&version=1.0.0&layer=Hybrid&style=default&tilematrixset=EPSG:3857&TileMatrix={z}&TileRow={y}&TileCol={x}&format=image/png&key=${VWORLD_KEY}&domain=v0-archi-scan-layout-generator.vercel.app`
+    const baseLayer = mode === 'map'
+      ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+      : mode === 'satellite'
+        ? tile('Satellite')
+        : tile('Base')
+
+    const cadastralLayer = tile('lt_c_cadastral')
+    const hybridLayer = tile('Hybrid')
+    const safeAddress = (address || '대상지').replace(/'/g, "\\'").replace(/"/g, '&quot;')
 
     return `<!DOCTYPE html>
 <html><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   html,body,#map{width:100%;height:100%}
-  .leaflet-control-attribution{font-size:9px!important;opacity:0.6}
+  .leaflet-control-attribution{font-size:9px!important;opacity:0.5}
+  .leaflet-control-zoom{border:none!important}
+  .leaflet-control-zoom a{width:32px!important;height:32px!important;line-height:32px!important;
+    background:rgba(255,255,255,0.9)!important;border:1px solid rgba(0,0,0,0.15)!important;
+    font-size:16px!important;color:#333!important;border-radius:8px!important}
 </style>
 </head><body>
 <div id="map"></div>
 <script>
-  var map = L.map('map',{zoomControl:true,attributionControl:true}).setView([${lat},${lng}],18);
+  var map = L.map('map',{zoomControl:true}).setView([${lat},${lng}],18);
   
-  // 기본 레이어
-  var base = L.tileLayer('${baseLayers[mode].url}',{maxZoom:19,attribution:'VWorld'}).addTo(map);
+  L.tileLayer('${baseLayer}',{maxZoom:19,attribution:'VWorld | OSM'}).addTo(map);
   
-  // 지적도 오버레이 (cadastral/satellite 모드에서 표시)
-  ${mode !== 'map' ? `
-  var cadastral = L.tileLayer('${cadastralOverlay}',{maxZoom:19,opacity:${mode === 'cadastral' ? '0.7' : '0.5'}}).addTo(map);
-  ` : ''}
+  ${mode !== 'map' ? `L.tileLayer('${cadastralLayer}',{maxZoom:19,opacity:${mode === 'cadastral' ? 0.65 : 0.45}}).addTo(map);` : ''}
+  ${mode === 'satellite' ? `L.tileLayer('${hybridLayer}',{maxZoom:19}).addTo(map);` : ''}
   
-  // 위성 모드일 때 하이브리드(도로명) 오버레이
-  ${mode === 'satellite' ? `
-  var hybrid = L.tileLayer('${hybridOverlay}',{maxZoom:19}).addTo(map);
-  ` : ''}
-  
-  // 마커
   var icon = L.divIcon({
-    html:'<div style="width:24px;height:24px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center"><div style="width:8px;height:8px;background:white;border-radius:50%"></div></div>',
-    iconSize:[24,24],iconAnchor:[12,12],className:''
+    html:'<div style="width:28px;height:28px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 3px 12px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;background:white;border-radius:50%"></div></div>',
+    iconSize:[28,28],iconAnchor:[14,14],className:''
   });
   L.marker([${lat},${lng}],{icon:icon}).addTo(map)
-    .bindPopup('<b style="font-size:12px">${(address || '대상지').replace(/'/g, "\\'")}</b>');
+    .bindPopup('<div style="font-size:12px;font-weight:600;max-width:200px">${safeAddress}</div>');
 <\/script>
 </body></html>`
-  }, [lat, lng, mode, expanded, address])
+  }, [lat, lng, mode, address, origin])
 
   const blobUrl = useMemo(() => {
+    if (!mapHtml) return ''
     const blob = new Blob([mapHtml], { type: 'text/html;charset=utf-8' })
     return URL.createObjectURL(blob)
   }, [mapHtml])
@@ -90,9 +84,10 @@ export function SiteMapPreview({ lng, lat, address, className = "" }: SiteMapPre
     map: '일반',
   }
 
+  if (!blobUrl) return null
+
   return (
     <div className={`rounded-xl border border-border/60 bg-card overflow-hidden ${className}`}>
-      {/* 헤더 */}
       <div className="flex items-center justify-between px-3 py-2 bg-secondary/30 border-b border-border/40">
         <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
           <MapPin className="h-3.5 w-3.5 text-primary" />
@@ -110,23 +105,13 @@ export function SiteMapPreview({ lng, lat, address, className = "" }: SiteMapPre
               {modeLabels[m]}
             </button>
           ))}
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="ml-1 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-          >
+          <button onClick={() => setExpanded(!expanded)} className="ml-1 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
             <Maximize2 className="h-3 w-3" />
           </button>
         </div>
       </div>
-
-      {/* 지도 */}
       <div className={`relative ${expanded ? 'h-[350px] sm:h-[450px]' : 'h-[220px] sm:h-[280px]'} transition-all`}>
-        <iframe
-          key={`${mode}-${expanded}`}
-          src={blobUrl}
-          className="w-full h-full border-0"
-          title="대상지 지적도"
-        />
+        <iframe key={`${mode}-${expanded}`} src={blobUrl} className="w-full h-full border-0" title="대상지 지적도" />
         <div className="absolute left-2 bottom-2 px-2 py-0.5 bg-black/50 rounded text-[9px] text-white/80 font-mono pointer-events-none">
           {lat.toFixed(5)}, {lng.toFixed(5)}
         </div>
