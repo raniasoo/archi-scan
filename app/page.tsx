@@ -1004,7 +1004,31 @@ export default function ArchiScanPage() {
       zoneCode: prev.zoneCode || molitMappedZone || prev.zoneCode,
     }))
     
-    // regulation의 접도/지구단위 즉시 업데이트 (zoneType은 applyZoneData에서 설정)
+    // MOLIT 용도지역이 있고 regulation에 아직 설정 안 된 경우 → 직접 반영
+    if (molitMappedZone) {
+      const zoneLabelMap: Record<string, string> = {
+        'residential-exclusive-1': '제1종 전용주거지역',
+        'residential-exclusive-2': '제2종 전용주거지역',
+        'residential-1': '제1종 일반주거지역',
+        'residential-2': '제2종 일반주거지역',
+        'residential-3': '제3종 일반주거지역',
+        'semi-residential': '준주거지역',
+        'commercial-neighborhood': '근린상업지역',
+        'commercial-general': '일반상업지역',
+        'commercial-central': '중심상업지역',
+        'industrial': '준공업지역',
+        'industrial-general': '일반공업지역',
+        'green-natural': '자연녹지지역',
+      }
+      setRegulation(prev => ({
+        ...prev,
+        zoneType: molitMappedZone as any,
+        zoneName: zoneLabelMap[molitMappedZone] || data.zoneType || prev.zoneName,
+      }))
+      console.log('[v0] MOLIT 용도지역 직접 반영:', molitMappedZone, data.zoneType)
+    }
+    
+    // regulation의 접도/지구단위 즉시 업데이트
     const roadNameOnly = roadAddr.replace(/.*[구군시]\s*/,'')
     const earlyRoadWidth = roadNameOnly.includes('대로') ? 25 :
                            roadNameOnly.includes('길') ? 4 :
