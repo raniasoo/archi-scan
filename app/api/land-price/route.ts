@@ -71,7 +71,7 @@ async function fetchFromVworld(pnu: string, entX?: number, entY?: number): Promi
   // LP_PA_CBND_BUBUN에 jiga(공시지가) 필드 직접 조회 (Vercel icn1에서 작동)
   // 하드코딩 키 사용 (env var가 다른 값으로 설정되어도 안전)
   const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-  const VWORLD_DOMAIN = 'archiscan.kr'
+  const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
   
   // PNU로 직접 조회
   if (pnu && pnu.length >= 19) {

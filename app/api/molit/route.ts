@@ -171,6 +171,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Perform real lookup with optional manual parcel
     const result = await lookupSiteData(body.address, manualParcel)
     
+    console.log('[MOLIT-DEBUG] zoneType:', result?.data?.zoneType, '| siteArea:', result?.data?.siteArea, '| address:', body.address)
+    
     return NextResponse.json({ ...result, isDemo: false })
     
   } catch (error) {

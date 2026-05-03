@@ -135,7 +135,7 @@ async function fetchByLURIS(pnu: string): Promise<string | null> {
 // ① Vworld 토지이용계획속성조회 (ned API) - PNU 기반 정식 엔드포인트
 async function fetchByVworldAttr(pnu: string): Promise<string | null> {
   // ned/data/getLandUseAttr: 계획구역 내 토지 이용계획 속성정보 조회
-  const domain = 'archiscan.kr'
+  const domain = 'v0-archi-scan-layout-generator.vercel.app'
   const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${VWORLD_KEY}&domain=${domain}&pnu=${pnu}&cnflcAt=1&numOfRows=100&format=json`
   try {
     const res  = await fetch(url, { signal: AbortSignal.timeout(5000) })

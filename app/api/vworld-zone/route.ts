@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 const KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
-const DOM = 'archiscan.kr'
+const DOM = 'v0-archi-scan-layout-generator.vercel.app'
 const LURIS_URL = 'https://apis.data.go.kr/1611000/nsdi/LandUseService/attr/getLandUsePlan'
 const LURIS_KEY = process.env.MOLIT_API_KEY || '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba5d56d21444098'
 
