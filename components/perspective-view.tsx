@@ -238,10 +238,19 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, typ
   const [dimBotX, dimBotY] = toPersp(bx - 15, bDepth, 0)
   const [dimTopX, dimTopY] = toPersp(bx - 15, bDepth, totalH)
 
+  // viewBox 동적 줌: 건물 영역에 맞춤
+  const [topL] = toPersp(bx, bDepth, totalH)
+  const [, topY] = toPersp(bx + bw / 2, bDepth, totalH)
+  const margin = 40
+  const vbTop = Math.max(0, topY - margin)
+  const vbH = GROUND_Y + 30 - vbTop
+  const vbLeft = Math.max(0, topL - margin)
+  const vbW = W - 2 * vbLeft
+
   return (
     <div className="space-y-1">
       <div className="rounded-xl overflow-hidden border border-border/50 bg-slate-950">
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', background: 'linear-gradient(180deg, #0c1222 0%, #0f172a 40%, #1e293b 100%)' }}>
+        <svg viewBox={`${vbLeft} ${vbTop} ${vbW} ${vbH}`} width="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', background: 'linear-gradient(180deg, #0c1222 0%, #0f172a 40%, #1e293b 100%)' }}>
           {/* 하늘 그라데이션 */}
           <defs>
             <linearGradient id="sky-persp" x1="0" y1="0" x2="0" y2="1">
