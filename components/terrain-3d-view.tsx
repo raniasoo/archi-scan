@@ -81,8 +81,8 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   scene.fog=new THREE.Fog(0x1e293b,200,500);
   
   var camera=new THREE.PerspectiveCamera(50,W/H,0.1,1000);
-  camera.position.set(0,80,100);
-  camera.lookAt(0,0,0);
+  camera.position.set(0,55,120);
+  camera.lookAt(0,10,0);
   
   var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
   renderer.setSize(W,H);
@@ -93,11 +93,11 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   var geo=new THREE.PlaneGeometry(120,120,GRID-1,GRID-1);
   var verts=geo.attributes.position.array;
   
-  // 표고 적용 (높이 과장: 실제 고저차의 3~10배)
-  var exaggeration=eRange<5?10:eRange<15?5:3;
+  // 표고 적용 (높이 과장: 강하게 — 지형 구분이 명확하도록)
+  var exaggeration=eRange<3?15:eRange<8?12:eRange<15?8:5;
   for(var i=0;i<GRID*GRID;i++){
     var norm=(elevations[i]-minE)/eRange;
-    verts[i*3+2]=norm*exaggeration*8; // Z축을 위로
+    verts[i*3+2]=norm*exaggeration*12; // Z축을 위로 (기존 8→12)
   }
   geo.computeVertexNormals();
   
@@ -178,7 +178,7 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   var markerGeo=new THREE.CylinderGeometry(0.3,0.3,15,8);
   var markerMat=new THREE.MeshStandardMaterial({color:0xef4444,emissive:0x991b1b});
   var marker=new THREE.Mesh(markerGeo,markerMat);
-  var centerElev=(elevations[Math.floor(GRID*GRID/2)]-minE)/eRange*exaggeration*8;
+  var centerElev=(elevations[Math.floor(GRID*GRID/2)]-minE)/eRange*exaggeration*12;
   marker.position.set(0,centerElev+8,0);
   scene.add(marker);
   

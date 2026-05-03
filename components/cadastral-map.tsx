@@ -252,6 +252,30 @@ export function CadastralMap({
               </defs>
               <rect width={VIEW_W} height={VIEW_H} fill="url(#cad-grid)" />
 
+              {/* 주변 필지 컨텍스트 (시각적 맥락 제공) */}
+              {svgData.points.length >= 3 && (() => {
+                const cx = svgData.points.reduce((s, p) => s + p.x, 0) / svgData.points.length
+                const cy = svgData.points.reduce((s, p) => s + p.y, 0) / svgData.points.length
+                const margin = 40
+                return (
+                  <g opacity="0.25">
+                    {/* 도로 (하단) */}
+                    <rect x={0} y={VIEW_H - 28} width={VIEW_W} height={28} fill="#334155" rx="2" />
+                    <line x1={20} y1={VIEW_H - 14} x2={VIEW_W - 20} y2={VIEW_H - 14} stroke="#475569" strokeWidth="1" strokeDasharray="8 6" />
+                    <text x={VIEW_W / 2} y={VIEW_H - 8} textAnchor="middle" fontSize="8" fill="#64748b">도 로</text>
+                    {/* 인접 필지 (좌) */}
+                    <rect x={8} y={margin} width={svgData.points[0]?.x - 20 || 40} height={VIEW_H - margin - 35} fill="none" stroke="#475569" strokeWidth="0.8" rx="2" />
+                    <text x={20} y={VIEW_H / 2} fontSize="7" fill="#475569" transform={`rotate(-90,20,${VIEW_H/2})`} textAnchor="middle">인접 필지</text>
+                    {/* 인접 필지 (우) */}
+                    {svgData.points.length > 1 && (
+                      <rect x={(Math.max(...svgData.points.map(p=>p.x)) + 15)} y={margin} width={VIEW_W - Math.max(...svgData.points.map(p=>p.x)) - 25} height={VIEW_H - margin - 35} fill="none" stroke="#475569" strokeWidth="0.8" rx="2" />
+                    )}
+                    {/* 인접 필지 (상) */}
+                    <rect x={margin} y={8} width={VIEW_W - margin * 2} height={Math.min(...svgData.points.map(p=>p.y)) - 15} fill="none" stroke="#475569" strokeWidth="0.8" rx="2" />
+                  </g>
+                )
+              })()}
+
               {/* 대지 영역 */}
               <path
                 d={toSVGPath(svgData.points)}

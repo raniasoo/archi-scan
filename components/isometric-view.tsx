@@ -90,9 +90,11 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, type,
   const W = 520, H = 440
   const cx = W / 2, cy = H * 0.62
 
-  const baseSize = Math.min(80, Math.sqrt(siteArea) * 0.8)
+  // 건물 크기를 뷰포트에 맞게 스케일 (기존 너무 작았음)
+  const rawSize = Math.sqrt(siteArea) * 0.8
+  const baseSize = Math.max(60, Math.min(120, rawSize < 30 ? rawSize * 4 : rawSize < 60 ? rawSize * 2.5 : rawSize * 1.5))
   const siteW = baseSize, siteD = baseSize * 0.8
-  const floorH = Math.min(12, 120 / Math.max(floors, 3))
+  const floorH = Math.min(12, Math.max(6, 120 / Math.max(floors, 3)))
   const buildH = floors * floorH
   const bldRatio = Math.sqrt(buildingCoverage / 100) * 0.9
 
