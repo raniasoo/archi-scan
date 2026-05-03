@@ -35,6 +35,7 @@ import { saveProject as saveProjectToStorage, getRecentProjects, loadProject as 
 import { saveProjectToCloud } from "@/lib/cloud-storage"
 import { SiteVisualsManager } from "@/components/site-visuals-manager"
 import { SiteMapPreview } from "@/components/site-map-preview"
+import { ZoneAllowedUsesCard } from "@/components/zone-allowed-uses-card"
 import { type SiteVisualsConfig, EMPTY_SITE_VISUALS } from "@/lib/site-visuals-config"
 import { type FinancialScenariosConfig, EMPTY_SCENARIOS_CONFIG } from "@/lib/financial-scenarios-config"
 import { ARCHISCAN_COPY, getStrategyName } from "@/constants/archiscan-copy"
@@ -2028,8 +2029,15 @@ export default function ArchiScanPage() {
 
             <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
               {/* Regulation Input */}
-              <div className="order-2 lg:order-1">
+              <div className="order-2 lg:order-1 space-y-4">
                 <RegulationInput regulation={regulation} onChange={setRegulation} />
+                {/* 건축 가능 용도 안내 */}
+                {regulation.zoneType && regulation.zoneType !== 'custom' && (
+                  <ZoneAllowedUsesCard 
+                    zoneType={regulation.zoneType} 
+                    zoneName={regulation.zoneName}
+                  />
+                )}
               </div>
 
               {/* Regulation Analysis + Legal Review */}
