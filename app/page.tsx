@@ -72,6 +72,9 @@ import { AuthButton } from "@/components/auth-button"
 import { StrategySelection } from "@/components/strategy-selection"
 import { AIConceptGenerator } from "@/components/ai-concept-generator"
 import { BuildingGoalSelector } from "@/components/building-goal-selector"
+import { PatternQualityCard } from "@/components/pattern-quality-card"
+import { ValuePrioritySelector } from "@/components/value-priority-selector"
+import { evaluatePatternQuality, type UserValues } from "@/lib/pattern-quality"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
   Building2, 
@@ -507,6 +510,12 @@ export default function ArchiScanPage() {
   const [supplementKey, setSupplementKey] = useState(0)  // 강제 리렌더용
   const [regulation, setRegulation] = useState<ZoningRegulation>(getDefaultRegulation())
   const [strategy, setStrategy] = useState<DesignStrategy>("profitability")
+  const [userValues, setUserValues] = useState<UserValues>({
+    profitVsQuality: 50,
+    privacyVsCommunity: 50,
+    efficiencyVsSpace: 50,
+    selectedPatterns: [],
+  })
   const [supplementData, setSupplementData] = useState<{
     zoneType?: string
     roadWidth?: string
@@ -1998,6 +2007,12 @@ export default function ArchiScanPage() {
               />
             </div>
 
+            {/* 가치 우선순위 (알렉산더 패턴 기반) */}
+            <ValuePrioritySelector
+              values={userValues}
+              onChange={setUserValues}
+            />
+
             <div className="flex items-center gap-3 px-2">
               <div className="h-px flex-1 bg-border" />
               <span className="text-xs text-muted-foreground">또는 직접 전략을 선택하세요</span>
@@ -2487,6 +2502,22 @@ export default function ArchiScanPage() {
                   />
                 )}
               </>
+            )}
+
+            {selectedLayout && selectedLayoutData && (
+              <PatternQualityCard
+                result={evaluatePatternQuality({
+                  type: selectedLayoutData.type || "tower",
+                  name: selectedLayoutData.name,
+                  coverage: selectedLayoutData.coverage,
+                  floors: selectedLayoutData.floors,
+                  units: selectedLayoutData.units || 0,
+                  parking: selectedLayoutData.parking || 0,
+                  gfa: selectedLayoutData.gfa,
+                  siteArea: safeNumber(siteArea, 660),
+                  strategy,
+                }, userValues)}
+              />
             )}
 
             {selectedLayout && selectedLayoutData && (
