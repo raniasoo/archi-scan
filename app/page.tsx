@@ -36,6 +36,7 @@ import { saveProjectToCloud } from "@/lib/cloud-storage"
 import { SiteVisualsManager } from "@/components/site-visuals-manager"
 import { SiteMapPreview } from "@/components/site-map-preview"
 import { ZoneAllowedUsesCard } from "@/components/zone-allowed-uses-card"
+import { ZONE_LAYOUT_CONFIGS, getUseLabel } from "@/lib/zone-layout-config"
 import { type SiteVisualsConfig, EMPTY_SITE_VISUALS } from "@/lib/site-visuals-config"
 import { type FinancialScenariosConfig, EMPTY_SCENARIOS_CONFIG } from "@/lib/financial-scenarios-config"
 import { ARCHISCAN_COPY, getStrategyName } from "@/constants/archiscan-copy"
@@ -265,6 +266,10 @@ function generateLayouts(
     
     // 특징 생성 (clamped 값 사용)
     const features: string[] = []
+    // 건물 용도 표시 (용도지역 기반)
+    if (zoneConfig) {
+      features.push(getUseLabel(zoneConfig.primaryUse))
+    }
     if (typeChars.bestFor.includes(strategy)) {
       features.push("전략 최적화")
     }
@@ -301,12 +306,43 @@ function generateLayouts(
   // 전략에 따른 배치 유형 선택 및 우선순위
   const layouts: LayoutOption[] = []
   
+  // 용도지역 기반 배치안 이름 가져오기
+  const zoneConfig = ZONE_LAYOUT_CONFIGS[regulation.zoneType] || null
+  const getLayoutName = (typeId: string, defaultName: string) => {
+    if (zoneConfig?.layoutNamePrefix[typeId]) {
+      return zoneConfig.layoutNamePrefix[typeId]
+    }
+    return defaultName
+  }
+  const getLayoutDesc = (typeId: string, defaultDesc: string) => {
+    if (zoneConfig) {
+      const use = getUseLabel(zoneConfig.primaryUse)
+      const descs: Record<string, string> = {
+        tower: zoneConfig.primaryUse === 'single-family' ? '대지 효율을 높인 저층 단독주택' :
+               zoneConfig.primaryUse === 'multi-family' ? '소규모 대지에 최적화된 저층 다세대' :
+               zoneConfig.primaryUse === 'commercial-mix' ? `저층 상가 + 상층 주거의 ${use}` :
+               zoneConfig.primaryUse === 'office' ? `대형 업무공간 확보 오피스 타워` :
+               zoneConfig.primaryUse === 'knowledge-industry' ? '제조·연구·사무 복합 지식산업센터' :
+               defaultDesc,
+        courtyard: zoneConfig.primaryUse === 'single-family' ? '중앙 정원 프라이빗 단독주택' :
+                   zoneConfig.primaryUse === 'commercial-mix' ? '오픈몰+주거 복합 중정형' :
+                   defaultDesc,
+        lshape: zoneConfig.primaryUse === 'commercial-mix' ? '상가+주거 복합 ㄱ자형 배치' :
+                defaultDesc,
+      }
+      return descs[typeId] || defaultDesc
+    }
+    return defaultDesc
+  }
+  
   // 타워형 - 고층 개발에 적합
   const tower = calculateLayout(
     "tower",
-    strategy === "view-priority" ? "파노라마 타워형" :
-    strategy === "area-maximize" ? "고밀도 타워형" :
-    strategy === "profitability" ? "수익형 타워" : "컴팩트 타워형",
+    getLayoutName("tower",
+      strategy === "view-priority" ? "파노라마 타워형" :
+      strategy === "area-maximize" ? "고밀도 타워형" :
+      strategy === "profitability" ? "수익형 타워" : "컴팩트 타워형"
+    ),
     45,
     effectiveMaxFloors,
     strategy === "view-priority" 
@@ -323,8 +359,10 @@ function generateLayouts(
   // 중정형 - 커뮤니티/실거주에 적합
   const courtyard = calculateLayout(
     "courtyard",
-    strategy === "livability" ? "라이프스타일 중정형" :
-    strategy === "privacy-priority" ? "프라이빗 중정형" : "커뮤니티 중정형",
+    getLayoutName("courtyard",
+      strategy === "livability" ? "라이프스타일 중정형" :
+      strategy === "privacy-priority" ? "프라이빗 중정형" : "커뮤니티 중정형"
+    ),
     55,
     Math.ceil(effectiveMaxFloors * 0.6),
     strategy === "livability"
@@ -339,8 +377,10 @@ function generateLayouts(
   // ㄱ자형 - 균형잡힌 배치
   const lshape = calculateLayout(
     "lshape",
-    strategy === "parking-efficient" ? "주차 최적 ㄱ자형" :
-    strategy === "privacy-priority" ? "독립 동선 ㄱ자형" : "코너 활용 ㄱ자형",
+    getLayoutName("lshape",
+      strategy === "parking-efficient" ? "주차 최적 ㄱ자형" :
+      strategy === "privacy-priority" ? "독립 동선 ㄱ자형" : "코너 활용 ㄱ자형"
+    ),
     50,
     Math.ceil(effectiveMaxFloors * 0.75),
     strategy === "parking-efficient"
