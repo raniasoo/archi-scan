@@ -16,7 +16,7 @@ interface PerspectiveViewProps {
 const VP_X = 200 // 소실점 X
 const VP_Y = 80  // 소실점 Y (하늘 위쪽)
 const GROUND_Y = 350 // 지면 기준선
-const SCALE = 0.45 // 원근 스케일
+const SCALE = 0.85 // 원근 스케일 (0.45→0.85 확대)
 
 function toPersp(x3d: number, y3d: number, z3d: number): [number, number] {
   // y3d = 깊이(앞뒤), z3d = 높이, x3d = 좌우

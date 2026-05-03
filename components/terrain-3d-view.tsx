@@ -150,7 +150,7 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
           }
         };
         img.onerror=function(){loaded++;if(loaded>=total){texture.needsUpdate=true;loadCadastral();}};
-        img.src='https://xdworld.vworld.kr/2d/Base/service/'+z+'/'+(tx+ddx)+'/'+(ty+ddy)+'.png';
+        img.src='${origin}/api/tile?layer=Base&z='+z+'&x='+(tx+ddx)+'&y='+(ty+ddy);
       })(dx,dy);
     }
   }
@@ -164,7 +164,7 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
           img.crossOrigin='anonymous';
           img.onload=function(){
             var px=(ddx+1)*(512/3), py=(ddy+1)*(512/3);
-            ctx.globalAlpha=0.6;
+            ctx.globalAlpha=0.8;
             ctx.drawImage(img,px,py,512/3,512/3);
             ctx.globalAlpha=1;
             cLoaded++;
