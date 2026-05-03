@@ -37,6 +37,7 @@ import { SiteVisualsManager } from "@/components/site-visuals-manager"
 import { SiteMapPreview } from "@/components/site-map-preview"
 import { ZoneAllowedUsesCard } from "@/components/zone-allowed-uses-card"
 import { ZONE_LAYOUT_CONFIGS, getUseLabel } from "@/lib/zone-layout-config"
+import { SlopeAnalysisCard } from "@/components/slope-analysis-card"
 import { type SiteVisualsConfig, EMPTY_SITE_VISUALS } from "@/lib/site-visuals-config"
 import { type FinancialScenariosConfig, EMPTY_SCENARIOS_CONFIG } from "@/lib/financial-scenarios-config"
 import { ARCHISCAN_COPY, getStrategyName } from "@/constants/archiscan-copy"
@@ -1857,11 +1858,15 @@ export default function ArchiScanPage() {
               
               {/* 대상지 위치 지도 */}
               {siteCoords && (
-                <div className="mt-4">
+                <div className="mt-4 space-y-3">
                   <SiteMapPreview
                     lng={siteCoords.lng}
                     lat={siteCoords.lat}
                     address={address}
+                  />
+                  <SlopeAnalysisCard
+                    lng={siteCoords.lng}
+                    lat={siteCoords.lat}
                   />
                 </div>
               )}
