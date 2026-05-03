@@ -70,6 +70,8 @@ import { toast } from "sonner"
 import { optimizeLayout, type OptimizationReport } from "@/lib/layout-optimizer"
 import { AuthButton } from "@/components/auth-button"
 import { StrategySelection } from "@/components/strategy-selection"
+import { AIConceptGenerator } from "@/components/ai-concept-generator"
+import { BuildingGoalSelector } from "@/components/building-goal-selector"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
   Building2, 
@@ -1986,6 +1988,22 @@ export default function ArchiScanPage() {
               </Button>
             </div>
 
+            {/* 건물 목표 선택 (감성적 입력) */}
+            <div className="border border-primary/20 rounded-xl p-4 bg-gradient-to-br from-primary/5 to-blue-500/5">
+              <BuildingGoalSelector
+                onRecommend={(strategies) => {
+                  if (strategies.length > 0) setStrategy(strategies[0])
+                }}
+                onSkip={() => {}}
+              />
+            </div>
+
+            <div className="flex items-center gap-3 px-2">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">또는 직접 전략을 선택하세요</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
             <StrategySelection 
   selected={strategy} 
   onChange={setStrategy}
@@ -2469,6 +2487,25 @@ export default function ArchiScanPage() {
                   />
                 )}
               </>
+            )}
+
+            {selectedLayout && selectedLayoutData && (
+              <AIConceptGenerator
+                input={{
+                  address,
+                  zoneType: regulation.zoneType,
+                  zoneName: molitSupplementData.zoneLabel || regulation.zoneType,
+                  siteArea: safeNumber(siteArea, 660),
+                  layoutName: selectedLayoutData.name,
+                  floors: selectedLayoutData.floors,
+                  units: selectedLayoutData.units || 0,
+                  buildingCoverageRatio: selectedLayoutData.coverage,
+                  floorAreaRatio: Math.round((selectedLayoutData.gfa / safeNumber(siteArea, 660)) * 100),
+                  roi: selectedLayoutData.feasibility?.roi || 0,
+                  totalProjectCost: selectedLayoutData.feasibility?.totalProjectCost || 0,
+                  strategy,
+                }}
+              />
             )}
 
             {selectedLayout && (

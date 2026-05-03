@@ -160,6 +160,80 @@ export function LandingPage({ onStart }: LandingPageProps) {
         </div>
       </section>
 
+      {/* Analysis Preview — 실제 결과물 미리보기 */}
+      <section className="py-16 md:py-24 border-t border-border/50">
+        <div className="max-w-5xl mx-auto px-5">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold text-emerald-500 tracking-widest uppercase mb-3">실제 분석 결과</p>
+            <h2 className="text-2xl md:text-3xl font-bold">주소 하나로 이만큼 나옵니다</h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-4">
+            {/* 대지 분석 카드 */}
+            <div className="rounded-xl border border-border/50 bg-card/50 p-5 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-blue-500">
+                <MapPin className="h-4 w-4" />
+                대지 분석
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">용도지역</span><span className="font-semibold">제3종일반주거지역</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">대지면적</span><span className="font-semibold">660㎡</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">건폐율</span><span className="font-semibold">50%</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">용적률</span><span className="font-semibold">300%</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">경사도</span><span className="font-semibold text-green-500">완경사 3.2%</span></div>
+              </div>
+              <div className="h-16 rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center text-[10px] text-muted-foreground">
+                🗺 2D 지적도 + 3D 지형도
+              </div>
+            </div>
+
+            {/* 배치안 카드 */}
+            <div className="rounded-xl border border-border/50 bg-card/50 p-5 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-purple-500">
+                <Sparkles className="h-4 w-4" />
+                AI 배치안 (4종 자동 생성)
+              </div>
+              <div className="space-y-1.5">
+                {[
+                  { name: "고밀도 타워형", roi: "28.9%", color: "text-emerald-500" },
+                  { name: "파노라마 타워형", roi: "22.1%", color: "text-blue-500" },
+                  { name: "수익형 타워", roi: "31.4%", color: "text-emerald-500" },
+                  { name: "컴팩트 중정형", roi: "18.7%", color: "text-amber-500" },
+                ].map(l => (
+                  <div key={l.name} className="flex justify-between items-center text-xs p-1.5 rounded bg-muted/30">
+                    <span>{l.name}</span>
+                    <span className={`font-bold ${l.color}`}>ROI {l.roi}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-purple-500 font-medium">
+                <Sparkles className="h-3 w-3" />
+                NEW: AI 건축 컨셉 이미지 프롬프트 자동 생성
+              </div>
+            </div>
+
+            {/* 사업성 카드 */}
+            <div className="rounded-xl border border-border/50 bg-card/50 p-5 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-500">
+                <BarChart3 className="h-4 w-4" />
+                사업성 분석
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">총사업비</span><span className="font-semibold">70.4억원</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">예상수익</span><span className="font-semibold text-emerald-500">20.4억원</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">ROI</span><span className="font-bold text-emerald-500 text-sm">28.9%</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">손익분기 분양률</span><span className="font-semibold">77.6%</span></div>
+              </div>
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-center">
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">✅ 투자 적정 (사업 추진 권고)</span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-center text-[10px] text-muted-foreground mt-4">* 서울시 제3종일반주거지역 660㎡ 기준 예시 결과입니다</p>
+        </div>
+      </section>
+
       {/* Trust / Checklist */}
       <section className="py-16 md:py-24 border-t border-border/50">
         <div className="max-w-3xl mx-auto px-5">
