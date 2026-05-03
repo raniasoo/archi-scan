@@ -27,32 +27,48 @@ export async function GET(req: NextRequest) {
 
     const locations = points.map(p => `${p.lat},${p.lng}`).join('|')
 
-    // Open Elevation API (무료, 글로벌 DEM 데이터)
-    const res = await fetch('https://api.open-elevation.com/api/v1/lookup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        locations: points.map(p => ({ latitude: p.lat, longitude: p.lng }))
-      }),
-    })
-
     let elevations: number[] = []
 
-    if (res.ok) {
-      const data = await res.json()
-      elevations = data.results?.map((r: any) => r.elevation) || []
-    }
-
-    // Open Elevation 실패 시 Open-Meteo Elevation API fallback
-    if (elevations.length === 0) {
+    // 1순위: Open-Meteo Elevation API (무료, 안정적, 인증 불필요)
+    try {
       const lats = points.map(p => p.lat).join(',')
       const lngs = points.map(p => p.lng).join(',')
-      const fallbackRes = await fetch(
-        `https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`
+      const meteoRes = await fetch(
+        `https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`,
+        { signal: AbortSignal.timeout(8000) }
       )
-      if (fallbackRes.ok) {
-        const fallbackData = await fallbackRes.json()
-        elevations = fallbackData.elevation || []
+      if (meteoRes.ok) {
+        const meteoData = await meteoRes.json()
+        if (Array.isArray(meteoData.elevation) && meteoData.elevation.length >= 5) {
+          elevations = meteoData.elevation
+          console.log(`[elevation] Open-Meteo OK: ${elevations.length}pts, center=${elevations[0]}m`)
+        }
+      }
+    } catch (e) {
+      console.log(`[elevation] Open-Meteo err: ${e}`)
+    }
+
+    // 2순위: Open Elevation API (불안정할 수 있음)
+    if (elevations.length < 5) {
+      try {
+        const res = await fetch('https://api.open-elevation.com/api/v1/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            locations: points.map(p => ({ latitude: p.lat, longitude: p.lng }))
+          }),
+          signal: AbortSignal.timeout(6000),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          const results = data?.results
+          if (Array.isArray(results) && results.length >= 5) {
+            elevations = results.map((r: any) => r.elevation)
+            console.log(`[elevation] OpenElevation OK: ${elevations.length}pts`)
+          }
+        }
+      } catch (e) {
+        console.log(`[elevation] OpenElevation err: ${e}`)
       }
     }
 

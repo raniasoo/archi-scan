@@ -53,6 +53,11 @@ async function fetchLURIS(pnu: string): Promise<string | null> {
     const res = await fetch(url, { signal: AbortSignal.timeout(7000) })
     const text = await res.text()
     console.log(`[LURIS] s=${res.status} len=${text.length}`)
+    // 500 에러 시 즉시 null (VWorld fallback으로)
+    if (res.status >= 500) {
+      console.log(`[LURIS] 서버 에러 ${res.status}, VWorld fallback 전환`)
+      return null
+    }
     if (text.trim().startsWith('<')) {
       const m = text.match(/<prposArea1Nm>(.*?)<\/prposArea1Nm>/) || text.match(/<prposArea1>(.*?)<\/prposArea1>/)
       if (m?.[1]) return m[1]
@@ -73,16 +78,52 @@ async function fetchVworld(pnu: string): Promise<{zoneType: string, hasDistrict:
   const result = { zoneType: '', hasDistrict: false, allItems: [] as {code:string,name:string}[] }
   try {
     const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${KEY}&domain=${DOM}&pnu=${pnu}&cnflcAt=1&numOfRows=100&format=json`
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
-    if (!res.ok) return result
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        'Referer': `https://${DOM}`,
+        'Origin': `https://${DOM}`,
+      }
+    })
+    console.log(`[Vworld NED] s=${res.status} pnu=${pnu}`)
+    if (!res.ok) {
+      console.log(`[Vworld NED] HTTP ${res.status}`)
+      return result
+    }
     const j = await res.json()
     const list: Record<string,string>[] = j?.landUses?.field || []
+    console.log(`[Vworld NED] items=${list.length}`)
     result.allItems = list.map(i=>({code:i.prposAreaDstrcCode||'',name:i.prposAreaDstrcCodeNm||''}))
     const zoneItem = list.find(item => /^UQA[1-4]\d{2}$/.test(item?.prposAreaDstrcCode || ''))
     result.hasDistrict = list.some(item => (item?.prposAreaDstrcCode||'').startsWith('UQQ3') || (item?.prposAreaDstrcCodeNm||'').includes('지구단위계획'))
     result.zoneType = zoneItem?.prposAreaDstrcCodeNm || ''
-  } catch (e) { console.log(`[Vworld] err: ${e}`) }
+  } catch (e) { console.log(`[Vworld NED] err: ${e}`) }
   return result
+}
+
+// 3순위: Vworld WFS 토지이용계획 (NED 실패 시 대안)
+async function fetchVworldWFS(pnu: string): Promise<string> {
+  try {
+    const url = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_luris&srsName=EPSG:4326&key=${KEY}&domain=${DOM}&pnu=${pnu}&outputType=json&maxFeatures=10`
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        'Referer': `https://${DOM}`,
+        'Origin': `https://${DOM}`,
+      }
+    })
+    if (!res.ok) return ''
+    const j = await res.json()
+    const features = j?.features || []
+    for (const f of features) {
+      const name = f?.properties?.prposArea1Nm || f?.properties?.prposAreaDstrcCodeNm || ''
+      if (name && toCode(name)) {
+        console.log(`[Vworld WFS] found: ${name}`)
+        return name
+      }
+    }
+  } catch (e) { console.log(`[Vworld WFS] err: ${e}`) }
+  return ''
 }
 
 // GET: 디버그
@@ -96,7 +137,8 @@ export async function GET(req: NextRequest) {
   }
   const luris = await fetchLURIS(pnu)
   const vworld = await fetchVworld(pnu)
-  return NextResponse.json({ pnu, luris, vworld })
+  const wfs = (!luris && !vworld.zoneType) ? await fetchVworldWFS(pnu) : null
+  return NextResponse.json({ pnu, luris, vworld, wfs })
 }
 
 export async function POST(req: NextRequest) {
@@ -116,13 +158,22 @@ export async function POST(req: NextRequest) {
     source = 'luris'
   }
 
-  // 2순위: Vworld
+  // 2순위: Vworld NED
   const vw = await fetchVworld(pnu)
   if (!zoneType && vw.zoneType) {
     zoneType = vw.zoneType
     source = 'vworld-ned'
   }
   hasDistrict = vw.hasDistrict
+
+  // 3순위: Vworld WFS (LURIS + NED 모두 실패 시)
+  if (!zoneType) {
+    const wfsZone = await fetchVworldWFS(pnu)
+    if (wfsZone && toCode(wfsZone)) {
+      zoneType = wfsZone
+      source = 'vworld-wfs'
+    }
+  }
 
   if (lurisZone && vw.zoneType && lurisZone !== vw.zoneType) {
     console.log(`[zone] DIFF luris="${lurisZone}" vworld="${vw.zoneType}"`)
@@ -134,7 +185,7 @@ export async function POST(req: NextRequest) {
     success: true, pnu, zoneType, zoneCode,
     heightLimit: HEIGHT[zoneCode]||null, coverageRatio: BCR[zoneCode]||null, floorAreaRatio: FAR[zoneCode]||null,
     hasDistrictPlan: hasDistrict, source,
-    _debug: { input: { sigunguCd, bjdongCd, bun, ji }, luris: lurisZone, vworld: vw.zoneType, allItems: vw.allItems }
+    _debug: { input: { sigunguCd, bjdongCd, bun, ji }, luris: lurisZone, vworld: vw.zoneType, wfs: zoneType !== vw.zoneType && source === 'vworld-wfs' ? zoneType : null, allItems: vw.allItems }
   })
 }
 // trigger rebuild 1777307958
