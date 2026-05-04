@@ -2183,10 +2183,62 @@ export async function lookupSiteData(
       status: 'network-error',
       message: error instanceof Error ? error.message : String(error),
     }
+    
+    // MOLIT 건축물대장 실패해도 용도지역은 별도로 조회 시도
+    let zoneType: string | undefined
+    let entX: number | undefined
+    let entY: number | undefined
+    let bdMgtSnVal: string | undefined
+    
+    // Juso 결과에서 좌표와 bdMgtSn 가져오기
+    const diagJuso = diagnostics.jusoResult as Record<string, unknown> | undefined
+    if (diagJuso?.entX) entX = diagJuso.entX as number
+    if (diagJuso?.entY) entY = diagJuso.entY as number
+    if (diagJuso?.bdMgtSn) bdMgtSnVal = diagJuso.bdMgtSn as string
+    
+    try {
+      // 1차: MOLIT 지역지구 API
+      if (sigunguCd && bjdongCd && bun && ji) {
+        console.log(`[MOLIT-CATCH] 용도지역 별도 조회: ${sigunguCd}-${bjdongCd}-${bun}-${ji}`)
+        const zoneResult = await fetchZoneType(sigunguCd, bjdongCd, bun, ji, getApiKey())
+        if (zoneResult) {
+          zoneType = zoneResult
+          console.log(`[MOLIT-CATCH] 용도지역 조회 성공: ${zoneType}`)
+        }
+      }
+      
+      // 2차: VWorld 좌표 기반
+      if (!zoneType && entX && entY) {
+        console.log(`[MOLIT-CATCH] VWorld 좌표 기반 용도지역 조회: ${entX}, ${entY}`)
+        const coordZone = await fetchZoneTypeByCoord(entX, entY)
+        if (coordZone) {
+          zoneType = coordZone
+          console.log(`[MOLIT-CATCH] VWorld 용도지역 성공: ${zoneType}`)
+        }
+      }
+    } catch (zoneErr) {
+      console.warn('[MOLIT-CATCH] 용도지역 조회도 실패:', zoneErr)
+    }
+    
     return {
       success: false,
       error: '건축물대장 조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
       diagnostics,
+      // Juso 성공 시 부분 데이터라도 반환 (용도지역, 좌표, 면적)
+      data: (zoneType || entX) ? {
+        address: normalizedAddress,
+        roadAddress: (diagJuso?.roadAddr as string) || normalizedAddress,
+        zoneType: zoneType || undefined,
+        entX,
+        entY,
+        bdMgtSn: bdMgtSnVal,
+        sigunguCd,
+        bjdongCd,
+        bun,
+        ji,
+        dataSource: 'juso-only' as const,
+        fetchedAt: new Date().toISOString(),
+      } : undefined,
     }
   }
 }
