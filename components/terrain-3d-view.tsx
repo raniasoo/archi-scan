@@ -40,22 +40,13 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
 
     // 표고 데이터 (12x12 = 144개 — URL 길이 제한 내)
     const DATA_GRID = 12, RANGE = 0.004
-    const MESH_GRID = 40 // 메시 세분화 (보간)
-    const pts: Array<{ lat: number; lng: number }> = []
-    for (let gy = 0; gy < DATA_GRID; gy++)
-      for (let gx = 0; gx < DATA_GRID; gx++)
-        pts.push({
-          lat: lat + RANGE - (gy / (DATA_GRID - 1)) * RANGE * 2,
-          lng: lng - RANGE + (gx / (DATA_GRID - 1)) * RANGE * 2,
-        })
+    const MESH_GRID = 40
 
     let rawElevations: number[]
     try {
-      const lats = pts.map(p => p.lat.toFixed(6)).join(',')
-      const lngs = pts.map(p => p.lng.toFixed(6)).join(',')
-      const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`)
+      const r = await fetch(`/api/elevation-grid?lat=${lat}&lng=${lng}&grid=${DATA_GRID}&range=${RANGE}`)
       const d = await r.json()
-      rawElevations = d.elevation || new Array(DATA_GRID * DATA_GRID).fill(0)
+      rawElevations = d.elevations?.length ? d.elevations : new Array(DATA_GRID * DATA_GRID).fill(0)
     } catch {
       rawElevations = new Array(DATA_GRID * DATA_GRID).fill(0)
     }
