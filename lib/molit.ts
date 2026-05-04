@@ -2207,13 +2207,38 @@ export async function lookupSiteData(
         }
       }
       
-      // 2차: VWorld 좌표 기반
-      if (!zoneType && entX && entY) {
-        console.log(`[MOLIT-CATCH] VWorld 좌표 기반 용도지역 조회: ${entX}, ${entY}`)
-        const coordZone = await fetchZoneTypeByCoord(entX, entY)
-        if (coordZone) {
-          zoneType = coordZone
-          console.log(`[MOLIT-CATCH] VWorld 용도지역 성공: ${zoneType}`)
+      // 2차: VWorld 좌표 기반 (지오코딩 → 좌표 → 용도지역)
+      if (!zoneType) {
+        try {
+          // 먼저 주소로 좌표를 얻음
+          const geoParams = new URLSearchParams({
+            service: 'address', request: 'getcoord', version: '2.0',
+            crs: 'EPSG:4326', refine: 'true', simple: 'false',
+            format: 'json', type: 'ROAD',
+            key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+            address: normalizedAddress,
+          })
+          const geoRes = await fetch(`https://api.vworld.kr/req/address?${geoParams}`, {
+            signal: AbortSignal.timeout(5000),
+            headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+          })
+          if (geoRes.ok) {
+            const geoData = await geoRes.json()
+            const point = geoData?.response?.result?.point
+            if (point?.x && point?.y) {
+              entX = parseFloat(point.x)
+              entY = parseFloat(point.y)
+              console.log(`[MOLIT-CATCH] VWorld 지오코딩 성공: ${entX}, ${entY}`)
+              
+              const coordZone = await fetchZoneTypeByCoord(entX, entY)
+              if (coordZone) {
+                zoneType = coordZone
+                console.log(`[MOLIT-CATCH] VWorld 좌표 기반 용도지역 성공: ${zoneType}`)
+              }
+            }
+          }
+        } catch (geoErr) {
+          console.warn('[MOLIT-CATCH] VWorld 지오코딩 실패:', geoErr)
         }
       }
     } catch (zoneErr) {
