@@ -2065,7 +2065,8 @@ export async function lookupSiteData(
     
     // 5단계: 좌표 기반 VWorld 용도지역 (MOLIT 0건 + PNU도 실패 시)
     if (!vworldZoneType) {
-      const addr = (diagJusoEmpty?.roadAddr as string) || (diagJusoEmpty?.rawResponse as any)?.roadAddr || normalizedAddress
+      // normalizedAddress 사용 (괄호 제거된 깨끗한 주소)
+      const addr = normalizedAddress
       if (addr) {
         try {
           console.log(`[VWORLD-GEO] MOLIT 0건 경로 - 지오코딩 시도: ${addr}`)
