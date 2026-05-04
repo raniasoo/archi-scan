@@ -16,7 +16,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
   const [loading, setLoading] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameRef = useRef<number>(0)
-  const rotationRef = useRef({ x: 0.35, y: 0.5 })
+  const rotationRef = useRef({ x: 0.3, y: 0.6 })
   const zoomRef = useRef(1)
   const isDragging = useRef(false)
   const lastMouse = useRef({ x: 0, y: 0 })
@@ -30,6 +30,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
 
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0x1a2332)
+    scene.fog = new THREE.Fog(0x1a2332, 200, 500)
 
     const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 2000)
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
@@ -61,16 +62,38 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     const minE = Math.min(...elevations), maxE = Math.max(...elevations)
     const eRange = Math.max(maxE - minE, 1)
 
-    // 지형 메시
-    const geo = new THREE.PlaneGeometry(120, 120, GRID - 1, GRID - 1)
+    // 지형 메시 (작은 메시 = 가까이서 보기)
+    const geo = new THREE.PlaneGeometry(80, 80, GRID - 1, GRID - 1)
     const verts = geo.attributes.position.array as Float32Array
-    const exag = eRange < 3 ? 40 : eRange < 8 ? 30 : eRange < 20 ? 20 : 15
+    const exag = eRange < 3 ? 50 : eRange < 8 ? 35 : eRange < 20 ? 25 : 18
     let maxZ = 0
+
+    // 1차: 실제 표고 적용
     for (let i = 0; i < GRID * GRID; i++) {
       const norm = (elevations[i] - minE) / eRange
-      const z = norm * exag * 20
-      verts[i * 3 + 2] = z
-      if (z > maxZ) maxZ = z
+      verts[i * 3 + 2] = norm * exag * 20
+    }
+
+    // 2차: 이웃 차이 기반 미세 굴곡 추가 (표면 거칠기)
+    const roughness = new Float32Array(GRID * GRID)
+    for (let gy = 1; gy < GRID - 1; gy++) {
+      for (let gx = 1; gx < GRID - 1; gx++) {
+        const idx = gy * GRID + gx
+        const dN = elevations[idx] - elevations[(gy - 1) * GRID + gx]
+        const dS = elevations[idx] - elevations[(gy + 1) * GRID + gx]
+        const dE = elevations[idx] - elevations[gy * GRID + gx + 1]
+        const dW = elevations[idx] - elevations[gy * GRID + gx - 1]
+        const localSlope = Math.abs(dN) + Math.abs(dS) + Math.abs(dE) + Math.abs(dW)
+        // 경사가 급한 곳일수록 더 울퉁불퉁하게
+        const noise = (Math.sin(gx * 3.7 + gy * 2.3) * 0.5 + Math.cos(gx * 1.3 - gy * 4.1) * 0.3) * localSlope * 0.15
+        roughness[idx] = noise
+      }
+    }
+
+    for (let i = 0; i < GRID * GRID; i++) {
+      verts[i * 3 + 2] += roughness[i] * exag * 0.8
+      if (verts[i * 3 + 2] > maxZ) maxZ = verts[i * 3 + 2]
+      if (verts[i * 3 + 2] < 0) verts[i * 3 + 2] = 0
     }
     geo.computeVertexNormals()
 
@@ -175,7 +198,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     infoDiv.innerHTML = `▲ ${maxE.toFixed(0)}m &nbsp;▼ ${minE.toFixed(0)}m &nbsp;차이 ${eRange.toFixed(0)}m`
 
     // 애니메이션
-    const camDist = Math.max(maxZ * 0.8, 80) + 100
+    const camDist = Math.max(maxZ * 0.6, 60) + 60
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate)
       const rx = Math.max(0.1, Math.min(1.2, rotationRef.current.x))
