@@ -795,7 +795,7 @@ async function tryEndpointList(
       message: result.message,
     })
     
-    if (finalResult.data) {
+    if (result.data) {
       console.log(`[MOLIT] Found data via ${endpointConfig.name} (${endpointConfig.family || 'current'})`)
       return { result, endpointUsed: endpointConfig.name, family: endpointConfig.family || 'current' }
     }
