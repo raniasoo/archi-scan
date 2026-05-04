@@ -13,10 +13,14 @@ export async function GET(request: Request) {
       buildingName: result.data?.buildingName,
       siteArea: result.data?.siteArea,
       zoneType: result.data?.zoneType,
+      dataSource: result.data?.dataSource,
+      entX: result.data?.entX,
+      entY: result.data?.entY,
       lookupPath: result.diagnostics?.lookupPath,
       jusoSuccess: result.diagnostics?.jusoResult?.success,
       jusoError: result.diagnostics?.jusoResult?.error,
       error: result.error,
+      hasData: !!result.data,
     })
   } catch (err: unknown) {
     return NextResponse.json({ error: String(err), inputAddress: address })
