@@ -38,26 +38,45 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.shadowMap.enabled = true
 
-    // 표고 데이터
-    const GRID = 40, RANGE = 0.005
+    // 표고 데이터 (12x12 = 144개 — URL 길이 제한 내)
+    const DATA_GRID = 12, RANGE = 0.004
+    const MESH_GRID = 40 // 메시 세분화 (보간)
     const pts: Array<{ lat: number; lng: number }> = []
-    for (let gy = 0; gy < GRID; gy++)
-      for (let gx = 0; gx < GRID; gx++)
+    for (let gy = 0; gy < DATA_GRID; gy++)
+      for (let gx = 0; gx < DATA_GRID; gx++)
         pts.push({
-          lat: lat + RANGE - (gy / (GRID - 1)) * RANGE * 2,
-          lng: lng - RANGE + (gx / (GRID - 1)) * RANGE * 2,
+          lat: lat + RANGE - (gy / (DATA_GRID - 1)) * RANGE * 2,
+          lng: lng - RANGE + (gx / (DATA_GRID - 1)) * RANGE * 2,
         })
 
-    let elevations: number[]
+    let rawElevations: number[]
     try {
       const lats = pts.map(p => p.lat.toFixed(6)).join(',')
       const lngs = pts.map(p => p.lng.toFixed(6)).join(',')
       const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`)
       const d = await r.json()
-      elevations = d.elevation || new Array(GRID * GRID).fill(0)
+      rawElevations = d.elevation || new Array(DATA_GRID * DATA_GRID).fill(0)
     } catch {
-      elevations = new Array(GRID * GRID).fill(0)
+      rawElevations = new Array(DATA_GRID * DATA_GRID).fill(0)
     }
+
+    // 12x12 → 40x40 바이리니어 보간
+    const elevations = new Array(MESH_GRID * MESH_GRID).fill(0)
+    for (let my = 0; my < MESH_GRID; my++) {
+      for (let mx = 0; mx < MESH_GRID; mx++) {
+        const fx = mx / (MESH_GRID - 1) * (DATA_GRID - 1)
+        const fy = my / (MESH_GRID - 1) * (DATA_GRID - 1)
+        const ix = Math.min(Math.floor(fx), DATA_GRID - 2)
+        const iy = Math.min(Math.floor(fy), DATA_GRID - 2)
+        const dx = fx - ix, dy = fy - iy
+        const e00 = rawElevations[iy * DATA_GRID + ix]
+        const e10 = rawElevations[iy * DATA_GRID + ix + 1]
+        const e01 = rawElevations[(iy + 1) * DATA_GRID + ix]
+        const e11 = rawElevations[(iy + 1) * DATA_GRID + ix + 1]
+        elevations[my * MESH_GRID + mx] = e00 * (1 - dx) * (1 - dy) + e10 * dx * (1 - dy) + e01 * (1 - dx) * dy + e11 * dx * dy
+      }
+    }
+    const GRID = MESH_GRID
 
     const minE = Math.min(...elevations), maxE = Math.max(...elevations)
     const eRange = Math.max(maxE - minE, 1)
