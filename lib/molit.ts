@@ -1594,6 +1594,9 @@ export async function lookupSiteData(
   // platGbCd from manual override (default '0')
   let platGbCd = '0'
   
+  // jusoResult를 try 블록에서도 접근할 수 있도록 상위 스코프에 선언
+  let jusoResult: JusoResolutionResult | null = null
+  
   // ========================================
   // Step 0: Check for manual parcel override (skip Juso)
   // ========================================
@@ -1643,7 +1646,7 @@ export async function lookupSiteData(
     // ========================================
     // Step 1: Try address resolution via Juso API
     // ========================================
-    const jusoResult = await resolveAddressWithJuso(normalizedAddress)
+    jusoResult = await resolveAddressWithJuso(normalizedAddress)
     
     // Store Juso diagnostics with raw response
     diagnostics.jusoResult = {
