@@ -50,7 +50,18 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     renderer.shadowMap.enabled = true
 
     // 표고 데이터 (12x12 = 144개 — URL 길이 제한 내)
-    const DATA_GRID = 10, RANGE = 0.004
+    // RANGE를 필지 크기에 맞게 자동 조정
+    let RANGE = 0.004 // 기본: ~400m 반경
+    if (sitePolygon?.coords?.length > 2) {
+      const lngs = sitePolygon.coords.map(c => c[0])
+      const lats = sitePolygon.coords.map(c => c[1])
+      const spanLng = Math.max(...lngs) - Math.min(...lngs)
+      const spanLat = Math.max(...lats) - Math.min(...lats)
+      const maxSpan = Math.max(spanLng, spanLat)
+      // 필지가 화면의 25~35% 차지하도록 (최소 0.0005 = 55m)
+      RANGE = Math.max(maxSpan * 2, 0.0005)
+    }
+    const DATA_GRID = 10
     const MESH_GRID = 40
 
     let rawElevations: number[]
@@ -226,12 +237,31 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
         
         // 경계선 (파란색 굵은 선)
         const bGeo = new THREE.BufferGeometry().setFromPoints(boundaryPts)
-        const bMat = new THREE.LineBasicMaterial({ color: 0x3b82f6, linewidth: 2 })
+        const bMat = new THREE.LineBasicMaterial({ color: 0x3b82f6, linewidth: 3 })
         scene.add(new THREE.Line(bGeo, bMat))
         
-        // 경계선 점 (꼭짓점 표시)
-        const dotMat = new THREE.PointsMaterial({ color: 0x60a5fa, size: 2.5 })
-        scene.add(new THREE.Points(bGeo, dotMat))
+        // 경계선을 따라 밀집된 점으로 굵기 보완 (WebGL linewidth 제한 우회)
+        const densePts: THREE.Vector3[] = []
+        for (let i = 0; i < boundaryPts.length - 1; i++) {
+          const a = boundaryPts[i], b = boundaryPts[i + 1]
+          const seg = a.distanceTo(b)
+          const steps = Math.max(Math.ceil(seg / 0.5), 2)
+          for (let s = 0; s <= steps; s++) {
+            densePts.push(new THREE.Vector3(
+              a.x + (b.x - a.x) * s / steps,
+              a.y + (b.y - a.y) * s / steps + 0.1,
+              a.z + (b.z - a.z) * s / steps,
+            ))
+          }
+        }
+        const denseGeo = new THREE.BufferGeometry().setFromPoints(densePts)
+        const denseMat = new THREE.PointsMaterial({ color: 0x60a5fa, size: 1.8, opacity: 0.9, transparent: true })
+        scene.add(new THREE.Points(denseGeo, denseMat))
+        
+        // 꼭짓점 강조
+        const dotGeo = new THREE.BufferGeometry().setFromPoints(boundaryPts)
+        const dotMat = new THREE.PointsMaterial({ color: 0x93c5fd, size: 3.5 })
+        scene.add(new THREE.Points(dotGeo, dotMat))
       }
     }
 
