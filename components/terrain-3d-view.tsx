@@ -28,6 +28,11 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     if (W < 10 || H < 10) return
     canvas.width = W; canvas.height = H
 
+    const MESH_SIZE = 100
+    const TARGET_MAX_Z = MESH_SIZE * 0.3
+
+    try {
+
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0x1a2332)
     scene.fog = new THREE.Fog(0x1a2332, MESH_SIZE * 1.5, MESH_SIZE * 4)
@@ -73,12 +78,10 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     const eRange = Math.max(maxE - minE, 1)
 
     // 지형 메시
-    const MESH_SIZE = 100
     const geo = new THREE.PlaneGeometry(MESH_SIZE, MESH_SIZE, GRID - 1, GRID - 1)
     const verts = geo.attributes.position.array as Float32Array
 
-    // 높이를 메시 폭의 30%로 제한 (자연스러운 경사)
-    const TARGET_MAX_Z = MESH_SIZE * 0.3
+    // 높이를 메시 폭의 30%로 제한
     let maxZ = 0
 
     // 1차: 실제 표고 적용 (0~TARGET_MAX_Z 범위로 정규화)
@@ -221,6 +224,11 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     }
     animate()
     setLoading(false)
+
+    } catch (err) {
+      console.error('3D terrain init error:', err)
+      setLoading(false)
+    }
   }, [lat, lng])
 
   useEffect(() => {
