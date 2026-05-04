@@ -13,14 +13,52 @@ interface Terrain3DViewProps {
 export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DViewProps) {
   const [expanded, setExpanded] = useState(false)
   const [origin, setOrigin] = useState('')
+  const [tileDataMap, setTileDataMap] = useState<Record<string, string>>({})
+  const [tilesReady, setTilesReady] = useState(false)
 
   useEffect(() => { setOrigin(window.location.origin) }, [])
 
-  const html3d = useMemo(() => {
-    if (!origin) return ''
+  // React에서 타일을 미리 fetch → base64 변환 (CORS 문제 없음)
+  useEffect(() => {
+    if (!origin) return
+    const z = 16
+    const n = Math.pow(2, z)
+    const tx = Math.floor((lng + 180) / 360 * n)
+    const ty = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n)
 
-    const tileProxy = (layer: string, z: number, x: number, y: number) =>
-      `${origin}/api/tile?layer=${layer}&z=${z}&x=${x}&y=${y}`
+    const tasks: Promise<void>[] = []
+    const dataMap: Record<string, string> = {}
+
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (const layer of ['Base', 'lt_c_cadastral']) {
+          const key = `${layer}_${dx}_${dy}`
+          const url = `${origin}/api/tile?layer=${layer}&z=${z}&x=${tx + dx}&y=${ty + dy}`
+          const task = fetch(url)
+            .then(r => r.blob())
+            .then(blob => new Promise<void>((resolve) => {
+              const reader = new FileReader()
+              reader.onload = () => { dataMap[key] = reader.result as string; resolve() }
+              reader.onerror = () => resolve()
+              reader.readAsDataURL(blob)
+            }))
+            .catch(() => {})
+          tasks.push(task as Promise<void>)
+        }
+      }
+    }
+
+    Promise.all(tasks).then(() => {
+      setTileDataMap(dataMap)
+      setTilesReady(true)
+    })
+  }, [origin, lat, lng])
+
+  const html3d = useMemo(() => {
+    if (!origin || !tilesReady) return ''
+
+    // 타일 데이터를 JSON으로 직렬화하여 iframe에 전달
+    const tileJson = JSON.stringify(tileDataMap)
 
     return `<!DOCTYPE html>
 <html><head>
@@ -37,6 +75,7 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
 <div id="loading">3D 지적도 로딩중...</div>
 <script>
 (async function(){
+  var TILE_DATA = ${tileJson};
   const LAT=${lat}, LNG=${lng};
   const GRID=32, RANGE=0.003; // 약 300m 범위, 32x32 그리드
   
@@ -119,83 +158,51 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   }
   geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
   
-  // 4) 지도 텍스처 (VWorld 타일)
+  // 4) 지도 텍스처 (React에서 미리 fetch한 타일 데이터 사용)
   var texCanvas=document.createElement('canvas');
   texCanvas.width=512; texCanvas.height=512;
   var ctx=texCanvas.getContext('2d');
   ctx.fillStyle='#e2e8f0';
   ctx.fillRect(0,0,512,512);
   
-  // 타일 좌표 계산 (줌 16)
-  var z=16;
-  var n=Math.pow(2,z);
-  var tx=Math.floor((LNG+180)/360*n);
-  var ty=Math.floor((1-Math.log(Math.tan(LAT*Math.PI/180)+1/Math.cos(LAT*Math.PI/180))/Math.PI)/2*n);
-  
-  // fetch → dataURL 변환 (blob iframe CORS 우회)
-  function fetchTileAsDataUrl(url){
-    return fetch(url).then(function(r){return r.blob()}).then(function(blob){
-      return new Promise(function(resolve){
-        var reader=new FileReader();
-        reader.onload=function(){resolve(reader.result)};
-        reader.onerror=function(){resolve(null)};
-        reader.readAsDataURL(blob);
-      });
-    }).catch(function(){return null});
+  // 임베드된 base64 타일을 canvas에 그리기 (네트워크 요청 없음)
+  function drawTile(key, px, py, alpha){
+    return new Promise(function(resolve){
+      var dataUrl=TILE_DATA[key];
+      if(!dataUrl){resolve();return;}
+      var img=new Image();
+      img.onload=function(){
+        if(alpha<1) ctx.globalAlpha=alpha;
+        ctx.drawImage(img,px,py,512/3,512/3);
+        if(alpha<1) ctx.globalAlpha=1;
+        resolve();
+      };
+      img.onerror=function(){resolve()};
+      img.src=dataUrl;
+    });
   }
   
-  // 3x3 타일 그리드 로드 (fetch→dataURL 방식)
-  var tilePromises=[];
+  // Base 타일 9장 그리기
+  var basePromises=[];
   for(var dy=-1;dy<=1;dy++){
     for(var dx=-1;dx<=1;dx++){
-      (function(ddx,ddy){
-        var url='${origin}/api/tile?layer=Base&z='+z+'&x='+(tx+ddx)+'&y='+(ty+ddy);
-        var p=fetchTileAsDataUrl(url).then(function(dataUrl){
-          if(!dataUrl) return;
-          return new Promise(function(resolve){
-            var img=new Image();
-            img.onload=function(){
-              ctx.drawImage(img,(ddx+1)*(512/3),(ddy+1)*(512/3),512/3,512/3);
-              resolve();
-            };
-            img.onerror=function(){resolve()};
-            img.src=dataUrl;
-          });
-        });
-        tilePromises.push(p);
-      })(dx,dy);
+      basePromises.push(drawTile('Base_'+dx+'_'+dy,(dx+1)*(512/3),(dy+1)*(512/3),1));
     }
   }
   
-  Promise.all(tilePromises).then(function(){
+  Promise.all(basePromises).then(function(){
     texture.needsUpdate=true;
-    // 지적도 오버레이
+    // 지적도 오버레이 9장 그리기
     var cadPromises=[];
     for(var dy=-1;dy<=1;dy++){
       for(var dx=-1;dx<=1;dx++){
-        (function(ddx,ddy){
-          var url='${origin}/api/tile?layer=lt_c_cadastral&z='+z+'&x='+(tx+ddx)+'&y='+(ty+ddy);
-          var p=fetchTileAsDataUrl(url).then(function(dataUrl){
-            if(!dataUrl) return;
-            return new Promise(function(resolve){
-              var img=new Image();
-              img.onload=function(){
-                ctx.globalAlpha=0.8;
-                ctx.drawImage(img,(ddx+1)*(512/3),(ddy+1)*(512/3),512/3,512/3);
-                ctx.globalAlpha=1;
-                resolve();
-              };
-              img.onerror=function(){resolve()};
-              img.src=dataUrl;
-            });
-          });
-          cadPromises.push(p);
-        })(dx,dy);
+        cadPromises.push(drawTile('lt_c_cadastral_'+dx+'_'+dy,(dx+1)*(512/3),(dy+1)*(512/3),0.8));
       }
     }
     return Promise.all(cadPromises);
   }).then(function(){
     texture.needsUpdate=true;
+    document.getElementById('loading').style.display='none';
   });
   
   var texture=new THREE.CanvasTexture(texCanvas);
@@ -302,7 +309,7 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
 })();
 <\/script>
 </body></html>`
-  }, [lat, lng, origin, address])
+  }, [lat, lng, origin, address, tilesReady, tileDataMap])
 
   const blobUrl = useMemo(() => {
     if (!html3d) return ''
