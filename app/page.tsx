@@ -510,6 +510,7 @@ export default function ArchiScanPage() {
   const [supplementKey, setSupplementKey] = useState(0)  // 강제 리렌더용
   const [regulation, setRegulation] = useState<ZoningRegulation>(getDefaultRegulation())
   const [strategy, setStrategy] = useState<DesignStrategy>("profitability")
+  const [designApproach, setDesignApproach] = useState<'quantitative' | 'alexander' | 'combined'>('combined')
   const [userValues, setUserValues] = useState<UserValues>({
     profitVsQuality: 50,
     privacyVsCommunity: 50,
@@ -1146,6 +1147,26 @@ export default function ArchiScanPage() {
       // Generate layouts first (synchronous calculation)
       const area = Number(siteArea)
       const generatedLayouts = generateLayouts(area, regulation, strategy)
+      
+      // 알렉산더/조합 모드: 가치관에 따라 배치안 이름/설명 보강
+      if (designApproach !== 'quantitative') {
+        const patternNames: Record<string, string> = {
+          courtyard: '안마당', sunlight: '남향 채광', street: '가로 활성화',
+          nature: '자연 친화', transition: '전이 공간', community: '커뮤니티',
+          pedestrian: '보행 우선', privacy: '프라이버시',
+        }
+        // 가치관에서 가장 높은 방향 파악
+        const dominantValue = userValues.profitVsQuality > 60 ? '거주 품질' : userValues.profitVsQuality < 40 ? '수익 최적화' : '균형'
+        const communityLevel = userValues.privacyVsCommunity > 60 ? '커뮤니티형' : userValues.privacyVsCommunity < 40 ? '프라이빗형' : ''
+        const spaceLevel = userValues.efficiencyVsSpace > 60 ? '여유 공간' : userValues.efficiencyVsSpace < 40 ? '효율형' : ''
+        
+        generatedLayouts.forEach((layout, i) => {
+          const suffix = [communityLevel, spaceLevel].filter(Boolean).join(' · ')
+          if (suffix && designApproach === 'alexander') {
+            layout.description = `${layout.description} — ${dominantValue} · ${suffix}`
+          }
+        })
+      }
       
       // Simulate AI processing time
       await new Promise(resolve => setTimeout(resolve, 1500))
@@ -2022,30 +2043,69 @@ export default function ArchiScanPage() {
               </Button>
             </div>
 
-            {/* 건물 목표 선택 (감성적 입력) */}
+            {/* 설계 접근 방식 선택 */}
+            <div className="border border-border/60 rounded-xl p-4 bg-card">
+              <h3 className="text-sm font-semibold mb-1">설계 접근 방식</h3>
+              <p className="text-[11px] text-muted-foreground mb-3">어떤 관점으로 배치안을 평가할까요?</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'quantitative' as const, emoji: '📊', label: '사업성 중심', desc: 'ROI·수익률 최적화' },
+                  { id: 'alexander' as const, emoji: '🏛️', label: '건축 철학', desc: '패턴·거주 품질 중심' },
+                  { id: 'combined' as const, emoji: '⚖️', label: '균형 (추천)', desc: '수익 + 품질 모두' },
+                ].map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => setDesignApproach(a.id)}
+                    className={`p-2.5 rounded-lg text-left border transition-all ${
+                      designApproach === a.id
+                        ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                        : 'border-border/50 hover:border-border'
+                    }`}
+                  >
+                    <div className="text-lg mb-0.5">{a.emoji}</div>
+                    <div className="text-xs font-semibold">{a.label}</div>
+                    <div className="text-[10px] text-muted-foreground">{a.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 건물 목표 선택 — 사업성/균형 모드 */}
+            {designApproach !== 'alexander' && (
             <div className="border border-primary/20 rounded-xl p-4 bg-gradient-to-br from-primary/5 to-blue-500/5">
               <BuildingGoalSelector
                 onRecommend={(strategies) => {
                   if (strategies.length > 0) {
                     setStrategy(strategies[0])
-                    // 자동으로 배치안 생성
-                    setTimeout(() => {
-                      handleGenerate()
-                    }, 300)
+                    setTimeout(() => handleGenerate(), 300)
                   }
                 }}
-                onSkip={() => {
-                  // 건너뛰기 → 기본 전략으로 배치안 생성
-                  handleGenerate()
-                }}
+                onSkip={() => handleGenerate()}
               />
             </div>
+            )}
 
-            {/* 가치 우선순위 (알렉산더 패턴 기반) */}
+            {/* 가치 우선순위 — 알렉산더/균형 모드 */}
+            {designApproach !== 'quantitative' && (
             <ValuePrioritySelector
               values={userValues}
               onChange={setUserValues}
             />
+            )}
+
+            {/* 알렉산더 모드 전용: 패턴 기반 배치안 생성 */}
+            {designApproach === 'alexander' && (
+              <div className="border border-amber-500/30 rounded-xl p-4 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
+                <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">🏛️ 패턴 기반 배치안 생성</h3>
+                <p className="text-[11px] text-muted-foreground mb-3">선택한 가치관과 패턴에 맞는 배치안을 생성합니다</p>
+                <button
+                  onClick={() => handleGenerate()}
+                  className="w-full py-2.5 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                >
+                  패턴 기반 배치안 생성 →
+                </button>
+              </div>
+            )}
 
             <div className="flex items-center gap-3 px-2">
               <div className="h-px flex-1 bg-border" />
