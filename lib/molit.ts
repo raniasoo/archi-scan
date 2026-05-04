@@ -2200,10 +2200,14 @@ export async function lookupSiteData(
     if (diagJuso?.bdMgtSn) bdMgtSnVal = diagJuso.bdMgtSn as string
     
     try {
-      // 1차: MOLIT 지역지구 API
-      if (sigunguCd && bjdongCd && bun && ji) {
-        console.log(`[MOLIT-CATCH] 용도지역 별도 조회: ${sigunguCd}-${bjdongCd}-${bun}-${ji}`)
-        const zoneResult = await fetchZoneType(sigunguCd, bjdongCd, bun, ji, getApiKey())
+      // jibunFallback이 있으면 실제 필지 번지 사용 (bdMgtSn과 다를 수 있음)
+      const zoneBun = jibunBun !== bun ? jibunBun : bun
+      const zoneJi = jibunJi !== ji ? jibunJi : ji
+      
+      // 1차: MOLIT 지역지구 API (실제 필지 번지 사용)
+      if (sigunguCd && bjdongCd && zoneBun && zoneJi) {
+        console.log(`[MOLIT-CATCH] 용도지역 별도 조회: ${sigunguCd}-${bjdongCd}-${zoneBun}-${zoneJi}`)
+        const zoneResult = await fetchZoneType(sigunguCd, bjdongCd, zoneBun, zoneJi, getApiKey())
         if (zoneResult) {
           zoneType = zoneResult
           console.log(`[MOLIT-CATCH] 용도지역 조회 성공: ${zoneType}`)
