@@ -457,19 +457,23 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
     let ji = '0000'
     
     let platGbCdFromBdMgtSn = '0'  // 기본값 대지
+    let jibunBun = '0000', jibunJi = '0000', jibunPlatGbCd = '0'
+    
     if (bdMgtSn.length >= 19) {
       sigunguCd = bdMgtSn.substring(0, 5)
       bjdongCd = bdMgtSn.substring(5, 10)
       platGbCdFromBdMgtSn = bdMgtSn.substring(10, 11)  // 0=대지, 1=산
       bun = bdMgtSn.substring(11, 15)
       ji = bdMgtSn.substring(15, 19)
+      jibunBun = bun
+      jibunJi = ji
+      jibunPlatGbCd = platGbCdFromBdMgtSn
       
       console.log(`[JUSO] Parsed bdMgtSn: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, platGbCd=${platGbCdFromBdMgtSn}, bun=${bun}, ji=${ji}`)
       
       // 지번주소에서도 번/지 파싱 (bdMgtSn 실패 시 fallback용)
       const jibunAddr = juso.jibunAddr || ''
       const jibunMatch = jibunAddr.match(/(\d+)(?:-(\d+))?(?:\s|$)/)
-      let jibunBun = bun, jibunJi = ji, jibunPlatGbCd = platGbCdFromBdMgtSn
       if (jibunMatch) {
         jibunBun = jibunMatch[1].padStart(4, '0')
         jibunJi = (jibunMatch[2] || '0').padStart(4, '0')
