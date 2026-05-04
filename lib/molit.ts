@@ -479,7 +479,11 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
         jibunJi = (jibunMatch[2] || '0').padStart(4, '0')
         jibunPlatGbCd = jibunAddr.includes('산 ') ? '1' : '0'
         if (jibunBun !== bun || jibunJi !== ji) {
-          console.log(`[JUSO] Note: bdMgtSn(${bun}-${ji}) ≠ 지번주소(${jibunBun}-${jibunJi}) — bdMgtSn 우선, jibunAddr은 fallback`)
+          console.log(`[JUSO] ⚠️ bdMgtSn(${bun}-${ji}) ≠ 지번주소(${jibunBun}-${jibunJi}) — 지번주소 번지를 기본값으로 사용`)
+          // 지번주소 번지를 기본값으로 사용 (MOLIT 건축물대장 + 용도지역 모두)
+          bun = jibunBun
+          ji = jibunJi
+          platGbCdFromBdMgtSn = jibunPlatGbCd
         }
       }
     } else {
@@ -513,8 +517,8 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
       ji,
       lookupPath: 'juso-resolved',
       platGbCdFromBdMgtSn,
-      // jibun fallback (bdMgtSn 실패 시 사용)
-      jibunFallback: (jibunBun !== bun || jibunJi !== ji) ? { bun: jibunBun, ji: jibunJi, platGbCd: jibunPlatGbCd } : undefined,
+      // jibun fallback: bdMgtSn 원본 번지 저장 (지번주소로 교체된 경우)
+      bdMgtSnFallback: (jibunBun !== bun) ? undefined : undefined, // 이미 교체됨, fallback 불필요
       // 건물 입구 좌표 (WGS84) - detail=Y 응답에 포함
       entX: juso.entX ? parseFloat(juso.entX) : undefined,
       entY: juso.entY ? parseFloat(juso.entY) : undefined,
@@ -1857,25 +1861,8 @@ export async function lookupSiteData(
       targetBuildingName: targetBldNm,
     }, platGbCd)
     
-    // bdMgtSn 조회 실패 시 jibun fallback 재시도
-    const jibunFallback = jusoResolvedAny?.['jibunFallback'] as { bun: string; ji: string; platGbCd: string } | undefined
+    // bun/ji는 이미 지번주소 기준으로 설정됨 (jibun 우선)
     let finalResult = result
-    if (!result.data && jibunFallback) {
-      console.log(`[MOLIT] bdMgtSn 조회 실패 → jibun fallback 시도: bun=${jibunFallback.bun}, ji=${jibunFallback.ji}, platGbCd=${jibunFallback.platGbCd}`)
-      const fallbackResult = await fetchBuildingMultiEndpoint({
-        sigunguCd,
-        bjdongCd,
-        bun: jibunFallback.bun,
-        ji: jibunFallback.ji,
-        targetBuildingName: targetBldNm,
-      }, jibunFallback.platGbCd)
-      if (fallbackResult.data) {
-        console.log(`[MOLIT] jibun fallback 성공!`)
-        finalResult = fallbackResult
-        // 진단 정보 업데이트
-        finalResult.attemptedEndpoints = [...result.attemptedEndpoints, ...fallbackResult.attemptedEndpoints]
-      }
-    }
     
     // Store endpoint results in diagnostics
     // Map attemptedEndpoints to a more UI-friendly format
