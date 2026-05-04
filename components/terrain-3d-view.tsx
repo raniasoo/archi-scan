@@ -39,7 +39,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     renderer.shadowMap.enabled = true
 
     // 표고 데이터 (12x12 = 144개 — URL 길이 제한 내)
-    const DATA_GRID = 12, RANGE = 0.004
+    const DATA_GRID = 10, RANGE = 0.004
     const MESH_GRID = 40
 
     let rawElevations: number[]
