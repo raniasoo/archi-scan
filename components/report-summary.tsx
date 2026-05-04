@@ -4,6 +4,7 @@
 import { useRef, useState, useEffect } from "react"
 import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag } from "@/lib/report-drawings"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
+import { evaluatePatternQuality } from "@/lib/pattern-quality"
 // Card components replaced with native divs for isolated styling
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -784,6 +785,32 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       <p style="font-size: 10pt; color: #475569;">${layout.reasoning.summary}</p>
     </div>
     ` : ''}
+    
+    ${(() => {
+      try {
+        const pq = evaluatePatternQuality({
+          type: layout.type || 'tower',
+          name: layout.name,
+          coverage: layout.coverage,
+          floors: layout.floors,
+          units: layout.units || 0,
+          parking: layout.parking || 0,
+          gfa: layout.gfa,
+          siteArea: siteAreaNum,
+          strategy: 'profitability',
+        })
+        return `
+        <div class="highlight" style="margin-bottom: 16px; background: #ecfdf5; border-left: 3px solid #10b981;">
+          <div class="highlight-title" style="color: #065f46;">📖 설계 철학 (Alexander Pattern Language)</div>
+          <p style="font-size: 9pt; color: #374151; line-height: 1.6;">${pq.philosophy}</p>
+          <div style="margin-top: 8px; display: flex; gap: 12px; font-size: 8pt; color: #6b7280;">
+            <span>등급: <b style="color: ${pq.gradeColor};">${pq.grade}</b></span>
+            <span>패턴 점수: <b>${pq.totalPatternScore}</b>/100</span>
+            <span>Living Structure: <b>${pq.totalLivingScore}</b>/100</span>
+          </div>
+        </div>`
+      } catch { return '' }
+    })()}
     
     ${(layout.recommendation?.reasons?.length ?? 0) > 0 || (layout.recommendation?.warnings?.length ?? 0) > 0 ? `
     <div class="risk-grid">

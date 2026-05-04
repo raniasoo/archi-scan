@@ -1270,18 +1270,21 @@ export default function ArchiScanPage() {
     const selected = layouts.find(l => l.id === selectedLayout) || layouts[0]
     const recommended = recommendedLayout
     
-    // Calculate financials using UNIFIED formula (synced with calculateFeasibility)
+    // Calculate financials using REAL data from feasibilityResult
     const area = Number(siteArea)
     const gfa = Math.round(area * (selected.coverage / 100) * selected.floors)
+    
+    // feasibilityResult가 있으면 실제 값 사용, 없으면 fallback
+    const realLandPrice = landPriceData.pricePerM2 || 5000000
     const heightPremium = selected.floors > 15 ? 1.15 : selected.floors > 10 ? 1.08 : 1.0
-    const landCost = area * 5000000 // 5M per sqm (unified)
-    const constructionCost = gfa * 2500000 * heightPremium // 2.5M per sqm (unified)
-    const otherCosts = constructionCost * 0.15 // 15% soft costs (unified)
-    const parkingCost = selected.parking * 30000000 // parking cost
-    const totalInvestment = landCost + constructionCost + otherCosts + parkingCost
-    const projectedRevenue = gfa * 8000000 // 8M per sqm (unified, area-based)
-    const profit = projectedRevenue - totalInvestment
-    const roi = totalInvestment > 0 ? (profit / totalInvestment) * 100 : 0
+    const landCost = feasibilityResult?.landCost || area * realLandPrice
+    const constructionCost = feasibilityResult?.constructionCost || gfa * 2500000 * heightPremium
+    const otherCosts = feasibilityResult?.softCost || constructionCost * 0.15
+    const parkingCost = selected.parking * 30000000
+    const totalInvestment = feasibilityResult?.totalCost || (landCost + constructionCost + otherCosts + parkingCost)
+    const projectedRevenue = feasibilityResult?.totalRevenue || gfa * 8000000
+    const profit = feasibilityResult?.profit || (projectedRevenue - totalInvestment)
+    const roi = feasibilityResult?.roi || (totalInvestment > 0 ? (profit / totalInvestment) * 100 : 0)
     
     return {
       address,
