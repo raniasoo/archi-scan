@@ -1998,11 +1998,20 @@ export async function lookupSiteData(
       
       // VWorld 토지이용계획 우선: 건축물대장 용도지역보다 정확
       // (건축물대장은 과거 데이터, 토지이용계획은 최신 용도지역 반영)
-      if (siteData.entX && siteData.entY) {
-        const vworldZone = await fetchZoneTypeByCoord(siteData.entX, siteData.entY)
+      // PNU 기반 조회가 좌표 기반보다 정확 (필지 경계 근처에서 오차 없음)
+      {
+        console.log(`[MOLIT] VWorld 토지이용계획 우선 조회 시도 (PNU 기반)`)
+        const vworldZone = await fetchZoneType(sigunguCd, bjdongCd, bun, ji, getApiKey())
         if (vworldZone && vworldZone !== siteData.zoneType) {
           console.log(`[MOLIT] 용도지역 VWorld 우선 적용: 건축물대장="${siteData.zoneType}" → VWorld="${vworldZone}"`)
           siteData.zoneType = vworldZone
+        } else if (!vworldZone && siteData.entX && siteData.entY) {
+          // PNU 실패 시 좌표 기반 fallback
+          const coordZone = await fetchZoneTypeByCoord(siteData.entX, siteData.entY)
+          if (coordZone && coordZone !== siteData.zoneType) {
+            console.log(`[MOLIT] 용도지역 좌표 기반 우선 적용: 건축물대장="${siteData.zoneType}" → VWorld="${coordZone}"`)
+            siteData.zoneType = coordZone
+          }
         }
       }
       
