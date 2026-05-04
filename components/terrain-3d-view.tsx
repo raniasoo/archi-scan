@@ -63,7 +63,7 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
 
     // 표고 데이터 (12x12 = 144개 — URL 길이 제한 내)
     // 표고 데이터
-    const RANGE = 0.002 // ~220m 반경 (필지 크기에 적절)
+    const RANGE = 0.001 // ~110m 반경 (필지가 크게 보임)
     const DATA_GRID = 10
     const MESH_GRID = 40
 
