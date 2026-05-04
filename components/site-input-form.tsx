@@ -397,7 +397,12 @@ export function SiteInputForm({
     setLookupError(null)
     
     try {
-      const requestBody: Record<string, unknown> = { address: address.trim() }
+      // 자동완성에서 "(평창동, 평창삼호빌라)" 등이 포함될 수 있으므로 제거
+      const cleanAddress = address.trim()
+        .replace(/\([^)]*\)/g, '')  // 완전한 괄호 제거
+        .replace(/\([^)]*$/g, '')   // 닫히지 않은 괄호 제거
+        .trim()
+      const requestBody: Record<string, unknown> = { address: cleanAddress }
       
       // If manual parcel override provided, include it
       if (overrideParcel) {
@@ -811,7 +816,9 @@ export function SiteInputForm({
   }
   
   const handleSelectSuggestion = (addr: string) => {
-    onAddressChange(addr)
+    // 자동완성 주소에서 괄호 부분 제거: "평창12길 16-6 (평창동, 삼호빌라)" → "평창12길 16-6"
+    const cleanAddr = addr.replace(/\s*\([^)]*\)\s*$/g, '').trim()
+    onAddressChange(cleanAddr)
     setShowSuggestions(false)
     setSuggestions([])
   }
