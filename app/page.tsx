@@ -2026,9 +2026,18 @@ export default function ArchiScanPage() {
             <div className="border border-primary/20 rounded-xl p-4 bg-gradient-to-br from-primary/5 to-blue-500/5">
               <BuildingGoalSelector
                 onRecommend={(strategies) => {
-                  if (strategies.length > 0) setStrategy(strategies[0])
+                  if (strategies.length > 0) {
+                    setStrategy(strategies[0])
+                    // 자동으로 배치안 생성
+                    setTimeout(() => {
+                      handleGenerate()
+                    }, 300)
+                  }
                 }}
-                onSkip={() => {}}
+                onSkip={() => {
+                  // 건너뛰기 → 기본 전략으로 배치안 생성
+                  handleGenerate()
+                }}
               />
             </div>
 
