@@ -2224,8 +2224,8 @@ export async function lookupSiteData(
       success: false,
       error: '건축물대장 조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
       diagnostics,
-      // Juso 성공 시 부분 데이터라도 반환 (용도지역, 좌표, 면적)
-      data: (zoneType || entX) ? {
+      // Juso 성공 시 부분 데이터라도 반환 (용도지역, 좌표)
+      data: sigunguCd ? {
         address: normalizedAddress,
         roadAddress: (diagJuso?.roadAddr as string) || normalizedAddress,
         zoneType: zoneType || undefined,
