@@ -162,16 +162,16 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
           const e10 = elevations[gy * GRID + gx + 1]
           if ((e00 - contourElev) * (e10 - contourElev) < 0) {
             const t = (contourElev - e00) / (e10 - e00)
-            const x = -MESH_SIZE/2 + (gx + t) * (MESH_SIZE / (GRID - 1))
-            const z2 = -MESH_SIZE/2 + gy * (MESH_SIZE / (GRID - 1))
-            contourPts.push(new THREE.Vector3(x, contourZ + 0.3, -z2))
+            const cx = -MESH_SIZE/2 + (gx + t) * (MESH_SIZE / (GRID - 1))
+            const cz = -MESH_SIZE/2 + gy * (MESH_SIZE / (GRID - 1))
+            contourPts.push(new THREE.Vector3(cx, contourZ + 0.3, cz))
           }
           const e01 = elevations[(gy + 1) * GRID + gx]
           if ((e00 - contourElev) * (e01 - contourElev) < 0) {
             const t = (contourElev - e00) / (e01 - e00)
-            const x = -MESH_SIZE/2 + gx * (MESH_SIZE / (GRID - 1))
-            const z2 = -MESH_SIZE/2 + (gy + t) * (MESH_SIZE / (GRID - 1))
-            contourPts.push(new THREE.Vector3(x, contourZ + 0.3, -z2))
+            const cx = -MESH_SIZE/2 + gx * (MESH_SIZE / (GRID - 1))
+            const cz = -MESH_SIZE/2 + (gy + t) * (MESH_SIZE / (GRID - 1))
+            contourPts.push(new THREE.Vector3(cx, contourZ + 0.3, cz))
           }
         }
       }
