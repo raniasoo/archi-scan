@@ -207,16 +207,18 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
       
       for (const coord of sitePolygon.coords) {
         const cLng = coord[0], cLat = coord[1]
-        // lat/lng → 메시 로컬 좌표 (-50 ~ +50)
+        // lat/lng → 메시 로컬 좌표
+        // x: 서(-50) → 동(+50), lng 방향
         const mx = ((cLng - (lng - RANGE_VAL)) / (RANGE_VAL * 2)) * MESH_SIZE - MESH_SIZE / 2
+        // y: 남(-50) → 북(+50), lat 방향 (후에 world z로 반전)
         const my = ((cLat - (lat - RANGE_VAL)) / (RANGE_VAL * 2)) * MESH_SIZE - MESH_SIZE / 2
         
         // 범위 내인지 확인
         if (mx < -MESH_SIZE/2 || mx > MESH_SIZE/2 || my < -MESH_SIZE/2 || my > MESH_SIZE/2) continue
         
-        // 해당 위치의 표고 보간 (bilinear)
+        // 표고 보간: elevation grid에서 gy=0=북, gy=GRID-1=남
         const gxf = (mx + MESH_SIZE/2) / MESH_SIZE * (GRID - 1)
-        const gyf = (my + MESH_SIZE/2) / MESH_SIZE * (GRID - 1)
+        const gyf = (MESH_SIZE/2 - my) / MESH_SIZE * (GRID - 1) // 북(my=+50)→gy=0, 남(my=-50)→gy=39
         const gxi = Math.min(Math.floor(gxf), GRID - 2)
         const gyi = Math.min(Math.floor(gyf), GRID - 2)
         const dxf = gxf - gxi, dyf = gyf - gyi
@@ -227,8 +229,8 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
           elevations[(gyi+1) * GRID + gxi+1] * dxf * dyf
         const h = ((elev - minE) / eRange) * TARGET_MAX_Z + 0.5
         
-        // PlaneGeometry 회전 후 좌표: world(x, z_elev, local_y_mapped)
-        boundaryPts.push(new THREE.Vector3(mx, h, my))
+        // PlaneGeometry rotation.x=-PI/2 후: world z = -my (Y축 반전)
+        boundaryPts.push(new THREE.Vector3(mx, h, -my))
       }
       
       // 폴리곤 닫기
