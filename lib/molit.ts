@@ -1996,6 +1996,16 @@ export async function lookupSiteData(
         }
       }
       
+      // VWorld 토지이용계획 우선: 건축물대장 용도지역보다 정확
+      // (건축물대장은 과거 데이터, 토지이용계획은 최신 용도지역 반영)
+      if (siteData.entX && siteData.entY) {
+        const vworldZone = await fetchZoneTypeByCoord(siteData.entX, siteData.entY)
+        if (vworldZone && vworldZone !== siteData.zoneType) {
+          console.log(`[MOLIT] 용도지역 VWorld 우선 적용: 건축물대장="${siteData.zoneType}" → VWorld="${vworldZone}"`)
+          siteData.zoneType = vworldZone
+        }
+      }
+      
       return {
         success: true,
         data: await ensureCoordinates(siteData),
