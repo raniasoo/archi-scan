@@ -1,4 +1,4 @@
-const CACHE_NAME = 'archi-scan-v1';
+const CACHE_NAME = 'archi-scan-v3';
 const OFFLINE_URL = '/';
 
 // Install: cache the app shell
