@@ -550,6 +550,7 @@ interface BuildingLookupParams {
   bjdongCd: string     // 법정동코드 (5자리)
   bun?: string         // 번 (4자리, 앞 0 채움)
   ji?: string          // 지 (4자리, 앞 0 채움)
+  targetBuildingName?: string  // Juso에서 받은 건물명 (매칭용)
 }
 
 interface BuildingLookupResult {
@@ -710,8 +711,24 @@ async function fetchBuildingEndpoint(
     
     const data = Array.isArray(items) ? items[0] : items
     
+    // 건물명 매칭: 같은 필지에 여러 건물이 있을 때 정확한 건물 찾기
+    let matchedData = data
+    if (Array.isArray(items) && items.length > 1 && params.targetBuildingName) {
+      const target = params.targetBuildingName.replace(/\s/g, '')
+      const matched = items.find((item: any) => {
+        const bldNm = (item.bldNm || item.bdNm || '').replace(/\s/g, '')
+        return bldNm.includes(target) || target.includes(bldNm)
+      })
+      if (matched) {
+        matchedData = matched
+        console.log(`[MOLIT] Building name matched: "${params.targetBuildingName}" → "${(matched as any).bldNm || (matched as any).bdNm}"`)
+      } else {
+        console.log(`[MOLIT] No building name match for "${params.targetBuildingName}" among ${items.length} items, using first`)
+      }
+    }
+    
     console.log(`[MOLIT] ${endpointConfig.name} SUCCESS: Found building data`)
-    return { data, apiStatus: 'success-with-data', totalCount, debug }
+    return { data: matchedData, apiStatus: 'success-with-data', totalCount, debug }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     console.error(`[MOLIT] ${endpointConfig.name} error:`, errorMsg)
@@ -1806,11 +1823,16 @@ export async function lookupSiteData(
   
   try {
     // Try multiple MOLIT building register endpoints in sequence
+    // Juso에서 받은 건물명을 전달하여 같은 필지의 여러 건물 중 정확한 건물 매칭
+    const jusoResolvedAny = jusoResult?.resolved as unknown as Record<string, unknown>
+    const targetBldNm = jusoResolvedAny?.['bdNm'] as string | undefined
+    
     const result = await fetchBuildingMultiEndpoint({
       sigunguCd,
       bjdongCd,
       bun,
       ji,
+      targetBuildingName: targetBldNm,
     }, platGbCd)
     
     // Store endpoint results in diagnostics
