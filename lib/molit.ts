@@ -472,22 +472,16 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
       
       console.log(`[JUSO] Parsed bdMgtSn: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, platGbCd=${platGbCdFromBdMgtSn}, bun=${bun}, ji=${ji}`)
       
-      // 지번주소에서 직접 번/지 파싱 (bdMgtSn과 다를 수 있음)
+      // 지번주소에서도 번/지 파싱 (bdMgtSn 실패 시 fallback용)
       const jibunAddr = juso.jibunAddr || ''
       const jibunMatch = jibunAddr.match(/(\d+)(?:-(\d+))?(?:\s|$)/)
+      let jibunBun = bun, jibunJi = ji, jibunPlatGbCd = platGbCdFromBdMgtSn
       if (jibunMatch) {
-        const jibunBun = jibunMatch[1].padStart(4, '0')
-        const jibunJi = (jibunMatch[2] || '0').padStart(4, '0')
+        jibunBun = jibunMatch[1].padStart(4, '0')
+        jibunJi = (jibunMatch[2] || '0').padStart(4, '0')
+        jibunPlatGbCd = jibunAddr.includes('산 ') ? '1' : '0'
         if (jibunBun !== bun || jibunJi !== ji) {
-          console.log(`[JUSO] ⚠️ bdMgtSn(${bun}-${ji}) ≠ 지번주소(${jibunBun}-${jibunJi}) — 지번주소를 우선 사용`)
-          bun = jibunBun
-          ji = jibunJi
-          // 지번주소에서 산 여부 확인
-          if (jibunAddr.includes('산 ') || jibunAddr.includes('산')) {
-            platGbCdFromBdMgtSn = '1'
-          } else {
-            platGbCdFromBdMgtSn = '0'  // 지번주소에 '산'이 없으면 일반 대지
-          }
+          console.log(`[JUSO] Note: bdMgtSn(${bun}-${ji}) ≠ 지번주소(${jibunBun}-${jibunJi}) — bdMgtSn 우선, jibunAddr은 fallback`)
         }
       }
     } else {
@@ -521,6 +515,8 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
       ji,
       lookupPath: 'juso-resolved',
       platGbCdFromBdMgtSn,
+      // jibun fallback (bdMgtSn 실패 시 사용)
+      jibunFallback: (jibunBun !== bun || jibunJi !== ji) ? { bun: jibunBun, ji: jibunJi, platGbCd: jibunPlatGbCd } : undefined,
       // 건물 입구 좌표 (WGS84) - detail=Y 응답에 포함
       entX: juso.entX ? parseFloat(juso.entX) : undefined,
       entY: juso.entY ? parseFloat(juso.entY) : undefined,
@@ -797,7 +793,7 @@ async function tryEndpointList(
       message: result.message,
     })
     
-    if (result.data) {
+    if (finalResult.data) {
       console.log(`[MOLIT] Found data via ${endpointConfig.name} (${endpointConfig.family || 'current'})`)
       return { result, endpointUsed: endpointConfig.name, family: endpointConfig.family || 'current' }
     }
@@ -1854,9 +1850,29 @@ export async function lookupSiteData(
       targetBuildingName: targetBldNm,
     }, platGbCd)
     
+    // bdMgtSn 조회 실패 시 jibun fallback 재시도
+    const jibunFallback = jusoResolvedAny?.['jibunFallback'] as { bun: string; ji: string; platGbCd: string } | undefined
+    let finalResult = result
+    if (!result.data && jibunFallback) {
+      console.log(`[MOLIT] bdMgtSn 조회 실패 → jibun fallback 시도: bun=${jibunFallback.bun}, ji=${jibunFallback.ji}, platGbCd=${jibunFallback.platGbCd}`)
+      const fallbackResult = await fetchBuildingMultiEndpoint({
+        sigunguCd,
+        bjdongCd,
+        bun: jibunFallback.bun,
+        ji: jibunFallback.ji,
+        targetBuildingName: targetBldNm,
+      }, jibunFallback.platGbCd)
+      if (fallbackResult.data) {
+        console.log(`[MOLIT] jibun fallback 성공!`)
+        finalResult = fallbackResult
+        // 진단 정보 업데이트
+        finalResult.attemptedEndpoints = [...result.attemptedEndpoints, ...fallbackResult.attemptedEndpoints]
+      }
+    }
+    
     // Store endpoint results in diagnostics
     // Map attemptedEndpoints to a more UI-friendly format
-    const endpointsForUI = result.attemptedEndpoints.map((ep: { 
+    const endpointsForUI = finalResult.attemptedEndpoints.map((ep: { 
       name?: string; 
       status?: string; 
       totalCount?: number; 
@@ -1880,18 +1896,18 @@ export async function lookupSiteData(
     }))
     
     diagnostics.molitEndpoints = {
-      endpointUsed: result.endpointUsed,
-      familyUsed: result.familyUsed,
-      attempted: result.attemptedEndpoints,
-      sentValues: result.sentValues,
-      supplementaryParcels: result.supplementaryParcels,
+      endpointUsed: finalResult.endpointUsed,
+      familyUsed: finalResult.familyUsed,
+      attempted: finalResult.attemptedEndpoints,
+      sentValues: finalResult.sentValues,
+      supplementaryParcels: finalResult.supplementaryParcels,
     }
-    diagnostics.attemptsCount = result.attemptedEndpoints.length
+    diagnostics.attemptsCount = finalResult.attemptedEndpoints.length
     
-    if (result.data) {
-      console.log(`[MOLIT] Building data found via ${result.endpointUsed}:`, result.data.bldNm || '(no name)')
+    if (finalResult.data) {
+      console.log(`[MOLIT] Building data found via ${finalResult.endpointUsed}:`, finalResult.data.bldNm || '(no name)')
       
-      const siteData = mapBuildingToSiteData(result.data)
+      const siteData = mapBuildingToSiteData(finalResult.data)
       siteData.dataSource = 'building'
       
       // 지역지구 API로 용도지역 조회
@@ -1912,7 +1928,7 @@ export async function lookupSiteData(
       
       diagnostics.apiResponse = {
         status: 'success-with-data',
-        totalCount: result.totalCount,
+        totalCount: finalResult.totalCount,
       }
       diagnostics.stoppedAt = 'complete'
       
