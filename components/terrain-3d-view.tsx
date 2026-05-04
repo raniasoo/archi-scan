@@ -16,7 +16,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
   const [loading, setLoading] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameRef = useRef<number>(0)
-  const rotationRef = useRef({ x: 0.3, y: 0.6 })
+  const rotationRef = useRef({ x: 0.4, y: 0.5 })
   const zoomRef = useRef(1)
   const isDragging = useRef(false)
   const lastMouse = useRef({ x: 0, y: 0 })
@@ -30,7 +30,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
 
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0x1a2332)
-    scene.fog = new THREE.Fog(0x1a2332, 200, 500)
+    scene.fog = new THREE.Fog(0x1a2332, MESH_SIZE * 1.5, MESH_SIZE * 4)
 
     const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 2000)
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
@@ -72,20 +72,22 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     const minE = Math.min(...elevations), maxE = Math.max(...elevations)
     const eRange = Math.max(maxE - minE, 1)
 
-    // 지형 메시 (작은 메시 = 가까이서 보기)
-    const geo = new THREE.PlaneGeometry(80, 80, GRID - 1, GRID - 1)
+    // 지형 메시
+    const MESH_SIZE = 100
+    const geo = new THREE.PlaneGeometry(MESH_SIZE, MESH_SIZE, GRID - 1, GRID - 1)
     const verts = geo.attributes.position.array as Float32Array
-    const exag = eRange < 3 ? 50 : eRange < 8 ? 35 : eRange < 20 ? 25 : 18
+
+    // 높이를 메시 폭의 30%로 제한 (자연스러운 경사)
+    const TARGET_MAX_Z = MESH_SIZE * 0.3
     let maxZ = 0
 
-    // 1차: 실제 표고 적용
+    // 1차: 실제 표고 적용 (0~TARGET_MAX_Z 범위로 정규화)
     for (let i = 0; i < GRID * GRID; i++) {
       const norm = (elevations[i] - minE) / eRange
-      verts[i * 3 + 2] = norm * exag * 20
+      verts[i * 3 + 2] = norm * TARGET_MAX_Z
     }
 
-    // 2차: 이웃 차이 기반 미세 굴곡 추가 (표면 거칠기)
-    const roughness = new Float32Array(GRID * GRID)
+    // 2차: 미세 굴곡 (경사 급한 곳 울퉁불퉁)
     for (let gy = 1; gy < GRID - 1; gy++) {
       for (let gx = 1; gx < GRID - 1; gx++) {
         const idx = gy * GRID + gx
@@ -94,17 +96,16 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
         const dE = elevations[idx] - elevations[gy * GRID + gx + 1]
         const dW = elevations[idx] - elevations[gy * GRID + gx - 1]
         const localSlope = Math.abs(dN) + Math.abs(dS) + Math.abs(dE) + Math.abs(dW)
-        // 경사가 급한 곳일수록 더 울퉁불퉁하게
-        const noise = (Math.sin(gx * 3.7 + gy * 2.3) * 0.5 + Math.cos(gx * 1.3 - gy * 4.1) * 0.3) * localSlope * 0.15
-        roughness[idx] = noise
+        const noise = (Math.sin(gx * 3.7 + gy * 2.3) * 0.5 + Math.cos(gx * 1.3 - gy * 4.1) * 0.3) * localSlope * 0.02
+        verts[idx * 3 + 2] += noise * TARGET_MAX_Z * 0.1
       }
     }
 
     for (let i = 0; i < GRID * GRID; i++) {
-      verts[i * 3 + 2] += roughness[i] * exag * 0.8
       if (verts[i * 3 + 2] > maxZ) maxZ = verts[i * 3 + 2]
       if (verts[i * 3 + 2] < 0) verts[i * 3 + 2] = 0
     }
+    if (maxZ < 1) maxZ = TARGET_MAX_Z
     geo.computeVertexNormals()
 
     // 높이별 색상 (초록 → 연두 → 노랑 → 갈색)
@@ -144,7 +145,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     for (let c = 1; c <= contourCount; c++) {
       const contourElev = minE + c * contourInterval
       const contourNorm = (contourElev - minE) / eRange
-      const contourZ = contourNorm * exag * 20
+      const contourZ = contourNorm * TARGET_MAX_Z
       const contourPts: THREE.Vector3[] = []
       // 가로 스캔
       for (let gy = 0; gy < GRID - 1; gy++) {
@@ -184,7 +185,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     const markerMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b })
     const marker = new THREE.Mesh(markerGeo, markerMat)
     const cIdx = Math.floor(GRID * GRID / 2)
-    const centerZ = (elevations[cIdx] - minE) / eRange * exag * 20
+    const centerZ = (elevations[cIdx] - minE) / eRange * TARGET_MAX_Z
     marker.position.set(0, centerZ + 6, 0)
     scene.add(marker)
     const sphere = new THREE.Mesh(
@@ -197,7 +198,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     // 조명 — 낮은 ambient + 강한 방향성 = 극적인 그림자
     scene.add(new THREE.AmbientLight(0x334466, 0.3))
     const sun = new THREE.DirectionalLight(0xffeedd, 2.0)
-    sun.position.set(40, maxZ + 60, -30)
+    sun.position.set(MESH_SIZE * 0.5, TARGET_MAX_Z + 40, -MESH_SIZE * 0.3)
     sun.castShadow = true
     scene.add(sun)
     scene.add(new THREE.HemisphereLight(0x87CEEB, 0x332211, 0.4))
@@ -208,14 +209,14 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     infoDiv.innerHTML = `▲ ${maxE.toFixed(0)}m &nbsp;▼ ${minE.toFixed(0)}m &nbsp;차이 ${eRange.toFixed(0)}m`
 
     // 애니메이션
-    const camDist = Math.max(maxZ * 0.6, 60) + 60
+    const camDist = MESH_SIZE * 1.2
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate)
       const rx = Math.max(0.1, Math.min(1.2, rotationRef.current.x))
       const ry = rotationRef.current.y
       const d = camDist / zoomRef.current
       camera.position.set(d * Math.cos(rx) * Math.sin(ry), d * Math.sin(rx), d * Math.cos(rx) * Math.cos(ry))
-      camera.lookAt(0, maxZ * 0.3, 0)
+      camera.lookAt(0, TARGET_MAX_Z * 0.3, 0)
       renderer.render(scene, camera)
     }
     animate()
@@ -255,6 +256,15 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
           className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
           onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU} onWheel={onW}
         />
+        {/* 나침반 */}
+        <div className="absolute top-2 right-2 pointer-events-none">
+          <svg width="48" height="48" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="22" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.3)" strokeWidth="1"/>
+            <polygon points="24,5 20,22 24,19 28,22" fill="#ef4444"/>
+            <polygon points="24,43 20,26 24,29 28,26" fill="#94a3b8"/>
+            <text x="24" y="15" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#fff">N</text>
+          </svg>
+        </div>
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
             <p className="text-xs text-white/70">3D 지형 로딩중...</p>
