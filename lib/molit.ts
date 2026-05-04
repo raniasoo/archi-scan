@@ -2065,6 +2065,11 @@ export async function lookupSiteData(
                   }
                   siteData.zoneType = centroidZone
                 }
+                
+                // 4단계: 지도 마커를 필지 중심점으로 이동
+                siteData.entX = centroidLng
+                siteData.entY = centroidLat
+                console.log(`[VWORLD-CENTROID] 지도 좌표를 필지 중심점으로 변경`)
               }
             } else {
               console.log(`[VWORLD-CENTROID] 필지 폴리곤 없음 (PNU=${pnu})`)
