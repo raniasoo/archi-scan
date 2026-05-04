@@ -471,6 +471,25 @@ async function resolveAddressWithJuso(address: string): Promise<JusoResolutionRe
       ji = bdMgtSn.substring(15, 19)
       
       console.log(`[JUSO] Parsed bdMgtSn: sigunguCd=${sigunguCd}, bjdongCd=${bjdongCd}, platGbCd=${platGbCdFromBdMgtSn}, bun=${bun}, ji=${ji}`)
+      
+      // 지번주소에서 직접 번/지 파싱 (bdMgtSn과 다를 수 있음)
+      const jibunAddr = juso.jibunAddr || ''
+      const jibunMatch = jibunAddr.match(/(\d+)(?:-(\d+))?(?:\s|$)/)
+      if (jibunMatch) {
+        const jibunBun = jibunMatch[1].padStart(4, '0')
+        const jibunJi = (jibunMatch[2] || '0').padStart(4, '0')
+        if (jibunBun !== bun || jibunJi !== ji) {
+          console.log(`[JUSO] ⚠️ bdMgtSn(${bun}-${ji}) ≠ 지번주소(${jibunBun}-${jibunJi}) — 지번주소를 우선 사용`)
+          bun = jibunBun
+          ji = jibunJi
+          // 지번주소에서 산 여부 확인
+          if (jibunAddr.includes('산 ') || jibunAddr.includes('산')) {
+            platGbCdFromBdMgtSn = '1'
+          } else {
+            platGbCdFromBdMgtSn = '0'  // 지번주소에 '산'이 없으면 일반 대지
+          }
+        }
+      }
     } else {
       console.log(`[JUSO] bdMgtSn too short or missing: "${bdMgtSn}" (length: ${bdMgtSn.length})`)
       return { 
