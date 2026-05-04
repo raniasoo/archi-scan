@@ -20,6 +20,9 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
   const frameRef = useRef<number>(0)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
+  const sceneRef = useRef<THREE.Scene | null>(null)
+  const boundaryGroupRef = useRef<THREE.Group | null>(null)
+  const terrainDataRef = useRef<{ elevations: number[], minE: number, eRange: number, GRID: number, RANGE: number, MESH_SIZE: number, TARGET_MAX_Z: number } | null>(null)
   const rotationRef = useRef({ x: 0.4, y: 0.5 })
   const zoomRef = useRef(1)
   const isDragging = useRef(false)
@@ -30,6 +33,14 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     if (!canvas) return
     const W = canvas.clientWidth, H = canvas.clientHeight
     if (W < 10 || H < 10) return
+    
+    // 기존 렌더러 정리 (WebGL context 충돌 방지)
+    if (frameRef.current) cancelAnimationFrame(frameRef.current)
+    if (rendererRef.current) {
+      rendererRef.current.dispose()
+      rendererRef.current = null
+    }
+    
     canvas.width = W; canvas.height = H
 
     const MESH_SIZE = 100
@@ -38,6 +49,7 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     try {
 
     const scene = new THREE.Scene()
+    sceneRef.current = scene
     scene.background = new THREE.Color(0x1a2332)
     scene.fog = new THREE.Fog(0x1a2332, MESH_SIZE * 1.5, MESH_SIZE * 4)
 
@@ -50,17 +62,8 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     renderer.shadowMap.enabled = true
 
     // 표고 데이터 (12x12 = 144개 — URL 길이 제한 내)
-    // RANGE를 필지 크기에 맞게 자동 조정
-    let RANGE = 0.004 // 기본: ~400m 반경
-    if (sitePolygon?.coords?.length > 2) {
-      const lngs = sitePolygon.coords.map(c => c[0])
-      const lats = sitePolygon.coords.map(c => c[1])
-      const spanLng = Math.max(...lngs) - Math.min(...lngs)
-      const spanLat = Math.max(...lats) - Math.min(...lats)
-      const maxSpan = Math.max(spanLng, spanLat)
-      // 필지가 화면의 25~35% 차지하도록 (최소 0.0005 = 55m)
-      RANGE = Math.max(maxSpan * 2, 0.0005)
-    }
+    // 표고 데이터
+    const RANGE = 0.002 // ~220m 반경 (필지 크기에 적절)
     const DATA_GRID = 10
     const MESH_GRID = 40
 
@@ -93,6 +96,9 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
 
     const minE = Math.min(...elevations), maxE = Math.max(...elevations)
     const eRange = Math.max(maxE - minE, 1)
+    
+    // terrain 데이터를 ref에 저장 (경계선 별도 렌더링용)
+    terrainDataRef.current = { elevations, minE, eRange, GRID, RANGE, MESH_SIZE, TARGET_MAX_Z }
 
     // 지형 메시
     const geo = new THREE.PlaneGeometry(MESH_SIZE, MESH_SIZE, GRID - 1, GRID - 1)
@@ -320,11 +326,15 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
       console.error('3D terrain init error:', err)
       setLoading(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lng, sitePolygon])
 
   useEffect(() => {
     init()
-    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current) }
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current)
+      rendererRef.current?.dispose()
+    }
   }, [init])
 
   // expand 시 리사이즈
