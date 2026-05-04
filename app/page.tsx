@@ -1880,6 +1880,7 @@ export default function ArchiScanPage() {
                     lng={siteCoords.lng}
                     lat={siteCoords.lat}
                     address={address}
+                    sitePolygon={sitePolygon ?? undefined}
                   />
                   <SlopeAnalysisCard
                     lng={siteCoords.lng}

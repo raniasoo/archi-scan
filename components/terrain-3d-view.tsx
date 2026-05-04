@@ -9,9 +9,10 @@ interface Terrain3DViewProps {
   lat: number
   address?: string
   className?: string
+  sitePolygon?: { coords: [number, number][], centroid: [number, number] }
 }
 
-export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DViewProps) {
+export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }: Terrain3DViewProps) {
   const [expanded, setExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [compassAngle, setCompassAngle] = useState(0)
@@ -188,6 +189,52 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
       }
     }
 
+    // 지적 경계선 오버레이
+    if (sitePolygon?.coords?.length > 2) {
+      const RANGE_VAL = RANGE
+      const boundaryPts: THREE.Vector3[] = []
+      
+      for (const coord of sitePolygon.coords) {
+        const cLng = coord[0], cLat = coord[1]
+        // lat/lng → 메시 로컬 좌표 (-50 ~ +50)
+        const mx = ((cLng - (lng - RANGE_VAL)) / (RANGE_VAL * 2)) * MESH_SIZE - MESH_SIZE / 2
+        const my = ((cLat - (lat - RANGE_VAL)) / (RANGE_VAL * 2)) * MESH_SIZE - MESH_SIZE / 2
+        
+        // 범위 내인지 확인
+        if (mx < -MESH_SIZE/2 || mx > MESH_SIZE/2 || my < -MESH_SIZE/2 || my > MESH_SIZE/2) continue
+        
+        // 해당 위치의 표고 보간 (bilinear)
+        const gxf = (mx + MESH_SIZE/2) / MESH_SIZE * (GRID - 1)
+        const gyf = (my + MESH_SIZE/2) / MESH_SIZE * (GRID - 1)
+        const gxi = Math.min(Math.floor(gxf), GRID - 2)
+        const gyi = Math.min(Math.floor(gyf), GRID - 2)
+        const dxf = gxf - gxi, dyf = gyf - gyi
+        const elev = 
+          elevations[gyi * GRID + gxi] * (1-dxf) * (1-dyf) +
+          elevations[gyi * GRID + gxi+1] * dxf * (1-dyf) +
+          elevations[(gyi+1) * GRID + gxi] * (1-dxf) * dyf +
+          elevations[(gyi+1) * GRID + gxi+1] * dxf * dyf
+        const h = ((elev - minE) / eRange) * TARGET_MAX_Z + 0.5
+        
+        // PlaneGeometry 회전 후 좌표: world(x, z_elev, local_y_mapped)
+        boundaryPts.push(new THREE.Vector3(mx, h, my))
+      }
+      
+      // 폴리곤 닫기
+      if (boundaryPts.length > 2) {
+        boundaryPts.push(boundaryPts[0].clone())
+        
+        // 경계선 (파란색 굵은 선)
+        const bGeo = new THREE.BufferGeometry().setFromPoints(boundaryPts)
+        const bMat = new THREE.LineBasicMaterial({ color: 0x3b82f6, linewidth: 2 })
+        scene.add(new THREE.Line(bGeo, bMat))
+        
+        // 경계선 점 (꼭짓점 표시)
+        const dotMat = new THREE.PointsMaterial({ color: 0x60a5fa, size: 2.5 })
+        scene.add(new THREE.Points(bGeo, dotMat))
+      }
+    }
+
     // 마커
     const markerGeo = new THREE.CylinderGeometry(0.4, 0.4, 12, 8)
     const markerMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b })
@@ -241,7 +288,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
       console.error('3D terrain init error:', err)
       setLoading(false)
     }
-  }, [lat, lng])
+  }, [lat, lng, sitePolygon])
 
   useEffect(() => {
     init()
@@ -317,6 +364,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:'#268033'}}/>낮음</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:'#80a610'}}/>중간</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{background:'#c08c14'}}/>높음</span>
+          {sitePolygon && <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-blue-400 inline-block"/>필지</span>}
         </div>
       </div>
     </div>
