@@ -706,6 +706,27 @@ export default function ArchiScanPage() {
     console.log('[v0] LegalSummary updated:', summary)
   }, [regulation, siteArea, address])
 
+  // Auto-load parcel polygon for 3D terrain boundary overlay
+  useEffect(() => {
+    if (!siteCoords || !address || sitePolygon) return
+    const fetchPolygon = async () => {
+      try {
+        const res = await fetch('/api/vworld', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address, siteArea, entX: siteCoords.lng, entY: siteCoords.lat }),
+        })
+        const data = await res.json()
+        if (data.success && data.parcel?.coordinates?.length) {
+          setSitePolygon({ coords: data.parcel.coordinates, centroid: data.parcel.centroid })
+        } else if (data.demoParcel?.coordinates?.length) {
+          setSitePolygon({ coords: data.demoParcel.coordinates, centroid: data.demoParcel.centroid })
+        }
+      } catch {}
+    }
+    fetchPolygon()
+  }, [siteCoords, address])
+
   // Auto-calculate feasibilityResult when selectedLayout changes
   useEffect(() => {
     if (selectedLayout === null || layouts.length === 0) {
