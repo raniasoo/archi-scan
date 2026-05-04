@@ -1996,58 +1996,82 @@ export async function lookupSiteData(
         }
       }
       
-      // VWorld 토지이용계획 우선: 건축물대장 용도지역보다 정확
-      // MOLIT 지역지구 API도 건축물대장 기준이므로 VWorld PNU 직접 조회
+      // VWorld 토지이용계획 우선: 필지 중심점(centroid) 기반 용도지역 조회
+      // 건물 입구 좌표는 필지 경계에 있어 인접 용도지역 반환 가능
+      // → 필지 폴리곤의 중심점으로 조회하면 정확한 용도지역 반환
       {
-        const pnuCandidates = [
-          `${sigunguCd}${bjdongCd}1${bun}${ji}`,
-          `${sigunguCd}${bjdongCd}2${bun}${ji}`,
-        ]
-        const layers = ['LT_C_UQ111', 'LT_C_LHBLPN', 'LT_C_LANDINFOBASIC', 'LT_C_AISRESC']
-        let vworldZone: string | undefined
-        
-        for (const pnu of pnuCandidates) {
-          if (vworldZone) break
-          for (const layer of layers) {
-            try {
-              console.log(`[VWORLD-OVERRIDE] ${layer} PNU=${pnu}`)
-              const params = new URLSearchParams({
-                service: 'data', request: 'GetFeature', data: layer,
-                key: VWORLD_KEY, domain: VWORLD_DOMAIN, attribute: 'true',
-                page: '1', size: '10', crs: 'EPSG:4326', format: 'json',
-                attrFilter: `pnu:=:${pnu}`,
-              })
-              const res = await fetch(`https://api.vworld.kr/req/data?${params}`, {
-                signal: AbortSignal.timeout(5000),
-                headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
-              })
-              if (!res.ok) continue
-              const data = await res.json()
-              const features = data?.response?.result?.featureCollection?.features || []
-              const status = data?.response?.status
-              console.log(`[VWORLD-OVERRIDE] ${layer} PNU=${pnu} status=${status} features=${features.length}`)
-              if (features.length > 0) {
-                console.log(`[VWORLD-OVERRIDE] props keys: ${Object.keys(features[0]?.properties || {}).join(',')}`)
-                console.log(`[VWORLD-OVERRIDE] props values: ${JSON.stringify(features[0]?.properties).slice(0,300)}`)
-              }
-              for (const feat of features) {
-                const props = feat?.properties || {}
-                const val = (props.prposAreaDstrcCodeNm || props.lndcgrCodeNm || props.uname || props.name || '').trim()
-                if (val && (val.includes('주거') || val.includes('상업') || val.includes('공업') || val.includes('녹지') || val.includes('관리'))) {
-                  vworldZone = val
-                  break
+        try {
+          // 1단계: LP_PA_CBND_BUBUN에서 필지 폴리곤 가져오기
+          const pnu = `${sigunguCd}${bjdongCd}1${bun}${ji}`
+          console.log(`[VWORLD-CENTROID] 필지 폴리곤 조회: PNU=${pnu}`)
+          
+          const polyParams = new URLSearchParams({
+            service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN',
+            key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+            geometry: 'true', attribute: 'true',
+            page: '1', size: '1', crs: 'EPSG:4326', format: 'json',
+            attrFilter: `pnu:=:${pnu}`,
+          })
+          const polyRes = await fetch(`https://api.vworld.kr/req/data?${polyParams}`, {
+            signal: AbortSignal.timeout(8000),
+            headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+          })
+          
+          if (polyRes.ok) {
+            const polyData = await polyRes.json()
+            const features = polyData?.response?.result?.featureCollection?.features || []
+            
+            if (features.length > 0) {
+              const geom = features[0]?.geometry
+              let centroidLng: number | undefined
+              let centroidLat: number | undefined
+              
+              // 2단계: 폴리곤 중심점 계산
+              if (geom?.type === 'Polygon' && geom.coordinates?.[0]) {
+                const ring = geom.coordinates[0] as number[][]
+                let sumLng = 0, sumLat = 0, count = 0
+                for (const [lng, lat] of ring) {
+                  sumLng += lng
+                  sumLat += lat
+                  count++
+                }
+                if (count > 0) {
+                  centroidLng = sumLng / count
+                  centroidLat = sumLat / count
+                }
+              } else if (geom?.type === 'MultiPolygon' && geom.coordinates?.[0]?.[0]) {
+                const ring = geom.coordinates[0][0] as number[][]
+                let sumLng = 0, sumLat = 0, count = 0
+                for (const [lng, lat] of ring) {
+                  sumLng += lng
+                  sumLat += lat
+                  count++
+                }
+                if (count > 0) {
+                  centroidLng = sumLng / count
+                  centroidLat = sumLat / count
                 }
               }
-              if (vworldZone) break
-            } catch { /* 무시 */ }
+              
+              if (centroidLng && centroidLat) {
+                console.log(`[VWORLD-CENTROID] 필지 중심점: lng=${centroidLng.toFixed(6)}, lat=${centroidLat.toFixed(6)}`)
+                console.log(`[VWORLD-CENTROID] 건물 입구: lng=${siteData.entX?.toFixed(6)}, lat=${siteData.entY?.toFixed(6)}`)
+                
+                // 3단계: 중심점으로 용도지역 조회
+                const centroidZone = await fetchZoneTypeByCoord(centroidLng, centroidLat)
+                if (centroidZone) {
+                  if (centroidZone !== siteData.zoneType) {
+                    console.log(`[VWORLD-CENTROID] 용도지역 변경: "${siteData.zoneType}" → "${centroidZone}" (필지 중심점 기준)`)
+                  }
+                  siteData.zoneType = centroidZone
+                }
+              }
+            } else {
+              console.log(`[VWORLD-CENTROID] 필지 폴리곤 없음 (PNU=${pnu})`)
+            }
           }
-        }
-        
-        if (vworldZone) {
-          if (vworldZone !== siteData.zoneType) {
-            console.log(`[MOLIT] 용도지역 VWorld 우선: "${siteData.zoneType}" → "${vworldZone}"`)
-          }
-          siteData.zoneType = vworldZone
+        } catch (e) {
+          console.warn('[VWORLD-CENTROID] 필지 중심점 용도지역 조회 실패:', e)
         }
       }
       
