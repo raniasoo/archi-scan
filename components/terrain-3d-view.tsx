@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Box, Maximize2 } from "lucide-react"
+import * as THREE from "three"
 
 interface Terrain3DViewProps {
   lng: number
@@ -12,312 +13,207 @@ interface Terrain3DViewProps {
 
 export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DViewProps) {
   const [expanded, setExpanded] = useState(false)
-  const [origin, setOrigin] = useState('')
-  const [tileDataMap, setTileDataMap] = useState<Record<string, string>>({})
-  const [tilesReady, setTilesReady] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const sceneRef = useRef<THREE.Scene | null>(null)
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
+  const frameRef = useRef<number>(0)
+  const rotationRef = useRef({ x: 0.6, y: 0.4 })
+  const zoomRef = useRef(1)
+  const isDragging = useRef(false)
+  const lastMouse = useRef({ x: 0, y: 0 })
 
-  useEffect(() => { setOrigin(window.location.origin) }, [])
+  const init = useCallback(async () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
 
-  // React에서 타일을 미리 fetch → base64 변환 (CORS 문제 없음)
-  useEffect(() => {
-    if (!origin) return
-    const z = 16
-    const n = Math.pow(2, z)
+    const W = canvas.clientWidth, H = canvas.clientHeight
+    if (W < 10 || H < 10) return
+    canvas.width = W; canvas.height = H
+
+    // Scene
+    const scene = new THREE.Scene()
+    scene.background = new THREE.Color(0x1e293b)
+    scene.fog = new THREE.Fog(0x1e293b, 300, 600)
+    sceneRef.current = scene
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 2000)
+    cameraRef.current = camera
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+    renderer.setSize(W, H)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.shadowMap.enabled = true
+    rendererRef.current = renderer
+
+    // 1) 표고 데이터
+    const GRID = 32, RANGE = 0.003
+    const points: Array<{ lat: number; lng: number }> = []
+    for (let gy = 0; gy < GRID; gy++) {
+      for (let gx = 0; gx < GRID; gx++) {
+        points.push({
+          lat: lat + RANGE - (gy / (GRID - 1)) * RANGE * 2,
+          lng: lng - RANGE + (gx / (GRID - 1)) * RANGE * 2,
+        })
+      }
+    }
+
+    let elevations: number[]
+    try {
+      const lats = points.map(p => p.lat.toFixed(6)).join(',')
+      const lngs = points.map(p => p.lng.toFixed(6)).join(',')
+      const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`)
+      const d = await r.json()
+      elevations = d.elevation || new Array(GRID * GRID).fill(0)
+    } catch {
+      elevations = new Array(GRID * GRID).fill(0)
+    }
+
+    const minE = Math.min(...elevations), maxE = Math.max(...elevations)
+    const eRange = Math.max(maxE - minE, 1)
+
+    // 2) 지형 메시
+    const geo = new THREE.PlaneGeometry(120, 120, GRID - 1, GRID - 1)
+    const verts = geo.attributes.position.array as Float32Array
+
+    const exaggeration = eRange < 3 ? 25 : eRange < 8 ? 18 : eRange < 20 ? 12 : 8
+    let maxZ = 0
+    for (let i = 0; i < GRID * GRID; i++) {
+      const norm = (elevations[i] - minE) / eRange
+      const z = norm * exaggeration * 15
+      verts[i * 3 + 2] = z
+      if (z > maxZ) maxZ = z
+    }
+    geo.computeVertexNormals()
+
+    // 3) 타일 텍스처 (같은 origin → CORS 문제 없음)
+    const texCanvas = document.createElement('canvas')
+    texCanvas.width = 512; texCanvas.height = 512
+    const ctx = texCanvas.getContext('2d')!
+    ctx.fillStyle = '#e2e8f0'
+    ctx.fillRect(0, 0, 512, 512)
+
+    const z16 = 16, n = Math.pow(2, z16)
     const tx = Math.floor((lng + 180) / 360 * n)
     const ty = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n)
 
-    const tasks: Promise<void>[] = []
-    const dataMap: Record<string, string> = {}
+    const texture = new THREE.CanvasTexture(texCanvas)
+    texture.minFilter = THREE.LinearFilter
 
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        for (const layer of ['Base', 'lt_c_cadastral']) {
-          const key = `${layer}_${dx}_${dy}`
-          const url = `${origin}/api/tile?layer=${layer}&z=${z}&x=${tx + dx}&y=${ty + dy}`
-          const task = fetch(url)
-            .then(r => r.blob())
-            .then(blob => new Promise<void>((resolve) => {
-              const reader = new FileReader()
-              reader.onload = () => { dataMap[key] = reader.result as string; resolve() }
-              reader.onerror = () => resolve()
-              reader.readAsDataURL(blob)
-            }))
-            .catch(() => {})
-          tasks.push(task as Promise<void>)
+    // Base 타일 로드
+    const loadTile = (layer: string, dx: number, dy: number, alpha: number): Promise<void> =>
+      new Promise((resolve) => {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.onload = () => {
+          if (alpha < 1) ctx.globalAlpha = alpha
+          ctx.drawImage(img, (dx + 1) * (512 / 3), (dy + 1) * (512 / 3), 512 / 3, 512 / 3)
+          if (alpha < 1) ctx.globalAlpha = 1
+          texture.needsUpdate = true
+          resolve()
         }
-      }
-    }
+        img.onerror = () => resolve()
+        img.src = `/api/tile?layer=${layer}&z=${z16}&x=${tx + dx}&y=${ty + dy}`
+      })
 
-    Promise.all(tasks).then(() => {
-      setTileDataMap(dataMap)
-      setTilesReady(true)
+    // Base 9장 로드
+    const basePs: Promise<void>[] = []
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++)
+        basePs.push(loadTile('Base', dx, dy, 1))
+
+    Promise.all(basePs).then(() => {
+      // 지적도 오버레이 9장
+      const cadPs: Promise<void>[] = []
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++)
+          cadPs.push(loadTile('lt_c_cadastral', dx, dy, 0.8))
+      return Promise.all(cadPs)
+    }).then(() => {
+      texture.needsUpdate = true
+      setLoading(false)
     })
-  }, [origin, lat, lng])
 
-  const html3d = useMemo(() => {
-    if (!origin || !tilesReady) return ''
+    // 머티리얼
+    const mat = new THREE.MeshStandardMaterial({
+      map: texture,
+      roughness: 0.7,
+      metalness: 0,
+      side: THREE.DoubleSide,
+    })
 
-    // 타일 데이터를 JSON으로 직렬화하여 iframe에 전달
-    const tileJson = JSON.stringify(tileDataMap)
+    const terrain = new THREE.Mesh(geo, mat)
+    terrain.rotation.x = -Math.PI / 2
+    terrain.receiveShadow = true
+    scene.add(terrain)
 
-    return `<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>*{margin:0;padding:0}html,body,#c{width:100%;height:100%;overflow:hidden;background:#1e293b}
-#info{position:absolute;bottom:8px;left:8px;color:rgba(255,255,255,0.7);font:11px/1.4 sans-serif;
-background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:none}
-#loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#5eead4;font:14px sans-serif}
-</style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
-</head><body>
-<canvas id="c"></canvas>
-<div id="info">${(address||'대상지').replace(/'/g,"\\'")} · 3D 지적도</div>
-<div id="loading">3D 지적도 로딩중...</div>
-<script>
-(async function(){
-  var TILE_DATA = ${tileJson};
-  const LAT=${lat}, LNG=${lng};
-  const GRID=32, RANGE=0.003; // 약 300m 범위, 32x32 그리드
-  
-  // 1) 표고 데이터 수집 (그리드)
-  var points=[];
-  for(var gy=0;gy<GRID;gy++){
-    for(var gx=0;gx<GRID;gx++){
-      var plat=LAT-RANGE+gy*(2*RANGE/(GRID-1));
-      var plng=LNG-RANGE+gx*(2*RANGE/(GRID-1));
-      points.push({latitude:plat,longitude:plng});
-    }
-  }
-  
-  var elevations=[];
-  try{
-    // Open-Meteo Elevation API (빠르고 안정적)
-    var lats=points.map(p=>p.latitude).join(',');
-    var lngs=points.map(p=>p.longitude).join(',');
-    var r=await fetch('https://api.open-meteo.com/v1/elevation?latitude='+lats+'&longitude='+lngs);
-    var d=await r.json();
-    elevations=d.elevation||[];
-  }catch(e){}
-  
-  if(elevations.length<GRID*GRID){
-    // fallback: 평탄 지형
-    elevations=new Array(GRID*GRID).fill(0);
-  }
-  
-  // 표고 범위 정규화
-  var minE=Math.min(...elevations), maxE=Math.max(...elevations);
-  var eRange=maxE-minE;
-  if(eRange<0.5) eRange=1; // 평탄 지형 보정
-  
-  // 2) 지도 타일 텍스처 로드
-  var canvas=document.getElementById('c');
-  var W=canvas.clientWidth, H=canvas.clientHeight;
-  canvas.width=W; canvas.height=H;
-  
-  // Three.js 세팅
-  var scene=new THREE.Scene();
-  scene.background=new THREE.Color(0x1e293b);
-  scene.fog=new THREE.Fog(0x1e293b,200,500);
-  
-  var camera=new THREE.PerspectiveCamera(45,W/H,0.1,2000);
-  
-  var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
-  renderer.setSize(W,H);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-  renderer.shadowMap.enabled=true;
-  
-  // 3) 지형 메시 생성
-  var geo=new THREE.PlaneGeometry(120,120,GRID-1,GRID-1);
-  var verts=geo.attributes.position.array;
-  
-  // 표고 적용 (높이 과장: 극대화 — 반드시 시각적으로 보이도록)
-  var exaggeration=eRange<3?25:eRange<8?18:eRange<20?12:8;
-  var maxZ=0;
-  for(var i=0;i<GRID*GRID;i++){
-    var norm=(elevations[i]-minE)/eRange;
-    var z=norm*exaggeration*15;
-    verts[i*3+2]=z;
-    if(z>maxZ)maxZ=z;
-  }
-  geo.computeVertexNormals();
-  
-  // 카메라 위치: maxZ 위에서 비스듬히 내려보기
-  camera.position.set(80, maxZ+60, 120);
-  camera.lookAt(0, maxZ*0.3, 0);
-  
-  // 높이별 색상 (초록→노랑→갈색→흰색)
-  var colors=new Float32Array(GRID*GRID*3);
-  for(var i=0;i<GRID*GRID;i++){
-    var h=verts[i*3+2]/Math.max(maxZ,1);
-    var r,g,b;
-    if(h<0.25){r=0.18+h*1.2;g=0.45+h*0.8;b=0.15;}
-    else if(h<0.5){var t=(h-0.25)*4;r=0.48+t*0.4;g=0.65-t*0.15;b=0.15-t*0.05;}
-    else if(h<0.75){var t=(h-0.5)*4;r=0.88-t*0.1;g=0.5-t*0.15;b=0.1+t*0.15;}
-    else{var t=(h-0.75)*4;r=0.78+t*0.15;g=0.35+t*0.15;b=0.25+t*0.2;}
-    colors[i*3]=r;colors[i*3+1]=g;colors[i*3+2]=b;
-  }
-  geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
-  
-  // 4) 지도 텍스처 (React에서 미리 fetch한 타일 데이터 사용)
-  var texCanvas=document.createElement('canvas');
-  texCanvas.width=512; texCanvas.height=512;
-  var ctx=texCanvas.getContext('2d');
-  ctx.fillStyle='#e2e8f0';
-  ctx.fillRect(0,0,512,512);
-  
-  // 임베드된 base64 타일을 canvas에 그리기 (네트워크 요청 없음)
-  function drawTile(key, px, py, alpha){
-    return new Promise(function(resolve){
-      var dataUrl=TILE_DATA[key];
-      if(!dataUrl){resolve();return;}
-      var img=new Image();
-      img.onload=function(){
-        if(alpha<1) ctx.globalAlpha=alpha;
-        ctx.drawImage(img,px,py,512/3,512/3);
-        if(alpha<1) ctx.globalAlpha=1;
-        resolve();
-      };
-      img.onerror=function(){resolve()};
-      img.src=dataUrl;
-    });
-  }
-  
-  // Base 타일 9장 그리기
-  var basePromises=[];
-  for(var dy=-1;dy<=1;dy++){
-    for(var dx=-1;dx<=1;dx++){
-      basePromises.push(drawTile('Base_'+dx+'_'+dy,(dx+1)*(512/3),(dy+1)*(512/3),1));
-    }
-  }
-  
-  Promise.all(basePromises).then(function(){
-    texture.needsUpdate=true;
-    // 지적도 오버레이 9장 그리기
-    var cadPromises=[];
-    for(var dy=-1;dy<=1;dy++){
-      for(var dx=-1;dx<=1;dx++){
-        cadPromises.push(drawTile('lt_c_cadastral_'+dx+'_'+dy,(dx+1)*(512/3),(dy+1)*(512/3),0.8));
-      }
-    }
-    return Promise.all(cadPromises);
-  }).then(function(){
-    texture.needsUpdate=true;
-    document.getElementById('loading').style.display='none';
-  });
-  
-  var texture=new THREE.CanvasTexture(texCanvas);
-  texture.minFilter=THREE.LinearFilter;
-  
-  var mat=new THREE.MeshStandardMaterial({
-    map:texture,
-    roughness:0.7,
-    metalness:0.0,
-    side:THREE.DoubleSide,
-  });
-  
-  var terrain=new THREE.Mesh(geo,mat);
-  terrain.rotation.x=-Math.PI/2;
-  terrain.receiveShadow=true;
-  scene.add(terrain);
-  
-  // 5) 중심 마커
-  var markerGeo=new THREE.CylinderGeometry(0.3,0.3,15,8);
-  var markerMat=new THREE.MeshStandardMaterial({color:0xef4444,emissive:0x991b1b});
-  var marker=new THREE.Mesh(markerGeo,markerMat);
-  var centerElev=(elevations[Math.floor(GRID*GRID/2)]-minE)/eRange*exaggeration*15;
-  marker.position.set(0,centerElev+8,0);
-  scene.add(marker);
-  
-  // 마커 상단 구
-  var sphereGeo=new THREE.SphereGeometry(1.2,16,16);
-  var sphereMat=new THREE.MeshStandardMaterial({color:0xef4444,emissive:0xef4444,emissiveIntensity:0.5});
-  var sphere=new THREE.Mesh(sphereGeo,sphereMat);
-  sphere.position.set(0,centerElev+16,0);
-  scene.add(sphere);
-  
-  // 6) 조명
-  var amb=new THREE.AmbientLight(0xffffff,0.35);
-  scene.add(amb);
-  var dir=new THREE.DirectionalLight(0xffffff,1.2);
-  dir.position.set(80,150,30);
-  dir.castShadow=true;
-  scene.add(dir);
-  var hemi=new THREE.HemisphereLight(0x87CEEB,0x8B7355,0.4);
-  scene.add(hemi);
-  
-  // 7) 마우스/터치 컨트롤 (간단한 궤도 카메라)
-  var isDragging=false, prevX=0, prevY=0;
-  var theta=Math.PI/4, phi=Math.PI/3, dist=140;
-  
-  function updateCamera(){
-    camera.position.x=dist*Math.sin(phi)*Math.sin(theta);
-    camera.position.y=dist*Math.cos(phi);
-    camera.position.z=dist*Math.sin(phi)*Math.cos(theta);
-    camera.lookAt(0,centerElev/2,0);
-  }
-  updateCamera();
-  
-  canvas.addEventListener('pointerdown',function(e){isDragging=true;prevX=e.clientX;prevY=e.clientY;});
-  canvas.addEventListener('pointermove',function(e){
-    if(!isDragging)return;
-    theta+=(e.clientX-prevX)*0.01;
-    phi=Math.max(0.2,Math.min(Math.PI/2-0.1,phi-(e.clientY-prevY)*0.01));
-    prevX=e.clientX;prevY=e.clientY;
-    updateCamera();
-  });
-  canvas.addEventListener('pointerup',function(){isDragging=false;});
-  canvas.addEventListener('wheel',function(e){
-    dist=Math.max(50,Math.min(300,dist+e.deltaY*0.3));
-    updateCamera();
-  },{passive:true});
-  
-  // 터치 줌
-  var lastDist=0;
-  canvas.addEventListener('touchstart',function(e){
-    if(e.touches.length===2){
-      lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    }
-  });
-  canvas.addEventListener('touchmove',function(e){
-    if(e.touches.length===2){
-      var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-      dist=Math.max(50,Math.min(300,dist-(d-lastDist)*0.5));
-      lastDist=d;
-      updateCamera();
-    }
-  });
-  
-  // 8) 렌더 루프
-  document.getElementById('loading').style.display='none';
-  
-  function animate(){
-    requestAnimationFrame(animate);
-    // 마커 애니메이션
-    sphere.position.y=centerElev+16+Math.sin(Date.now()*0.002)*1;
-    renderer.render(scene,camera);
-  }
-  animate();
-  
-  // 리사이즈
-  window.addEventListener('resize',function(){
-    W=canvas.clientWidth;H=canvas.clientHeight;
-    canvas.width=W;canvas.height=H;
-    camera.aspect=W/H;
-    camera.updateProjectionMatrix();
-    renderer.setSize(W,H);
-  });
-})();
-<\/script>
-</body></html>`
-  }, [lat, lng, origin, address, tilesReady, tileDataMap])
+    // 마커
+    const markerGeo = new THREE.CylinderGeometry(0.3, 0.3, 15, 8)
+    const markerMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b })
+    const marker = new THREE.Mesh(markerGeo, markerMat)
+    const centerElev = (elevations[Math.floor(GRID * GRID / 2)] - minE) / eRange * exaggeration * 15
+    marker.position.set(0, centerElev + 7.5, 0)
+    scene.add(marker)
 
-  const blobUrl = useMemo(() => {
-    if (!html3d) return ''
-    const blob = new Blob([html3d], { type: 'text/html;charset=utf-8' })
-    return URL.createObjectURL(blob)
-  }, [html3d])
+    const sphereGeo = new THREE.SphereGeometry(1.5, 16, 16)
+    const sphereMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5 })
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat)
+    sphere.position.set(0, centerElev + 16, 0)
+    scene.add(sphere)
 
-  if (!blobUrl) return null
+    // 조명
+    scene.add(new THREE.AmbientLight(0xffffff, 0.35))
+    const dir = new THREE.DirectionalLight(0xffffff, 1.2)
+    dir.position.set(80, 150, 30)
+    dir.castShadow = true
+    scene.add(dir)
+    scene.add(new THREE.HemisphereLight(0x87CEEB, 0x8B7355, 0.4))
+
+    // 애니메이션
+    const camDist = maxZ + 130
+    const animate = () => {
+      frameRef.current = requestAnimationFrame(animate)
+      const rx = Math.max(0.1, Math.min(1.2, rotationRef.current.x))
+      const ry = rotationRef.current.y
+      const d = camDist / zoomRef.current
+      camera.position.set(
+        d * Math.cos(rx) * Math.sin(ry),
+        d * Math.sin(rx),
+        d * Math.cos(rx) * Math.cos(ry)
+      )
+      camera.lookAt(0, maxZ * 0.3, 0)
+      renderer.render(scene, camera)
+    }
+    animate()
+    setLoading(false)
+  }, [lat, lng])
+
+  useEffect(() => {
+    init()
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current)
+      rendererRef.current?.dispose()
+    }
+  }, [init])
+
+  // 마우스/터치 이벤트
+  const onPD = (e: React.PointerEvent) => {
+    isDragging.current = true
+    lastMouse.current = { x: e.clientX, y: e.clientY }
+  }
+  const onPM = (e: React.PointerEvent) => {
+    if (!isDragging.current) return
+    rotationRef.current.y += (e.clientX - lastMouse.current.x) * 0.008
+    rotationRef.current.x += (e.clientY - lastMouse.current.y) * 0.008
+    lastMouse.current = { x: e.clientX, y: e.clientY }
+  }
+  const onPU = () => { isDragging.current = false }
+  const onW = (e: React.WheelEvent) => {
+    zoomRef.current = Math.max(0.3, Math.min(3, zoomRef.current - e.deltaY * 0.001))
+  }
 
   return (
     <div className={`rounded-xl border border-border/60 bg-card overflow-hidden ${className}`}>
@@ -332,7 +228,19 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
         </button>
       </div>
       <div className={`relative ${expanded ? 'h-[400px] sm:h-[500px]' : 'h-[260px] sm:h-[320px]'} transition-all`}>
-        <iframe key={expanded ? 'exp' : 'col'} src={blobUrl} className="w-full h-full border-0" title="3D 지적도" />
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
+          onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU} onWheel={onW}
+        />
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
+            <p className="text-xs text-white/70">3D 지적도 로딩중...</p>
+          </div>
+        )}
+        <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-[10px] text-white/70 pointer-events-none">
+          {address || '대상지'} · 3D 지적도
+        </div>
       </div>
     </div>
   )
