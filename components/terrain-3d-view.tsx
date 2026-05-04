@@ -16,7 +16,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
   const [loading, setLoading] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameRef = useRef<number>(0)
-  const rotationRef = useRef({ x: 0.6, y: 0.4 })
+  const rotationRef = useRef({ x: 0.35, y: 0.5 })
   const zoomRef = useRef(1)
   const isDragging = useRef(false)
   const lastMouse = useRef({ x: 0, y: 0 })
@@ -38,7 +38,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     renderer.shadowMap.enabled = true
 
     // 표고 데이터
-    const GRID = 40, RANGE = 0.003
+    const GRID = 40, RANGE = 0.005
     const pts: Array<{ lat: number; lng: number }> = []
     for (let gy = 0; gy < GRID; gy++)
       for (let gx = 0; gx < GRID; gx++)
@@ -64,11 +64,11 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     // 지형 메시
     const geo = new THREE.PlaneGeometry(120, 120, GRID - 1, GRID - 1)
     const verts = geo.attributes.position.array as Float32Array
-    const exag = eRange < 3 ? 25 : eRange < 8 ? 18 : eRange < 20 ? 12 : 8
+    const exag = eRange < 3 ? 40 : eRange < 8 ? 30 : eRange < 20 ? 20 : 15
     let maxZ = 0
     for (let i = 0; i < GRID * GRID; i++) {
       const norm = (elevations[i] - minE) / eRange
-      const z = norm * exag * 15
+      const z = norm * exag * 20
       verts[i * 3 + 2] = z
       if (z > maxZ) maxZ = z
     }
@@ -96,13 +96,22 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     terrain.receiveShadow = true
     scene.add(terrain)
 
+    // 와이어프레임 오버레이 (지형 굴곡 강조)
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: 0x000000, wireframe: true, opacity: 0.08, transparent: true,
+    })
+    const wire = new THREE.Mesh(geo, wireMat)
+    wire.rotation.x = -Math.PI / 2
+    wire.position.y = 0.1
+    scene.add(wire)
+
     // 등고선 (5m 간격)
     const contourInterval = eRange > 30 ? 10 : eRange > 10 ? 5 : 2
     const contourCount = Math.floor(eRange / contourInterval)
     for (let c = 1; c <= contourCount; c++) {
       const contourElev = minE + c * contourInterval
       const contourNorm = (contourElev - minE) / eRange
-      const contourZ = contourNorm * exag * 15
+      const contourZ = contourNorm * exag * 20
       const contourPts: THREE.Vector3[] = []
       // 가로 스캔
       for (let gy = 0; gy < GRID - 1; gy++) {
@@ -142,7 +151,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     const markerMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b })
     const marker = new THREE.Mesh(markerGeo, markerMat)
     const cIdx = Math.floor(GRID * GRID / 2)
-    const centerZ = (elevations[cIdx] - minE) / eRange * exag * 15
+    const centerZ = (elevations[cIdx] - minE) / eRange * exag * 20
     marker.position.set(0, centerZ + 6, 0)
     scene.add(marker)
     const sphere = new THREE.Mesh(
@@ -152,13 +161,13 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     sphere.position.set(0, centerZ + 13, 0)
     scene.add(sphere)
 
-    // 조명 — 강한 방향성으로 그림자 효과
-    scene.add(new THREE.AmbientLight(0x4488aa, 0.4))
-    const sun = new THREE.DirectionalLight(0xffeedd, 1.5)
-    sun.position.set(60, maxZ + 80, 40)
+    // 조명 — 낮은 ambient + 강한 방향성 = 극적인 그림자
+    scene.add(new THREE.AmbientLight(0x334466, 0.3))
+    const sun = new THREE.DirectionalLight(0xffeedd, 2.0)
+    sun.position.set(40, maxZ + 60, -30)
     sun.castShadow = true
     scene.add(sun)
-    scene.add(new THREE.HemisphereLight(0x87CEEB, 0x553322, 0.5))
+    scene.add(new THREE.HemisphereLight(0x87CEEB, 0x332211, 0.4))
 
     // 표고 범위 라벨 (HTML 오버레이)
     const infoDiv = document.createElement('div')
@@ -166,7 +175,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     infoDiv.innerHTML = `▲ ${maxE.toFixed(0)}m &nbsp;▼ ${minE.toFixed(0)}m &nbsp;차이 ${eRange.toFixed(0)}m`
 
     // 애니메이션
-    const camDist = maxZ + 130
+    const camDist = Math.max(maxZ * 0.8, 80) + 100
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate)
       const rx = Math.max(0.1, Math.min(1.2, rotationRef.current.x))
