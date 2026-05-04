@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ results: [] })
   }
 
-  const jusoKey = process.env.JUSO_API_KEY || 'U01TX0FVVEgyMDI2MDUwNDIyMDk0NzExODA5OTM='
+  const jusoKey = 'U01TX0FVVEgyMDI2MDUwNDIyMDk0NzExODA5OTM='
   if (!jusoKey) {
     return NextResponse.json({ results: [], error: 'JUSO_API_KEY not configured' })
   }

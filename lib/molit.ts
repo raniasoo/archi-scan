@@ -101,14 +101,8 @@ function getApiKey(): string {
 }
 
 function getJusoApiKey(): string {
-  const envKey = process.env.JUSO_API_KEY
-  // ENV 키가 있으면 무조건 사용 (juso-suggest와 동일한 로직)
-  if (envKey && envKey.length > 5) {
-    console.log(`[JUSO] getJusoApiKey: source=ENV, len=${envKey.length}`)
-    return envKey
-  }
-  // ENV 미설정 시 하드코딩 키 fallback
-  console.log(`[JUSO] getJusoApiKey: source=HARDCODED (ENV not set), len=${HARDCODED_JUSO_KEY.length}`)
+  // 2026-05-04 새로 발급받은 키를 직접 사용
+  console.log(`[JUSO] getJusoApiKey: source=HARDCODED_NEW, len=${HARDCODED_JUSO_KEY.length}`)
   return HARDCODED_JUSO_KEY
 }
 
