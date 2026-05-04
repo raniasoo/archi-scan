@@ -132,50 +132,71 @@ background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;pointer-events:non
   var tx=Math.floor((LNG+180)/360*n);
   var ty=Math.floor((1-Math.log(Math.tan(LAT*Math.PI/180)+1/Math.cos(LAT*Math.PI/180))/Math.PI)/2*n);
   
-  // 3x3 타일 그리드 로드
-  var loaded=0, total=9;
+  // fetch → dataURL 변환 (blob iframe CORS 우회)
+  function fetchTileAsDataUrl(url){
+    return fetch(url).then(function(r){return r.blob()}).then(function(blob){
+      return new Promise(function(resolve){
+        var reader=new FileReader();
+        reader.onload=function(){resolve(reader.result)};
+        reader.onerror=function(){resolve(null)};
+        reader.readAsDataURL(blob);
+      });
+    }).catch(function(){return null});
+  }
+  
+  // 3x3 타일 그리드 로드 (fetch→dataURL 방식)
+  var tilePromises=[];
   for(var dy=-1;dy<=1;dy++){
     for(var dx=-1;dx<=1;dx++){
       (function(ddx,ddy){
-        var img=new Image();
-        img.crossOrigin='anonymous';
-        img.onload=function(){
-          var px=(ddx+1)*(512/3), py=(ddy+1)*(512/3);
-          ctx.drawImage(img,px,py,512/3,512/3);
-          loaded++;
-          if(loaded>=total){
-            texture.needsUpdate=true;
-            // 지적도 오버레이
-            loadCadastral();
-          }
-        };
-        img.onerror=function(){loaded++;if(loaded>=total){texture.needsUpdate=true;loadCadastral();}};
-        img.src='${origin}/api/tile?layer=Base&z='+z+'&x='+(tx+ddx)+'&y='+(ty+ddy);
+        var url='${origin}/api/tile?layer=Base&z='+z+'&x='+(tx+ddx)+'&y='+(ty+ddy);
+        var p=fetchTileAsDataUrl(url).then(function(dataUrl){
+          if(!dataUrl) return;
+          return new Promise(function(resolve){
+            var img=new Image();
+            img.onload=function(){
+              ctx.drawImage(img,(ddx+1)*(512/3),(ddy+1)*(512/3),512/3,512/3);
+              resolve();
+            };
+            img.onerror=function(){resolve()};
+            img.src=dataUrl;
+          });
+        });
+        tilePromises.push(p);
       })(dx,dy);
     }
   }
   
-  function loadCadastral(){
-    var cLoaded=0;
+  Promise.all(tilePromises).then(function(){
+    texture.needsUpdate=true;
+    // 지적도 오버레이
+    var cadPromises=[];
     for(var dy=-1;dy<=1;dy++){
       for(var dx=-1;dx<=1;dx++){
         (function(ddx,ddy){
-          var img=new Image();
-          img.crossOrigin='anonymous';
-          img.onload=function(){
-            var px=(ddx+1)*(512/3), py=(ddy+1)*(512/3);
-            ctx.globalAlpha=0.8;
-            ctx.drawImage(img,px,py,512/3,512/3);
-            ctx.globalAlpha=1;
-            cLoaded++;
-            if(cLoaded>=9) texture.needsUpdate=true;
-          };
-          img.onerror=function(){cLoaded++;};
-          img.src='${origin}/api/tile?layer=lt_c_cadastral&z='+z+'&x='+(tx+ddx)+'&y='+(ty+ddy);
+          var url='${origin}/api/tile?layer=lt_c_cadastral&z='+z+'&x='+(tx+ddx)+'&y='+(ty+ddy);
+          var p=fetchTileAsDataUrl(url).then(function(dataUrl){
+            if(!dataUrl) return;
+            return new Promise(function(resolve){
+              var img=new Image();
+              img.onload=function(){
+                ctx.globalAlpha=0.8;
+                ctx.drawImage(img,(ddx+1)*(512/3),(ddy+1)*(512/3),512/3,512/3);
+                ctx.globalAlpha=1;
+                resolve();
+              };
+              img.onerror=function(){resolve()};
+              img.src=dataUrl;
+            });
+          });
+          cadPromises.push(p);
         })(dx,dy);
       }
     }
-  }
+    return Promise.all(cadPromises);
+  }).then(function(){
+    texture.needsUpdate=true;
+  });
   
   var texture=new THREE.CanvasTexture(texCanvas);
   texture.minFilter=THREE.LinearFilter;
