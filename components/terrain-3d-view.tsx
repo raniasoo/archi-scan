@@ -14,8 +14,11 @@ interface Terrain3DViewProps {
 export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DViewProps) {
   const [expanded, setExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [compassAngle, setCompassAngle] = useState(0)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameRef = useRef<number>(0)
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
   const rotationRef = useRef({ x: 0.4, y: 0.5 })
   const zoomRef = useRef(1)
   const isDragging = useRef(false)
@@ -38,7 +41,9 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     scene.fog = new THREE.Fog(0x1a2332, MESH_SIZE * 1.5, MESH_SIZE * 4)
 
     const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 2000)
+    cameraRef.current = camera
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+    rendererRef.current = renderer
     renderer.setSize(W, H)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.shadowMap.enabled = true
@@ -157,15 +162,15 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
           const e10 = elevations[gy * GRID + gx + 1]
           if ((e00 - contourElev) * (e10 - contourElev) < 0) {
             const t = (contourElev - e00) / (e10 - e00)
-            const x = -60 + (gx + t) * (120 / (GRID - 1))
-            const z2 = -60 + gy * (120 / (GRID - 1))
+            const x = -MESH_SIZE/2 + (gx + t) * (MESH_SIZE / (GRID - 1))
+            const z2 = -MESH_SIZE/2 + gy * (MESH_SIZE / (GRID - 1))
             contourPts.push(new THREE.Vector3(x, contourZ + 0.3, -z2))
           }
           const e01 = elevations[(gy + 1) * GRID + gx]
           if ((e00 - contourElev) * (e01 - contourElev) < 0) {
             const t = (contourElev - e00) / (e01 - e00)
-            const x = -60 + gx * (120 / (GRID - 1))
-            const z2 = -60 + (gy + t) * (120 / (GRID - 1))
+            const x = -MESH_SIZE/2 + gx * (MESH_SIZE / (GRID - 1))
+            const z2 = -MESH_SIZE/2 + (gy + t) * (MESH_SIZE / (GRID - 1))
             contourPts.push(new THREE.Vector3(x, contourZ + 0.3, -z2))
           }
         }
@@ -213,6 +218,7 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
 
     // 애니메이션
     const camDist = MESH_SIZE * 1.2
+    let lastCompass = 0
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate)
       const rx = Math.max(0.1, Math.min(1.2, rotationRef.current.x))
@@ -221,6 +227,12 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
       camera.position.set(d * Math.cos(rx) * Math.sin(ry), d * Math.sin(rx), d * Math.cos(rx) * Math.cos(ry))
       camera.lookAt(0, TARGET_MAX_Z * 0.3, 0)
       renderer.render(scene, camera)
+      // 나침반 업데이트 (10fps)
+      const now = Date.now()
+      if (now - lastCompass > 100) {
+        lastCompass = now
+        setCompassAngle(-ry * 180 / Math.PI)
+      }
     }
     animate()
     setLoading(false)
@@ -235,6 +247,24 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
     init()
     return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current) }
   }, [init])
+
+  // expand 시 리사이즈
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const renderer = rendererRef.current
+    const camera = cameraRef.current
+    if (!canvas || !renderer || !camera) return
+    const t = setTimeout(() => {
+      const W = canvas.clientWidth, H = canvas.clientHeight
+      if (W > 10 && H > 10) {
+        canvas.width = W; canvas.height = H
+        camera.aspect = W / H
+        camera.updateProjectionMatrix()
+        renderer.setSize(W, H)
+      }
+    }, 100)
+    return () => clearTimeout(t)
+  }, [expanded])
 
   const onPD = (e: React.PointerEvent) => { isDragging.current = true; lastMouse.current = { x: e.clientX, y: e.clientY } }
   const onPM = (e: React.PointerEvent) => {
@@ -264,13 +294,15 @@ export function Terrain3DView({ lng, lat, address, className = "" }: Terrain3DVi
           className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
           onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU} onWheel={onW}
         />
-        {/* 나침반 */}
+        {/* 나침반 — 모델 회전에 연동 */}
         <div className="absolute top-2 right-2 pointer-events-none">
           <svg width="48" height="48" viewBox="0 0 48 48">
             <circle cx="24" cy="24" r="22" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.3)" strokeWidth="1"/>
-            <polygon points="24,5 20,22 24,19 28,22" fill="#ef4444"/>
-            <polygon points="24,43 20,26 24,29 28,26" fill="#94a3b8"/>
-            <text x="24" y="15" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#fff">N</text>
+            <g transform={`rotate(${compassAngle}, 24, 24)`}>
+              <polygon points="24,5 20,22 24,19 28,22" fill="#ef4444"/>
+              <polygon points="24,43 20,26 24,29 28,26" fill="#94a3b8"/>
+              <text x="24" y="15" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#fff">N</text>
+            </g>
           </svg>
         </div>
         {loading && (
