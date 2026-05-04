@@ -75,6 +75,7 @@ import { BuildingGoalSelector } from "@/components/building-goal-selector"
 import { PatternQualityCard } from "@/components/pattern-quality-card"
 import { ValuePrioritySelector } from "@/components/value-priority-selector"
 import { evaluatePatternQuality, type UserValues } from "@/lib/pattern-quality"
+import { ALEXANDER_LAYOUT_TYPES, recommendLayoutTypes, getAlexanderLayoutDescription } from "@/lib/alexander-layouts"
 import { AIReasoningPanel } from "@/components/ai-reasoning"
 import { 
   Building2, 
@@ -1148,22 +1149,36 @@ export default function ArchiScanPage() {
       const area = Number(siteArea)
       const generatedLayouts = generateLayouts(area, regulation, strategy)
       
-      // 알렉산더/조합 모드: 가치관에 따라 배치안 이름/설명 보강
+      // 알렉산더/조합 모드: 배치안을 패턴 기반 이름으로 변환
       if (designApproach !== 'quantitative') {
-        const patternNames: Record<string, string> = {
-          courtyard: '안마당', sunlight: '남향 채광', street: '가로 활성화',
-          nature: '자연 친화', transition: '전이 공간', community: '커뮤니티',
-          pedestrian: '보행 우선', privacy: '프라이버시',
+        // 대지 조건에 따른 최적 유형 추천
+        const recommendedTypes = recommendLayoutTypes({
+          siteArea: area,
+          zoneType: regulation.zoneType,
+          maxFloors: regulation.maxFloors || 5,
+        })
+        
+        // 기존 배치안 유형 → 알렉산더 유형 매핑
+        const typeMapping: Record<string, string> = {
+          'tower': 'panorama-tower',
+          'linear': 'sunlight-plate',
+          'courtyard': 'living-courtyard',
+          'lshape': 'transition-house',
+          'cluster': 'village-cluster',
         }
-        // 가치관에서 가장 높은 방향 파악
-        const dominantValue = userValues.profitVsQuality > 60 ? '거주 품질' : userValues.profitVsQuality < 40 ? '수익 최적화' : '균형'
-        const communityLevel = userValues.privacyVsCommunity > 60 ? '커뮤니티형' : userValues.privacyVsCommunity < 40 ? '프라이빗형' : ''
-        const spaceLevel = userValues.efficiencyVsSpace > 60 ? '여유 공간' : userValues.efficiencyVsSpace < 40 ? '효율형' : ''
         
         generatedLayouts.forEach((layout, i) => {
-          const suffix = [communityLevel, spaceLevel].filter(Boolean).join(' · ')
-          if (suffix && designApproach === 'alexander') {
-            layout.description = `${layout.description} — ${dominantValue} · ${suffix}`
+          // 매핑 또는 추천순 배정
+          const mappedId = typeMapping[layout.type] || recommendedTypes[Math.min(i, recommendedTypes.length - 1)]?.id
+          const alexType = ALEXANDER_LAYOUT_TYPES.find(t => t.id === mappedId) || recommendedTypes[i]
+          
+          if (alexType) {
+            layout.name = `${alexType.icon} ${alexType.name}`
+            layout.description = getAlexanderLayoutDescription(alexType)
+            
+            if (designApproach === 'alexander') {
+              layout.description += ` — ${alexType.philosophy.slice(0, 80)}...`
+            }
           }
         })
       }
