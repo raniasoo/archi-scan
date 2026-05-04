@@ -1997,21 +1997,51 @@ export async function lookupSiteData(
       }
       
       // VWorld 토지이용계획 우선: 건축물대장 용도지역보다 정확
-      // (건축물대장은 과거 데이터, 토지이용계획은 최신 용도지역 반영)
-      // PNU 기반 조회가 좌표 기반보다 정확 (필지 경계 근처에서 오차 없음)
+      // MOLIT 지역지구 API도 건축물대장 기준이므로 VWorld PNU 직접 조회
       {
-        console.log(`[MOLIT] VWorld 토지이용계획 우선 조회 시도 (PNU 기반)`)
-        const vworldZone = await fetchZoneType(sigunguCd, bjdongCd, bun, ji, getApiKey())
-        if (vworldZone && vworldZone !== siteData.zoneType) {
-          console.log(`[MOLIT] 용도지역 VWorld 우선 적용: 건축물대장="${siteData.zoneType}" → VWorld="${vworldZone}"`)
-          siteData.zoneType = vworldZone
-        } else if (!vworldZone && siteData.entX && siteData.entY) {
-          // PNU 실패 시 좌표 기반 fallback
-          const coordZone = await fetchZoneTypeByCoord(siteData.entX, siteData.entY)
-          if (coordZone && coordZone !== siteData.zoneType) {
-            console.log(`[MOLIT] 용도지역 좌표 기반 우선 적용: 건축물대장="${siteData.zoneType}" → VWorld="${coordZone}"`)
-            siteData.zoneType = coordZone
+        const pnuCandidates = [
+          `${sigunguCd}${bjdongCd}1${bun}${ji}`,
+          `${sigunguCd}${bjdongCd}2${bun}${ji}`,
+        ]
+        const layers = ['LT_C_LHBLPN', 'LT_C_LANDINFOBASIC']
+        let vworldZone: string | undefined
+        
+        for (const pnu of pnuCandidates) {
+          if (vworldZone) break
+          for (const layer of layers) {
+            try {
+              console.log(`[VWORLD-OVERRIDE] ${layer} PNU=${pnu}`)
+              const params = new URLSearchParams({
+                service: 'data', request: 'GetFeature', data: layer,
+                key: VWORLD_KEY, domain: VWORLD_DOMAIN, attribute: 'true',
+                page: '1', size: '10', crs: 'EPSG:4326', format: 'json',
+                attrFilter: `pnu:=:${pnu}`,
+              })
+              const res = await fetch(`https://api.vworld.kr/req/data?${params}`, {
+                signal: AbortSignal.timeout(5000),
+                headers: { 'Referer': `https://${VWORLD_DOMAIN}`, 'Origin': `https://${VWORLD_DOMAIN}` },
+              })
+              if (!res.ok) continue
+              const data = await res.json()
+              const features = data?.response?.result?.featureCollection?.features || []
+              for (const feat of features) {
+                const props = feat?.properties || {}
+                const val = (props.prposAreaDstrcCodeNm || props.lndcgrCodeNm || '').trim()
+                if (val && (val.includes('주거') || val.includes('상업') || val.includes('공업') || val.includes('녹지') || val.includes('관리'))) {
+                  vworldZone = val
+                  break
+                }
+              }
+              if (vworldZone) break
+            } catch { /* 무시 */ }
           }
+        }
+        
+        if (vworldZone) {
+          if (vworldZone !== siteData.zoneType) {
+            console.log(`[MOLIT] 용도지역 VWorld 우선: "${siteData.zoneType}" → "${vworldZone}"`)
+          }
+          siteData.zoneType = vworldZone
         }
       }
       
