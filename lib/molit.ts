@@ -1553,6 +1553,12 @@ export async function lookupSiteData(
 ): Promise<MolitLookupResponse> {
   const normalizedAddress = normalizeAddress(address)
   
+  console.log(`[MOLIT] ========== lookupSiteData ==========`)
+  console.log(`[MOLIT] Raw address: "${address}"`)
+  console.log(`[MOLIT] Normalized: "${normalizedAddress}"`)
+  console.log(`[MOLIT] Address length: raw=${address.length}, norm=${normalizedAddress.length}`)
+  console.log(`[MOLIT] JUSO key preview: ${HARDCODED_JUSO_KEY.substring(0, 10)}...`)
+  
   // Initialize diagnostics
   const diagnostics: MolitLookupResponse['diagnostics'] = {
     lookupPath: manualParcel ? 'local-parsed' : 'none',
