@@ -2003,7 +2003,7 @@ export async function lookupSiteData(
           `${sigunguCd}${bjdongCd}1${bun}${ji}`,
           `${sigunguCd}${bjdongCd}2${bun}${ji}`,
         ]
-        const layers = ['LT_C_LHBLPN', 'LT_C_LANDINFOBASIC']
+        const layers = ['LT_C_UQ111', 'LT_C_LHBLPN', 'LT_C_LANDINFOBASIC', 'LT_C_AISRESC']
         let vworldZone: string | undefined
         
         for (const pnu of pnuCandidates) {
@@ -2024,9 +2024,15 @@ export async function lookupSiteData(
               if (!res.ok) continue
               const data = await res.json()
               const features = data?.response?.result?.featureCollection?.features || []
+              const status = data?.response?.status
+              console.log(`[VWORLD-OVERRIDE] ${layer} PNU=${pnu} status=${status} features=${features.length}`)
+              if (features.length > 0) {
+                console.log(`[VWORLD-OVERRIDE] props keys: ${Object.keys(features[0]?.properties || {}).join(',')}`)
+                console.log(`[VWORLD-OVERRIDE] props values: ${JSON.stringify(features[0]?.properties).slice(0,300)}`)
+              }
               for (const feat of features) {
                 const props = feat?.properties || {}
-                const val = (props.prposAreaDstrcCodeNm || props.lndcgrCodeNm || '').trim()
+                const val = (props.prposAreaDstrcCodeNm || props.lndcgrCodeNm || props.uname || props.name || '').trim()
                 if (val && (val.includes('주거') || val.includes('상업') || val.includes('공업') || val.includes('녹지') || val.includes('관리'))) {
                   vworldZone = val
                   break
