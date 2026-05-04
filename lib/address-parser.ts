@@ -297,7 +297,8 @@ export function normalizeAddress(address: string): string {
     .trim()
     .replace(/\s+/g, ' ')           // Multiple spaces to single
     .replace(/,\s*/g, ' ')          // Commas to spaces
-    .replace(/\([^)]*\)/g, '')      // Remove parenthetical content (평창동, 삼호빌라)
+    .replace(/\([^)]*\)/g, '')      // Remove complete parenthetical (평창동, 삼호빌라)
+    .replace(/\([^)]*$/g, '')       // Remove unclosed parenthetical (평창동
     .replace(/\s*번지\s*/g, ' ')    // Remove 번지
     .trim()
 }
