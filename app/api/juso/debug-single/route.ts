@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 // ACTUAL KEY - juso.go.kr에서 발급받은 실제 dev 키 (44자)
-const FALLBACK_JUSO_KEY = 'devU01TX0FVVEgyMDI2MDQxMjExNDA0MTExNzkxMjk='
+const FALLBACK_JUSO_KEY = 'U01TX0FVVEgyMDI2MDUwNDIyMDk0NzExODA5OTM='
 
 /**
  * JUSO Single Debug Endpoint

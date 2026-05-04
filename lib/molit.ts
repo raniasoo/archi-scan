@@ -91,7 +91,7 @@ const MOLIT_ATCH_JIBUN_ENDPOINT = {
 // MOLIT key: 64 chars from data.go.kr  
 // JUSO key: 44 chars from juso.go.kr (dev key with 'dev' prefix)
 const HARDCODED_MOLIT_KEY = '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba5d56d21444098'
-const HARDCODED_JUSO_KEY = 'devU01TX0FVVEgyMDI2MDQyMjIwMDgxNjExNzk4MjA='
+const HARDCODED_JUSO_KEY = 'U01TX0FVVEgyMDI2MDUwNDIyMDk0NzExODA5OTM='
 const VWORLD_KEY = 'FFEC486D-E635-345C-9BA6-5404A5AA191B'
 const VWORLD_DOMAIN = 'v0-archi-scan-layout-generator.vercel.app'
 
