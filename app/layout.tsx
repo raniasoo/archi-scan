@@ -4,7 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { GoogleAnalytics } from '@/components/google-analytics'
 import { Toaster } from '@/components/ui/sonner'
 import { SubscriptionProvider } from '@/components/subscription-provider'
-import AuthProvider from '@/components/auth-provider'
+
 import './globals.css'
 
 const notoSansKr = Noto_Sans_KR({ 
@@ -70,13 +70,13 @@ export default function RootLayout({
   return (
     <html lang="ko" className="bg-background">
       <body className={`${notoSansKr.className} antialiased bg-background`}>
-        <AuthProvider>
+        
           <SubscriptionProvider>
             {children}
             <Toaster position="top-center" richColors closeButton />
             <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}` }} />
           </SubscriptionProvider>
-        </AuthProvider>
+        
         {process.env.NODE_ENV === 'production' && <Analytics />}
         <GoogleAnalytics />
       </body>
