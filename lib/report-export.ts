@@ -656,7 +656,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       .cover, .pdf-cover { 
         height: 267mm !important;
         max-height: 267mm !important;
-        overflow: hidden !important; 
+        overflow: visible !important; 
         break-after: page !important; 
         page-break-after: always !important; 
         display: flex !important;
@@ -1390,6 +1390,26 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         max-width: 100% !important; 
         padding: 24px 16px !important; 
       }
+    }
+    /* === 모바일 화면 최적화 === */
+    @media screen and (max-width: 767px) {
+      .cover h1 { font-size: 24px !important; word-break: keep-all !important; line-height: 1.35 !important; }
+      .cover .address { font-size: 15px !important; }
+      .cover .meta-info { font-size: 11px !important; }
+      .cover .company { font-size: 13px !important; }
+      .section-title { font-size: 17px !important; margin-bottom: 10px !important; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; }
+      .summary-card { padding: 8px 6px !important; }
+      .summary-card .value { font-size: 16px !important; }
+      .summary-card .label { font-size: 10px !important; }
+      .plan-card { padding: 10px !important; }
+      table { font-size: 11px !important; }
+      table td, table th { padding: 5px 6px !important; }
+      .risk-grid { grid-template-columns: 1fr !important; }
+      .conclusion-box { padding: 12px !important; }
+      .ai-score-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; }
+      .ai-score-value { font-size: 18px !important; }
+      .score-grid { grid-template-columns: repeat(2, 1fr) !important; }
     }
     @media screen and (min-width: 768px) {
       .page { 
@@ -2660,6 +2680,19 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         padding: 24px 16px !important; 
       }
     }
+    /* === 모바일 화면 최적화 === */
+    @media screen and (max-width: 767px) {
+      .cover h1 { font-size: 24px !important; word-break: keep-all !important; line-height: 1.35 !important; }
+      .cover .address { font-size: 15px !important; }
+      .section-title { font-size: 17px !important; margin-bottom: 10px !important; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; }
+      .summary-card { padding: 8px 6px !important; }
+      .ai-score-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; }
+      .score-grid { grid-template-columns: repeat(2, 1fr) !important; }
+      .risk-grid { grid-template-columns: 1fr !important; }
+      table { font-size: 11px !important; }
+      table td, table th { padding: 5px 6px !important; }
+    }
     @media screen and (min-width: 768px) {
       .page { 
         max-width: 900px !important; 
@@ -2957,7 +2990,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
       .cover, .pdf-cover { 
         height: 267mm !important;
         max-height: 267mm !important;
-        overflow: hidden !important; 
+        overflow: visible !important; 
         break-after: page !important; 
         page-break-after: always !important; 
         display: flex !important;
