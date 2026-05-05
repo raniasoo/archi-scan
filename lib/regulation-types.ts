@@ -92,12 +92,26 @@ export const SETBACK_TYPE_LABELS: Record<SetbackType, string> = {
   "both": "복합적용",
 }
 
-// 용도지역별 기본값
+// 용도지역별 기본값 (국토계획법 시행령 + 서울시 도시계획조례 기준)
 export const ZONE_DEFAULTS: Record<ZoneType, Partial<ZoningRegulation>> = {
+  "residential-exclusive-1": {
+    maxCoverageRatio: 50,
+    maxFloorAreaRatio: 100,
+    maxHeight: 12,
+    maxFloors: 3,
+    parkingRatio: 1.0,
+  },
+  "residential-exclusive-2": {
+    maxCoverageRatio: 50,
+    maxFloorAreaRatio: 150,
+    maxHeight: 18,
+    maxFloors: 5,
+    parkingRatio: 1.0,
+  },
   "residential-1": {
     maxCoverageRatio: 60,
     maxFloorAreaRatio: 150,
-    maxHeight: 20,
+    maxHeight: 16,
     maxFloors: 4,
     parkingRatio: 1.0,
   },
@@ -110,38 +124,59 @@ export const ZONE_DEFAULTS: Record<ZoneType, Partial<ZoningRegulation>> = {
   },
   "residential-3": {
     maxCoverageRatio: 50,
-    maxFloorAreaRatio: 250,
+    maxFloorAreaRatio: 300,
     maxHeight: 50,
     maxFloors: 15,
-    parkingRatio: 1.2,
+    parkingRatio: 1.0,
   },
   "semi-residential": {
-    maxCoverageRatio: 70,
+    maxCoverageRatio: 60,
     maxFloorAreaRatio: 400,
     maxHeight: 60,
     maxFloors: 20,
     parkingRatio: 1.0,
   },
   "commercial-general": {
-    maxCoverageRatio: 80,
+    maxCoverageRatio: 60,
     maxFloorAreaRatio: 800,
     maxHeight: 100,
     maxFloors: 30,
-    parkingRatio: 0.7,
-  },
-  "commercial-neighborhood": {
-    maxCoverageRatio: 70,
-    maxFloorAreaRatio: 600,
-    maxHeight: 60,
-    maxFloors: 15,
     parkingRatio: 0.8,
   },
+  "commercial-neighborhood": {
+    maxCoverageRatio: 60,
+    maxFloorAreaRatio: 600,
+    maxHeight: 60,
+    maxFloors: 20,
+    parkingRatio: 0.8,
+  },
+  "commercial-central": {
+    maxCoverageRatio: 60,
+    maxFloorAreaRatio: 1000,
+    maxHeight: 150,
+    maxFloors: 40,
+    parkingRatio: 0.7,
+  },
   "industrial": {
-    maxCoverageRatio: 70,
+    maxCoverageRatio: 60,
     maxFloorAreaRatio: 400,
     maxHeight: 50,
     maxFloors: 12,
     parkingRatio: 0.5,
+  },
+  "industrial-general": {
+    maxCoverageRatio: 60,
+    maxFloorAreaRatio: 350,
+    maxHeight: 50,
+    maxFloors: 10,
+    parkingRatio: 0.5,
+  },
+  "green-natural": {
+    maxCoverageRatio: 20,
+    maxFloorAreaRatio: 80,
+    maxHeight: 12,
+    maxFloors: 3,
+    parkingRatio: 1.0,
   },
   "custom": {
     maxCoverageRatio: 60,
@@ -226,15 +261,12 @@ export function analyzeRegulations(
   )
   const recommendedMinFloors = Math.max(3, Math.ceil(recommendedMaxFloors * 0.6))
   
-  // 예상 세대수 (세대당 85㎡ 기준 - 공용 포함 약 110㎡ 공급면적 기준으로 보수적 계산)
-  const avgUnitSize = 85
+  // 예상 세대수 (세대당 전용 84㎡ 기준 — 한국 표준 주거 면적)
+  const avgUnitSize = 84
   const estimatedUnits = Math.floor(maxGrossFloorArea / avgUnitSize)
   
-  // 법정 주차대수 (서울시 조례 기준)
-  // 전용 60m² 이하: 0.5대/세대, 60~85m²: 1.0대/세대
-  // 85m² 기준 세대는 소형(60m²이하) 위주로 가정 → 0.7대/세대 (혼합 기준)
-  const parkingPerUnit = avgUnitSize <= 60 ? 0.5 : avgUnitSize <= 85 ? 0.7 : 1.0
-  const requiredParking = Math.ceil(estimatedUnits * parkingPerUnit)
+  // 법정 주차대수 — regulation.parkingRatio 사용 (용도지역별 이미 설정됨)
+  const requiredParking = Math.ceil(estimatedUnits * regulation.parkingRatio)
   
   // 경고 및 유의사항 생성
   const warnings: RegulationWarning[] = []
@@ -247,11 +279,17 @@ export function analyzeRegulations(
     })
   }
   
-  if (regulation.roadWidth < 6) {
+  if (regulation.roadWidth < 4) {
+    warnings.push({
+      type: "error",
+      title: "접도 요건 미충족",
+      description: "건축법 제44조에 따라 건축물 대지는 2m 이상 도로에 접해야 합니다. 현재 접도 폭이 4m 미만으로 건축 허가에 제한이 있을 수 있습니다.",
+    })
+  } else if (regulation.roadWidth < 6) {
     warnings.push({
       type: "warning",
       title: "협소한 접도 폭",
-      description: "접도 폭이 6m 미만인 경우 차량 진출입 및 소방차 접근에 제한이 있을 수 있습니다.",
+      description: "접도 폭이 6m 미만인 경우 차량 진출입 및 소방차 접근에 제한이 있을 수 있습니다. 건축선 후퇴가 필요할 수 있습니다.",
     })
   }
   
@@ -259,7 +297,7 @@ export function analyzeRegulations(
     warnings.push({
       type: "info",
       title: "복합 사선제한 적용",
-      description: "북측사선과 도로사선이 동시에 적용되어 상층부 면적이 감소할 수 있습니다.",
+      description: "북측사선과 도로사선이 동시에 적용되어 상층부 면적이 감소할 수 있습니다. 건축법 제61조 일조권 사선제한 검토가 필요합니다.",
     })
   }
   
@@ -267,7 +305,23 @@ export function analyzeRegulations(
     warnings.push({
       type: "info",
       title: "고밀도 주거 개발",
-      description: "용적률 300% 이상의 고밀도 개발은 일조권, 프라이버시 등에 대한 추가 검토가 필요합니다.",
+      description: "용적률 300% 이상의 고밀도 개발은 일조권, 프라이버시, 환경영향평가 대상 여부 등에 대한 추가 검토가 필요합니다.",
+    })
+  }
+  
+  if (regulation.zoneType === "residential-exclusive-1" || regulation.zoneType === "residential-exclusive-2") {
+    warnings.push({
+      type: "info",
+      title: "전용주거지역 용도 제한",
+      description: "전용주거지역은 단독주택과 공동주택만 건축 가능하며, 근린생활시설(상가) 배치가 제한됩니다. 국토계획법 시행령 제71조를 확인하세요.",
+    })
+  }
+  
+  if (regulation.zoneType === "green-natural") {
+    warnings.push({
+      type: "warning",
+      title: "자연녹지지역 개발 제한",
+      description: "자연녹지지역은 건폐율 20%, 용적률 80%로 개발 밀도가 매우 낮습니다. 개발행위 허가 기준을 별도로 확인해야 합니다.",
     })
   }
   
@@ -275,7 +329,15 @@ export function analyzeRegulations(
     warnings.push({
       type: "warning",
       title: "주차 면적 과다",
-      description: "필요 주차대수 확보를 위해 지하주차장 2개층 이상이 필요할 수 있습니다.",
+      description: `필요 주차 ${requiredParking}대 확보를 위해 지하주차장 2개층 이상이 필요할 수 있습니다. 기계식 주차장 검토를 권고합니다.`,
+    })
+  }
+  
+  if (siteArea < 200) {
+    warnings.push({
+      type: "info",
+      title: "소규모 대지",
+      description: "대지면적 200㎡ 미만은 건축 효율이 크게 떨어집니다. 인접 필지 합필 가능성을 검토하세요.",
     })
   }
   
