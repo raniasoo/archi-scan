@@ -1,7 +1,9 @@
 import type { NextAuthOptions } from "next-auth"
+import GoogleProvider from "next-auth/providers/google"
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    // 카카오 로그인
     {
       id: "kakao",
       name: "Kakao",
@@ -23,6 +25,35 @@ export const authOptions: NextAuthOptions = {
         }
       },
     },
+    // 네이버 로그인
+    ...(process.env.NAVER_CLIENT_ID ? [{
+      id: "naver",
+      name: "Naver",
+      type: "oauth" as const,
+      clientId: process.env.NAVER_CLIENT_ID!,
+      clientSecret: process.env.NAVER_CLIENT_SECRET!,
+      authorization: {
+        url: "https://nid.naver.com/oauth2.0/authorize",
+        params: { response_type: "code" },
+      },
+      token: "https://nid.naver.com/oauth2.0/token",
+      userinfo: "https://openapi.naver.com/v1/nid/me",
+      profile(profile: any) {
+        return {
+          id: profile.response.id,
+          name: profile.response.nickname || profile.response.name || "사용자",
+          email: profile.response.email || null,
+          image: profile.response.profile_image || null,
+        }
+      },
+    }] : []),
+    // 구글 로그인
+    ...(process.env.GOOGLE_CLIENT_ID ? [
+      GoogleProvider({
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      })
+    ] : []),
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
