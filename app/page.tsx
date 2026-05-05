@@ -3611,7 +3611,7 @@ export default function ArchiScanPage() {
                   size="sm" 
                   className="gap-1.5 whitespace-nowrap flex-shrink-0"
                   disabled={downloadingExcel}
-                  onClick={() => {
+                  onClick={async () => {
                     setDownloadingExcel(true);
                     setDownloadError(null);
                     try {
@@ -3718,7 +3718,7 @@ export default function ArchiScanPage() {
                   variant="outline" 
                   size="sm" 
                   className="gap-1.5 whitespace-nowrap flex-shrink-0"
-                  onClick={() => {
+                  onClick={async () => {
                     setDownloadError(null);
                     try {
                       if (!selectedLayoutData) {
