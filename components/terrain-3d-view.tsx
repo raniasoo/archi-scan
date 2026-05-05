@@ -22,7 +22,7 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
   const sceneRef = useRef<THREE.Scene | null>(null)
   const boundaryGroupRef = useRef<THREE.Group | null>(null)
-  const terrainDataRef = useRef<{ elevations: number[], minE: number, eRange: number, GRID: number, RANGE: number, MESH_SIZE: number, TARGET_MAX_Z: number } | null>(null)
+  const terrainDataRef = useRef<{ elevations: number[], minE: number, eRange: number, GRID: number, RANGE: number, MESH_SIZE: number, TARGET_MAX_Z: number, RANGE_LNG: number } | null>(null)
   const rotationRef = useRef({ x: 0.4, y: 0.5 })
   const zoomRef = useRef(1)
   const isDragging = useRef(false)
@@ -63,7 +63,9 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
 
     // 표고 데이터 (12x12 = 144개 — URL 길이 제한 내)
     // 표고 데이터
-    const RANGE = 0.0005 // ~55m 반경 (필지 2배 확대)
+    const RANGE = 0.0006 // ~66m 반경
+    const cosLat = Math.cos(lat * Math.PI / 180) // 위도 보정 (37.6°: ~0.793)
+    const RANGE_LNG = RANGE / cosLat // 경도는 위도보다 좁으므로 보정
     const DATA_GRID = 10
     const MESH_GRID = 40
 
@@ -98,7 +100,7 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     const eRange = Math.max(maxE - minE, 1)
     
     // terrain 데이터를 ref에 저장 (경계선 별도 렌더링용)
-    terrainDataRef.current = { elevations, minE, eRange, GRID, RANGE, MESH_SIZE, TARGET_MAX_Z }
+    terrainDataRef.current = { elevations, minE, eRange, GRID, RANGE, MESH_SIZE, TARGET_MAX_Z, RANGE_LNG }
 
     // 지형 메시
     const geo = new THREE.PlaneGeometry(MESH_SIZE, MESH_SIZE, GRID - 1, GRID - 1)
@@ -209,13 +211,13 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     // 지적 경계선 오버레이
     if (sitePolygon?.coords?.length > 2) {
       const RANGE_VAL = RANGE
+      const RANGE_LNG_VAL = RANGE_LNG
       const boundaryPts: THREE.Vector3[] = []
       
       for (const coord of sitePolygon.coords) {
         const cLng = coord[0], cLat = coord[1]
-        // lat/lng → 메시 로컬 좌표
-        // x: 서(-50) → 동(+50), lng 방향
-        const mx = ((cLng - (lng - RANGE_VAL)) / (RANGE_VAL * 2)) * MESH_SIZE - MESH_SIZE / 2
+        // lat/lng → 메시 로컬 좌표 (경도는 cosLat 보정)
+        const mx = ((cLng - (lng - RANGE_LNG_VAL)) / (RANGE_LNG_VAL * 2)) * MESH_SIZE - MESH_SIZE / 2
         // y: 남(-50) → 북(+50), lat 방향 (후에 world z로 반전)
         const my = ((cLat - (lat - RANGE_VAL)) / (RANGE_VAL * 2)) * MESH_SIZE - MESH_SIZE / 2
         
