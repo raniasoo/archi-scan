@@ -13,578 +13,282 @@ interface FloorPlanProps {
   gfa?: number
 }
 
-export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType, units = 0, gfa = 0 }: FloorPlanProps) {
-  const isGroundFloor = floor === 1
-  const isBasementOrParking = floor <= 0
-  const isTopFloor = floor === totalFloors
-  const isLowFloor = floor <= 3
-  const isMidFloor = floor > 3 && floor < totalFloors - 2
-  const isHighFloor = floor >= totalFloors - 2
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 세대 내부 실 배치 헬퍼
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  // 용도지역별 1층 상가 허용 여부
-  // 전용주거지역: 상가 불가 → 전층 주거
-  // 일반주거/준주거/상업: 상가 가능
-  const allowCommercial = !zoneType || (
-    !zoneType.includes('exclusive') && zoneType !== 'green-natural' && zoneType !== 'green-production'
-  )
-  
-  // 1층 상가/세대 표시용 라벨과 색상
-  const gfLabel = allowCommercial ? '상가' : '세대'
-  const gfColor = allowCommercial ? '#f59e0b' : '#22c55e'
-  const gfFill = allowCommercial ? '#f59e0b20' : '#22c55e20'
-
-  // 동적 세대수 배분
-  const totalUnits = units || 10
-  const upperFloors = Math.max(totalFloors - 1, 1)
-  const upperFloorUnits = totalFloors > 1 ? Math.ceil(totalUnits * 0.6 / upperFloors) : totalUnits
-  const groundFloorUnits = totalFloors > 1 ? Math.max(totalUnits - (upperFloorUnits * upperFloors), 2) : totalUnits
-  const currentFloorUnits = isGroundFloor ? groundFloorUnits : upperFloorUnits
-  const totalGFA = gfa || (totalUnits * 59)
-  const unitArea = Math.round(totalGFA / Math.max(totalUnits, 1))
-
-  // 전략에 따른 색상 테마
-  const getStrategyColors = () => {
-    switch (strategy) {
-      case "view-priority":
-        return { primary: "#0ea5e9", secondary: "#0ea5e920", accent: "#06b6d4" }
-      case "privacy-priority":
-        return { primary: "#8b5cf6", secondary: "#8b5cf620", accent: "#a855f7" }
-      case "area-maximize":
-        return { primary: "#f59e0b", secondary: "#f59e0b20", accent: "#eab308" }
-      case "parking-efficient":
-        return { primary: "#64748b", secondary: "#64748b20", accent: "#475569" }
-      case "profitability":
-        return { primary: "#22c55e", secondary: "#22c55e20", accent: "#10b981" }
-      case "livability":
-        return { primary: "#ec4899", secondary: "#ec489920", accent: "#f472b6" }
-      default:
-        return { primary: "#3b82f6", secondary: "#3b82f620", accent: "#2563eb" }
-    }
+function UnitInterior({ x, y, w, h, label, area, color, mirror = false, compact = false }: {
+  x: number; y: number; w: number; h: number
+  label: string; area: number; color: string; mirror?: boolean; compact?: boolean
+}) {
+  if (compact || w < 35 || h < 35) {
+    return (
+      <g>
+        <rect x={x} y={y} width={w} height={h} fill={`${color}15`} stroke={color} strokeWidth="1" />
+        <text x={x + w/2} y={y + h/2 - 3} fontSize="7" textAnchor="middle" fill={color} fontWeight="600">{label}</text>
+        <text x={x + w/2} y={y + h/2 + 7} fontSize="6" textAnchor="middle" fill={color}>{area}㎡</text>
+      </g>
+    )
   }
 
-  const colors = getStrategyColors()
+  const pad = 1.5
+  const innerW = w - pad * 2
+  const innerH = h - pad * 2
+  const ix = x + pad
+  const iy = y + pad
+  const livingH = Math.round(innerH * 0.55)
+  const kitchenW = Math.round(innerW * 0.35)
+  const roomH = innerH - livingH - 1
+  const roomY = iy + livingH + 1
+  const br1W = Math.round(innerW * 0.4)
+  const br2W = Math.round(innerW * 0.35)
+  const bathW = innerW - br1W - br2W - 2
 
-  // 층별 설명 텍스트
-  const getFloorDescription = () => {
-    if (isGroundFloor) return `1층 (${groundFloorUnits}${gfLabel}+로비/주차)`
-    if (floor === 2) return `2층 (${currentFloorUnits}세대)`
-    if (isTopFloor) return `${floor}층 (최상층 ${currentFloorUnits}세대)`
-    if (isHighFloor) return `${floor}층 (고층 세대)`
-    if (isMidFloor) return `${floor}층 (기준층)`
-    return `${floor}층`
-  }
-
-  // 전략에 따른 세대 크기 조정
-  const getUnitConfig = () => {
-    switch (strategy) {
-      case "view-priority":
-        return { unitCount: 2, unitSize: "대형", hasBalcony: true, hasOpenSpace: true }
-      case "privacy-priority":
-        return { unitCount: 3, unitSize: "중형", hasBalcony: true, hasOpenSpace: true }
-      case "area-maximize":
-        return { unitCount: 6, unitSize: "소형", hasBalcony: false, hasOpenSpace: false }
-      case "parking-efficient":
-        return { unitCount: 4, unitSize: "중형", hasBalcony: true, hasOpenSpace: false }
-      case "profitability":
-        return { unitCount: 5, unitSize: "소형", hasBalcony: false, hasOpenSpace: false }
-      case "livability":
-        return { unitCount: 4, unitSize: "중형", hasBalcony: true, hasOpenSpace: true }
-      default:
-        return { unitCount: 4, unitSize: "중형", hasBalcony: true, hasOpenSpace: false }
-    }
-  }
-
-  const unitConfig = getUnitConfig()
+  const lx = mirror ? ix + innerW - (innerW - kitchenW - 1) : ix
+  const kx = mirror ? ix : ix + innerW - kitchenW
+  const r1x = mirror ? ix + innerW - br1W : ix
+  const r2x = mirror ? ix + innerW - br1W - br2W - 1 : ix + br1W + 1
+  const btx = mirror ? ix : ix + br1W + br2W + 2
 
   return (
-    <svg 
-      viewBox="0 0 300 200" 
-      className="w-full h-full"
-      preserveAspectRatio="xMidYMid meet"
-      style={{ 
-        display: 'block',
-        maxWidth: '100%',
-        maxHeight: '100%',
-        objectFit: 'contain'
-      }}
-    >
+    <g>
+      <rect x={x} y={y} width={w} height={h} fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
+      {/* 발코니 */}
+      <rect x={x + 2} y={y - 5} width={w - 4} height={5} fill="none" stroke={color} strokeWidth="0.5" strokeDasharray="2 1" />
+      <text x={x + w/2} y={y - 1} fontSize="3.5" textAnchor="middle" fill={color} opacity="0.5">발코니</text>
+      {/* 거실 */}
+      <rect x={lx} y={iy} width={innerW - kitchenW - 1} height={livingH} fill={`${color}08`} stroke={color} strokeWidth="0.5" />
+      <text x={lx + (innerW - kitchenW - 1)/2} y={iy + livingH/2} fontSize="6" textAnchor="middle" fill={color} fontWeight="500">거실</text>
+      <rect x={lx + 3} y={iy + livingH - 10} width={Math.min(innerW * 0.3, 22)} height={5} rx="1" fill={`${color}20`} stroke={color} strokeWidth="0.3" />
+      {/* 주방 */}
+      <rect x={kx} y={iy} width={kitchenW} height={livingH} fill={`${color}12`} stroke={color} strokeWidth="0.5" />
+      <text x={kx + kitchenW/2} y={iy + livingH/2} fontSize="5" textAnchor="middle" fill={color}>주방</text>
+      <rect x={kx + 2} y={iy + 3} width={kitchenW - 4} height={4} rx="1" fill={`${color}30`} stroke={color} strokeWidth="0.3" />
+      {/* 방1 */}
+      <rect x={r1x} y={roomY} width={br1W} height={roomH} fill={`${color}06`} stroke={color} strokeWidth="0.5" />
+      <text x={r1x + br1W/2} y={roomY + roomH/2} fontSize="5" textAnchor="middle" fill={color}>방1</text>
+      <rect x={r1x + 3} y={roomY + 3} width={br1W * 0.55} height={roomH * 0.45} rx="1" fill={`${color}12`} stroke={color} strokeWidth="0.2" />
+      {/* 방2 */}
+      <rect x={r2x} y={roomY} width={br2W} height={roomH} fill={`${color}06`} stroke={color} strokeWidth="0.5" />
+      <text x={r2x + br2W/2} y={roomY + roomH/2} fontSize="5" textAnchor="middle" fill={color}>방2</text>
+      {/* 욕실 */}
+      <rect x={btx} y={roomY} width={bathW} height={roomH} fill="#0ea5e908" stroke="#0ea5e9" strokeWidth="0.5" />
+      <text x={btx + bathW/2} y={roomY + roomH/2 - 1} fontSize="4" textAnchor="middle" fill="#0ea5e9">욕실</text>
+      <circle cx={btx + bathW/2} cy={roomY + roomH/2 + 5} r="2" fill="#0ea5e920" stroke="#0ea5e9" strokeWidth="0.3" />
+      {/* 현관 */}
+      <rect x={x + w/2 - 5} y={y + h - 2} width={10} height={3} fill={color} rx="0.5" />
+      {/* 라벨 */}
+      <text x={x + w/2} y={y + h + 9} fontSize="6.5" textAnchor="middle" fill={color} fontWeight="600">{label} ({area}㎡)</text>
+    </g>
+  )
+}
+
+// 코어 (EV 2대 + 계단실)
+function CoreBlock({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  const evW = Math.round(w * 0.35)
+  const stairW = w - evW * 2 - 4
+  return (
+    <g>
+      <rect x={x} y={y} width={w} height={h} fill="#47556920" stroke="#475569" strokeWidth="1.5" rx="1" />
+      <rect x={x + 2} y={y + 2} width={evW} height={h - 4} fill="#334155" rx="1" />
+      <text x={x + 2 + evW/2} y={y + h/2 + 1} fontSize="5" textAnchor="middle" fill="white" fontWeight="500">EV1</text>
+      <rect x={x + evW + 3} y={y + 2} width={evW} height={h - 4} fill="#334155" rx="1" />
+      <text x={x + evW + 3 + evW/2} y={y + h/2 + 1} fontSize="5" textAnchor="middle" fill="white" fontWeight="500">EV2</text>
+      <rect x={x + evW * 2 + 4} y={y + 2} width={stairW} height={h - 4} fill="#475569" rx="1" />
+      {Array.from({ length: Math.floor((h - 6) / 3) }, (_, i) => (
+        <line key={i} x1={x + evW * 2 + 5} y1={y + 3 + i * 3} x2={x + w - 2} y2={y + 3 + i * 3} stroke="#94a3b8" strokeWidth="0.3" />
+      ))}
+      <text x={x + evW * 2 + 4 + stairW/2} y={y + h/2 + 1} fontSize="4.5" textAnchor="middle" fill="white">계단</text>
+    </g>
+  )
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 메인 컴포넌트
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType, units = 0, gfa = 0 }: FloorPlanProps) {
+  const isGF = floor === 1
+  const isTop = floor === totalFloors
+  const allowComm = !zoneType || (!zoneType.includes('exclusive') && zoneType !== 'green-natural' && zoneType !== 'green-production')
+  const gfL = allowComm ? '상가' : '세대'
+  const gfC = allowComm ? '#f59e0b' : '#22c55e'
+  const gfF = allowComm ? '#f59e0b15' : '#22c55e15'
+
+  const tU = units || 10
+  const uF = Math.max(totalFloors - 1, 1)
+  const upU = totalFloors > 1 ? Math.ceil(tU * 0.6 / uF) : tU
+  const gfU = totalFloors > 1 ? Math.max(tU - (upU * uF), 2) : tU
+  const curU = isGF ? gfU : upU
+  const tGFA = gfa || (tU * 59)
+  const uA = Math.round(tGFA / Math.max(tU, 1))
+
+  const gc = () => {
+    switch (strategy) {
+      case "view-priority": return { p: "#0ea5e9", s: "#0ea5e920" }
+      case "privacy-priority": return { p: "#8b5cf6", s: "#8b5cf620" }
+      case "area-maximize": return { p: "#f59e0b", s: "#f59e0b20" }
+      case "parking-efficient": return { p: "#64748b", s: "#64748b20" }
+      case "profitability": return { p: "#22c55e", s: "#22c55e20" }
+      case "livability": return { p: "#ec4899", s: "#ec489920" }
+      default: return { p: "#3b82f6", s: "#3b82f620" }
+    }
+  }
+  const c = gc()
+
+  const desc = isGF ? `1층 (${gfU}${gfL}+로비)` : isTop ? `${floor}층 (최상층)` : `${floor}층 (기준층 ${curU}세대)`
+  const sL = strategy === "view-priority" ? "조망형" : strategy === "privacy-priority" ? "프라이버시형" : strategy === "area-maximize" ? "면적형" : strategy === "parking-efficient" ? "주차형" : strategy === "profitability" ? "사업성형" : "실거주형"
+
+  return (
+    <svg viewBox="0 0 300 220" className="w-full h-full" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', maxWidth: '100%', maxHeight: '100%' }}>
       <defs>
-        <pattern id="floor-grid" width="10" height="10" patternUnits="userSpaceOnUse">
-          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.3" className="text-border" />
+        <pattern id="fp-grid" width="10" height="10" patternUnits="userSpaceOnUse">
+          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.15" className="text-border" />
         </pattern>
-        <linearGradient id="unitGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={colors.primary} stopOpacity="0.2" />
-          <stop offset="100%" stopColor={colors.primary} stopOpacity="0.1" />
-        </linearGradient>
       </defs>
-      
-      {/* Background */}
-      <rect x="0" y="0" width="300" height="200" fill="url(#floor-grid)" />
-      
-      {/* Ground Floor - Parking/Lobby/Commercial */}
-      {isGroundFloor && type === "tower" && (
-        <g transform="translate(50, 20)">
-          <rect x="0" y="0" width="200" height="160" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          
-          {/* Dynamic ground floor: units + lobby */}
-          {(() => {
-            const gfUnits = groundFloorUnits
-            const totalSlots = gfUnits + 1
-            const slotW = Math.floor(190 / totalSlots)
-            const lobbyIdx = Math.floor(gfUnits / 2)
-            const elements: React.ReactElement[] = []
-            let unitIdx = 0
-            for (let i = 0; i < totalSlots; i++) {
-              const x = 5 + i * slotW; const w = slotW - 3
-              if (i === lobbyIdx) {
-                elements.push(<g key="lobby"><rect x={x} y={5} width={w} height={50} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" /><text x={x+w/2} y={30} fontSize="9" textAnchor="middle" fill="#06b6d4" fontWeight="500">로비</text></g>)
-              } else {
-                elements.push(<g key={`gf${unitIdx}`}><rect x={x} y={5} width={w} height={50} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={x+w/2} y={30} fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text></g>)
-                unitIdx++
-              }
-            }
-            return elements
-          })()}
-          
-          {/* Elevator/Stairs Core */}
-          <rect x="75" y="60" width="50" height="35" fill="#64748b40" stroke="#64748b" strokeWidth="2" />
-          <rect x="80" y="65" width="18" height="25" fill="#475569" />
-          <text x="89" y="80" fontSize="6" textAnchor="middle" fill="white">EV</text>
-          <rect x="102" y="65" width="18" height="25" fill="#334155" />
-          <text x="111" y="80" fontSize="6" textAnchor="middle" fill="white">계단</text>
-          
-          {/* Parking Area */}
-          <rect x="5" y="100" width="190" height="55" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="4" />
-          <text x="100" y="130" fontSize="10" textAnchor="middle" fill="#64748b">주차장</text>
-          
-          {/* Entrance */}
-          <rect x="90" y="155" width="20" height="8" fill="#2dd4bf" />
-          <text x="100" y="175" fontSize="7" textAnchor="middle" fill="#2dd4bf">주출입구</text>
-        </g>
-      )}
+      <rect x="0" y="0" width="300" height="220" fill="url(#fp-grid)" />
 
-      {/* Upper Floors - Tower Type */}
-      {!isGroundFloor && type === "tower" && (
-        <g transform="translate(50, 20)">
-          <rect x="0" y="0" width="200" height="160" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          
-          {currentFloorUnits <= 8 ? (
-            /* Individual units for small buildings */
-            (() => {
-              const n = currentFloorUnits
-              const topRow = Math.ceil(n / 2)
-              const bottomRow = n - topRow
-              const elements: React.ReactElement[] = []
-              const tw = Math.floor((195) / Math.max(topRow, 1))
-              for (let i = 0; i < topRow; i++) {
-                const x = 5 + i * tw; const w = tw - 5
-                elements.push(<g key={`t${i}`}><rect x={x} y={5} width={w} height={50} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={x+w/2} y={25} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65+i)}호</text><text x={x+w/2} y={38} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>)
-              }
-              if (bottomRow > 0) {
-                const bw = Math.floor((195) / Math.max(bottomRow, 1))
-                for (let i = 0; i < bottomRow; i++) {
-                  const x = 5 + i * bw; const w = bw - 5
-                  elements.push(<g key={`b${i}`}><rect x={x} y={95} width={w} height={50} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={x+w/2} y={115} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65+topRow+i)}호</text><text x={x+w/2} y={128} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>)
-                }
-              }
-              return elements
-            })()
-          ) : (
-            /* Compact summary for large buildings (9+ units/floor) */
-            <>
-              {/* 4 representative units */}
-              <rect x="5" y="5" width="90" height="55" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="50" y="28" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">A호</text>
-              <text x="50" y="43" fontSize="8" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-              <rect x="105" y="5" width="90" height="55" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="150" y="28" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">B호</text>
-              <text x="150" y="43" fontSize="8" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-              {/* Summary label */}
-              <rect x="5" y="95" width="190" height="55" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
-              <text x="100" y="118" fontSize="11" textAnchor="middle" fill={colors.primary} fontWeight="600">... 외 {currentFloorUnits - 2}세대</text>
-              <text x="100" y="135" fontSize="8" textAnchor="middle" fill={colors.primary}>기준층 총 {currentFloorUnits}세대 × {unitArea}㎡</text>
-            </>
-          )}
-          
-          {/* Core */}
-          <rect x="75" y="60" width="50" height="30" fill="#64748b40" stroke="#64748b" strokeWidth="2" />
-          <rect x="80" y="63" width="18" height="22" fill="#475569" />
-          <text x="89" y="77" fontSize="5" textAnchor="middle" fill="white">EV</text>
-          <rect x="102" y="63" width="18" height="22" fill="#334155" />
-          <text x="111" y="77" fontSize="5" textAnchor="middle" fill="white">계단</text>
-        </g>
-      )}
-      
-      {/* Ground Floor - Courtyard Type */}
-      {isGroundFloor && type === "courtyard" && (
-        <g transform="translate(30, 15)">
-          <rect x="0" y="0" width="240" height="170" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          
-          {/* Dynamic top row: units + lobby */}
-          {(() => {
-            const topUnits = Math.min(groundFloorUnits, 4)
-            const totalSlots = topUnits + 1
-            const slotW = Math.floor(230 / totalSlots)
-            const lobbyIdx = Math.floor(topUnits / 2)
-            const elements: React.ReactElement[] = []
-            let unitIdx = 0
-            for (let i = 0; i < totalSlots; i++) {
-              const x = 5 + i * slotW; const w = slotW - 3
-              if (i === lobbyIdx) {
-                elements.push(<g key="lobby"><rect x={x} y={5} width={w} height={35} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" /><text x={x+w/2} y={25} fontSize="8" textAnchor="middle" fill="#06b6d4">로비</text></g>)
-              } else {
-                elements.push(<g key={`gf${unitIdx}`}><rect x={x} y={5} width={w} height={35} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={x+w/2} y={25} fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel} {String.fromCharCode(65 + unitIdx)}</text></g>)
-                unitIdx++
-              }
-            }
-            return elements
-          })()}
-          
-          {/* Central Courtyard */}
-          <rect x="50" y="50" width="140" height="70" fill="#22c55e15" stroke="#22c55e" strokeWidth="1" />
-          <text x="120" y="85" fontSize="10" textAnchor="middle" fill="#22c55e">중정 / 조경</text>
-          <text x="120" y="100" fontSize="7" textAnchor="middle" fill="#22c55e">커뮤니티 공간</text>
-          
-          {/* Side Corridors */}
-          <rect x="5" y="45" width="40" height="80" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="3" />
-          <text x="25" y="88" fontSize="6" textAnchor="middle" fill="#64748b" transform="rotate(-90, 25, 85)">주차/복도</text>
-          <rect x="195" y="45" width="40" height="80" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="3" />
-          
-          {/* Lower Amenities */}
-          <rect x="5" y="130" width="70" height="35" fill="#8b5cf620" stroke="#8b5cf6" strokeWidth="1" />
-          <text x="40" y="150" fontSize="8" textAnchor="middle" fill="#8b5cf6">관리실</text>
-          <rect x="85" y="130" width="70" height="35" fill="#64748b20" stroke="#64748b" strokeWidth="1" />
-          <text x="120" y="150" fontSize="8" textAnchor="middle" fill="#64748b">기계실</text>
-          <rect x="165" y="130" width="70" height="35" fill="#ec489920" stroke="#ec4899" strokeWidth="1" />
-          <text x="200" y="150" fontSize="8" textAnchor="middle" fill="#ec4899">커뮤니티</text>
-          
-          {/* Entrance */}
-          <rect x="110" y="162" width="20" height="8" fill="#2dd4bf" />
-        </g>
-      )}
-      
-      {/* Upper Floors - Courtyard Type */}
-      {!isGroundFloor && type === "courtyard" && (
-        <g transform="translate(30, 15)">
-          <rect x="0" y="0" width="240" height="170" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          
-          {currentFloorUnits <= 8 ? (
-            /* Individual units */
-            <>
-              {(() => {
-                const topCount = Math.ceil(currentFloorUnits / 2)
-                const tw = Math.floor(230 / Math.max(topCount, 1))
-                return Array.from({ length: topCount }, (_, i) => (
-                  <g key={`t${i}`}><rect x={5 + i * tw} y={5} width={tw - 5} height={40} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={5 + i * tw + (tw - 5) / 2} y={22} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text><text x={5 + i * tw + (tw - 5) / 2} y={35} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>
-                ))
-              })()}
-              {(() => {
-                const topCount = Math.ceil(currentFloorUnits / 2)
-                const bottomCount = currentFloorUnits - topCount
-                const bw = Math.floor(230 / Math.max(bottomCount, 1))
-                return Array.from({ length: bottomCount }, (_, i) => (
-                  <g key={`b${i}`}><rect x={5 + i * bw} y={125} width={bw - 5} height={40} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={5 + i * bw + (bw - 5) / 2} y={142} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + topCount + i)}호</text><text x={5 + i * bw + (bw - 5) / 2} y={155} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>
-                ))
-              })()}
-            </>
-          ) : (
-            /* Compact summary */
-            <>
-              <rect x="5" y="5" width="110" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="60" y="22" fontSize="9" textAnchor="middle" fill={colors.primary} fontWeight="500">A호 {unitArea}㎡</text>
-              <rect x="125" y="5" width="110" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
-              <text x="180" y="22" fontSize="8" textAnchor="middle" fill={colors.primary}>... 외 {Math.ceil(currentFloorUnits/2)-1}세대</text>
-              <rect x="5" y="125" width="230" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
-              <text x="120" y="142" fontSize="9" textAnchor="middle" fill={colors.primary} fontWeight="600">하단 윙 {currentFloorUnits - Math.ceil(currentFloorUnits/2)}세대 × {unitArea}㎡</text>
-            </>
-          )}
-          
-          {/* Courtyard */}
-          <rect x="50" y="50" width="140" height="70" fill="#22c55e15" stroke="#22c55e" strokeWidth="1" strokeDasharray="4" />
-          <text x="120" y="90" fontSize="10" textAnchor="middle" fill="#22c55e">중정</text>
-          
-          {/* Side corridors */}
-          <rect x="5" y="50" width="40" height="70" fill="#64748b20" stroke="#64748b" strokeWidth="1" />
-          <text x="25" y="90" fontSize="7" textAnchor="middle" fill="#64748b" transform="rotate(-90, 25, 85)">복도</text>
-          <rect x="195" y="50" width="40" height="70" fill="#64748b20" stroke="#64748b" strokeWidth="1" />
-        </g>
-      )}
-      
-      {/* Ground Floor - L-Shape Type */}
-      {isGroundFloor && type === "lshape" && (
-        <g transform="translate(25, 10)">
-          {/* Vertical wing */}
-          <rect x="0" y="0" width="80" height="140" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          {/* Horizontal wing */}
-          <rect x="0" y="140" width="250" height="50" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          
-          {/* Dynamic vertical wing: units + lobby */}
-          {(() => {
-            const vUnits = Math.min(groundFloorUnits, 3)
-            const totalSlots = vUnits + 1 // units + lobby
-            const slotH = Math.floor(130 / totalSlots)
-            const elements: React.ReactElement[] = []
-            for (let i = 0; i < vUnits; i++) {
-              elements.push(<g key={`gf${i}`}><rect x={5} y={5 + i * slotH} width={70} height={slotH - 5} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={40} y={5 + i * slotH + (slotH - 5) / 2 + 3} fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text></g>)
-            }
-            // Lobby at bottom of vertical wing
-            elements.push(<g key="lobby"><rect x={5} y={5 + vUnits * slotH} width={70} height={slotH - 5} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" /><text x={40} y={5 + vUnits * slotH + (slotH - 5) / 2 + 3} fontSize="9" textAnchor="middle" fill="#06b6d4">로비</text></g>)
-            return elements
-          })()}
-          
-          {/* Parking in horizontal wing */}
-          <rect x="85" y="145" width="160" height="40" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="4" />
-          <text x="165" y="168" fontSize="9" textAnchor="middle" fill="#64748b">주차장 / 기계실</text>
-          
-          {/* Entrance */}
-          <rect x="30" y="182" width="20" height="8" fill="#2dd4bf" />
-        </g>
-      )}
-      
-      {/* Upper Floors - L-Shape Type */}
-      {!isGroundFloor && type === "lshape" && (
-        <g transform="translate(25, 10)">
-          {/* Vertical wing */}
-          <rect x="0" y="0" width="80" height="140" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          {/* Horizontal wing */}
-          <rect x="0" y="140" width="250" height="50" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          
-          {/* Dynamic vertical wing units */}
-          {currentFloorUnits <= 8 ? (
-            <>
-              {(() => {
-                const vCount = Math.ceil(currentFloorUnits / 2)
-                const vh = Math.floor(130 / Math.max(vCount, 1))
-                return Array.from({ length: vCount }, (_, i) => (
-                  <g key={`v${i}`}><rect x={5} y={5 + i * vh} width={70} height={vh - 5} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={40} y={5 + i * vh + (vh - 5) / 2} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text><text x={40} y={5 + i * vh + (vh - 5) / 2 + 13} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>
-                ))
-              })()}
-            </>
-          ) : (
-            /* Compact vertical wing */
-            <>
-              <rect x="5" y="5" width="70" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="40" y="22" fontSize="9" textAnchor="middle" fill={colors.primary} fontWeight="500">A호 {unitArea}㎡</text>
-              <rect x="5" y="50" width="70" height="85" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
-              <text x="40" y="85" fontSize="8" textAnchor="middle" fill={colors.primary}>수직동</text>
-              <text x="40" y="100" fontSize="8" textAnchor="middle" fill={colors.primary}>{Math.ceil(currentFloorUnits/2)}세대</text>
-            </>
-          )}
-          
-          {/* Core at corner */}
-          <rect x="5" y="145" width="40" height="40" fill="#64748b40" stroke="#64748b" strokeWidth="2" />
-          <text x="25" y="168" fontSize="7" textAnchor="middle" fill="#64748b">코어</text>
-          
-          {/* Dynamic horizontal wing units */}
-          {currentFloorUnits <= 8 ? (
-            (() => {
-              const vCount = Math.ceil(currentFloorUnits / 2)
-              const hCount = currentFloorUnits - vCount
-              const hw = Math.floor(195 / Math.max(hCount, 1))
-              return Array.from({ length: hCount }, (_, i) => (
-                <g key={`h${i}`}><rect x={50 + i * hw} y={145} width={hw - 5} height={40} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" /><text x={50 + i * hw + (hw - 5) / 2} y={162} fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + vCount + i)}호</text><text x={50 + i * hw + (hw - 5) / 2} y={175} fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text></g>
-              ))
-            })()
-          ) : (
-            /* Compact horizontal wing */
-            <rect x="50" y="145" width="195" height="40" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3">
-            </rect>
-          )}
-          {currentFloorUnits > 8 && (
-            <text x="147" y="168" fontSize="8" textAnchor="middle" fill={colors.primary}>수평동 {currentFloorUnits - Math.ceil(currentFloorUnits/2)}세대 × {unitArea}㎡</text>
-          )}
-        </g>
-      )}
+      {/* TOWER */}
+      {type === "tower" && !isGF && (() => {
+        const n = Math.min(curU, 4), ox = 25, oy = 10, bW = 250, bH = 170
+        const cW = 50, cH = 28, cX = ox + bW/2 - cW/2, cY = oy + bH/2 - cH/2
+        const corrH = 14, corrY = cY + cH
+        return (<g>
+          <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          <rect x={ox + 5} y={corrY} width={bW - 10} height={corrH} fill="#64748b10" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1" />
+          <text x={ox + bW/2} y={corrY + corrH/2 + 2} fontSize="5" textAnchor="middle" fill="#94a3b8">복도</text>
+          <CoreBlock x={cX} y={cY} w={cW} h={cH} />
+          {n >= 2 ? (<>
+            <UnitInterior x={ox + 5} y={oy + 5} w={(bW - 14)/2} h={cY - oy - 8} label="A호" area={uA} color={c.p} />
+            <UnitInterior x={ox + 5 + (bW - 14)/2 + 4} y={oy + 5} w={(bW - 14)/2} h={cY - oy - 8} label="B호" area={uA} color={c.p} mirror />
+          </>) : (<UnitInterior x={ox + 5} y={oy + 5} w={bW - 10} h={cY - oy - 8} label="A호" area={uA} color={c.p} />)}
+          {n >= 4 ? (<>
+            <UnitInterior x={ox + 5} y={corrY + corrH + 3} w={(bW - 14)/2} h={oy + bH - corrY - corrH - 8} label="C호" area={uA} color={c.p} />
+            <UnitInterior x={ox + 5 + (bW - 14)/2 + 4} y={corrY + corrH + 3} w={(bW - 14)/2} h={oy + bH - corrY - corrH - 8} label="D호" area={uA} color={c.p} mirror />
+          </>) : n >= 3 ? (<UnitInterior x={ox + 5} y={corrY + corrH + 3} w={bW - 10} h={oy + bH - corrY - corrH - 8} label="C호" area={uA} color={c.p} />) : null}
+          {n > 4 && <text x={ox + bW/2} y={oy + bH - 3} fontSize="6" textAnchor="middle" fill={c.p}>+ {curU - 4}세대</text>}
+        </g>)
+      })()}
 
-      {/* Linear Type - Ground Floor */}
-      {isGroundFloor && type === "linear" && (
-        <g transform="translate(15, 40)">
-          <rect x="0" y="0" width="270" height="120" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          
-          {/* Dynamic ground floor units + lobby */}
-          {(() => {
-            const gfUnits = groundFloorUnits
-            const totalSlots = gfUnits + 1 // units + lobby
-            const slotW = Math.floor(260 / totalSlots)
-            const lobbyIdx = Math.floor(gfUnits / 2) // lobby in the middle
-            const elements: React.ReactElement[] = []
-            let unitIdx = 0
-            for (let i = 0; i < totalSlots; i++) {
-              const x = 5 + i * slotW
-              const w = slotW - 4
-              if (i === lobbyIdx) {
-                // Lobby
-                elements.push(
-                  <g key="lobby">
-                    <rect x={x} y={5} width={w} height={40} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1.5" />
-                    <text x={x + w/2} y={28} fontSize="9" textAnchor="middle" fill="#06b6d4">로비</text>
-                  </g>
-                )
-              } else {
-                // Unit or commercial
-                elements.push(
-                  <g key={`gf${unitIdx}`}>
-                    <rect x={x} y={5} width={w} height={40} fill={gfFill} stroke={gfColor} strokeWidth="1" />
-                    <text x={x + w/2} y={28} fontSize="8" textAnchor="middle" fill={gfColor}>{gfLabel}</text>
-                  </g>
-                )
-                unitIdx++
-              }
-            }
-            return elements
-          })()}
-          
-          {/* Parking */}
-          <rect x="5" y="50" width="260" height="65" fill="#64748b15" stroke="#64748b" strokeWidth="1" strokeDasharray="4" />
-          <text x="135" y="85" fontSize="10" textAnchor="middle" fill="#64748b">주차장</text>
-          
-          {/* Entrance */}
-          <rect x="125" y="112" width="20" height="8" fill="#2dd4bf" />
-        </g>
-      )}
-      
-      {/* Linear Type - Upper Floors */}
-      {!isGroundFloor && type === "linear" && (
-        <g transform="translate(15, 40)">
-          <rect x="0" y="0" width="270" height="120" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
-          
-          {currentFloorUnits <= 8 ? (
-            Array.from({ length: currentFloorUnits }, (_, i) => {
-              const uw = Math.floor(260 / Math.max(currentFloorUnits, 1))
-              return (
-                <g key={i}>
-                  <rect x={5 + i * uw} y="5" width={uw - 4} height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                  <text x={5 + i * uw + (uw - 4) / 2} y="35" fontSize="9" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + i)}호</text>
-                  <text x={5 + i * uw + (uw - 4) / 2} y="50" fontSize="7" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-                </g>
-              )
-            })
-          ) : (
-            /* Compact for 9+ units */
-            <>
-              <rect x="5" y="5" width="80" height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="45" y="35" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">A호</text>
-              <text x="45" y="50" fontSize="8" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-              <rect x="90" y="5" width="80" height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-              <text x="130" y="35" fontSize="10" textAnchor="middle" fill={colors.primary} fontWeight="500">B호</text>
-              <text x="130" y="50" fontSize="8" textAnchor="middle" fill={colors.primary}>{unitArea}㎡</text>
-              <rect x="175" y="5" width="90" height="75" fill={colors.secondary} stroke={colors.primary} strokeWidth="1" strokeDasharray="3" />
-              <text x="220" y="30" fontSize="9" textAnchor="middle" fill={colors.primary} fontWeight="600">... 외 {currentFloorUnits - 2}세대</text>
-              <text x="220" y="48" fontSize="7" textAnchor="middle" fill={colors.primary}>총 {currentFloorUnits}세대</text>
-              <text x="220" y="62" fontSize="7" textAnchor="middle" fill={colors.primary}>× {unitArea}㎡</text>
-            </>
-          )}
-          
-          {/* Corridor */}
-          <rect x="5" y="85" width="260" height="30" fill="#64748b20" stroke="#64748b" strokeWidth="1" />
-          <text x="135" y="103" fontSize="8" textAnchor="middle" fill="#64748b">복도 / 코어</text>
-        </g>
-      )}
+      {type === "tower" && isGF && (() => {
+        const ox = 25, oy = 10, bW = 250, bH = 170, gN = Math.min(gfU, 4)
+        const sw = Math.floor((bW - 10) / (gN + 1)), li = Math.floor(gN / 2)
+        return (<g>
+          <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          {Array.from({ length: gN + 1 }, (_, i) => {
+            const sx = ox + 5 + i * sw, sw2 = sw - 4
+            if (i === li) return (<g key="l"><rect x={sx} y={oy + 5} width={sw2} height={50} fill="#06b6d415" stroke="#06b6d4" strokeWidth="1.5" rx="1" /><text x={sx + sw2/2} y={oy + 28} fontSize="8" textAnchor="middle" fill="#06b6d4" fontWeight="600">로비</text><rect x={sx + sw2/2 - 6} y={oy + 50} width={12} height={3} fill="#06b6d4" rx="0.5" /></g>)
+            return (<g key={`g${i}`}><rect x={sx} y={oy + 5} width={sw2} height={50} fill={gfF} stroke={gfC} strokeWidth="1" rx="1" /><text x={sx + sw2/2} y={oy + 30} fontSize="7" textAnchor="middle" fill={gfC} fontWeight="500">{gfL}</text></g>)
+          })}
+          <CoreBlock x={ox + bW/2 - 25} y={oy + 62} w={50} h={25} />
+          <rect x={ox + 5} y={oy + 95} width={bW - 10} height={55} fill="#64748b08" stroke="#64748b" strokeWidth="0.8" strokeDasharray="3 2" rx="2" />
+          {Array.from({ length: 5 }, (_, i) => (<g key={`p${i}`}><rect x={ox + 15 + i * 45} y={oy + 105} width={35} height={18} fill="none" stroke="#64748b" strokeWidth="0.4" /><text x={ox + 32 + i * 45} y={oy + 117} fontSize="4" textAnchor="middle" fill="#94a3b8">P{i+1}</text></g>))}
+          <text x={ox + bW/2} y={oy + 145} fontSize="7" textAnchor="middle" fill="#64748b">주차장</text>
+          <rect x={ox + bW/2 - 10} y={oy + bH - 4} width={20} height={5} fill="#2dd4bf" rx="1" />
+          <text x={ox + bW/2} y={oy + bH + 8} fontSize="6" textAnchor="middle" fill="#2dd4bf">주출입구</text>
+        </g>)
+      })()}
 
-      {/* Cluster Type - Ground Floor */}
-      {isGroundFloor && type === "cluster" && (
-        <g transform="translate(30, 20)">
-          {/* Dynamic cluster ground floor */}
-          {(() => {
-            const gfUnits = groundFloorUnits
-            const bldgAUnits = Math.ceil(gfUnits / 2)
-            const bldgBUnits = gfUnits - bldgAUnits
-            const elements: React.ReactElement[] = []
-            // Building A
-            elements.push(<rect key="bA" x="0" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />)
-            const aw = Math.floor(90 / (bldgAUnits + 1)) // units + lobby
-            for (let i = 0; i < bldgAUnits; i++) {
-              elements.push(<g key={`a${i}`}><rect x={5 + i * aw} y={5} width={aw - 3} height={40} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={5 + i * aw + (aw - 3) / 2} y={28} fontSize="7" textAnchor="middle" fill={gfColor}>{gfLabel}</text></g>)
-            }
-            elements.push(<g key="lobbyA"><rect x={5 + bldgAUnits * aw} y={5} width={aw - 3} height={40} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1" /><text x={5 + bldgAUnits * aw + (aw - 3) / 2} y={28} fontSize="7" textAnchor="middle" fill="#06b6d4">로비</text></g>)
-            elements.push(<rect key="parkA" x="5" y="50" width="90" height="15" fill="#64748b20" stroke="#64748b" strokeWidth="0.5" />)
-            // Building B
-            elements.push(<rect key="bB" x="140" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />)
-            const bw = Math.floor(90 / (bldgBUnits + 1))
-            for (let i = 0; i < bldgBUnits; i++) {
-              elements.push(<g key={`b${i}`}><rect x={145 + i * bw} y={5} width={bw - 3} height={40} fill={gfFill} stroke={gfColor} strokeWidth="1" /><text x={145 + i * bw + (bw - 3) / 2} y={28} fontSize="7" textAnchor="middle" fill={gfColor}>{gfLabel}</text></g>)
-            }
-            elements.push(<g key="lobbyB"><rect x={145 + bldgBUnits * bw} y={5} width={bw - 3} height={40} fill="#06b6d420" stroke="#06b6d4" strokeWidth="1" /><text x={145 + bldgBUnits * bw + (bw - 3) / 2} y={28} fontSize="7" textAnchor="middle" fill="#06b6d4">로비</text></g>)
-            elements.push(<rect key="parkB" x="145" y="50" width="90" height="15" fill="#64748b20" stroke="#64748b" strokeWidth="0.5" />)
-            return elements
-          })()}
-          
-          {/* Central Open Space */}
-          <rect x="50" y="85" width="140" height="60" fill="#22c55e15" stroke="#22c55e" strokeWidth="1" strokeDasharray="4" />
-          <text x="120" y="118" fontSize="9" textAnchor="middle" fill="#22c55e">중앙 정원</text>
-          
-          {/* Side Buildings */}
-          <rect x="0" y="90" width="45" height="60" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
-          <rect x="195" y="90" width="45" height="60" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
-          
-          {/* Entrance */}
-          <rect x="110" y="145" width="20" height="8" fill="#2dd4bf" />
-        </g>
-      )}
-      
-      {/* Cluster Type - Upper Floors */}
-      {!isGroundFloor && type === "cluster" && (
-        <g transform="translate(30, 20)">
-          {/* Dynamic distribution across buildings */}
-          {(() => {
-            const n = currentFloorUnits
-            const bldgA = Math.ceil(n / 3)
-            const bldgB = Math.ceil((n - bldgA) / 2)
-            const sides = n - bldgA - bldgB
-            const elements: React.ReactElement[] = []
-            let idx = 0
-            // Building A
-            elements.push(<rect key="bA" x="0" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />)
-            const aw = Math.floor(90 / Math.max(bldgA, 1))
-            for (let i = 0; i < bldgA; i++) {
-              elements.push(
-                <g key={`a${i}`}>
-                  <rect x={5 + i * aw} y={5} width={aw - 3} height={60} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                  <text x={5 + i * aw + (aw - 3) / 2} y={32} fontSize="8" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + idx++)}호</text>
-                </g>
-              )
-            }
-            // Building B
-            elements.push(<rect key="bB" x="140" y="0" width="100" height="70" fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />)
-            const bw = Math.floor(90 / Math.max(bldgB, 1))
-            for (let i = 0; i < bldgB; i++) {
-              elements.push(
-                <g key={`b${i}`}>
-                  <rect x={145 + i * bw} y={5} width={bw - 3} height={60} fill={colors.secondary} stroke={colors.primary} strokeWidth="1" />
-                  <text x={145 + i * bw + (bw - 3) / 2} y={32} fontSize="8" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + idx++)}호</text>
-                </g>
-              )
-            }
-            // Central Open Space
-            elements.push(<rect key="cs" x="50" y="85" width="140" height="60" fill="#22c55e15" stroke="#22c55e" strokeWidth="1" strokeDasharray="4" />)
-            elements.push(<text key="cst" x="120" y="118" fontSize="9" textAnchor="middle" fill="#22c55e">중정 공간</text>)
-            // Side buildings
-            if (sides >= 1) {
-              elements.push(<rect key="sL" x="0" y="90" width="45" height="60" fill={colors.secondary} stroke={colors.primary} strokeWidth="2" />)
-              elements.push(<text key="sLt" x="22" y="123" fontSize="8" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + idx++)}호</text>)
-            }
-            if (sides >= 2) {
-              elements.push(<rect key="sR" x="195" y="90" width="45" height="60" fill={colors.secondary} stroke={colors.primary} strokeWidth="2" />)
-              elements.push(<text key="sRt" x="217" y="123" fontSize="8" textAnchor="middle" fill={colors.primary}>{String.fromCharCode(65 + idx++)}호</text>)
-            }
-            return elements
-          })()}
-        </g>
-      )}
-      
-      {/* Floor label */}
-      <text x="15" y="15" fontSize="10" fill="currentColor" className="text-foreground font-medium">
-        {getFloorDescription()}
-      </text>
-      
-      {/* Strategy indicator */}
-      <text x="285" y="15" fontSize="8" textAnchor="end" fill={colors.primary}>
-        {strategy === "view-priority" ? "조망형" : 
-         strategy === "privacy-priority" ? "프라이버시형" :
-         strategy === "area-maximize" ? "면적형" :
-         strategy === "parking-efficient" ? "주차형" :
-         strategy === "profitability" ? "사업성형" : "실거주형"}
-      </text>
+      {/* COURTYARD */}
+      {type === "courtyard" && !isGF && (() => {
+        const ox = 15, oy = 8, bW = 270, bH = 175, n = Math.min(curU, 6)
+        const topN = Math.ceil(n / 2), botN = n - topN, uH = 48
+        const courtY = oy + uH + 12, courtH = bH - uH * 2 - 24
+        const tw = Math.floor((bW - 10) / topN), bw = botN > 0 ? Math.floor((bW - 10) / botN) : 0
+        return (<g>
+          <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          {Array.from({ length: topN }, (_, i) => (<UnitInterior key={`t${i}`} x={ox + 5 + i * tw} y={oy + 3} w={tw - 4} h={uH} label={`${String.fromCharCode(65 + i)}호`} area={uA} color={c.p} mirror={i % 2 === 1} compact={tw < 55} />))}
+          <rect x={ox + 30} y={courtY} width={bW - 60} height={courtH} fill="#22c55e08" stroke="#22c55e" strokeWidth="1" rx="2" />
+          <circle cx={ox + bW/2 - 30} cy={courtY + courtH/2} r="8" fill="#22c55e15" stroke="#22c55e" strokeWidth="0.5" />
+          <circle cx={ox + bW/2 + 30} cy={courtY + courtH/2} r="8" fill="#22c55e15" stroke="#22c55e" strokeWidth="0.5" />
+          <text x={ox + bW/2} y={courtY + courtH/2 + 2} fontSize="8" textAnchor="middle" fill="#22c55e" fontWeight="500">중정</text>
+          <CoreBlock x={ox + 3} y={courtY + 5} w={24} h={courtH - 10} />
+          {Array.from({ length: botN }, (_, i) => (<UnitInterior key={`b${i}`} x={ox + 5 + i * bw} y={courtY + courtH + 5} w={bw - 4} h={uH} label={`${String.fromCharCode(65 + topN + i)}호`} area={uA} color={c.p} mirror={i % 2 === 0} compact={bw < 55} />))}
+        </g>)
+      })()}
+
+      {type === "courtyard" && isGF && (() => {
+        const ox = 15, oy = 8, bW = 270, bH = 175, gN = Math.min(gfU, 4), sw = Math.floor((bW - 10) / (gN + 1)), li = Math.floor(gN / 2)
+        return (<g>
+          <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          {Array.from({ length: gN + 1 }, (_, i) => { const sx = ox + 5 + i * sw; if (i === li) return <g key="l"><rect x={sx} y={oy + 5} width={sw - 4} height={35} fill="#06b6d415" stroke="#06b6d4" strokeWidth="1.5" rx="1" /><text x={sx + (sw-4)/2} y={oy + 25} fontSize="7" textAnchor="middle" fill="#06b6d4" fontWeight="600">로비</text></g>; return <g key={`g${i}`}><rect x={sx} y={oy + 5} width={sw - 4} height={35} fill={gfF} stroke={gfC} strokeWidth="1" rx="1" /><text x={sx + (sw-4)/2} y={oy + 25} fontSize="7" textAnchor="middle" fill={gfC}>{gfL}</text></g> })}
+          <rect x={ox + 35} y={oy + 48} width={bW - 70} height={65} fill="#22c55e08" stroke="#22c55e" strokeWidth="1" rx="2" />
+          <text x={ox + bW/2} y={oy + 82} fontSize="9" textAnchor="middle" fill="#22c55e">중정 / 조경</text>
+          <CoreBlock x={ox + 5} y={oy + 55} w={26} h={50} />
+          <rect x={ox + 5} y={oy + 120} width={80} height={45} fill="#8b5cf610" stroke="#8b5cf6" strokeWidth="0.8" rx="1" /><text x={ox + 45} y={oy + 145} fontSize="7" textAnchor="middle" fill="#8b5cf6">관리실</text>
+          <rect x={ox + 90} y={oy + 120} width={80} height={45} fill="#64748b10" stroke="#64748b" strokeWidth="0.8" rx="1" /><text x={ox + 130} y={oy + 145} fontSize="7" textAnchor="middle" fill="#64748b">기계실</text>
+          <rect x={ox + 175} y={oy + 120} width={90} height={45} fill="#ec489910" stroke="#ec4899" strokeWidth="0.8" rx="1" /><text x={ox + 220} y={oy + 145} fontSize="7" textAnchor="middle" fill="#ec4899">커뮤니티</text>
+          <rect x={ox + bW/2 - 10} y={oy + bH - 4} width={20} height={5} fill="#2dd4bf" rx="1" />
+        </g>)
+      })()}
+
+      {/* L-SHAPE */}
+      {type === "lshape" && (() => {
+        const ox = 20, oy = 8
+        return (<g>
+          <rect x={ox} y={oy} width={80} height={130} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          <rect x={ox} y={oy + 130} width={260} height={50} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          {isGF ? (<>
+            {Array.from({ length: Math.min(gfU, 3) }, (_, i) => { const sh = Math.floor(120 / Math.min(gfU, 3)); return <g key={`v${i}`}><rect x={ox + 5} y={oy + 5 + i * sh} width={70} height={sh - 5} fill={gfF} stroke={gfC} strokeWidth="1" rx="1" /><text x={ox + 40} y={oy + 5 + i * sh + (sh-5)/2 + 3} fontSize="7" textAnchor="middle" fill={gfC}>{gfL}</text></g> })}
+            <CoreBlock x={ox + 5} y={oy + 135} w={35} h={40} />
+            <rect x={ox + 45} y={oy + 135} width={210} height={40} fill="#64748b08" stroke="#64748b" strokeWidth="0.8" strokeDasharray="3" rx="1" />
+            <text x={ox + 150} y={oy + 158} fontSize="8" textAnchor="middle" fill="#64748b">주차장</text>
+            <rect x={ox + 30} y={oy + 175} width={20} height={5} fill="#2dd4bf" rx="1" />
+          </>) : (<>
+            {(() => { const vN = Math.ceil(curU / 2), vh = Math.floor(120 / Math.max(vN, 1)); return Array.from({ length: Math.min(vN, 3) }, (_, i) => (<UnitInterior key={`v${i}`} x={ox + 3} y={oy + 3 + i * vh} w={74} h={vh - 4} label={`${String.fromCharCode(65 + i)}호`} area={uA} color={c.p} compact={vh < 35} />)) })()}
+            <CoreBlock x={ox + 5} y={oy + 135} w={35} h={40} />
+            {(() => { const vN = Math.ceil(curU / 2), hN = curU - vN, hw = Math.floor(210 / Math.max(hN, 1)); return Array.from({ length: Math.min(hN, 4) }, (_, i) => (<UnitInterior key={`h${i}`} x={ox + 45 + i * hw} y={oy + 135} w={hw - 4} h={40} label={`${String.fromCharCode(65 + vN + i)}호`} area={uA} color={c.p} compact />)) })()}
+          </>)}
+        </g>)
+      })()}
+
+      {/* LINEAR */}
+      {type === "linear" && (() => {
+        const ox = 10, oy = 30, bW = 280, bH = 130
+        return (<g>
+          <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          {isGF ? (<>
+            {Array.from({ length: Math.min(gfU + 1, 6) }, (_, i) => { const sw = Math.floor((bW - 10) / Math.min(gfU + 1, 6)), li = Math.floor(gfU / 2); if (i === li) return <g key="l"><rect x={ox + 5 + i * sw} y={oy + 5} width={sw - 4} height={45} fill="#06b6d415" stroke="#06b6d4" strokeWidth="1.5" rx="1" /><text x={ox + 5 + i * sw + (sw-4)/2} y={oy + 30} fontSize="7" textAnchor="middle" fill="#06b6d4" fontWeight="600">로비</text></g>; return <g key={`g${i}`}><rect x={ox + 5 + i * sw} y={oy + 5} width={sw - 4} height={45} fill={gfF} stroke={gfC} strokeWidth="1" rx="1" /><text x={ox + 5 + i * sw + (sw-4)/2} y={oy + 30} fontSize="7" textAnchor="middle" fill={gfC}>{gfL}</text></g> })}
+            <rect x={ox + 5} y={oy + 55} width={bW - 10} height={65} fill="#64748b08" stroke="#64748b" strokeWidth="0.8" strokeDasharray="3" rx="1" />
+            <text x={ox + bW/2} y={oy + 92} fontSize="8" textAnchor="middle" fill="#64748b">주차장</text>
+            <rect x={ox + bW/2 - 10} y={oy + bH - 4} width={20} height={5} fill="#2dd4bf" rx="1" />
+          </>) : (<>
+            {(() => { const n = Math.min(curU, 5), uw = Math.floor((bW - 10) / n); return Array.from({ length: n }, (_, i) => (<UnitInterior key={i} x={ox + 5 + i * uw} y={oy + 5} w={uw - 4} h={85} label={`${String.fromCharCode(65 + i)}호`} area={uA} color={c.p} mirror={i % 2 === 1} compact={uw < 45} />)) })()}
+            {curU > 5 && <text x={ox + bW/2} y={oy + 98} fontSize="6" textAnchor="middle" fill={c.p}>+ {curU - 5}세대</text>}
+            <rect x={ox + 5} y={oy + 95} width={bW - 10} height={28} fill="#64748b10" stroke="#64748b" strokeWidth="0.5" />
+            <CoreBlock x={ox + bW/2 - 25} y={oy + 98} w={50} h={22} />
+          </>)}
+        </g>)
+      })()}
+
+      {/* CLUSTER */}
+      {type === "cluster" && (() => {
+        const ox = 20, oy = 10
+        return (<g>
+          <rect x={ox} y={oy} width={100} height={70} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          <rect x={ox + 160} y={oy} width={100} height={70} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          {isGF ? (<>
+            <rect x={ox + 5} y={oy + 5} width={90} height={30} fill={gfF} stroke={gfC} strokeWidth="1" rx="1" /><text x={ox + 50} y={oy + 23} fontSize="7" textAnchor="middle" fill={gfC}>{gfL}</text>
+            <rect x={ox + 5} y={oy + 40} width={40} height={25} fill="#06b6d415" stroke="#06b6d4" strokeWidth="1" rx="1" /><text x={ox + 25} y={oy + 55} fontSize="6" textAnchor="middle" fill="#06b6d4">로비</text>
+            <rect x={ox + 165} y={oy + 5} width={90} height={30} fill={gfF} stroke={gfC} strokeWidth="1" rx="1" /><text x={ox + 210} y={oy + 23} fontSize="7" textAnchor="middle" fill={gfC}>{gfL}</text>
+            <rect x={ox + 165} y={oy + 40} width={40} height={25} fill="#06b6d415" stroke="#06b6d4" strokeWidth="1" rx="1" /><text x={ox + 185} y={oy + 55} fontSize="6" textAnchor="middle" fill="#06b6d4">로비</text>
+          </>) : (<>
+            <UnitInterior x={ox + 3} y={oy + 3} w={46} h={64} label="A호" area={uA} color={c.p} compact />
+            <UnitInterior x={ox + 52} y={oy + 3} w={46} h={64} label="B호" area={uA} color={c.p} compact />
+            <UnitInterior x={ox + 163} y={oy + 3} w={46} h={64} label="C호" area={uA} color={c.p} compact />
+            <UnitInterior x={ox + 212} y={oy + 3} w={46} h={64} label="D호" area={uA} color={c.p} compact />
+          </>)}
+          <rect x={ox + 40} y={oy + 85} width={180} height={70} fill="#22c55e08" stroke="#22c55e" strokeWidth="1" strokeDasharray="3" rx="2" />
+          <text x={ox + 130} y={oy + 122} fontSize="9" textAnchor="middle" fill="#22c55e">중앙 정원</text>
+          <rect x={ox} y={oy + 90} width={35} height={60} fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
+          <rect x={ox + 225} y={oy + 90} width={35} height={60} fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
+          {!isGF && (<><UnitInterior x={ox + 2} y={oy + 92} w={31} h={56} label="E" area={uA} color={c.p} compact /><UnitInterior x={ox + 227} y={oy + 92} w={31} h={56} label="F" area={uA} color={c.p} compact /></>)}
+          {isGF && <rect x={ox + 120} y={oy + 155} width={20} height={5} fill="#2dd4bf" rx="1" />}
+        </g>)
+      })()}
+
+      <text x="10" y="215" fontSize="9" fill="currentColor" className="text-foreground" fontWeight="500">{desc}</text>
+      <text x="290" y="215" fontSize="7" textAnchor="end" fill={c.p}>{sL}</text>
     </svg>
   )
 }
