@@ -182,6 +182,27 @@ function evaluatePatterns(layout: LayoutForPattern, values?: UserValues): Patter
     description: "주차 진입과 보행 동선이 분리되어 안전하고 쾌적한 보행 환경을 조성합니다"
   })
 
+  // ============================================================
+  // 사용자가 선택한 패턴 → 점수 가중치 적용 (1.3배, 최대 100)
+  // "내가 중요하게 여기는 것"이 점수에 실제 반영됨
+  // ============================================================
+  if (values?.selectedPatterns?.length) {
+    const patternIdMap: Record<string, number> = {
+      'courtyard': 115, 'south-light': 105, 'shop-street': 87,
+      'tree-view': 171, 'quiet-entry': 112, 'neighbors': 36,
+      'walk-safe': 79, 'two-light': 106,
+    }
+    const boostedIds = new Set(
+      values.selectedPatterns.map(sp => patternIdMap[sp]).filter(Boolean)
+    )
+    patterns.forEach(p => {
+      if (boostedIds.has(p.id)) {
+        p.score = Math.min(100, Math.round(p.score * 1.3))
+        p.description += ' ⭐ 사용자 중시 항목'
+      }
+    })
+  }
+
   return patterns
 }
 

@@ -198,13 +198,30 @@ function getGradeFromScore(score: unknown): string {
 function generateLayouts(
   siteArea: number, 
   regulation: ZoningRegulation, 
-  strategy: DesignStrategy
+  strategy: DesignStrategy,
+  userValues?: UserValues,
+  designApproach?: 'quantitative' | 'alexander' | 'combined'
 ): LayoutOption[] {
   const params = STRATEGY_PARAMETERS[strategy]
   const analysis = analyzeRegulations(siteArea, regulation)
   
   // 전략에 따른 세대 크기
   const unitSize = UNIT_SIZES[params.unitSizePreference]
+  
+  // ============================================================
+  // 알렉산더 3축 슬라이더 → 배치안 파라미터 조절
+  // profitVsQuality: 0=수익극대화 → 높은건폐율, 100=거주품질 → 낮은건폐율+여유공간
+  // privacyVsCommunity: 0=프라이버시 → 동간격↑, 100=커뮤니티 → 공유공간↑
+  // efficiencyVsSpace: 0=효율 → 빈틈없는배치, 100=여유 → 넉넉한외부공간
+  // ============================================================
+  const pq = userValues?.profitVsQuality ?? 50
+  const pc = userValues?.privacyVsCommunity ?? 50
+  const es = userValues?.efficiencyVsSpace ?? 50
+  
+  // 슬라이더 기반 보정 계수 (0.85 ~ 1.15 범위)
+  const coverageAdj = 1.15 - (pq + es) / 200 * 0.30      // 품질↑/여유↑ → 건폐율↓
+  const floorAdj = 1.10 - pq / 100 * 0.20                 // 품질↑ → 층수↓ (여유있는 스케일)
+  const openSpaceAdj = 1.0 + (pq + es) / 200 * 0.30       // 품질↑/여유↑ → 외부공간↑
   
   // 법규 한도 계산
   const maxCoverage = regulation.maxCoverageRatio
@@ -224,11 +241,11 @@ function generateLayouts(
     const typeChars = LAYOUT_TYPE_CHARACTERISTICS[typeId] || LAYOUT_TYPE_CHARACTERISTICS.tower
     
     // 전략 파라미터 적용
-    const coverage = Math.min(maxCoverage, Math.round(coverageBase * params.coverageMultiplier))
-    const floors = Math.min(effectiveMaxFloors, Math.round(floorBase * params.floorMultiplier))
+    const coverage = Math.min(maxCoverage, Math.round(coverageBase * params.coverageMultiplier * coverageAdj))
+    const floors = Math.min(effectiveMaxFloors, Math.round(floorBase * params.floorMultiplier * floorAdj))
     const buildingArea = (siteArea * coverage) / 100
     const gfa = buildingArea * floors
-    const openSpace = Math.round((100 - coverage) * params.openSpaceRatio * 100) / 100
+    const openSpace = Math.round((100 - coverage) * params.openSpaceRatio * openSpaceAdj * 100) / 100
     
     // 세대수 계산 (코어 효율 반영)
     const netArea = gfa * params.coreEfficiency
@@ -1147,7 +1164,7 @@ export default function ArchiScanPage() {
     try {
       // Generate layouts first (synchronous calculation)
       const area = Number(siteArea)
-      const generatedLayouts = generateLayouts(area, regulation, strategy)
+      const generatedLayouts = generateLayouts(area, regulation, strategy, userValues, designApproach)
       
       // 알렉산더/조합 모드: 배치안을 패턴 기반 이름으로 변환
       if (designApproach !== 'quantitative') {
@@ -1180,6 +1197,43 @@ export default function ArchiScanPage() {
               layout.description += ` — ${alexType.philosophy.slice(0, 80)}...`
             }
           }
+        })
+      }
+      
+      // ============================================================
+      // 알렉산더/균형 모드: 패턴 품질 점수로 배치안 재정렬
+      // 사용자의 가치관 선택이 추천 순서에 실제 반영됨
+      // ============================================================
+      if (designApproach !== 'quantitative') {
+        const scored = generatedLayouts.map(layout => {
+          const pq = evaluatePatternQuality({
+            type: layout.type || 'tower',
+            name: layout.name,
+            coverage: layout.coverage,
+            floors: layout.floors,
+            units: layout.units || 0,
+            parking: layout.parking || 0,
+            gfa: layout.gfa || 0,
+            siteArea: area,
+            strategy,
+          }, userValues)
+          return { layout, patternScore: pq.overallQuality }
+        })
+        
+        // 법규 준수 유지하면서 패턴 점수로 재정렬
+        scored.sort((a, b) => {
+          const aLegal = a.layout.isLegallyCompliant ? 1 : 0
+          const bLegal = b.layout.isLegallyCompliant ? 1 : 0
+          if (aLegal !== bLegal) return bLegal - aLegal
+          return b.patternScore - a.patternScore
+        })
+        
+        // 재정렬된 순서 적용
+        generatedLayouts.length = 0
+        scored.forEach((s, i) => {
+          s.layout.id = i + 1
+          s.layout.recommendation.isRecommended = i === 0
+          generatedLayouts.push(s.layout)
         })
       }
       
