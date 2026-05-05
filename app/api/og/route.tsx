@@ -25,18 +25,22 @@ export async function GET() {
           AI 건축 사전기획 플랫폼
         </h1>
         <p style={{ fontSize: '22px', color: '#94a3b8', textAlign: 'center', margin: '0 80px' }}>
-          주소 입력만으로 건축 사업성을 분석합니다
+          주소 입력만으로 대지 분석부터 사업성 검토까지
         </p>
         <div style={{ display: 'flex', gap: '12px', marginTop: '40px' }}>
-          <div style={{ padding: '8px 20px', borderRadius: '24px', background: 'rgba(94,234,212,0.12)', border: '1px solid rgba(94,234,212,0.2)', color: '#5eead4', fontSize: '15px', fontWeight: 600, display: 'flex' }}>국토부 자동조회</div>
           <div style={{ padding: '8px 20px', borderRadius: '24px', background: 'rgba(94,234,212,0.12)', border: '1px solid rgba(94,234,212,0.2)', color: '#5eead4', fontSize: '15px', fontWeight: 600, display: 'flex' }}>국토부 자동조회</div>
           <div style={{ padding: '8px 20px', borderRadius: '24px', background: 'rgba(94,234,212,0.12)', border: '1px solid rgba(94,234,212,0.2)', color: '#5eead4', fontSize: '15px', fontWeight: 600, display: 'flex' }}>AI 배치안</div>
           <div style={{ padding: '8px 20px', borderRadius: '24px', background: 'rgba(94,234,212,0.12)', border: '1px solid rgba(94,234,212,0.2)', color: '#5eead4', fontSize: '15px', fontWeight: 600, display: 'flex' }}>사업성 분석</div>
           <div style={{ padding: '8px 20px', borderRadius: '24px', background: 'rgba(94,234,212,0.12)', border: '1px solid rgba(94,234,212,0.2)', color: '#5eead4', fontSize: '15px', fontWeight: 600, display: 'flex' }}>PDF 보고서</div>
-          <div style={{ padding: '8px 20px', borderRadius: '24px', background: 'rgba(94,234,212,0.12)', border: '1px solid rgba(94,234,212,0.2)', color: '#5eead4', fontSize: '15px', fontWeight: 600, display: 'flex' }}>PDF 보고서</div>
         </div>
       </div>
     ),
-    { width: 1200, height: 630 }
+    {
+      width: 1200,
+      height: 630,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    }
   )
 }
