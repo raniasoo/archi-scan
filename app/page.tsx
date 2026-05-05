@@ -1733,7 +1733,7 @@ export default function ArchiScanPage() {
                 </div>
                 <div className="hidden xs:block text-left">
                   <h1 className="text-base md:text-xl font-bold tracking-tight text-foreground">Archi-Scan</h1>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">AI 건축 배치안 생성기</p>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">AI 건축 사전기획 플랫폼</p>
                 </div>
               </button>
               <div className="hidden md:block">
