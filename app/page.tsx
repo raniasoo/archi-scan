@@ -123,7 +123,7 @@ const ReportSummary = dynamic(() => import("@/components/report-summary").then(m
 const FinancialAnalysis = dynamic(() => import("@/components/financial-analysis").then(m => ({ default: m.FinancialAnalysis })), { loading: LoadingBox })
 const Dashboard = dynamic(() => import("@/components/dashboard").then(m => ({ default: m.Dashboard })), { loading: LoadingBox })
 const CollaborationManager = dynamic(() => import("@/components/collaboration-manager").then(m => ({ default: m.CollaborationManager })), { loading: LoadingBox })
-const QAInspectionPanel = dynamic(() => import("@/components/qa-inspection-panel").then(m => ({ default: m.QAInspectionPanel })), { loading: LoadingBox })
+
 
 // ── 동적 임포트: 단계별 컴포넌트 ──
 const LayoutCard = dynamic(() => import("@/components/layout-card").then(m => ({ default: m.LayoutCard })))
@@ -150,8 +150,7 @@ const ExcelImport = dynamic(() => import("@/components/excel-import").then(m => 
 const ProjectManager = dynamic(() => import("@/components/project-manager").then(m => ({ default: m.ProjectManager })))
 const VersionHistoryManager = dynamic(() => import("@/components/version-history-manager").then(m => ({ default: m.VersionHistoryManager })))
 const ApprovalWorkflowManager = dynamic(() => import("@/components/approval-workflow-manager").then(m => ({ default: m.ApprovalWorkflowManager })))
-const DebugPanel = dynamic(() => import("@/components/debug-panel").then(m => ({ default: m.DebugPanel })))
-const ReleaseChecklistPanel = dynamic(() => import("@/components/release-checklist-panel").then(m => ({ default: m.ReleaseChecklistPanel })))
+const DevPanels = dynamic(() => import("@/components/dev-panels").then(m => ({ default: m.DevPanels })))
 
 // ── 동적 임포트: 내보내기 함수 (사용 시에만 로드) ──
 const loadExportFunctions = () => import("@/lib/report-export")
@@ -3642,181 +3641,16 @@ export default function ArchiScanPage() {
           </div>
         )}
         
-        {/* Debug Panel - Development Only */}
-        <DebugPanel
+        {/* Dev Panels - Debug/Release/QA (Development Only) */}
+        <DevPanels
           address={address}
-          siteArea={siteAreaNum}
-          zoning={regulation?.zoneType}
-          road={`${regulation?.roadWidth || 0}m`}
-          heightLimit={regulation?.maxHeight}
-          districtPlan={supplementData?.districtPlan ?? "없음"}
-          selectedStrategy={strategy}
-          recommendedLayout={recommendedLayout ? {
-            id: recommendedLayout.id,
-            name: recommendedLayout.name,
-            floors: recommendedLayout.floors,
-            units: recommendedLayout.units,
-            parking: recommendedLayout.parking,
-            buildingCoverage: recommendedLayout.buildingCoverage,
-            far: recommendedLayout.far,
-            gfa: recommendedLayout.gfa,
-          } : null}
-          selectedLayout={selectedLayoutData ? {
-            id: selectedLayoutData.id,
-            name: selectedLayoutData.name,
-            type: selectedLayoutData.type,
-            floors: selectedLayoutData.floors,
-            units: selectedLayoutData.units,
-            parking: selectedLayoutData.parking,
-            buildingCoverage: selectedLayoutData.buildingCoverage,
-            far: selectedLayoutData.far,
-            gfa: selectedLayoutData.gfa,
-          } : null}
-          regulationResult={{
-            maxCoverage: regulation?.buildingCoverageLimit,
-            maxFar: regulation?.farLimit,
-            maxGfa: Math.round(siteAreaNum * (regulation?.farLimit || 0) / 100),
-            recommendedFloors: { min: 3, max: Math.min(7, Math.floor((regulation?.maxHeight || 30) / 3.5)) },
-            requiredParking: selectedLayoutData?.units || 0,
-          }}
-          feasibilityResult={{
-            planName: selectedLayoutData?.name,
-            totalCost: feasibilityResult?.landCost ? Math.round((feasibilityResult.landCost + feasibilityResult.constructionCost + feasibilityResult.indirectCost) / 100000000) : undefined,
-            expectedRevenue: feasibilityResult?.totalRevenue ? Math.round(feasibilityResult.totalRevenue / 100000000) : undefined,
-            expectedProfit: feasibilityResult?.expectedProfit ? Math.round(feasibilityResult.expectedProfit / 100000000) : undefined,
-            roi: feasibilityResult?.roi,
-            revenueModel: "세대수 기준",
-          }}
-          reportData={{
-            planName: selectedLayoutData?.name,
-            verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
-            roi: feasibilityResult?.roi,
-            totalCost: feasibilityResult?.landCost ? Math.round((feasibilityResult.landCost + feasibilityResult.constructionCost + feasibilityResult.indirectCost) / 100000000) : undefined,
-            expectedRevenue: feasibilityResult?.totalRevenue ? Math.round(feasibilityResult.totalRevenue / 100000000) : undefined,
-            units: selectedLayoutData?.units,
-            floors: selectedLayoutData?.floors,
-            grossFloorArea: selectedLayoutData?.gfa,
-          }}
-          floorPlanName={selectedLayoutData?.name}
-          comparisonCurrentPlan={selectedLayoutData?.name}
-        />
-        
-        {/* Release Checklist Panel - Development Only */}
-        <ReleaseChecklistPanel
-          address={address}
-          siteArea={siteAreaNum}
-          zoning={regulation?.zoneType}
-          road={`${regulation?.roadWidth || 0}m`}
-          heightLimit={regulation?.maxHeight}
-          districtPlan={supplementData?.districtPlan ?? "없음"}
-          selectedStrategy={strategy}
-          recommendedLayout={recommendedLayout ? {
-            id: recommendedLayout.id,
-            name: recommendedLayout.name,
-            floors: recommendedLayout.floors,
-            units: recommendedLayout.units,
-            parking: recommendedLayout.parking,
-            buildingCoverage: recommendedLayout.buildingCoverage,
-            far: recommendedLayout.far,
-            gfa: recommendedLayout.gfa,
-          } : null}
-          selectedLayout={selectedLayoutData ? {
-            id: selectedLayoutData.id,
-            name: selectedLayoutData.name,
-            type: selectedLayoutData.type,
-            floors: selectedLayoutData.floors,
-            units: selectedLayoutData.units,
-            parking: selectedLayoutData.parking,
-            buildingCoverage: selectedLayoutData.buildingCoverage,
-            far: selectedLayoutData.far,
-            gfa: selectedLayoutData.gfa,
-          } : null}
-          regulationResult={{
-            maxCoverage: regulation?.buildingCoverageLimit,
-            maxFar: regulation?.farLimit,
-            maxGfa: Math.round(siteAreaNum * (regulation?.farLimit || 0) / 100),
-            recommendedFloors: { min: 3, max: Math.min(7, Math.floor((regulation?.maxHeight || 30) / 3.5)) },
-            requiredParking: selectedLayoutData?.units || 0,
-          }}
-          floorPlanName={selectedLayoutData?.name}
-          feasibilityResult={{
-            planName: selectedLayoutData?.name,
-            totalCost: feasibilityResult?.landCost ? (feasibilityResult.landCost + feasibilityResult.constructionCost + feasibilityResult.indirectCost) / 100000000 : undefined,
-            expectedRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : undefined,
-            expectedProfit: feasibilityResult?.expectedProfit ? feasibilityResult.expectedProfit / 100000000 : undefined,
-            roi: feasibilityResult?.roi,
-            gfa: selectedLayoutData?.gfa,
-          }}
-          reportData={{
-            planName: selectedLayoutData?.name,
-            verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
-            roi: feasibilityResult?.roi,
-            totalCost: feasibilityResult?.landCost ? (feasibilityResult.landCost + feasibilityResult.constructionCost + feasibilityResult.indirectCost) / 100000000 : undefined,
-            expectedRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : undefined,
-            units: selectedLayoutData?.units,
-            floors: selectedLayoutData?.floors,
-            grossFloorArea: selectedLayoutData?.gfa,
-          }}
-        />
-        
-        {/* QA Inspection Panel - Development Only */}
-        <QAInspectionPanel
-          address={address}
-          siteArea={siteAreaNum}
-          zoning={regulation?.zoneType}
-          road={`${regulation?.roadWidth || 0}m`}
-          heightLimit={regulation?.maxHeight}
-          districtPlan={supplementData?.districtPlan ?? "없음"}
-          selectedStrategy={strategy}
-          recommendedLayout={recommendedLayout ? {
-            id: recommendedLayout.id,
-            name: recommendedLayout.name,
-            floors: recommendedLayout.floors,
-            units: recommendedLayout.units,
-            parking: recommendedLayout.parking,
-            buildingCoverage: recommendedLayout.buildingCoverage,
-            far: recommendedLayout.far,
-            gfa: recommendedLayout.gfa,
-          } : null}
-          selectedLayout={selectedLayoutData ? {
-            id: selectedLayoutData.id,
-            name: selectedLayoutData.name,
-            type: selectedLayoutData.type,
-            floors: selectedLayoutData.floors,
-            units: selectedLayoutData.units,
-            parking: selectedLayoutData.parking,
-            buildingCoverage: selectedLayoutData.buildingCoverage,
-            far: selectedLayoutData.far,
-            gfa: selectedLayoutData.gfa,
-          } : null}
-          regulationResult={{
-            maxCoverage: regulation?.buildingCoverageLimit,
-            maxFar: regulation?.farLimit,
-            maxGfa: Math.round(siteAreaNum * (regulation?.farLimit || 0) / 100),
-            recommendedFloors: { min: 3, max: Math.min(7, Math.floor((regulation?.maxHeight || 30) / 3.5)) },
-            requiredParking: selectedLayoutData?.units || 0,
-          }}
-          feasibilityResult={{
-            planName: selectedLayoutData?.name,
-            totalCost: feasibilityResult?.landCost ? (feasibilityResult.landCost + feasibilityResult.constructionCost + feasibilityResult.indirectCost) / 100000000 : undefined,
-            expectedRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : undefined,
-            expectedProfit: feasibilityResult?.expectedProfit ? feasibilityResult.expectedProfit / 100000000 : undefined,
-            roi: feasibilityResult?.roi,
-            gfa: selectedLayoutData?.gfa,
-          }}
-          reportData={{
-            planName: selectedLayoutData?.name,
-            verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
-            roi: feasibilityResult?.roi,
-            totalCost: feasibilityResult?.landCost ? (feasibilityResult.landCost + feasibilityResult.constructionCost + feasibilityResult.indirectCost) / 100000000 : undefined,
-            expectedRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : undefined,
-            units: selectedLayoutData?.units,
-            floors: selectedLayoutData?.floors,
-            grossFloorArea: selectedLayoutData?.gfa,
-            address: address,
-          }}
-          floorPlanName={selectedLayoutData?.name}
-          comparisonCurrentPlan={selectedLayoutData?.name}
+          siteAreaNum={siteAreaNum}
+          regulation={regulation}
+          supplementData={supplementData}
+          strategy={strategy}
+          recommendedLayout={recommendedLayout}
+          selectedLayoutData={selectedLayoutData}
+          feasibilityResult={feasibilityResult}
         />
       </main>
 
