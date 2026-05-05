@@ -1,7 +1,5 @@
 import type { NextAuthOptions } from "next-auth"
 
-const SITE_URL = process.env.NEXTAUTH_URL || "https://archiscan.kr"
-
 export const authOptions: NextAuthOptions = {
   providers: [
     {
@@ -12,17 +10,9 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.KAKAO_CLIENT_SECRET!,
       authorization: {
         url: "https://kauth.kakao.com/oauth/authorize",
-        params: {
-          scope: "profile_nickname profile_image",
-          redirect_uri: `${SITE_URL}/api/auth/callback/kakao`,
-        },
+        params: { scope: "" },
       },
-      token: {
-        url: "https://kauth.kakao.com/oauth/token",
-        params: {
-          redirect_uri: `${SITE_URL}/api/auth/callback/kakao`,
-        },
-      },
+      token: "https://kauth.kakao.com/oauth/token",
       userinfo: "https://kapi.kakao.com/v2/user/me",
       profile(profile) {
         return {
