@@ -209,9 +209,11 @@ function generateLayouts(
     const gfa = buildingArea * floors
     const openSpace = Math.round((100 - coverage) * params.openSpaceRatio * openSpaceAdj * 100) / 100
     
-    // 세대수 계산 (코어 효율 반영)
-    const netArea = gfa * params.coreEfficiency
-    const units = Math.max(Math.floor(netArea / unitSize), floors)
+    // 세대수 계산 (층별 건축면적 기준 — 현실적 세대수)
+    const netFloorArea = buildingArea * params.coreEfficiency
+    const unitsPerFloor = Math.max(Math.floor(netFloorArea / unitSize), 1)
+    const residentialFloors = Math.max(floors - 1, 1) // 1층은 로비/상가
+    const units = unitsPerFloor * residentialFloors
     
     // 주차대수 계산
     const requiredParking = Math.ceil(units * regulation.parkingRatio)
@@ -243,9 +245,11 @@ function generateLayouts(
     const clampedGFA = Math.min(buildingArea * clampedFloors, maxAllowedGFA)
     const clampedFAR = Math.round(clampedGFA / siteArea * 100)
     
-    // 세대수 재계산 (clamped GFA 기준)
-    const clampedNetArea = clampedGFA * params.coreEfficiency
-    const clampedUnits = Math.max(Math.floor(clampedNetArea / unitSize), clampedFloors)
+    // 세대수 재계산 (clamped 건축면적 기준 — 현실적 세대수)
+    const clampedNetFloorArea = clampedBuildingArea * params.coreEfficiency
+    const clampedUnitsPerFloor = Math.max(Math.floor(clampedNetFloorArea / unitSize), 1)
+    const clampedResidentialFloors = Math.max(clampedFloors - 1, 1)
+    const clampedUnits = clampedUnitsPerFloor * clampedResidentialFloors
     
     // 주차대수 재계산
     const clampedRequiredParking = Math.ceil(clampedUnits * regulation.parkingRatio)

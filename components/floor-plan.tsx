@@ -116,9 +116,9 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
   const gfF = allowComm ? '#f59e0b15' : '#22c55e15'
 
   const tU = units || 10
-  const uF = Math.max(totalFloors - 1, 1)
-  const upU = totalFloors > 1 ? Math.ceil(tU * 0.6 / uF) : tU
-  const gfU = totalFloors > 1 ? Math.max(tU - (upU * uF), 2) : tU
+  const residentialFloors = Math.max(totalFloors - 1, 1) // 1층 제외
+  const upU = Math.max(Math.ceil(tU / residentialFloors), 1) // 층당 세대수
+  const gfU = totalFloors > 1 ? Math.min(Math.max(Math.floor(upU * 0.6), 2), upU) : tU // 1층은 적게
   const curU = isGF ? gfU : upU
   const tGFA = gfa || (tU * 59)
   const uA = Math.round(tGFA / Math.max(tU, 1))

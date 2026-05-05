@@ -114,18 +114,10 @@ export function FloorplanStep(props: FloorplanStepProps) {
                   const totalFloors = safeNumber(selectedLayoutData.floors, selectedFloor)
                   const floorType = selectedFloor === 1 ? "로비/상가층" : selectedFloor === totalFloors ? "최상층" : "기준층"
                   
-                  // Calculate actual units per floor based on strategy (matches FloorPlan component)
-                  // 1F = 0 (lobby), upper floors depend on strategy
-                  let currentFloorUnits = 0
-                  if (selectedFloor > 1) {
-                    if (strategy === "view-priority" || strategy === "privacy-priority") {
-                      currentFloorUnits = 2 // A, B (large units)
-                    } else if (strategy === "area-maximize" || strategy === "profitability") {
-                      currentFloorUnits = 6 // A~F (small units)
-                    } else {
-                      currentFloorUnits = 4 // A~D (medium units - default)
-                    }
-                  }
+                  // Calculate actual units per floor from layout data
+                  const totalUnits = selectedLayoutData.units || 0
+                  const residentialFloors = Math.max(selectedLayoutData.floors - 1, 1)
+                  const currentFloorUnits = selectedFloor === 1 ? 0 : Math.ceil(totalUnits / residentialFloors)
                   
                   return (
                     <div className="bg-primary/10 border border-primary/20 rounded px-2 py-1.5 mb-2">
