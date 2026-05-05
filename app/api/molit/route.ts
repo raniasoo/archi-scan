@@ -223,15 +223,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         error: result.error,
         zoneType: result.data?.zoneType || null,
         siteArea: result.data?.siteArea || null,
+        buildingName: result.data?.buildingName || null,
+        mainPurpose: result.data?.mainPurpose || null,
+        groundFloors: result.data?.groundFloors || null,
+        buildingCoverage: result.data?.buildingCoverage || null,
+        floorAreaRatio: result.data?.floorAreaRatio || null,
         diagnostics: result.diagnostics,
-        itemCount: result.data?.items?.length || 0,
-        firstItem: result.data?.items?.[0] ? {
-          platPlc: result.data.items[0].platPlc,
-          bldNm: result.data.items[0].bldNm,
-          mainPurpsCdNm: result.data.items[0].mainPurpsCdNm,
-          platArea: result.data.items[0].platArea,
-          totArea: result.data.items[0].totArea,
-        } : null,
       })
     } catch (e) {
       return NextResponse.json({ status: 'test-error', error: String(e) })

@@ -1642,11 +1642,11 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">연면적</p><p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${report.planning.gfaFormatted}</p></div>
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">손익분기 분양률</p><p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${report.feasibility.breakEvenRateFormatted}</p></div>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px;">
-        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: #64748b; margin: 0 0 2px 0;">법규 부합성</p><p style="font-size: 20px; font-weight: 800; color: #0369a1; margin: 0;">${report.aiAnalysis.legalCompliance}</p></div>
-        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: #64748b; margin: 0 0 2px 0;">사업성</p><p style="font-size: 20px; font-weight: 800; color: #0369a1; margin: 0;">${report.aiAnalysis.profitability}</p></div>
-        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: #64748b; margin: 0 0 2px 0;">상품성</p><p style="font-size: 20px; font-weight: 800; color: #0369a1; margin: 0;">${report.aiAnalysis.marketability}</p></div>
-        <div style="background: #0d9488; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: rgba(255,255,255,0.8); margin: 0 0 2px 0;">종합 점수</p><p style="font-size: 20px; font-weight: 800; color: #fff; margin: 0;">${report.aiAnalysis.totalScore}</p></div>
+      <div class="ai-score-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px;">
+        <div class="ai-score-card" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px; text-align:center;"><span class="ai-score-label" style="font-size:9px; color:#64748b; display:block; margin-bottom:2px;">법규 부합성</span><span class="ai-score-value" style="font-size:20px; font-weight:800; color:#0369a1; display:block;">${report.aiAnalysis.legalCompliance}</span></div>
+        <div class="ai-score-card" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px; text-align:center;"><span class="ai-score-label" style="font-size:9px; color:#64748b; display:block; margin-bottom:2px;">사업성</span><span class="ai-score-value" style="font-size:20px; font-weight:800; color:#0369a1; display:block;">${report.aiAnalysis.profitability}</span></div>
+        <div class="ai-score-card" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px; text-align:center;"><span class="ai-score-label" style="font-size:9px; color:#64748b; display:block; margin-bottom:2px;">상품성</span><span class="ai-score-value" style="font-size:20px; font-weight:800; color:#0369a1; display:block;">${report.aiAnalysis.marketability}</span></div>
+        <div class="ai-score-card highlight-card" style="background:#0d9488; border-radius:8px; padding:10px; text-align:center;"><span class="ai-score-label" style="font-size:9px; color:rgba(255,255,255,0.8); display:block; margin-bottom:2px;">종합 점수</span><span class="ai-score-value" style="font-size:20px; font-weight:800; color:#fff; display:block;">${report.aiAnalysis.totalScore}</span></div>
       </div>
       <div style="background: #f1f5f9; border-radius: 8px; padding: 14px;">
         <p style="font-size: 11px; font-weight: 700; color: #334155; margin: 0 0 8px 0;">핵심 포인트</p>
@@ -1862,26 +1862,24 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 
       <h2 class="section-title" style="margin-bottom:12px;">8. AI 분석</h2>
 
-      <table style="width:100%; border-collapse:separate; border-spacing:8px 8px; margin:12px 0;" cellpadding="0">
-        <tr>
-          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
-            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">법규 부합성</p>
-            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
-          </td>
-          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
-            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">사업성</p>
-            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</p>
-          </td>
-          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
-            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">상품성</p>
-            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</p>
-          </td>
-          <td style="width:25%; text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px; vertical-align:middle;">
-            <p style="font-size:11px; color:#064e3b; margin:0 0 6px 0; font-weight:600;">종합 점수</p>
-            <p style="font-size:26px; font-weight:700; color:#065f46; margin:0;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</p>
-          </td>
-        </tr>
-      </table>
+      <div class="ai-score-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
+        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <span class="ai-score-label" style="font-size:11px; color:#64748b; display:block; margin-bottom:6px;">법규 부합성</span>
+          <span class="ai-score-value" style="font-size:22px; font-weight:700; color:#0f766e; display:block;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</span>
+        </div>
+        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <span class="ai-score-label" style="font-size:11px; color:#64748b; display:block; margin-bottom:6px;">사업성</span>
+          <span class="ai-score-value" style="font-size:22px; font-weight:700; color:#0f766e; display:block;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</span>
+        </div>
+        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <span class="ai-score-label" style="font-size:11px; color:#64748b; display:block; margin-bottom:6px;">상품성</span>
+          <span class="ai-score-value" style="font-size:22px; font-weight:700; color:#0f766e; display:block;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</span>
+        </div>
+        <div class="ai-score-card highlight-card" style="text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px;">
+          <span class="ai-score-label" style="font-size:11px; color:#064e3b; display:block; margin-bottom:6px; font-weight:600;">종합 점수</span>
+          <span class="ai-score-value" style="font-size:26px; font-weight:700; color:#065f46; display:block;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</span>
+        </div>
+      </div>
     </section>
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
@@ -3495,11 +3493,11 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">연면적</p><p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${report.planning.gfaFormatted}</p></div>
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center;"><p style="font-size: 10px; color: #64748b; margin: 0 0 4px 0;">손익분기 분양률</p><p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${report.feasibility.breakEvenRateFormatted}</p></div>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px;">
-        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: #64748b; margin: 0 0 2px 0;">법규 부합성</p><p style="font-size: 20px; font-weight: 800; color: #0369a1; margin: 0;">${report.aiAnalysis.legalCompliance}</p></div>
-        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: #64748b; margin: 0 0 2px 0;">사업성</p><p style="font-size: 20px; font-weight: 800; color: #0369a1; margin: 0;">${report.aiAnalysis.profitability}</p></div>
-        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: #64748b; margin: 0 0 2px 0;">상품성</p><p style="font-size: 20px; font-weight: 800; color: #0369a1; margin: 0;">${report.aiAnalysis.marketability}</p></div>
-        <div style="background: #0d9488; border-radius: 8px; padding: 10px; text-align: center;"><p style="font-size: 9px; color: rgba(255,255,255,0.8); margin: 0 0 2px 0;">종합 점수</p><p style="font-size: 20px; font-weight: 800; color: #fff; margin: 0;">${report.aiAnalysis.totalScore}</p></div>
+      <div class="ai-score-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px;">
+        <div class="ai-score-card" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px; text-align:center;"><span class="ai-score-label" style="font-size:9px; color:#64748b; display:block; margin-bottom:2px;">법규 부합성</span><span class="ai-score-value" style="font-size:20px; font-weight:800; color:#0369a1; display:block;">${report.aiAnalysis.legalCompliance}</span></div>
+        <div class="ai-score-card" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px; text-align:center;"><span class="ai-score-label" style="font-size:9px; color:#64748b; display:block; margin-bottom:2px;">사업성</span><span class="ai-score-value" style="font-size:20px; font-weight:800; color:#0369a1; display:block;">${report.aiAnalysis.profitability}</span></div>
+        <div class="ai-score-card" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px; text-align:center;"><span class="ai-score-label" style="font-size:9px; color:#64748b; display:block; margin-bottom:2px;">상품성</span><span class="ai-score-value" style="font-size:20px; font-weight:800; color:#0369a1; display:block;">${report.aiAnalysis.marketability}</span></div>
+        <div class="ai-score-card highlight-card" style="background:#0d9488; border-radius:8px; padding:10px; text-align:center;"><span class="ai-score-label" style="font-size:9px; color:rgba(255,255,255,0.8); display:block; margin-bottom:2px;">종합 점수</span><span class="ai-score-value" style="font-size:20px; font-weight:800; color:#fff; display:block;">${report.aiAnalysis.totalScore}</span></div>
       </div>
       <div style="background: #f1f5f9; border-radius: 8px; padding: 14px;">
         <p style="font-size: 11px; font-weight: 700; color: #334155; margin: 0 0 8px 0;">핵심 포인트</p>
@@ -3745,26 +3743,24 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
     <!-- 7. AI 분석 -->
     <section class="pdf-section pdf-section pdf-card-group">
       <h2 class="section-title" style="margin-bottom:12px;">8. AI 분석</h2>
-      <table style="width:100%; border-collapse:separate; border-spacing:8px 8px; margin:12px 0;" cellpadding="0">
-        <tr>
-          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
-            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">법규 부합성</p>
-            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</p>
-          </td>
-          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
-            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">사업성</p>
-            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</p>
-          </td>
-          <td style="width:25%; text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; vertical-align:middle;">
-            <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">상품성</p>
-            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</p>
-          </td>
-          <td style="width:25%; text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px; vertical-align:middle;">
-            <p style="font-size:11px; color:#064e3b; margin:0 0 6px 0; font-weight:600;">종합 점수</p>
-            <p style="font-size:26px; font-weight:700; color:#065f46; margin:0;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</p>
-          </td>
-        </tr>
-      </table>
+      <div class="ai-score-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0;">
+        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <span class="ai-score-label" style="font-size:11px; color:#64748b; display:block; margin-bottom:6px;">법규 부합성</span>
+          <span class="ai-score-value" style="font-size:22px; font-weight:700; color:#0f766e; display:block;">${report.aiAnalysis?.legalCompliance ?? (report.planning.coverage <= 60 ? 90 : 75)}</span>
+        </div>
+        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <span class="ai-score-label" style="font-size:11px; color:#64748b; display:block; margin-bottom:6px;">사업성</span>
+          <span class="ai-score-value" style="font-size:22px; font-weight:700; color:#0f766e; display:block;">${report.aiAnalysis?.profitability ?? (report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55)}</span>
+        </div>
+        <div class="ai-score-card" style="text-align:center; padding:14px 8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;">
+          <span class="ai-score-label" style="font-size:11px; color:#64748b; display:block; margin-bottom:6px;">상품성</span>
+          <span class="ai-score-value" style="font-size:22px; font-weight:700; color:#0f766e; display:block;">${report.aiAnalysis?.marketability ?? (report.feasibility.roi > 15 ? 78 : 65)}</span>
+        </div>
+        <div class="ai-score-card highlight-card" style="text-align:center; padding:14px 8px; background:#ecfdf5; border:2px solid #6ee7b7; border-radius:8px;">
+          <span class="ai-score-label" style="font-size:11px; color:#064e3b; display:block; margin-bottom:6px; font-weight:600;">종합 점수</span>
+          <span class="ai-score-value" style="font-size:26px; font-weight:700; color:#065f46; display:block;">${report.aiAnalysis?.totalScore ?? Math.round((report.feasibility.roi > 20 ? 85 : report.feasibility.roi > 12 ? 70 : 55) * 0.95)}</span>
+        </div>
+      </div>
     </section>
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
