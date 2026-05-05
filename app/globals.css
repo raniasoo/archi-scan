@@ -255,6 +255,9 @@
 
 .report-cover-compact h1 {
   color: oklch(0.25 0.02 55);
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 /* Report Card - Isolated light style for report sections */
@@ -265,6 +268,18 @@
   border: 1px solid #DED6C8;
   border-radius: 0.625rem;
   box-shadow: 0 2px 8px rgba(47, 42, 36, 0.06);
+}
+
+/* 모바일 보고서 카드 여백 압축 */
+@media (max-width: 640px) {
+  .report-card { margin-bottom: 0.75rem; }
+  .report-card .p-4 { padding: 0.75rem; }
+  .report-card .p-5 { padding: 0.875rem; }
+  .report-section-title { font-size: 0.8rem; }
+  .report-cover-compact { padding: 1rem 0.875rem; }
+  .report-cover-compact h1 { font-size: 1.125rem; }
+  .report-ai-scores { gap: 0.375rem; }
+  .report-ai-score { padding: 0.375rem 0.25rem; }
 }
 
 /* Report utility classes for isolated light theme */

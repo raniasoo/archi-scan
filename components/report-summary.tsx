@@ -432,25 +432,29 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       /* AI 점수 카드 - 모바일 2x2 */
       .ai-score-grid { grid-template-columns: 1fr 1fr !important; gap: 6px; }
       .ai-score-card { padding: 8px 6px; min-height: 0; }
-      /* 5번 섹션 카드 모바일 축소 */
-      .stat-box { padding: 7px 6px; }
-      table { font-size: 8pt; display: block; overflow-x: auto; white-space: nowrap; }
-      th, td { padding: 5px 6px; min-width: 55px; }
-      /* 카드/박스 */
-      .stat-box { padding: 7px 6px; }
+      /* 5번 섹션 카드 모바일 축소 — 4열→2열, 패딩/폰트 압축 */
+      .stat-box { padding: 6px 5px; min-height: 0; }
       .stat-value { font-size: 11pt; }
-      .stat-label { font-size: 8pt; }
-      /* 섹션 간격 압축 — 후반 섹션 여백 최소화 */
-      .section { margin-bottom: 14px; padding-bottom: 10px; }
-      .section:last-child { margin-bottom: 6px; padding-bottom: 4px; }
-      .section-title { font-size: 12pt; margin-bottom: 10px; padding-bottom: 8px; }
+      .stat-label { font-size: 7.5pt; }
+      .stat-note { font-size: 7.5pt; }
+      table { font-size: 8pt; display: block; overflow-x: auto; white-space: nowrap; }
+      th, td { padding: 4px 5px; min-width: 50px; }
+      /* 섹션 간격 압축 — 후반부 여백 최소화 */
+      .section { margin-bottom: 10px; padding-bottom: 8px; }
+      .section:last-child { margin-bottom: 4px; padding-bottom: 2px; }
+      .section-title { font-size: 11pt; margin-bottom: 8px; padding-bottom: 6px; }
       /* 여백 압축 */
-      .highlight { padding: 8px 10px; margin: 8px 0; }
-      .conclusion { padding: 12px; margin: 10px 0; }
-      .feature-tags { gap: 4px; }
-      .feature-tag { padding: 3px 6px; font-size: 8pt; }
-      /* 섹션 타이틀 잘림 방지 */
+      .highlight { padding: 7px 8px; margin: 6px 0; }
+      .conclusion { padding: 10px; margin: 8px 0; }
+      .feature-tags { gap: 3px; }
+      .feature-tag { padding: 2px 5px; font-size: 7.5pt; }
+      /* 표지 제목/주소 잘림 완전 방지 */
       .section-title span { word-break: keep-all; }
+      .cover h1, .cover .address { overflow: visible !important; text-overflow: unset !important; white-space: normal !important; }
+      /* 리스크/결론 박스 여백 축소 */
+      .risk-box { padding: 8px; }
+      .risk-title { font-size: 9pt; margin-bottom: 5px; }
+      .risk-list li { font-size: 8pt; margin-bottom: 2px; }
     }
     .cover { text-align: center; padding: 60px 20px; margin-bottom: 40px; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; border-radius: 8px; }
     .cover h1 { font-size: 24pt; font-weight: 700; margin-bottom: 8px; }
@@ -658,19 +662,19 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       </div>
     </div>
     <div class="grid-2" style="grid-template-columns: repeat(4, 1fr); margin: 8px 0;">
-      <div class="stat-box text-center">
+      <div class="stat-box small text-center">
         <div class="stat-label">세대수</div>
         <div class="stat-value">${layout.units}<span style="font-size: 10pt; font-weight: 400;">세대</span></div>
       </div>
-      <div class="stat-box text-center">
+      <div class="stat-box small text-center">
         <div class="stat-label">규모</div>
         <div class="stat-value">지상 ${layout.floors}<span style="font-size: 10pt; font-weight: 400;">층</span></div>
       </div>
-      <div class="stat-box text-center">
+      <div class="stat-box small text-center">
         <div class="stat-label">주차대수</div>
         <div class="stat-value">${layout.parking}<span style="font-size: 10pt; font-weight: 400;">대</span></div>
       </div>
-      <div class="stat-box text-center">
+      <div class="stat-box small text-center">
         <div class="stat-label">건폐율</div>
         <div class="stat-value">${layout.coverage}<span style="font-size: 10pt; font-weight: 400;">%</span></div>
       </div>
@@ -2254,7 +2258,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       <div 
         id="report"
         ref={printRef} 
-        className="flex flex-col gap-5 print:bg-white print:gap-0 print:block"
+        className="flex flex-col gap-3 sm:gap-5 print:bg-white print:gap-0 print:block"
         style={{ fontFamily: "'Noto Sans KR', 'Malgun Gothic', sans-serif" }}
       >
         {/* Report Cover - Sand Beige & Forest Green Premium */}
