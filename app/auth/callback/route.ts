@@ -8,22 +8,29 @@ export async function GET(request: Request) {
   const error_description = searchParams.get('error_description')
   const next = searchParams.get('next') ?? '/'
 
-  console.log('[auth/callback]', { code: code ? 'present' : 'missing', error_param, error_description, origin })
-
   if (error_param) {
     console.error('[auth/callback] OAuth error:', error_param, error_description)
     return NextResponse.redirect(`${origin}/?auth_error=${error_param}`)
   }
 
   if (code) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      console.log('[auth/callback] Session created successfully')
+    try {
+      const supabase = await createClient()
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+      
+      if (error) {
+        console.error('[auth/callback] EXCHANGE_ERROR:', error.message, error.status)
+        return NextResponse.redirect(`${origin}/?auth_error=exchange_failed`)
+      }
+
+      console.log('[auth/callback] SUCCESS user:', data.user?.email || data.user?.id)
       return NextResponse.redirect(`${origin}${next}`)
+    } catch (e: any) {
+      console.error('[auth/callback] CATCH_ERROR:', e?.message || String(e))
+      return NextResponse.redirect(`${origin}/?auth_error=exception`)
     }
-    console.error('[auth/callback] Exchange failed:', error.message)
   }
 
-  return NextResponse.redirect(`${origin}/?auth_error=true`)
+  console.error('[auth/callback] NO_CODE')
+  return NextResponse.redirect(`${origin}/?auth_error=no_code`)
 }
