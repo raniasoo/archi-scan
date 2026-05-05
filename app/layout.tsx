@@ -74,6 +74,7 @@ export default function RootLayout({
   return (
     <html lang="ko" className="bg-background">
       <head>
+        <meta name="google-site-verification" content="kuPQKhHg9zi-xuTMlLEsLeqY9tZTwJZZGfIZt2Fd1ZY" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
