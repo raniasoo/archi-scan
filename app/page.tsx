@@ -12,58 +12,26 @@
 import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { SiteInputForm } from "@/components/site-input-form"
 import type { SupplementData } from "@/components/manual-supplement-form"
-import { SiteMapPreview } from "@/components/site-map-preview"
-import { ZoneAllowedUsesCard } from "@/components/zone-allowed-uses-card"
-import { ZONE_LAYOUT_CONFIGS, getUseLabel } from "@/lib/zone-layout-config"
 import { type SiteVisualsConfig, EMPTY_SITE_VISUALS } from "@/lib/site-visuals-config"
+import { ZONE_LAYOUT_CONFIGS, getUseLabel } from "@/lib/zone-layout-config"
 import { type FinancialScenariosConfig, EMPTY_SCENARIOS_CONFIG } from "@/lib/financial-scenarios-config"
-import { ARCHISCAN_COPY, getStrategyName } from "@/constants/archiscan-copy"
-import { ARCHISCAN_SCENARIOS, applyScenarioToInput, IS_DEV_MODE } from "@/constants/archiscan-scenarios"
-import { saveProject as saveProjectToStorage, getRecentProjects, loadProject as loadProjectFromStorage, deleteProject as deleteProjectFromStorage, type ProjectListItem } from "@/lib/project-storage"
+import { saveProject as saveProjectToStorage, getRecentProjects, type ProjectListItem } from "@/lib/project-storage"
 import { saveProjectToCloud } from "@/lib/cloud-storage"
-import { type ProjectApprovalData, isEditingAllowed, getStoredUser } from "@/lib/user-roles-config"
 import { type BrandingConfig, loadBrandingConfig } from "@/lib/branding-config"
 import { toast } from "sonner"
 import { useSubscription } from "@/components/subscription-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { AuthButton } from "@/components/auth-button"
-import { fetchLandPrice, formatLandPricePerM2, formatLandCost } from "@/lib/land-price"
+import { fetchLandPrice } from "@/lib/land-price"
 import type { ImportedReportData } from "@/components/excel-import"
 import { type ProjectSnapshot } from "@/components/project-manager"
 import {
-  Building2, 
-  LayoutGrid, 
-  Layers, 
-  Banknote, 
-  FileText,
-  ChevronRight,
-  ChevronLeft,
-  Loader2,
-  CreditCard,
-  Scale,
-  Brain,
-  Sparkles,
-  LayoutDashboard,
-  CheckCircle2,
-  AlertCircle,
-  Maximize2,
-  Minimize2,
-  DoorOpen,
-  Calculator,
-  RotateCcw,
-  Settings2,
-  Code,
-  Table,
-  Printer,
-  Clock,
-  TrendingUp,
-  Share2,
-  Copy
+  Building2, LayoutGrid, Layers, Banknote, FileText,
+  Loader2, CreditCard, Scale, Brain, LayoutDashboard,
+  Settings2, Share2,
 } from "lucide-react"
 import { UserBadge } from "@/components/user-badge"
 import { UpgradeModal } from "@/components/upgrade-modal"
@@ -81,7 +49,7 @@ import {
   type SiteInput,
   safeNumber,
 } from "@/lib/project-analysis-state"
-import { getRegionalPricing, getZoneMultiplier, getTierInfo, type RegionalPricing } from "@/lib/regional-pricing"
+import { getRegionalPricing, getZoneMultiplier, type RegionalPricing } from "@/lib/regional-pricing"
 import {
   DesignStrategy,
   STRATEGY_PARAMETERS,
@@ -109,39 +77,15 @@ import { ALEXANDER_LAYOUT_TYPES, recommendLayoutTypes, getAlexanderLayoutDescrip
 const LoadingBox = () => <div className="flex items-center justify-center p-8 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" />로딩 중...</div>
 const BuildingVolume3D = dynamic(() => import("@/components/building-volume-3d").then(m => ({ default: m.BuildingVolume3D })), { ssr: false, loading: LoadingBox })
 const FloorPlan = dynamic(() => import("@/components/floor-plan").then(m => ({ default: m.FloorPlan })), { ssr: false, loading: LoadingBox })
-const IsometricView = dynamic(() => import("@/components/isometric-view").then(m => ({ default: m.IsometricView })), { ssr: false, loading: LoadingBox })
-const SectionView = dynamic(() => import("@/components/section-view").then(m => ({ default: m.SectionView })), { ssr: false, loading: LoadingBox })
-const ElevationView = dynamic(() => import("@/components/elevation-view").then(m => ({ default: m.ElevationView })), { ssr: false, loading: LoadingBox })
-const PerspectiveView = dynamic(() => import("@/components/perspective-view").then(m => ({ default: m.PerspectiveView })), { ssr: false, loading: LoadingBox })
-const Terrain3DView = dynamic(() => import("@/components/terrain-3d-view").then(m => ({ default: m.Terrain3DView })), { ssr: false, loading: LoadingBox })
-const CadastralMap = dynamic(() => import("@/components/cadastral-map").then(m => ({ default: m.CadastralMap })), { ssr: false, loading: LoadingBox })
-const SitePlan = dynamic(() => import("@/components/site-plan").then(m => ({ default: m.SitePlan })), { ssr: false, loading: LoadingBox })
-const BuildingFootprint = dynamic(() => import("@/components/building-footprint").then(m => ({ default: m.BuildingFootprint })), { ssr: false, loading: LoadingBox })
 
 // ── 동적 임포트: 무거운 기능 컴포넌트 ──
-const ReportSummary = dynamic(() => import("@/components/report-summary").then(m => ({ default: m.ReportSummary })), { loading: LoadingBox })
-const FinancialAnalysis = dynamic(() => import("@/components/financial-analysis").then(m => ({ default: m.FinancialAnalysis })), { loading: LoadingBox })
 const Dashboard = dynamic(() => import("@/components/dashboard").then(m => ({ default: m.Dashboard })), { loading: LoadingBox })
 const CollaborationManager = dynamic(() => import("@/components/collaboration-manager").then(m => ({ default: m.CollaborationManager })), { loading: LoadingBox })
 
 
 // ── 동적 임포트: 단계별 컴포넌트 ──
-const LayoutCard = dynamic(() => import("@/components/layout-card").then(m => ({ default: m.LayoutCard })))
-const LayoutComparison = dynamic(() => import("@/components/layout-comparison").then(m => ({ default: m.LayoutComparison })))
 const ProjectComparison = dynamic(() => import("@/components/project-comparison").then(m => ({ default: m.ProjectComparison })))
-const StrategySelection = dynamic(() => import("@/components/strategy-selection").then(m => ({ default: m.StrategySelection })))
-const RegulationInput = dynamic(() => import("@/components/regulation-input").then(m => ({ default: m.RegulationInput })))
-const RegulationAnalysisPanel = dynamic(() => import("@/components/regulation-analysis").then(m => ({ default: m.RegulationAnalysisPanel })))
-const LegalReviewPanel = dynamic(() => import("@/components/legal-review-panel").then(m => ({ default: m.LegalReviewPanel })))
-const ScenarioSlider = dynamic(() => import("@/components/scenario-slider").then(m => ({ default: m.ScenarioSlider })))
-const AIConceptGenerator = dynamic(() => import("@/components/ai-concept-generator").then(m => ({ default: m.AIConceptGenerator })))
-const AIReasoningPanel = dynamic(() => import("@/components/ai-reasoning").then(m => ({ default: m.AIReasoningPanel })))
-const PatternQualityCard = dynamic(() => import("@/components/pattern-quality-card").then(m => ({ default: m.PatternQualityCard })))
-const ValuePrioritySelector = dynamic(() => import("@/components/value-priority-selector").then(m => ({ default: m.ValuePrioritySelector })))
-const BuildingGoalSelector = dynamic(() => import("@/components/building-goal-selector").then(m => ({ default: m.BuildingGoalSelector })))
-const SlopeAnalysisCard = dynamic(() => import("@/components/slope-analysis-card").then(m => ({ default: m.SlopeAnalysisCard })))
 const SiteVisualsManager = dynamic(() => import("@/components/site-visuals-manager").then(m => ({ default: m.SiteVisualsManager })))
-const ScenarioSelector = dynamic(() => import("@/components/scenario-selector").then(m => ({ default: m.ScenarioSelector })))
 const BrandingEditor = dynamic(() => import("@/components/branding-editor").then(m => ({ default: m.BrandingEditor })))
 const LandingPage = dynamic(() => import("@/components/landing-page").then(m => ({ default: m.LandingPage })))
 
@@ -163,8 +107,6 @@ const ReportStep = dynamic(() => import("@/components/steps/report-step").then(m
 const loadExportFunctions = () => import("@/lib/report-export")
 const loadDxfGenerator = () => import("@/lib/dxf-generator")
 const loadLayoutOptimizer = () => import("@/lib/layout-optimizer")
-import type { ExportData } from "@/lib/report-export"
-import { buildExportData } from "@/lib/build-export-data"
 import type { OptimizationReport } from "@/lib/layout-optimizer"
 
 export interface LayoutOption {
