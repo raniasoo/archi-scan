@@ -9,11 +9,11 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
   const [showLiving, setShowLiving] = useState(false)
 
   return (
-    <div className="border border-emerald-200 dark:border-emerald-800 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/30">
+    <div className="border border-emerald-200 dark:border-emerald-800 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/80 dark:to-teal-950/80">
       {/* Header — 항상 보이는 요약 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/40 transition-colors"
       >
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
@@ -47,7 +47,7 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
         <div className="px-4 pb-4 space-y-4">
           {/* 점수 요약 바 */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
+            <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <BookOpen className="h-3.5 w-3.5 text-emerald-500" />
                 <span className="text-xs font-semibold">패턴 점수</span>
@@ -60,7 +60,7 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
                 <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${result.totalPatternScore}%` }} />
               </div>
             </div>
-            <div className="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
+            <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <Hexagon className="h-3.5 w-3.5 text-teal-500" />
                 <span className="text-xs font-semibold">Living Structure</span>
@@ -76,9 +76,9 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
           </div>
 
           {/* 설계 철학 서술 */}
-          <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 border-l-3 border-emerald-500">
+          <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 border-l-3 border-emerald-500">
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mb-1.5">📖 설계 철학</p>
-            <p className="text-xs text-foreground/80 leading-relaxed">{result.philosophy}</p>
+            <p className="text-xs text-foreground/90 leading-relaxed">{result.philosophy}</p>
           </div>
 
           {/* 패턴 상세 — 상위 6개 */}

@@ -109,10 +109,10 @@ export function AIConceptGenerator({ input }: { input: ConceptInput }) {
   }
 
   return (
-    <div className="border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-950/30 dark:to-blue-950/30">
+    <div className="border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-950/80 dark:to-blue-950/80">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 hover:bg-purple-50/50 dark:hover:bg-purple-900/20 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-purple-50/50 dark:hover:bg-purple-900/40 transition-colors"
       >
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
@@ -138,8 +138,8 @@ export function AIConceptGenerator({ input }: { input: ConceptInput }) {
                   onClick={() => setSelectedStyle(style.id)}
                   className={`p-2 rounded-lg text-center text-xs transition-all ${
                     selectedStyle === style.id
-                      ? "bg-purple-100 dark:bg-purple-900/40 border-2 border-purple-400 dark:border-purple-600 font-semibold"
-                      : "bg-white/60 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 hover:border-purple-300"
+                      ? "bg-purple-100 dark:bg-purple-900/60 border-2 border-purple-400 dark:border-purple-500 font-semibold"
+                      : "bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-600 hover:border-purple-300"
                   }`}
                 >
                   <span className="text-lg block mb-0.5">{style.emoji}</span>
