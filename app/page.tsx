@@ -158,6 +158,7 @@ const loadExportFunctions = () => import("@/lib/report-export")
 const loadDxfGenerator = () => import("@/lib/dxf-generator")
 const loadLayoutOptimizer = () => import("@/lib/layout-optimizer")
 import type { ExportData } from "@/lib/report-export"
+import { buildExportData } from "@/lib/build-export-data"
 import type { OptimizationReport } from "@/lib/layout-optimizer"
 
 export interface LayoutOption {
@@ -3405,74 +3406,7 @@ export default function ArchiScanPage() {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData: ExportData = {
-                        address,
-                        siteArea: siteAreaNum,
-                        branding: branding || undefined,
-                        layout: {
-                          name: selectedLayoutData.name,
-            type: selectedLayoutData.type,
-                          floors: selectedLayoutData.floors,
-                          units: selectedLayoutData.units,
-                          parking: selectedLayoutData.parking,
-                          buildingCoverage: selectedLayoutData.coverage ?? 0,
-                          far: selectedLayoutData.gfa ? Math.round((selectedLayoutData.gfa / siteAreaNum) * 100) : 0,
-                          gfa: selectedLayoutData.gfa ?? 0,
-                        },
-                        allLayouts: layouts.map(l => ({
-                          name: l.name,
-                          buildingCoverage: l.coverage ?? 0,
-                          floors: l.floors,
-                          units: l.units,
-                          parking: l.parking,
-                          gfa: l.gfa ?? 0,
-                          roi: (() => {
-                            if (l.id === selectedLayoutData.id) return feasibilityResult?.roi || 0
-                            try {
-                              const effectiveSP = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
-                                ? marketPrice.suggestedSalePrice
-                                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined
-                              const f = calculateFeasibility({
-                                siteArea: siteAreaNum, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
-                                floorCount: l.floors || 1, parkingCount: l.parking || 0,
-                                landPricePerM2: landPriceData.pricePerM2 || 5000000,
-                                salesPricePerM2: effectiveSP,
-                                constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
-                              })
-                              return f.roi
-                            } catch { return 0 }
-                          })(),
-                          isRecommended: l.id === selectedLayoutData.id,
-                        })),
-                        feasibility: {
-                          landCost: feasibilityResult?.landCost ? feasibilityResult.landCost / 100000000 : 0,
-                          constructionCost: feasibilityResult?.constructionCost ? feasibilityResult.constructionCost / 100000000 : 0,
-                          indirectCost: feasibilityResult?.softCost ? feasibilityResult.softCost / 100000000 : 0,
-                          totalCost: feasibilityResult?.totalCost ? feasibilityResult.totalCost / 100000000 : 0,
-                          totalRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : 0,
-                          expectedProfit: feasibilityResult?.profit ? feasibilityResult.profit / 100000000 : 0,
-                          roi: feasibilityResult?.roi ?? 0,
-                          avgSalePrice: feasibilityResult?.salesPricePerM2 || undefined,
-                          breakEvenRate: feasibilityResult?.totalRevenue && feasibilityResult?.totalCost 
-                            ? (feasibilityResult.totalCost / feasibilityResult.totalRevenue) * 100 
-                            : 0,
-                        },
-                        regulation: {
-                          zoneType: molitSupplementData.zoneCode || regulation?.zoneType || '',
-                          roadWidth: molitSupplementData.roadWidth || regulation?.roadWidth,
-                          maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
-                          buildingCoverageLimit: regulation?.maxCoverageRatio,
-                          farLimit: regulation?.maxFloorAreaRatio,
-                          hasDistrictPlan: molitSupplementData.hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false,
-                        },
-                        verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
-                        risks: {
-                          land: ["감정평가에 따른 매입가 변동", "소유권 및 권리관계 확인", "토지거래허가구역 해당 여부"],
-                          permit: ["지구단위계획 변경 필요 여부", "건축심의 소요기간", "각종 부담금 발생 가능성"],
-                          market: ["분양가 상한제 적용 여부", "인근 경쟁 물량 현황", "금리 변동에 따른 수요 변화"],
-                          construction: ["공사비 상승 리스크", "공사기간 지연 가능성", "하자보수 책임"],
-                        },
-                      };
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData });
                       // PDF 파일 다운로드 (인쇄 미리보기 아님)
                       const { downloadPdf } = await loadExportFunctions(); const result = await downloadPdf(exportData);
                       if (!result.success) {
@@ -3513,74 +3447,7 @@ export default function ArchiScanPage() {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData: ExportData = {
-                        address,
-                        siteArea: siteAreaNum,
-                        branding: branding || undefined,
-                        layout: {
-                          name: selectedLayoutData.name,
-            type: selectedLayoutData.type,
-                          floors: selectedLayoutData.floors,
-                          units: selectedLayoutData.units,
-                          parking: selectedLayoutData.parking,
-                          buildingCoverage: selectedLayoutData.coverage ?? 0,
-                          far: selectedLayoutData.gfa ? Math.round((selectedLayoutData.gfa / siteAreaNum) * 100) : 0,
-                          gfa: selectedLayoutData.gfa ?? 0,
-                        },
-                        allLayouts: layouts.map(l => ({
-                          name: l.name,
-                          buildingCoverage: l.coverage ?? 0,
-                          floors: l.floors,
-                          units: l.units,
-                          parking: l.parking,
-                          gfa: l.gfa ?? 0,
-                          roi: (() => {
-                            if (l.id === selectedLayoutData.id) return feasibilityResult?.roi || 0
-                            try {
-                              const effectiveSP = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
-                                ? marketPrice.suggestedSalePrice
-                                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined
-                              const f = calculateFeasibility({
-                                siteArea: siteAreaNum, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
-                                floorCount: l.floors || 1, parkingCount: l.parking || 0,
-                                landPricePerM2: landPriceData.pricePerM2 || 5000000,
-                                salesPricePerM2: effectiveSP,
-                                constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
-                              })
-                              return f.roi
-                            } catch { return 0 }
-                          })(),
-                          isRecommended: l.id === selectedLayoutData.id,
-                        })),
-                        feasibility: {
-                          landCost: feasibilityResult?.landCost ? feasibilityResult.landCost / 100000000 : 0,
-                          constructionCost: feasibilityResult?.constructionCost ? feasibilityResult.constructionCost / 100000000 : 0,
-                          indirectCost: feasibilityResult?.softCost ? feasibilityResult.softCost / 100000000 : 0,
-                          totalCost: feasibilityResult?.totalCost ? feasibilityResult.totalCost / 100000000 : 0,
-                          totalRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : 0,
-                          expectedProfit: feasibilityResult?.profit ? feasibilityResult.profit / 100000000 : 0,
-                          roi: feasibilityResult?.roi ?? 0,
-                          avgSalePrice: feasibilityResult?.salesPricePerM2 || undefined,
-                          breakEvenRate: feasibilityResult?.totalRevenue && feasibilityResult?.totalCost 
-                            ? (feasibilityResult.totalCost / feasibilityResult.totalRevenue) * 100 
-                            : 0,
-                        },
-                        regulation: {
-                          zoneType: molitSupplementData.zoneCode || regulation?.zoneType || '',
-                          roadWidth: molitSupplementData.roadWidth || regulation?.roadWidth,
-                          maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
-                          buildingCoverageLimit: regulation?.maxCoverageRatio,
-                          farLimit: regulation?.maxFloorAreaRatio,
-                          hasDistrictPlan: molitSupplementData.hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false,
-                        },
-                        verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
-                        risks: {
-                          land: ["감정평가에 따른 매입가 변동", "소유권 및 권리관계 확인", "토지거래허가구역 해당 여부"],
-                          permit: ["지구단위계획 변경 필요 여부", "건축심의 소요기간", "각종 부담금 발생 가능성"],
-                          market: ["분양가 상한제 적용 여부", "인근 경쟁 물량 현황", "금리 변동에 따른 수요 변화"],
-                          construction: ["공사비 상승 리스크", "공사기간 지연 가능성", "하자보수 책임"],
-                        },
-                      };
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData });
                       const { downloadHtml } = await loadExportFunctions(); const result = downloadHtml(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || 'HTML 다운로드 중 오류가 발생했습니다.');
@@ -3621,74 +3488,7 @@ export default function ArchiScanPage() {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData: ExportData = {
-                        address,
-                        siteArea: siteAreaNum,
-                        branding: branding || undefined,
-                        layout: {
-                          name: selectedLayoutData.name,
-            type: selectedLayoutData.type,
-                          floors: selectedLayoutData.floors,
-                          units: selectedLayoutData.units,
-                          parking: selectedLayoutData.parking,
-                          buildingCoverage: selectedLayoutData.coverage ?? 0,
-                          far: selectedLayoutData.gfa ? Math.round((selectedLayoutData.gfa / siteAreaNum) * 100) : 0,
-                          gfa: selectedLayoutData.gfa ?? 0,
-                        },
-                        allLayouts: layouts.map(l => ({
-                          name: l.name,
-                          buildingCoverage: l.coverage ?? 0,
-                          floors: l.floors,
-                          units: l.units,
-                          parking: l.parking,
-                          gfa: l.gfa ?? 0,
-                          roi: (() => {
-                            if (l.id === selectedLayoutData.id) return feasibilityResult?.roi || 0
-                            try {
-                              const effectiveSP = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
-                                ? marketPrice.suggestedSalePrice
-                                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined
-                              const f = calculateFeasibility({
-                                siteArea: siteAreaNum, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
-                                floorCount: l.floors || 1, parkingCount: l.parking || 0,
-                                landPricePerM2: landPriceData.pricePerM2 || 5000000,
-                                salesPricePerM2: effectiveSP,
-                                constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
-                              })
-                              return f.roi
-                            } catch { return 0 }
-                          })(),
-                          isRecommended: l.id === selectedLayoutData.id,
-                        })),
-                        feasibility: {
-                          landCost: feasibilityResult?.landCost ? feasibilityResult.landCost / 100000000 : 0,
-                          constructionCost: feasibilityResult?.constructionCost ? feasibilityResult.constructionCost / 100000000 : 0,
-                          indirectCost: feasibilityResult?.softCost ? feasibilityResult.softCost / 100000000 : 0,
-                          totalCost: feasibilityResult?.totalCost ? feasibilityResult.totalCost / 100000000 : 0,
-                          totalRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : 0,
-                          expectedProfit: feasibilityResult?.profit ? feasibilityResult.profit / 100000000 : 0,
-                          roi: feasibilityResult?.roi ?? 0,
-                          avgSalePrice: feasibilityResult?.salesPricePerM2 || undefined,
-                          breakEvenRate: feasibilityResult?.totalRevenue && feasibilityResult?.totalCost 
-                            ? (feasibilityResult.totalCost / feasibilityResult.totalRevenue) * 100 
-                            : 0,
-                        },
-                        regulation: {
-                          zoneType: molitSupplementData.zoneCode || regulation?.zoneType || '',
-                          roadWidth: molitSupplementData.roadWidth || regulation?.roadWidth,
-                          maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
-                          buildingCoverageLimit: regulation?.maxCoverageRatio,
-                          farLimit: regulation?.maxFloorAreaRatio,
-                          hasDistrictPlan: molitSupplementData.hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false,
-                        },
-                        verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
-                        risks: {
-                          land: ["감정평가에 따른 매입가 변동", "소유권 및 권리관계 확인", "토지거래허가구역 해당 여부"],
-                          permit: ["지구단위계획 변경 필요 여부", "건축심의 소요기간", "각종 부담금 발생 가능성"],
-                          market: ["분양가 상한제 적용 여부", "인근 경쟁 물량 현황", "금리 변동에 따른 수요 변화"],
-                          construction: ["공사비 상승 리스크", "공사기간 지연 가능성", "하자보수 책임"],
-                        },
-                      };
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData });
                       const { downloadExcel } = await loadExportFunctions(); const result = downloadExcel(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || '엑셀 다운로드 중 오류가 발생했습니다.');
@@ -3727,74 +3527,7 @@ export default function ArchiScanPage() {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData: ExportData = {
-                        address,
-                        siteArea: siteAreaNum,
-                        branding: branding || undefined,
-                        layout: {
-                          name: selectedLayoutData.name,
-            type: selectedLayoutData.type,
-                          floors: selectedLayoutData.floors,
-                          units: selectedLayoutData.units,
-                          parking: selectedLayoutData.parking,
-                          buildingCoverage: selectedLayoutData.coverage ?? 0,
-                          far: selectedLayoutData.gfa ? Math.round((selectedLayoutData.gfa / siteAreaNum) * 100) : 0,
-                          gfa: selectedLayoutData.gfa ?? 0,
-                        },
-                        allLayouts: layouts.map(l => ({
-                          name: l.name,
-                          buildingCoverage: l.coverage ?? 0,
-                          floors: l.floors,
-                          units: l.units,
-                          parking: l.parking,
-                          gfa: l.gfa ?? 0,
-                          roi: (() => {
-                            if (l.id === selectedLayoutData.id) return feasibilityResult?.roi || 0
-                            try {
-                              const effectiveSP = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
-                                ? marketPrice.suggestedSalePrice
-                                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined
-                              const f = calculateFeasibility({
-                                siteArea: siteAreaNum, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
-                                floorCount: l.floors || 1, parkingCount: l.parking || 0,
-                                landPricePerM2: landPriceData.pricePerM2 || 5000000,
-                                salesPricePerM2: effectiveSP,
-                                constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
-                              })
-                              return f.roi
-                            } catch { return 0 }
-                          })(),
-                          isRecommended: l.id === selectedLayoutData.id,
-                        })),
-                        feasibility: {
-                          landCost: feasibilityResult?.landCost ? feasibilityResult.landCost / 100000000 : 0,
-                          constructionCost: feasibilityResult?.constructionCost ? feasibilityResult.constructionCost / 100000000 : 0,
-                          indirectCost: feasibilityResult?.softCost ? feasibilityResult.softCost / 100000000 : 0,
-                          totalCost: feasibilityResult?.totalCost ? feasibilityResult.totalCost / 100000000 : 0,
-                          totalRevenue: feasibilityResult?.totalRevenue ? feasibilityResult.totalRevenue / 100000000 : 0,
-                          expectedProfit: feasibilityResult?.profit ? feasibilityResult.profit / 100000000 : 0,
-                          roi: feasibilityResult?.roi ?? 0,
-                          avgSalePrice: feasibilityResult?.salesPricePerM2 || undefined,
-                          breakEvenRate: feasibilityResult?.totalRevenue && feasibilityResult?.totalCost 
-                            ? (feasibilityResult.totalCost / feasibilityResult.totalRevenue) * 100 
-                            : 0,
-                        },
-                        regulation: {
-                          zoneType: molitSupplementData.zoneCode || regulation?.zoneType || '',
-                          roadWidth: molitSupplementData.roadWidth || regulation?.roadWidth,
-                          maxHeight: molitSupplementData.heightLimit || regulation?.maxHeight,
-                          buildingCoverageLimit: regulation?.maxCoverageRatio,
-                          farLimit: regulation?.maxFloorAreaRatio,
-                          hasDistrictPlan: molitSupplementData.hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false,
-                        },
-                        verdict: feasibilityResult?.roi && feasibilityResult.roi >= 20 ? "사업 추진 가능" : feasibilityResult?.roi && feasibilityResult.roi >= 10 ? "조건부 가능" : "추가 검토 필요",
-                        risks: {
-                          land: ["감정평가에 따른 매입가 변동", "소유권 및 권리관계 확인", "토지거래허가구역 해당 여부"],
-                          permit: ["지구단위계획 변경 필요 여부", "건축심의 소요기간", "각종 부담금 발생 가능성"],
-                          market: ["분양가 상한제 적용 여부", "인근 경쟁 물량 현황", "금리 변동에 따른 수요 변화"],
-                          construction: ["공사비 상승 리스크", "공사기간 지연 가능성", "하자보수 책임"],
-                        },
-                      };
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData });
                       const { openPrintPreview } = await loadExportFunctions(); const result = openPrintPreview(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || '인쇄 준비 중 오류가 발생했습니다.');
