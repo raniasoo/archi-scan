@@ -75,6 +75,7 @@ export default function RootLayout({
     <html lang="ko" className="bg-background">
       <head>
         <meta name="google-site-verification" content="kuPQKhHg9zi-xuTMlLEsLeqY9tZTwJZZGfIZt2Fd1ZY" />
+        <meta name="naver-site-verification" content="da2df9f0e5d6e03adec6a19391a9743896e40d7a" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
