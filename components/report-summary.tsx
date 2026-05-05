@@ -142,6 +142,9 @@ interface ReportSummaryProps {
   molitData?: { zoneCode?: string; roadWidth?: number; heightLimit?: number | null; hasDistrictPlan?: boolean }
   // NEW: Centralized feasibility result from parent
   feasibilityResult?: CentralizedFeasibilityResult | null
+  // Alexander pattern quality
+  userValues?: { profitVsQuality: number; privacyVsCommunity: number; efficiencyVsSpace: number; selectedPatterns: string[] }
+  designStrategy?: string
 }
 
 function formatKRW(value: number): string {
@@ -211,7 +214,7 @@ function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): Layout
   return bestLayout
 }
 
-export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility }: ReportSummaryProps) {
+export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility, userValues, designStrategy }: ReportSummaryProps) {
   // molitData 우선 적용 — regulation race condition 방지
   // regulation 한도(buildingCoverageLimit/farLimit)에서 용도지역 역추정 (zone-lookup 미완료 시 안전장치)
   const inferZoneFromLimits = (coverage?: number, far?: number): string => {
@@ -797,16 +800,37 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           parking: layout.parking || 0,
           gfa: layout.gfa,
           siteArea: siteAreaNum,
-          strategy: 'profitability',
-        })
+          strategy: designStrategy || 'profitability',
+        }, userValues)
+        const topPatterns = [...pq.patterns].sort((a, b) => b.score - a.score).slice(0, 3)
+        const pqLabel = userValues?.profitVsQuality != null ? (userValues.profitVsQuality > 60 ? '거주 품질 중심' : userValues.profitVsQuality < 40 ? '수익 극대화' : '균형') : ''
         return `
-        <div class="highlight" style="margin-bottom: 16px; background: #ecfdf5; border-left: 3px solid #10b981;">
-          <div class="highlight-title" style="color: #065f46;">📖 설계 철학 (Alexander Pattern Language)</div>
-          <p style="font-size: 9pt; color: #374151; line-height: 1.6;">${pq.philosophy}</p>
-          <div style="margin-top: 8px; display: flex; gap: 12px; font-size: 8pt; color: #6b7280;">
-            <span>등급: <b style="color: ${pq.gradeColor};">${pq.grade}</b></span>
+        <div style="margin-bottom: 16px; background: #ecfdf5; border-left: 3px solid #10b981; border-radius: 6px; padding: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="font-size: 10pt; font-weight: 700; color: #065f46;">📖 설계 품질 평가 (Alexander Pattern Language)</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="width: 28px; height: 28px; border-radius: 6px; background: ${pq.gradeColor}; color: white; font-weight: 900; font-size: 14pt; display: flex; align-items: center; justify-content: center;">${pq.grade}</div>
+              <span style="font-size: 12pt; font-weight: 800;">${pq.overallQuality}점</span>
+            </div>
+          </div>
+          <p style="font-size: 9pt; color: #374151; line-height: 1.6; margin-bottom: 12px;">${pq.philosophy}</p>
+          
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;">
+            ${topPatterns.map(p => `
+              <div style="background: white; border: 1px solid #d1fae5; border-radius: 5px; padding: 8px; text-align: center;">
+                <div style="font-size: 8pt; color: #6b7280; margin-bottom: 2px;">#${p.id} ${p.nameKr}</div>
+                <div style="font-size: 14pt; font-weight: 800; color: ${p.score >= 80 ? '#059669' : p.score >= 60 ? '#2563eb' : '#d97706'};">${p.score}</div>
+                <div style="height: 4px; background: #e5e7eb; border-radius: 2px; margin-top: 4px;">
+                  <div style="height: 100%; width: ${p.score}%; background: ${p.score >= 80 ? '#10b981' : p.score >= 60 ? '#3b82f6' : '#f59e0b'}; border-radius: 2px;"></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          
+          <div style="display: flex; gap: 12px; font-size: 8pt; color: #6b7280; border-top: 1px solid #d1fae5; padding-top: 8px;">
             <span>패턴 점수: <b>${pq.totalPatternScore}</b>/100</span>
             <span>Living Structure: <b>${pq.totalLivingScore}</b>/100</span>
+            ${pqLabel ? `<span>설계 방향: <b>${pqLabel}</b></span>` : ''}
           </div>
         </div>`
       } catch { return '' }
@@ -2967,6 +2991,55 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   )}
                 </div>
               )}
+
+              {/* 설계 품질 평가 — Alexander Pattern Language */}
+              {(() => {
+                try {
+                  const pq = evaluatePatternQuality({
+                    type: layout.type || 'tower',
+                    name: layout.name,
+                    coverage: layout.coverage,
+                    floors: layout.floors,
+                    units: layout.units || 0,
+                    parking: layout.parking || 0,
+                    gfa: layout.gfa || 0,
+                    siteArea: siteAreaNum,
+                    strategy: designStrategy || 'profitability',
+                  }, userValues)
+                  const topPatterns = [...pq.patterns].sort((a, b) => b.score - a.score).slice(0, 3)
+                  return (
+                    <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3.5">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                          📖 설계 품질 평가
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-md flex items-center justify-center text-white font-black text-sm" style={{ backgroundColor: pq.gradeColor }}>
+                            {pq.grade}
+                          </div>
+                          <span className="text-sm font-extrabold">{pq.overallQuality}점</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-foreground/70 leading-relaxed mb-3">{pq.philosophy}</p>
+                      <div className="grid grid-cols-3 gap-2 mb-2">
+                        {topPatterns.map(p => (
+                          <div key={p.id} className="bg-white/60 dark:bg-gray-800/60 rounded-md p-2 text-center">
+                            <p className="text-[9px] text-muted-foreground">#{p.id} {p.nameKr}</p>
+                            <p className="text-base font-black" style={{ color: p.score >= 80 ? '#059669' : p.score >= 60 ? '#2563eb' : '#d97706' }}>{p.score}</p>
+                            <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full mt-1">
+                              <div className="h-full rounded-full" style={{ width: `${p.score}%`, backgroundColor: p.score >= 80 ? '#10b981' : p.score >= 60 ? '#3b82f6' : '#f59e0b' }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-3 text-[10px] text-muted-foreground border-t border-emerald-200 dark:border-emerald-800 pt-2">
+                        <span>패턴 {pq.totalPatternScore}/100</span>
+                        <span>Living {pq.totalLivingScore}/100</span>
+                      </div>
+                    </div>
+                  )
+                } catch { return null }
+              })()}
 
               {/* 추천 이유 및 유의 사항 */}
               {layout.reasoning && (
