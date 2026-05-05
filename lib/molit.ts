@@ -2070,6 +2070,14 @@ export async function lookupSiteData(
                 siteData.entX = centroidLng
                 siteData.entY = centroidLat
                 console.log(`[VWORLD-CENTROID] 지도 좌표를 필지 중심점으로 변경`)
+                
+                // 5단계: 필지 폴리곤을 siteData에 저장 (3D 지적도용)
+                const ring = geom?.type === 'Polygon' ? geom.coordinates[0] as number[][] : geom?.coordinates?.[0]?.[0] as number[][] || []
+                if (ring.length > 2) {
+                  const polyCoords: [number, number][] = ring.map(([lng, lat]: number[]) => [lng, lat] as [number, number])
+                  siteData.parcelPolygon = { coords: polyCoords, centroid: [centroidLng, centroidLat] }
+                  console.log(`[VWORLD-CENTROID] 필지 폴리곤 저장: ${polyCoords.length}점`)
+                }
               }
             } else {
               console.log(`[VWORLD-CENTROID] 필지 폴리곤 없음 (PNU=${pnu})`)

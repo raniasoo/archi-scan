@@ -1107,6 +1107,13 @@ export default function ArchiScanPage() {
       }
     }
     
+    // 필지 폴리곤 저장 (MOLIT LP_PA_CBND_BUBUN 기반 — 지적도와 동일한 실제 필지 경계)
+    const pp = (data as any)?.parcelPolygon
+    if (pp?.coords?.length > 2) {
+      setSitePolygon({ coords: pp.coords, centroid: pp.centroid })
+      console.log(`[v0] MOLIT 필지 폴리곤 적용: ${pp.coords.length}점 (지적도 일치)`)
+    }
+    
     // 공시지가 자동 조회
     setLandPriceData(prev => ({ ...prev, loading: true }))
     fetchLandPrice({

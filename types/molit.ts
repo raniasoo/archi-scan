@@ -194,6 +194,8 @@ export interface MolitSiteData {
   // 건물 입구 좌표 (JUSO API detail=Y에서 파싱)
   entX?: number   // 경도 (longitude, WGS84)
   entY?: number   // 위도 (latitude, WGS84)
+  // 필지 폴리곤 (VWorld LP_PA_CBND_BUBUN에서 가져온 실제 지적 경계)
+  parcelPolygon?: { coords: [number, number][], centroid: [number, number] }
 }
 
 /**
