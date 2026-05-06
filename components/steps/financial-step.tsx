@@ -4,6 +4,8 @@ import { type Dispatch, type SetStateAction } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { ContributionSimulator } from "@/components/contribution-simulator"
+import { ScenarioComparison } from "@/components/scenario-comparison"
+import { ProjectRoadmap } from "@/components/project-roadmap"
 import { ChevronRight, ChevronLeft, TrendingUp, Calculator, FileText } from "lucide-react"
 import type { LayoutOption } from "@/app/page"
 import type { ZoningRegulation } from "@/lib/regulation-types"
@@ -190,6 +192,34 @@ export function FinancialStep(props: FinancialStepProps) {
                   ? marketPrice.suggestedSalePrice 
                   : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000}
                 avgUnitArea={selectedLayoutData.gfa ? Math.round(selectedLayoutData.gfa / Math.max(selectedLayoutData.units, 1)) : 84}
+              />
+            )}
+
+            {/* 사업 시나리오 비교 */}
+            {feasibilityResult && (
+              <ScenarioComparison
+                siteArea={siteAreaNum}
+                totalUnits={selectedLayoutData.units}
+                floors={selectedLayoutData.floors}
+                buildingCoverage={selectedLayoutData.coverage ?? 60}
+                totalProjectCost={feasibilityResult.totalCost || 0}
+                roi={feasibilityResult.roi ?? 0}
+              />
+            )}
+
+            {/* 프로젝트 로드맵 */}
+            {feasibilityResult && (
+              <ProjectRoadmap
+                totalUnits={selectedLayoutData.units}
+                isSmallScale={selectedLayoutData.units <= 200 && siteAreaNum < 10000}
+              />
+            )}
+
+            {/* 프로젝트 로드맵 */}
+            {feasibilityResult && (
+              <ProjectRoadmap
+                totalUnits={selectedLayoutData.units}
+                isSmallScale={selectedLayoutData.units <= 200 && siteAreaNum < 10000}
               />
             )}
 
