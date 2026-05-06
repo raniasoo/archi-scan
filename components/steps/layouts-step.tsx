@@ -393,7 +393,19 @@ export function LayoutsStep(props: LayoutsStepProps) {
                 input={{
                   address,
                   zoneType: regulation.zoneType,
-                  zoneName: (molitSupplementData as any).zoneLabel || regulation.zoneType,
+                  zoneName: (() => {
+                    const label = (molitSupplementData as any).zoneLabel
+                    if (label && !label.includes('residential') && !label.includes('commercial')) return label
+                    const map: Record<string, string> = {
+                      'residential-exclusive-1': '제1종전용주거지역', 'residential-exclusive-2': '제2종전용주거지역',
+                      'residential-1': '제1종일반주거지역', 'residential-2': '제2종일반주거지역',
+                      'residential-3': '제3종일반주거지역', 'semi-residential': '준주거지역',
+                      'commercial-neighborhood': '근린상업지역', 'commercial-general': '일반상업지역',
+                      'commercial-central': '중심상업지역', 'industrial': '준공업지역',
+                      'green-natural': '자연녹지지역',
+                    }
+                    return map[regulation.zoneType] || label || regulation.zoneType
+                  })(),
                   siteArea: safeNumber(siteArea, 660),
                   layoutName: selectedLayoutData.name,
                   floors: selectedLayoutData.floors,
