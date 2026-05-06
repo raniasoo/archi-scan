@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     // Gemini API 호출 (이미지 생성)
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GOOGLE_AI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
           }],
           generationConfig: {
             responseModalities: ["TEXT", "IMAGE"],
-            temperature: 0.8,
           },
         }),
       }
@@ -69,7 +68,7 @@ export async function POST(req: NextRequest) {
       success: true,
       image: imageData,
       description,
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.0-flash-exp-image-generation',
       prompt: architecturePrompt,
     })
 
@@ -132,7 +131,7 @@ Generate ONE high-quality architectural rendering image.`
 export async function GET() {
   return NextResponse.json({
     configured: !!GOOGLE_AI_API_KEY,
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-2.0-flash-exp-image-generation',
     capabilities: ['image-generation', 'text'],
     service: 'Nano Banana (Gemini)',
   })
