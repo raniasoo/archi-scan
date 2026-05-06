@@ -2056,7 +2056,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
           <div class="verdict-box">
             <p style="font-size: 16px; color: #065f46;">${report.conclusion.summaryBox}</p>
           </div>
-          <p class="pdf-note">본 보고서는 참고 자료로만 활용하시기 바랍니다.</p>
+          <p class="pdf-note" style="font-size: 11px; line-height: 1.8; padding-bottom: 4px; overflow: visible;">본 보고서는 참고 자료로만 활용하시기 바랍니다.</p>
         </div>
       </section>
 
@@ -3986,7 +3986,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
           <div class="verdict-box">
             <p style="font-size: 16px; color: #065f46;">${report.conclusion.summaryBox}</p>
           </div>
-          <p class="pdf-note">본 보고서는 참고 자료로만 활용하시기 바랍니다.</p>
+          <p class="pdf-note" style="font-size: 11px; line-height: 1.8; padding-bottom: 4px; overflow: visible;">본 보고서는 참고 자료로만 활용하시기 바랍니다.</p>
         </div>
       </section>
 
