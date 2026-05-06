@@ -2124,24 +2124,32 @@ export default function ArchiScanPage() {
       })()}
       
       {/* 모바일 하단 단계 네비게이션 */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur border-t border-border/50 px-2 py-1.5 safe-area-bottom">
-        <div className="flex items-center justify-between gap-1 max-w-lg mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur border-t border-border/50 px-1 py-1 safe-area-bottom">
+        <div className="flex items-center justify-between max-w-lg mx-auto">
           {steps.map((step, index) => {
+            const Icon = step.icon
             const isActive = currentStep === step.id
             const isPast = steps.findIndex(s => s.id === currentStep) > index
             const isFuture = !isActive && !isPast
+            const shortLabels: Record<string, string> = { '대지 입력': '대지', '설계 전략': '설계', '법규 검토': '법규', '배치안': '배치', '평면도': '평면', '사업성': '사업', '보고서': '보고' }
+            const shortLabel = shortLabels[step.label] || step.label
             return (
               <button key={step.id}
-                onClick={() => {
-                  if (isPast || isActive) setCurrentStep(step.id as AppStep)
-                }}
+                onClick={() => { if (isPast || isActive) setCurrentStep(step.id as AppStep) }}
                 disabled={isFuture}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-1 rounded-lg transition-colors ${
-                  isActive ? 'bg-primary/10 text-primary' : isPast ? 'text-muted-foreground' : 'text-muted-foreground/40'
+                className={`flex flex-col items-center gap-0.5 py-1.5 rounded-lg transition-all ${
+                  isActive
+                    ? 'bg-primary/15 text-primary flex-[1.8] min-w-[52px]'
+                    : isPast
+                    ? 'text-muted-foreground flex-1 min-w-[36px]'
+                    : 'text-muted-foreground/30 flex-1 min-w-[36px]'
                 }`}
               >
-                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-primary' : isPast ? 'bg-muted-foreground/50' : 'bg-muted-foreground/20'}`} />
-                <span className="text-[9px] font-medium leading-none">{step.label.replace(/ /g, '\n').split('\n')[0]}</span>
+                <Icon className={`${isActive ? 'h-4.5 w-4.5' : 'h-3.5 w-3.5'} transition-all`} />
+                {isActive
+                  ? <span className="text-[10px] font-bold leading-none">{shortLabel}</span>
+                  : <div className={`w-1 h-1 rounded-full mt-0.5 ${isPast ? 'bg-primary/50' : 'bg-muted-foreground/20'}`} />
+                }
               </button>
             )
           })}
