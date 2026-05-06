@@ -3024,19 +3024,19 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                           <span className="text-sm font-extrabold">{pq.overallQuality}점</span>
                         </div>
                       </div>
-                      <p className="text-[11px] text-foreground/70 leading-relaxed mb-3">{pq.philosophy}</p>
+                      <p className="text-[11px] text-gray-700 leading-relaxed mb-3">{pq.philosophy}</p>
                       <div className="grid grid-cols-3 gap-2 mb-2">
                         {topPatterns.map(p => (
-                          <div key={p.id} className="bg-white/60 rounded-md p-2 text-center">
-                            <p className="text-[9px] text-muted-foreground">#{p.id} {p.nameKr}</p>
+                          <div key={p.id} className="bg-white rounded-md p-2 text-center border border-gray-100">
+                            <p className="text-[9px] text-gray-500">#{p.id} {p.nameKr}</p>
                             <p className="text-base font-black" style={{ color: p.score >= 80 ? '#059669' : p.score >= 60 ? '#2563eb' : '#d97706' }}>{p.score}</p>
-                            <div className="h-1 bg-gray-200 rounded-full mt-1">
+                            <div className="h-1 bg-emerald-100 rounded-full mt-1">
                               <div className="h-full rounded-full" style={{ width: `${p.score}%`, backgroundColor: p.score >= 80 ? '#10b981' : p.score >= 60 ? '#3b82f6' : '#f59e0b' }} />
                             </div>
                           </div>
                         ))}
                       </div>
-                      <div className="flex gap-3 text-[10px] text-muted-foreground border-t border-emerald-200 pt-2">
+                      <div className="flex gap-3 text-[10px] text-gray-500 border-t border-emerald-200 pt-2">
                         <span>패턴 {pq.totalPatternScore}/100</span>
                         <span>Living {pq.totalLivingScore}/100</span>
                       </div>
