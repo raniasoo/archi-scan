@@ -20,11 +20,11 @@ export async function POST(req: NextRequest) {
     })
 
     // Gemini API 호출 — 모델 fallback 체인
-    // 나노바나나 2 우선 (무료 할당량 가장 큼)
+    // 나노바나나 모델 — API 모델 목록 직접 확인 (2026.05.06)
     const models = [
-      'gemini-2.0-flash-exp-image-generation',
-      'gemini-2.5-flash-image',
-      'gemini-3.1-flash-image-preview',
+      'gemini-2.5-flash-image',         // Nano Banana (1순위)
+      'gemini-3.1-flash-image-preview',  // Nano Banana 2
+      'gemini-3-pro-image-preview',      // Nano Banana Pro
     ]
     
     let data: any = null
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       success: true,
       image: imageData,
       description,
-      model: 'gemini-2.0-flash-exp-image-generation',
+      model: 'gemini-2.5-flash-image (Nano Banana)',
       prompt: architecturePrompt,
     })
 
