@@ -20,10 +20,11 @@ export async function POST(req: NextRequest) {
     })
 
     // Gemini API 호출 — 모델 fallback 체인
+    // 나노바나나 2 우선 (무료 할당량 가장 큼)
     const models = [
+      'gemini-2.0-flash-exp-image-generation',
       'gemini-2.5-flash-image',
       'gemini-3.1-flash-image-preview',
-      'gemini-3-pro-image-preview',
     ]
     
     let data: any = null
@@ -51,6 +52,8 @@ export async function POST(req: NextRequest) {
         } else {
           lastError = `${model}: ${response.status}`
           console.warn(`[GEMINI] ${model} failed: ${response.status}`)
+          // 429 rate limit → 2초 대기 후 다음 모델
+          if (response.status === 429) await new Promise(r => setTimeout(r, 2000))
         }
       } catch (e) {
         lastError = `${model}: ${e instanceof Error ? e.message : 'error'}`
@@ -59,9 +62,12 @@ export async function POST(req: NextRequest) {
     }
     
     if (!data) {
+      const is429 = lastError.includes('429')
       return NextResponse.json({ 
-        error: `모든 Gemini 모델 실패: ${lastError}`,
-      }, { status: 500 })
+        error: is429 
+          ? '⏳ AI 이미지 생성 일일 한도에 도달했습니다. 잠시 후 다시 시도해주세요.'
+          : `Gemini 모델 오류: ${lastError}`,
+      }, { status: is429 ? 429 : 500 })
     }
     
     // 응답에서 이미지와 텍스트 추출
