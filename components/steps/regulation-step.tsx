@@ -130,6 +130,56 @@ export function RegulationStep(props: RegulationStepProps) {
               />
             </div>
 
+            {/* 중첩 규제 분석 */}
+            {(() => {
+              const regs = (molitSupplementData as any)?.overlappingRegulations as { name: string; category: string; severity: string; coverageOverride?: number; heightLimit?: number; floorLimit?: number; description?: string }[] | undefined
+              if (!regs || regs.length === 0) return null
+              const critical = regs.filter(r => r.severity === 'critical')
+              const high = regs.filter(r => r.severity === 'high')
+              const others = regs.filter(r => r.severity !== 'critical' && r.severity !== 'high')
+              const severityColor = { critical: 'bg-red-500/20 text-red-400 border-red-500/30', high: 'bg-amber-500/20 text-amber-400 border-amber-500/30', medium: 'bg-blue-500/20 text-blue-400 border-blue-500/30', info: 'bg-slate-500/20 text-slate-400 border-slate-500/30' }
+              const severityLabel = { critical: '⚠️ 심각', high: '⚡ 높음', medium: 'ℹ️ 보통', info: '📋 참고' }
+              return (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-5 w-5 rounded-full bg-amber-500/20 flex items-center justify-center text-[10px]">🔍</div>
+                    <h3 className="text-sm font-semibold">중첩 규제 분석</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">{regs.length}개 규제 적용</span>
+                  </div>
+                  {critical.length > 0 && (
+                    <div className="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                      <p className="text-[10px] font-bold text-red-400 mb-1">⚠️ 핵심 규제 — 사업성에 직접 영향</p>
+                      {critical.map((r, i) => (
+                        <div key={i} className="flex items-start gap-2 py-1">
+                          <span className="text-xs font-semibold text-red-300 shrink-0">{r.name}</span>
+                          {r.description && <span className="text-[10px] text-red-400/80">{r.description}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    {[...high, ...others].map((r, i) => (
+                      <div key={i} className="flex items-center gap-2 py-0.5">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded border ${severityColor[r.severity as keyof typeof severityColor] || severityColor.info}`}>
+                          {severityLabel[r.severity as keyof typeof severityLabel] || '📋 참고'}
+                        </span>
+                        <span className="text-xs text-foreground">{r.name}</span>
+                        <span className="text-[10px] text-muted-foreground">({r.category})</span>
+                      </div>
+                    ))}
+                  </div>
+                  {(critical.some(r => r.coverageOverride) || high.some(r => r.coverageOverride)) && (
+                    <div className="mt-3 pt-2 border-t border-amber-500/20">
+                      <p className="text-[10px] text-amber-400 font-medium">
+                        💡 중첩 규제에 의해 건폐율이 {Math.min(...regs.filter(r => r.coverageOverride).map(r => r.coverageOverride!))}% 이하로 제한될 수 있습니다.
+                        {regs.some(r => r.heightLimit) && ` 높이 제한: ${Math.min(...regs.filter(r => r.heightLimit).map(r => r.heightLimit!))}m`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
             <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
               {/* Regulation Input */}
               <div className="order-2 lg:order-1 space-y-4">

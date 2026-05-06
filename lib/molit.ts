@@ -1059,11 +1059,12 @@ async function fetchZoneType(sigunguCd: string, bjdongCd: string, bun: string, j
 }
 
 
-// 중첩 규제 자동 분석 — MOLIT 지역지구 API에서 전체 규제 추출
+// 중첩 규제 자동 분석 — MOLIT 지역지구 API + VWorld NED fallback
 async function fetchOverlappingRegulations(sigunguCd: string, bjdongCd: string, bun: string, ji: string, molitKey: string): Promise<OverlappingRegulation[]> {
+  // 1차: MOLIT 지역지구 API
   try {
     const jijiguUrl = `https://apis.data.go.kr/1613000${MOLIT_ENDPOINTS.buildingJijuk}?serviceKey=${encodeURIComponent(molitKey)}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=50&pageNo=1&resultType=json`
-    console.log('[MOLIT-REG] 중첩 규제 조회...')
+    console.log('[MOLIT-REG] 중첩 규제 조회 (MOLIT 지역지구)...')
     const res = await fetch(jijiguUrl, { signal: AbortSignal.timeout(8000) })
     if (res.ok) {
       const json = await res.json()
@@ -1082,13 +1083,43 @@ async function fetchOverlappingRegulations(sigunguCd: string, bjdongCd: string, 
             return reg
           })
           .filter((r: OverlappingRegulation | null): r is OverlappingRegulation => r !== null)
-        console.log(`[MOLIT-REG] 중첩 규제 ${regulations.length}개:`, regulations.map(r => `${r.name}(${r.severity})`).join(', '))
-        return regulations
+        if (regulations.length > 0) {
+          console.log(`[MOLIT-REG] MOLIT 지역지구 성공: ${regulations.length}개 -`, regulations.map(r => `${r.name}(${r.severity})`).join(', '))
+          return regulations
+        }
       }
     }
   } catch (e) {
-    console.warn('[MOLIT-REG] 중첩 규제 조회 실패:', e)
+    console.warn('[MOLIT-REG] MOLIT 지역지구 조회 실패:', e)
   }
+
+  // 2차: VWorld NED 토지이용계획 fallback
+  try {
+    const platGb = '1'
+    const pnu = `${sigunguCd.slice(0,5).padEnd(5,'0')}${bjdongCd.slice(0,5).padEnd(5,'0')}${platGb}${bun.padStart(4,'0')}${ji.padStart(4,'0')}`
+    const url = `https://api.vworld.kr/ned/data/getLandUseAttr?key=${VWORLD_KEY}&domain=${VWORLD_DOMAIN}&pnu=${pnu}&numOfRows=50&format=json`
+    console.log(`[MOLIT-REG] VWorld NED fallback: PNU=${pnu}`)
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    if (res.ok) {
+      const text = await res.text()
+      if (text.startsWith('{')) {
+        const json = JSON.parse(text)
+        const list: Record<string, string>[] = json?.landUses?.field || json?.result?.prposAreaList || []
+        const regulations: OverlappingRegulation[] = list
+          .map(x => (x?.prposAreaDstrcCodeNm || '').trim())
+          .filter(name => name.length > 0)
+          .map(name => classifyRegulation(name))
+        if (regulations.length > 0) {
+          console.log(`[MOLIT-REG] VWorld NED 성공: ${regulations.length}개 -`, regulations.map(r => `${r.name}(${r.severity})`).join(', '))
+          return regulations
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[MOLIT-REG] VWorld NED 조회 실패:', e)
+  }
+
+  console.log('[MOLIT-REG] 중첩 규제 조회 실패 (0개)')
   return []
 }
 

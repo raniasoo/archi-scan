@@ -521,6 +521,7 @@ export default function ArchiScanPage() {
     bun?: string
     ji?: string
     bdMgtSn?: string  // 건물관리번호 (지적도 PNU 조회용)
+    overlappingRegulations?: { name: string; category: string; severity: string; coverageOverride?: number; heightLimit?: number; floorLimit?: number; description?: string }[]
   }>({})
 
   // 공시지가 state
@@ -960,6 +961,7 @@ export default function ArchiScanPage() {
     sigunguCd?: string; bjdongCd?: string; bun?: string; ji?: string
     buildingCoverage?: number; floorAreaRatio?: number
     bdMgtSn?: string
+    overlappingRegulations?: { name: string; category: string; severity: string; coverageOverride?: number; heightLimit?: number; floorLimit?: number; description?: string }[]
   }) => {
     const vwZone = (data as any)?._vworldZoneCode
     // vworld-zone 결과 전달인 경우: zone만 적용하고 나머지는 건드리지 않음
@@ -1021,6 +1023,8 @@ export default function ArchiScanPage() {
       ...coords,
       // vworld-zone 결과가 아직 없으면 MOLIT zone을 fallback으로 저장
       zoneCode: prev.zoneCode || molitMappedZone || prev.zoneCode,
+      // 중첩 규제 저장
+      overlappingRegulations: data.overlappingRegulations || prev.overlappingRegulations,
     }))
     
     // MOLIT 용도지역이 있고 regulation에 아직 설정 안 된 경우 → 직접 반영
