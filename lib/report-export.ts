@@ -3399,7 +3399,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
       .summary-card .label {
         font-size: 8pt !important;
         margin-bottom: 1px !important;
-        line-height: 1.2 !important;
+        line-height: 1.45 !important;
       }
       .summary-card .value {
         font-size: 10pt !important;
