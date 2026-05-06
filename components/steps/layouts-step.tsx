@@ -22,6 +22,7 @@ const LayoutComparison = dynamic(() => import("@/components/layout-comparison").
 const PatternQualityCard = dynamic(() => import("@/components/pattern-quality-card").then(m => ({ default: m.PatternQualityCard })))
 const AIReasoningPanel = dynamic(() => import("@/components/ai-reasoning").then(m => ({ default: m.AIReasoningPanel })))
 const AIConceptGenerator = dynamic(() => import("@/components/ai-concept-generator").then(m => ({ default: m.AIConceptGenerator })))
+const AIActionPanel = dynamic(() => import("@/components/ai-action-panel").then(m => ({ default: m.AIActionPanel })))
 
 function displayScore(score: unknown, fallbackText: string = '산정 중'): string {
   if (score === undefined || score === null) return fallbackText
@@ -416,6 +417,21 @@ export function LayoutsStep(props: LayoutsStepProps) {
                   totalProjectCost: feasibilityResult?.totalCost || 0,
                   strategy,
                 }}
+              />
+            )}
+
+            {/* AI 3종 실행 패널 */}
+            {selectedLayout && selectedLayoutData && (
+              <AIActionPanel
+                address={address}
+                siteArea={safeNumber(siteArea, 660)}
+                layoutName={selectedLayoutData.name}
+                floors={selectedLayoutData.floors}
+                units={selectedLayoutData.units || 0}
+                coverage={selectedLayoutData.coverage}
+                zoneType={regulation.zoneType}
+                roi={feasibilityResult?.roi || 0}
+                totalCost={feasibilityResult?.totalCost || 0}
               />
             )}
 
