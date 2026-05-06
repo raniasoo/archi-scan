@@ -50,7 +50,7 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
             <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <BookOpen className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="text-xs font-semibold">패턴 점수</span>
+                <span className="text-xs font-bold text-foreground">패턴 점수</span>
               </div>
               <div className="flex items-end gap-1">
                 <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{result.totalPatternScore}</span>
@@ -63,7 +63,7 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
             <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <Hexagon className="h-3.5 w-3.5 text-teal-500" />
-                <span className="text-xs font-semibold">Living Structure</span>
+                <span className="text-xs font-bold text-foreground">Living Structure</span>
               </div>
               <div className="flex items-end gap-1">
                 <span className="text-xl font-black text-teal-600 dark:text-teal-400">{result.totalLivingScore}</span>
@@ -76,9 +76,9 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
           </div>
 
           {/* 설계 철학 서술 */}
-          <div className="bg-white/95 dark:bg-gray-800/95 rounded-lg p-3 border-l-3 border-emerald-500">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-l-4 border-emerald-500">
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mb-1.5">📖 설계 철학</p>
-            <p className="text-xs text-foreground/90 leading-relaxed">{result.philosophy}</p>
+            <p className="text-xs text-foreground leading-relaxed">{result.philosophy}</p>
           </div>
 
           {/* 패턴 상세 — 상위 6개 */}
@@ -90,7 +90,7 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
                 .slice(0, 6)
                 .map(p => (
                 <div key={p.id} className="flex items-center gap-2 text-xs">
-                  <span className="w-16 shrink-0 text-muted-foreground">#{p.id}</span>
+                  <span className="w-16 shrink-0 text-emerald-600 dark:text-emerald-400 font-medium">#{p.id}</span>
                   <span className="flex-1 truncate">{p.nameKr}</span>
                   <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shrink-0">
                     <div

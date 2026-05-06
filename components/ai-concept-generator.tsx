@@ -130,7 +130,7 @@ export function AIConceptGenerator({ input }: { input: ConceptInput }) {
         <div className="px-4 pb-4 space-y-4">
           {/* 스타일 선택 */}
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-2">디자인 스타일 선택</p>
+            <p className="text-xs font-semibold text-foreground mb-2">디자인 스타일 선택</p>
             <div className="grid grid-cols-3 gap-2">
               {STYLE_PRESETS.map(style => (
                 <button
@@ -139,7 +139,7 @@ export function AIConceptGenerator({ input }: { input: ConceptInput }) {
                   className={`p-2 rounded-lg text-center text-xs transition-all ${
                     selectedStyle === style.id
                       ? "bg-purple-100 dark:bg-purple-900/60 border-2 border-purple-400 dark:border-purple-500 font-semibold"
-                      : "bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-600 hover:border-purple-300"
+                      : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:border-purple-300"
                   }`}
                 >
                   <span className="text-lg block mb-0.5">{style.emoji}</span>
