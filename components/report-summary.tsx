@@ -803,7 +803,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           units: layout.units || 0,
           parking: layout.parking || 0,
           gfa: layout.gfa,
-          siteArea: siteAreaNum,
+          siteArea: siteArea,
           strategy: designStrategy || 'profitability',
         }, userValues)
         const topPatterns = [...pq.patterns].sort((a, b) => b.score - a.score).slice(0, 3)
@@ -3007,7 +3007,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                     units: layout.units || 0,
                     parking: layout.parking || 0,
                     gfa: layout.gfa || 0,
-                    siteArea: siteAreaNum,
+                    siteArea: siteArea,
                     strategy: designStrategy || 'profitability',
                   }, userValues)
                   const topPatterns = [...pq.patterns].sort((a, b) => b.score - a.score).slice(0, 3)
