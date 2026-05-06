@@ -140,6 +140,10 @@ export function ReportStep(props: ReportStepProps) {
                       }
                     } catch (err) {
                       const errorMsg = err instanceof Error ? err.message : String(err);
+                      if (errorMsg.includes('ChunkLoadError') || errorMsg.includes('Loading chunk') || errorMsg.includes('Failed to fetch dynamically imported module')) {
+                        window.location.reload();
+                        return;
+                      }
                       setDownloadError(`PDF 생성 실패: ${errorMsg}`);
                     } finally {
                       setDownloadingPdf(false);
@@ -180,6 +184,11 @@ export function ReportStep(props: ReportStepProps) {
                       }
                     } catch (err) {
                       const errorMsg = err instanceof Error ? err.message : String(err);
+
+                      if (errorMsg.includes('ChunkLoadError') || errorMsg.includes('Loading chunk') || errorMsg.includes('Failed to fetch dynamically imported module')) {
+                        window.location.reload();
+                        return;
+                      }
                       console.error('[v0] HTML 오류:', errorMsg, err);
                       setDownloadError(`HTML 생성 실패: ${errorMsg}`);
                     } finally {
@@ -221,6 +230,11 @@ export function ReportStep(props: ReportStepProps) {
                       }
                     } catch (err) {
                       const errorMsg = err instanceof Error ? err.message : String(err);
+
+                      if (errorMsg.includes('ChunkLoadError') || errorMsg.includes('Loading chunk') || errorMsg.includes('Failed to fetch dynamically imported module')) {
+                        window.location.reload();
+                        return;
+                      }
                       console.error('[v0] Excel 오류:', errorMsg, err);
                       setDownloadError(`엑셀 생성 실패: ${errorMsg}`);
                     } finally {
@@ -260,6 +274,11 @@ export function ReportStep(props: ReportStepProps) {
                       }
                     } catch (err) {
                       const errorMsg = err instanceof Error ? err.message : String(err);
+
+                      if (errorMsg.includes('ChunkLoadError') || errorMsg.includes('Loading chunk') || errorMsg.includes('Failed to fetch dynamically imported module')) {
+                        window.location.reload();
+                        return;
+                      }
                       console.error('[v0] 인쇄 오류:', errorMsg, err);
                       setDownloadError(`인쇄 준비 실패: ${errorMsg}`);
                     }
