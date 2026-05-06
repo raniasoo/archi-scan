@@ -207,21 +207,21 @@ export function FinancialStep(props: FinancialStepProps) {
               />
             )}
 
-            {/* 프로젝트 로드맵 */}
-            {feasibilityResult && (
-              <ProjectRoadmap
-                totalUnits={selectedLayoutData.units}
-                isSmallScale={selectedLayoutData.units <= 200 && siteAreaNum < 10000}
-              />
-            )}
-
-            {/* 프로젝트 로드맵 */}
-            {feasibilityResult && (
-              <ProjectRoadmap
-                totalUnits={selectedLayoutData.units}
-                isSmallScale={selectedLayoutData.units <= 200 && siteAreaNum < 10000}
-              />
-            )}
+            {/* 프로젝트 로드맵 — 시나리오 추천에 따라 자동 전환 */}
+            {feasibilityResult && (() => {
+              const isSmall = selectedLayoutData.units <= 200 && siteAreaNum < 10000
+              const roi = feasibilityResult.roi ?? 0
+              // ScenarioComparison과 동일한 추천 로직
+              const scenario: 'reconstruction' | 'remodeling' | 'bulk-sale' = 
+                roi > 15 ? 'reconstruction' : 'remodeling'
+              return (
+                <ProjectRoadmap
+                  scenarioType={scenario}
+                  totalUnits={selectedLayoutData.units}
+                  isSmallScale={isSmall}
+                />
+              )
+            })()}
 
             <div className="flex flex-col items-center gap-2 pt-4">
               <Button onClick={() => setCurrentStep("report")} size="lg" className="gap-2 w-full md:w-auto">
