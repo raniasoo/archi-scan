@@ -2254,6 +2254,27 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   
   return (
     <div className="report-wrapper">
+      {/* 섹션 네비게이터 */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border/50 mb-3 -mx-1 px-1 print:hidden">
+        <div className="flex items-center gap-1 py-1.5 overflow-x-auto scrollbar-hide">
+          {[
+            { id: 'rpt-cover', label: '표지' },
+            { id: 'rpt-summary', label: '요약' },
+            { id: 'rpt-s1', label: '개요' },
+            { id: 'rpt-s2', label: '대상지' },
+            { id: 'rpt-s3', label: '법규' },
+            { id: 'rpt-s4', label: '배치' },
+            { id: 'rpt-s5', label: '규모' },
+            { id: 'rpt-s7', label: '사업성' },
+            { id: 'rpt-s8', label: 'AI' },
+            { id: 'rpt-s9', label: '리스크' },
+          ].map(s => (
+            <button key={s.id} onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap border border-border/50 bg-card/50 text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors shrink-0">{s.label}</button>
+          ))}
+        </div>
+      </div>
+
       {/* PDF-Style Report Layout - Premium Light Theme */}
       <div 
         id="report"
@@ -2262,7 +2283,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         style={{ fontFamily: "'Noto Sans KR', 'Malgun Gothic', sans-serif" }}
       >
         {/* Report Cover - Sand Beige & Forest Green Premium */}
-        <div className="report-cover-compact overflow-hidden print:mb-4 avoid-break">
+        <div className="report-cover-compact overflow-hidden print:mb-4 avoid-break" id="rpt-cover">
           <div className="flex flex-col gap-3 pt-2">
             {/* Header Row */}
             <div className="flex items-center justify-between">
@@ -2416,7 +2437,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         })()}
 
         {/* Section 1: 검토 개요 */}
-        <div className="report-card avoid-break print-section">
+        <div id="rpt-s1" className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <FileText className="h-4 w-4" style={{ color: '#2F6B4F' }} />
@@ -2449,7 +2470,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* Section 2: 대상지 분석 */}
-        <div className="report-card avoid-break print-section">
+        <div id="rpt-s2" className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <MapPin className="h-4 w-4" style={{ color: '#2F6B4F' }} />
@@ -2556,7 +2577,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* Section 3: 법규 검토 */}
-        <div className="report-card avoid-break print-section">
+        <div id="rpt-s3" className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <FileCheck className="h-4 w-4" style={{ color: '#2F6B4F' }} />
@@ -2627,6 +2648,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* Section 4: 배치안 비교 검토 */}
+        <div id="rpt-s4" style={{marginTop: -1}} />
         {layouts.length > 1 && (
           <div className="report-card avoid-break print-section">
             <div className="p-4 sm:p-5 space-y-4">
@@ -2703,7 +2725,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         )}
 
         {/* Section 5: 규모 산정 */}
-        <div className="report-card avoid-break print-section">
+        <div id="rpt-s5" className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <Building2 className="h-4 w-4" style={{ color: '#2F6B4F' }} />
@@ -2827,7 +2849,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* Section 7: 사업성 검토 */}
-        <div className="report-card avoid-break print-section">
+        <div id="rpt-s7" className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <Banknote className="h-4 w-4" style={{ color: '#2F6B4F' }} />
@@ -3076,7 +3098,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* Section 8: 리스크 및 고려사항 */}
-        <div className="report-card avoid-break print-section">
+        <div id="rpt-s9" className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
