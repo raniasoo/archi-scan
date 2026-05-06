@@ -415,7 +415,6 @@ export function LayoutsStep(props: LayoutsStepProps) {
                   roi: feasibilityResult?.roi || 0,
                   totalProjectCost: feasibilityResult?.totalCost || 0,
                   strategy,
-                  coverage: selectedLayoutData.coverage ?? 60,
                 }}
               />
             )}
