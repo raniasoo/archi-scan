@@ -1034,3 +1034,76 @@
     margin-top: 4pt !important;
   }
 }
+
+/* ============================================
+   Unified Card Design System
+   ============================================ */
+.app-card {
+  border-radius: 0.75rem;
+  border: 1px solid oklch(0.3 0.01 200);
+  background: oklch(0.18 0.01 200 / 0.5);
+  padding: 1rem;
+}
+.app-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.app-card-header .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+.app-card-header .title {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.app-card-header .badge {
+  font-size: 0.625rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 1rem;
+  font-weight: 500;
+}
+
+/* Card Variants */
+.app-card-success { border-color: oklch(0.6 0.15 165 / 0.3); background: oklch(0.6 0.15 165 / 0.05); }
+.app-card-success .icon { background: oklch(0.6 0.15 165 / 0.2); color: oklch(0.7 0.15 165); }
+.app-card-success .badge { background: oklch(0.6 0.15 165 / 0.2); color: oklch(0.7 0.15 165); }
+
+.app-card-warning { border-color: oklch(0.7 0.15 80 / 0.3); background: oklch(0.7 0.15 80 / 0.05); }
+.app-card-warning .icon { background: oklch(0.7 0.15 80 / 0.2); color: oklch(0.75 0.15 80); }
+.app-card-warning .badge { background: oklch(0.7 0.15 80 / 0.2); color: oklch(0.75 0.15 80); }
+
+.app-card-danger { border-color: oklch(0.6 0.2 25 / 0.3); background: oklch(0.6 0.2 25 / 0.05); }
+.app-card-danger .icon { background: oklch(0.6 0.2 25 / 0.2); color: oklch(0.7 0.2 25); }
+
+.app-card-info { border-color: oklch(0.6 0.15 250 / 0.3); background: oklch(0.6 0.15 250 / 0.05); }
+.app-card-info .icon { background: oklch(0.6 0.15 250 / 0.2); color: oklch(0.7 0.15 250); }
+
+.app-card-accent { border-color: oklch(0.6 0.2 290 / 0.3); background: oklch(0.6 0.2 290 / 0.05); }
+.app-card-accent .icon { background: oklch(0.6 0.2 290 / 0.2); color: oklch(0.7 0.2 290); }
+
+/* Stat Grid — consistent metric display */
+.stat-grid { display: grid; gap: 0.5rem; }
+.stat-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.stat-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.stat-grid-4 { grid-template-columns: repeat(4, 1fr); }
+.stat-cell {
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid oklch(0.3 0.01 200 / 0.5);
+  background: oklch(0.15 0.01 200 / 0.3);
+}
+.stat-cell .label { font-size: 0.625rem; color: oklch(0.55 0.01 200); margin-bottom: 0.25rem; }
+.stat-cell .value { font-size: 1.125rem; font-weight: 800; }
+
+@media (max-width: 640px) {
+  .stat-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .stat-grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
