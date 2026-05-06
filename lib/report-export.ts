@@ -1174,19 +1174,22 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         margin: 4px 0 !important;
       }
       .pdf-note {
-        font-size: 7pt !important;
-        margin: 2px 0 !important;
+        font-size: 8pt !important;
+        margin: 4px 0 !important;
         color: #6b7280 !important;
+        line-height: 1.5 !important;
+        padding-bottom: 2px !important;
       }
       .disclaimer {
         min-height: auto !important;
         height: auto !important;
         margin-top: 2px !important;
-        padding: 6px !important;
+        padding: 8px !important;
         flex: none !important;
         flex-grow: 0 !important;
         break-inside: avoid !important;
-        font-size: 7pt !important;
+        font-size: 8pt !important;
+        line-height: 1.5 !important;
       }
 
       /* ===== 화면 전용 요소 숨기기 (플로팅 버튼, 인디케이터 등) ===== */
@@ -1607,7 +1610,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       font-size: 11px; border-top: 1px solid #e5e7eb; margin-top: 16px;
       background: #f9fafb; overflow: visible;
     }
-    .disclaimer p { margin: 4px 0; line-height: 1.6; }
+    .disclaimer p { margin: 4px 0; line-height: 1.7; padding-bottom: 2px; }
     
     /* 키포인트 */
     .key-points { margin-top: 24px; overflow: visible; }
@@ -1997,7 +2000,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         </table>
         <div style="margin-top: 16px;">
           <h4 class="section-subtitle" style="margin-bottom: 8px;">예상 사업 일정</h4>
-          <div style="display: flex; gap: 2px; height: 28px; border-radius: 6px; overflow: hidden; font-size: 9px; font-weight: 600;">
+          <div style="display: flex; gap: 2px; height: 36px; border-radius: 6px; overflow: visible; font-size: 9px; font-weight: 600; line-height: 1.4;">
             <div style="flex: 2; background: #dbeafe; color: #1e40af; display: flex; align-items: center; justify-content: center;">사업기획<br/>2-3개월</div>
             <div style="flex: 3; background: #bae6fd; color: #0369a1; display: flex; align-items: center; justify-content: center;">인허가<br/>4-6개월</div>
             <div style="flex: 8; background: #99f6e4; color: #0f766e; display: flex; align-items: center; justify-content: center;">시공<br/>18-24개월</div>
@@ -3501,19 +3504,22 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
 
       /* ===== PDF 노트/면책 압축 ===== */
       .pdf-note {
-        font-size: 7pt !important;
-        margin: 2px 0 !important;
+        font-size: 8pt !important;
+        margin: 4px 0 !important;
         color: #6b7280 !important;
+        line-height: 1.5 !important;
+        padding-bottom: 2px !important;
       }
       .disclaimer {
         min-height: auto !important;
         height: auto !important;
         margin-top: 2px !important;
-        padding: 6px !important;
+        padding: 8px !important;
         flex: none !important;
         flex-grow: 0 !important;
         break-inside: avoid !important;
-        font-size: 7pt !important;
+        font-size: 8pt !important;
+        line-height: 1.5 !important;
       }
 
       /* ===== 화면 전용 요소 숨기기 (플로팅 버튼, 인디케이터 등) ===== */
@@ -3924,7 +3930,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
         </table>
         <div style="margin-top: 16px;">
           <h4 class="section-subtitle" style="margin-bottom: 8px;">예상 사업 일정</h4>
-          <div style="display: flex; gap: 2px; height: 28px; border-radius: 6px; overflow: hidden; font-size: 9px; font-weight: 600;">
+          <div style="display: flex; gap: 2px; height: 36px; border-radius: 6px; overflow: visible; font-size: 9px; font-weight: 600; line-height: 1.4;">
             <div style="flex: 2; background: #dbeafe; color: #1e40af; display: flex; align-items: center; justify-content: center;">사업기획<br/>2-3개월</div>
             <div style="flex: 3; background: #bae6fd; color: #0369a1; display: flex; align-items: center; justify-content: center;">인허가<br/>4-6개월</div>
             <div style="flex: 8; background: #99f6e4; color: #0f766e; display: flex; align-items: center; justify-content: center;">시공<br/>18-24개월</div>
