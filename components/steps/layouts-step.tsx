@@ -1,6 +1,6 @@
 "use client"
 
-import { type Dispatch, type SetStateAction, useState } from "react"
+import { type Dispatch, type SetStateAction } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,8 +21,7 @@ const LayoutCard = dynamic(() => import("@/components/layout-card").then(m => ({
 const LayoutComparison = dynamic(() => import("@/components/layout-comparison").then(m => ({ default: m.LayoutComparison })))
 const PatternQualityCard = dynamic(() => import("@/components/pattern-quality-card").then(m => ({ default: m.PatternQualityCard })))
 const AIReasoningPanel = dynamic(() => import("@/components/ai-reasoning").then(m => ({ default: m.AIReasoningPanel })))
-const AIConceptGenerator = dynamic(() => import("@/components/ai-concept-generator").then(m => ({ default: m.AIConceptGenerator })))
-const AIActionPanel = dynamic(() => import("@/components/ai-action-panel").then(m => ({ default: m.AIActionPanel })))
+const AIHub = dynamic(() => import("@/components/ai-hub").then(m => ({ default: m.AIHub })))
 
 function displayScore(score: unknown, fallbackText: string = '산정 중'): string {
   if (score === undefined || score === null) return fallbackText
@@ -70,7 +69,6 @@ export function LayoutsStep(props: LayoutsStepProps) {
   } = props
 
   const recommendedLayout = layouts.find(l => l.recommendation.isRecommended) || layouts[0]
-  const [conceptStyle, setConceptStyle] = useState('modern-luxury')
 
   return (
           <div className="flex flex-col gap-6">
@@ -391,7 +389,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
             )}
 
             {selectedLayout && selectedLayoutData && (
-              <AIConceptGenerator
+              <AIHub
                 input={{
                   address,
                   zoneType: regulation.zoneType,
@@ -417,24 +415,8 @@ export function LayoutsStep(props: LayoutsStepProps) {
                   roi: feasibilityResult?.roi || 0,
                   totalProjectCost: feasibilityResult?.totalCost || 0,
                   strategy,
+                  coverage: selectedLayoutData.coverage ?? 60,
                 }}
-                onStyleChange={setConceptStyle}
-              />
-            )}
-
-            {/* AI 3종 실행 패널 */}
-            {selectedLayout && selectedLayoutData && (
-              <AIActionPanel
-                address={address}
-                siteArea={safeNumber(siteArea, 660)}
-                layoutName={selectedLayoutData.name}
-                floors={selectedLayoutData.floors}
-                units={selectedLayoutData.units || 0}
-                coverage={selectedLayoutData.coverage}
-                zoneType={regulation.zoneType}
-                roi={feasibilityResult?.roi || 0}
-                totalCost={feasibilityResult?.totalCost || 0}
-                selectedStyle={conceptStyle}
               />
             )}
 
