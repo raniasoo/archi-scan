@@ -1,18 +1,16 @@
 "use client"
 
-import { type Dispatch, type SetStateAction } from "react"
-import dynamic from "next/dynamic"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import { Button } from "@/components/ui/button"
-import { ChevronRight, Brain } from "lucide-react"
+import { ChevronRight, ChevronDown, Brain, Sparkles } from "lucide-react"
 import type { ZoningRegulation } from "@/lib/regulation-types"
 import type { DesignStrategy } from "@/lib/design-strategy"
 import type { UserValues } from "@/lib/pattern-quality"
 import type { LegalSummary } from "@/lib/project-analysis-state"
 import { safeNumber } from "@/lib/project-analysis-state"
+import dynamic from "next/dynamic"
 
-const StrategySelection = dynamic(() => import("@/components/strategy-selection").then(m => ({ default: m.StrategySelection })))
 const ValuePrioritySelector = dynamic(() => import("@/components/value-priority-selector").then(m => ({ default: m.ValuePrioritySelector })))
-const BuildingGoalSelector = dynamic(() => import("@/components/building-goal-selector").then(m => ({ default: m.BuildingGoalSelector })))
 
 export interface StrategyStepProps {
   address: string
@@ -30,6 +28,49 @@ export interface StrategyStepProps {
   handleGenerate: () => void
 }
 
+const GOALS = [
+  {
+    id: "profit" as const,
+    emoji: "💰",
+    title: "수익 극대화",
+    desc: "투자 대비 최대 수익을 추구합니다",
+    strategy: "profitability" as DesignStrategy,
+    approach: "quantitative" as const,
+    color: "border-emerald-500/40 bg-emerald-500/5",
+    activeColor: "border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-500/30",
+  },
+  {
+    id: "comfort" as const,
+    emoji: "🏠",
+    title: "쾌적한 주거",
+    desc: "살기 좋은 환경이 우선입니다",
+    strategy: "livability" as DesignStrategy,
+    approach: "combined" as const,
+    color: "border-blue-500/40 bg-blue-500/5",
+    activeColor: "border-blue-500 bg-blue-500/15 ring-2 ring-blue-500/30",
+  },
+  {
+    id: "view" as const,
+    emoji: "🌇",
+    title: "조망·프리미엄",
+    desc: "조망과 브랜드 가치를 높입니다",
+    strategy: "view-priority" as DesignStrategy,
+    approach: "combined" as const,
+    color: "border-purple-500/40 bg-purple-500/5",
+    activeColor: "border-purple-500 bg-purple-500/15 ring-2 ring-purple-500/30",
+  },
+  {
+    id: "practical" as const,
+    emoji: "⚙️",
+    title: "실용적 설계",
+    desc: "주차·동선 효율을 최적화합니다",
+    strategy: "parking-efficient" as DesignStrategy,
+    approach: "quantitative" as const,
+    color: "border-slate-500/40 bg-slate-500/5",
+    activeColor: "border-slate-500 bg-slate-500/15 ring-2 ring-slate-500/30",
+  },
+]
+
 export function StrategyStep(props: StrategyStepProps) {
   const {
     address, siteArea, strategy, setStrategy,
@@ -38,112 +79,127 @@ export function StrategyStep(props: StrategyStepProps) {
     handleStrategyComplete, handleGenerate,
   } = props
 
-  return (
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Brain className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl md:text-2xl font-bold text-foreground">AI 설계 전략</h2>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {address} · {Number(siteArea).toLocaleString()}㎡ | 배치안 생성 방향을 선택하세요
-                </p>
-              </div>
-              <Button onClick={handleStrategyComplete} className="gap-2 w-full md:w-auto">
-                법규 검토
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+  const [selectedGoal, setSelectedGoal] = useState<string>(() => {
+    const match = GOALS.find(g => g.strategy === strategy)
+    return match?.id || "profit"
+  })
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
-            {/* 설계 접근 방식 선택 */}
-            <div className="border border-border/60 rounded-xl p-4 bg-card">
-              <h3 className="text-sm font-semibold mb-1">설계 접근 방식</h3>
-              <p className="text-[11px] text-muted-foreground mb-3">어떤 관점으로 배치안을 평가할까요?</p>
-              <div className="grid grid-cols-3 gap-2">
+  const handleGoalSelect = (goalId: string) => {
+    const goal = GOALS.find(g => g.id === goalId)
+    if (!goal) return
+    setSelectedGoal(goalId)
+    setStrategy(goal.strategy)
+    setDesignApproach(goal.approach)
+  }
+
+  const handleStart = () => {
+    handleGenerate()
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <Brain className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-bold text-foreground">설계 방향 선택</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {address} · {Number(siteArea).toLocaleString()}㎡
+        </p>
+      </div>
+
+      {/* 하나의 질문, 4개 선택지 */}
+      <div>
+        <h3 className="text-base font-semibold mb-3">어떤 건물을 만들고 싶으세요?</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {GOALS.map(goal => (
+            <button
+              key={goal.id}
+              onClick={() => handleGoalSelect(goal.id)}
+              className={`p-4 rounded-xl border-2 text-left transition-all ${
+                selectedGoal === goal.id ? goal.activeColor : goal.color
+              }`}
+            >
+              <span className="text-2xl block mb-2">{goal.emoji}</span>
+              <span className="text-sm font-bold block mb-0.5">{goal.title}</span>
+              <span className="text-xs text-muted-foreground leading-snug block">{goal.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 배치안 생성 CTA */}
+      <Button
+        onClick={handleStart}
+        size="lg"
+        className="w-full gap-2 py-6 text-base font-bold"
+      >
+        <Sparkles className="h-5 w-5" />
+        AI 배치안 생성하기
+        <ChevronRight className="h-5 w-5" />
+      </Button>
+
+      {/* 고급 설정 토글 */}
+      <div>
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto"
+        >
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+          고급 설정
+        </button>
+
+        {showAdvanced && (
+          <div className="mt-4 space-y-4">
+            {/* 세부 전략 선택 */}
+            <div className="border border-border/60 rounded-xl p-4 bg-card/50">
+              <p className="text-xs font-semibold mb-2">세부 전략</p>
+              <div className="grid grid-cols-3 gap-1.5">
                 {[
-                  { id: 'quantitative' as const, emoji: '📊', label: '사업성 중심', desc: 'ROI·수익률 최적화' },
-                  { id: 'alexander' as const, emoji: '🏛️', label: '건축 철학', desc: '패턴·거주 품질 중심' },
-                  { id: 'combined' as const, emoji: '⚖️', label: '균형 (추천)', desc: '수익 + 품질 모두' },
-                ].map(a => (
+                  { id: "profitability" as DesignStrategy, label: "수익성" },
+                  { id: "livability" as DesignStrategy, label: "실거주" },
+                  { id: "view-priority" as DesignStrategy, label: "조망" },
+                  { id: "privacy-priority" as DesignStrategy, label: "프라이버시" },
+                  { id: "area-maximize" as DesignStrategy, label: "면적최대" },
+                  { id: "parking-efficient" as DesignStrategy, label: "주차효율" },
+                ].map(s => (
                   <button
-                    key={a.id}
-                    onClick={() => setDesignApproach(a.id)}
-                    className={`p-2.5 rounded-lg text-left border transition-all ${
-                      designApproach === a.id
-                        ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                        : 'border-border/50 hover:border-border'
+                    key={s.id}
+                    onClick={() => setStrategy(s.id)}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
+                      strategy === s.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                     }`}
                   >
-                    <div className="text-lg mb-0.5">{a.emoji}</div>
-                    <div className="text-xs font-semibold">{a.label}</div>
-                    <div className="text-[10px] text-muted-foreground">{a.desc}</div>
+                    {s.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* 건물 목표 선택 — 사업성/균형 모드 */}
-            {designApproach !== 'alexander' && (
-            <div className="border border-primary/20 rounded-xl p-4 bg-gradient-to-br from-primary/5 to-blue-500/5">
-              <BuildingGoalSelector
-                onRecommend={(strategies) => {
-                  if (strategies.length > 0) {
-                    setStrategy(strategies[0])
-                    setTimeout(() => handleGenerate(), 300)
-                  }
-                }}
-                onSkip={() => handleGenerate()}
-              />
-            </div>
-            )}
-
-            {/* 가치 우선순위 — 알렉산더/균형 모드 */}
-            {designApproach !== 'quantitative' && (
+            {/* 가치 우선순위 슬라이더 */}
             <ValuePrioritySelector
               values={userValues}
               onChange={setUserValues}
             />
-            )}
+          </div>
+        )}
+      </div>
 
-            {/* 알렉산더 모드 전용: 패턴 기반 배치안 생성 */}
-            {designApproach === 'alexander' && (
-              <div className="border border-amber-500/30 rounded-xl p-4 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
-                <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">🏛️ 패턴 기반 배치안 생성</h3>
-                <p className="text-[11px] text-muted-foreground mb-3">선택한 가치관과 패턴에 맞는 배치안을 생성합니다</p>
-                <button
-                  onClick={() => handleGenerate()}
-                  className="w-full py-2.5 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
-                >
-                  패턴 기반 배치안 생성 →
-                </button>
-              </div>
-            )}
-
-            <div className="flex items-center gap-3 px-2">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">또는 직접 전략을 선택하세요</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-
-            <StrategySelection 
-  selected={strategy} 
-  onChange={setStrategy}
-  legalSummary={legalSummary}
-  siteConditions={{
-    siteArea: safeNumber(siteArea, 660),
-    zoneType: (molitSupplementData as any).zoneCode || regulation.zoneType,
-    roadCondition: `${(molitSupplementData as any).roadWidth || regulation.roadWidth}m 이상`,
-    heightLimit: String((molitSupplementData as any).heightLimit || regulation.maxHeight),
-    districtPlan: ((molitSupplementData as any).hasDistrictPlan ?? regulation.additionalNotes.includes('지구단위')) ? '적용' : '없음',
-  }}
-/>
-
-            <div className="flex justify-center pt-4">
-              <Button onClick={handleStrategyComplete} size="lg" className="gap-2 w-full md:w-auto">
-                이 전략으로 진행
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>  )
+      {/* 법규 검토로 건너뛰기 */}
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <button
+          onClick={handleStrategyComplete}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          법규 검토로 바로 이동 →
+        </button>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+    </div>
+  )
 }
