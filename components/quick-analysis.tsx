@@ -53,7 +53,7 @@ export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
       }
 
       const siteArea = molitData.data?.siteArea || molitData.data?.platArea || 660
-      const zoneCode = molitData.data?.zoneType || 'residential-2'
+      const rawZoneType = molitData.data?.zoneType || 'residential-2'
       const overlapping = molitData.data?.overlappingRegulations || []
 
       // 2단계: 법규 확인
@@ -65,7 +65,18 @@ export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
         'semi-residential': { name: '준주거지역', coverage: 70, far: 500, height: 40 },
         'commercial-neighborhood': { name: '근린상업지역', coverage: 70, far: 900, height: 60 },
         'commercial-general': { name: '일반상업지역', coverage: 80, far: 1300, height: 80 },
+        'commercial-central': { name: '중심상업지역', coverage: 90, far: 1500, height: 100 },
+        'residential-exclusive-1': { name: '제1종전용주거지역', coverage: 50, far: 100, height: 10 },
+        'residential-exclusive-2': { name: '제2종전용주거지역', coverage: 50, far: 150, height: 12 },
       }
+      // 한글 용도지역명 → 영문코드 역매핑 (MOLIT API는 한글로 반환)
+      const koreanToCode: Record<string, string> = {}
+      for (const [code, info] of Object.entries(zoneMap)) {
+        koreanToCode[info.name] = code
+      }
+      // 부분매칭: "제1종일반주거지역" 또는 "제1종 일반주거지역" 등 공백 유무 대응
+      const normalizedZone = rawZoneType.replace(/\s+/g, '')
+      const zoneCode = koreanToCode[normalizedZone] || koreanToCode[rawZoneType] || rawZoneType
       const zone = zoneMap[zoneCode] || zoneMap['residential-2']
 
       // 3단계: 배치안 + 사업성 자동 계산
