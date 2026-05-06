@@ -13,9 +13,15 @@ interface AIActionPanelProps {
   zoneType: string
   roi: number
   totalCost: number
+  selectedStyle?: string
 }
 
 export function AIActionPanel(props: AIActionPanelProps) {
+  const styleLabels: Record<string, string> = {
+    'modern-luxury': '모던 럭셔리', 'eco-green': '친환경 녹색',
+    'korean-modern': '한국 모던', 'minimalism': '미니멀리즘',
+    'urban-complex': '도시 복합', 'premium-resi': '프리미엄 주거',
+  }
   const [activeTab, setActiveTab] = useState<'render' | 'consult' | 'proposal' | null>(null)
   const [loading, setLoading] = useState(false)
   const [renderImage, setRenderImage] = useState<string | null>(null)
@@ -34,7 +40,7 @@ export function AIActionPanel(props: AIActionPanelProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `${props.layoutName} building design`,
-          style: 'modern-luxury',
+          style: props.selectedStyle || 'modern-luxury',
           address: props.address,
           layoutName: props.layoutName,
           floors: props.floors,
@@ -180,6 +186,12 @@ export function AIActionPanel(props: AIActionPanelProps) {
       {/* 렌더링 탭 */}
       {activeTab === 'render' && (
         <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground">선택된 스타일:</span>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-medium">
+              {styleLabels[props.selectedStyle || 'modern-luxury'] || props.selectedStyle || '모던 럭셔리'}
+            </span>
+          </div>
 
           <button onClick={handleRender} disabled={loading}
             className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">

@@ -1,6 +1,6 @@
 "use client"
 
-import { type Dispatch, type SetStateAction } from "react"
+import { type Dispatch, type SetStateAction, useState } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -70,6 +70,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
   } = props
 
   const recommendedLayout = layouts.find(l => l.recommendation.isRecommended) || layouts[0]
+  const [conceptStyle, setConceptStyle] = useState('modern-luxury')
 
   return (
           <div className="flex flex-col gap-6">
@@ -417,6 +418,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
                   totalProjectCost: feasibilityResult?.totalCost || 0,
                   strategy,
                 }}
+                onStyleChange={setConceptStyle}
               />
             )}
 
@@ -432,6 +434,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
                 zoneType={regulation.zoneType}
                 roi={feasibilityResult?.roi || 0}
                 totalCost={feasibilityResult?.totalCost || 0}
+                selectedStyle={conceptStyle}
               />
             )}
 

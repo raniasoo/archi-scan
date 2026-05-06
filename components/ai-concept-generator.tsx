@@ -82,10 +82,15 @@ ${input.slope ? `- 경사도: ${input.slope.grade} (${input.slope.average}%, ${i
 5. 참고 사례: 유사한 규모/용도의 국내외 우수 사례 2~3개`
 }
 
-export function AIConceptGenerator({ input }: { input: ConceptInput }) {
+export function AIConceptGenerator({ input, onStyleChange }: { input: ConceptInput; onStyleChange?: (style: string) => void }) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedStyle, setSelectedStyle] = useState("modern-luxury")
   const [copiedType, setCopiedType] = useState<string | null>(null)
+
+  const handleStyleChange = (style: string) => {
+    setSelectedStyle(style)
+    onStyleChange?.(style)
+  }
 
   const midjourneyPrompt = generateMidjourneyPrompt(input, selectedStyle)
   const claudePrompt = generateClaudePrompt(input, selectedStyle)
@@ -135,7 +140,7 @@ export function AIConceptGenerator({ input }: { input: ConceptInput }) {
               {STYLE_PRESETS.map(style => (
                 <button
                   key={style.id}
-                  onClick={() => setSelectedStyle(style.id)}
+                  onClick={() => handleStyleChange(style.id)}
                   className={`p-2 rounded-lg text-center text-xs transition-all ${
                     selectedStyle === style.id
                       ? "bg-purple-100 dark:bg-purple-900 border-2 border-purple-400 dark:border-purple-400 text-gray-900 dark:text-white font-semibold"
