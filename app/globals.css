@@ -96,39 +96,8 @@
   --report-danger: oklch(0.55 0.2 25);
 }
 
-/* 다크모드 보고서 미리보기 */
-.dark .report-summary-card {
-  background: oklch(0.25 0.015 200);
-  border-color: oklch(0.35 0.02 200);
-}
-.dark .report-summary-card .label {
-  color: oklch(0.65 0.02 200);
-}
-.dark .report-summary-card .value {
-  color: oklch(0.92 0.01 200);
-}
-.dark .report-summary-card-highlight {
-  background: oklch(0.22 0.04 155);
-  border-color: oklch(0.4 0.08 155);
-}
-.dark .report-summary-card-highlight .value,
-.dark .report-summary-card-premium .value {
-  color: oklch(0.7 0.14 175);
-}
-.dark .report-summary-card-premium {
-  background: oklch(0.2 0.05 175);
-  border-color: oklch(0.45 0.12 175);
-}
-.dark .report-card {
-  background: oklch(0.22 0.02 200);
-  border-color: oklch(0.3 0.02 200);
-}
-.dark .report-text-muted {
-  color: oklch(0.6 0.02 200);
-}
-.dark .report-text-primary {
-  color: oklch(0.65 0.14 175);
-}
+/* Report stays in light theme regardless of dark mode */
+/* Report stays in light theme regardless of dark mode */
 
 @theme inline {
   --font-sans: 'Noto Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
