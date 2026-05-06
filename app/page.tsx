@@ -636,7 +636,7 @@ export default function ArchiScanPage() {
       if (saved) {
         const s = JSON.parse(saved)
         if (s.address) setAddress(s.address)
-        if (s.siteArea) setSiteArea(s.siteArea)
+        if (s.siteArea) setSiteArea(String(s.siteArea))
         if (s.strategy) setStrategy(s.strategy)
         if (s.regulation) {
           // zoneType, roadWidth는 자동조회 시 항상 새로 추론 (캐시 오염 방지)
@@ -1528,8 +1528,8 @@ export default function ArchiScanPage() {
 
   const isStepClickable = (stepId: string) => {
     if (stepId === "input") return true
-    if (stepId === "strategy") return siteArea.trim() !== ""
-    if (stepId === "regulation") return siteArea.trim() !== ""
+    if (stepId === "strategy") return String(siteArea).trim() !== ""
+    if (stepId === "regulation") return String(siteArea).trim() !== ""
     if (stepId === "layouts") return layouts.length > 0
     if (stepId === "floorplan" || stepId === "financial" || stepId === "report") {
       return selectedLayout !== null
@@ -1566,7 +1566,7 @@ export default function ArchiScanPage() {
       <QuickAnalysis onDetailedAnalysis={(addr, area, rawData) => {
         // Quick 분석 데이터를 Full 분석에 주입
         setAddress(addr)
-        setSiteArea(area)
+        setSiteArea(String(area))
         if (rawData) {
           const zc = rawData.zoneType || ''
           if (zc) {
