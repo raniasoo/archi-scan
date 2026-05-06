@@ -187,6 +187,16 @@ export interface MolitSiteData {
   zoneType?: string          // 지역 (용도지역)
   district?: string          // 지구
   area?: string              // 구역
+  overlappingRegulations?: {
+    name: string
+    category: string
+    coverageOverride?: number
+    farOverride?: number
+    heightLimit?: number
+    floorLimit?: number
+    severity: 'critical' | 'high' | 'medium' | 'info'
+    description?: string
+  }[]
   
   // Meta
   dataSource?: 'building' | 'land' | 'address'

@@ -20,6 +20,7 @@
  * - JUSO_API_KEY: 주소기반산업지원서비스 API키 (juso.go.kr) - Optional, uses MOLIT_API_KEY if not set
  */
 
+import { type OverlappingRegulation, classifyRegulation } from '@/lib/zone-client'
 import type {
   MolitApiResponse,
   MolitBuildingBasicItem,
@@ -1057,6 +1058,40 @@ async function fetchZoneType(sigunguCd: string, bjdongCd: string, bun: string, j
   return undefined
 }
 
+
+// 중첩 규제 자동 분석 — MOLIT 지역지구 API에서 전체 규제 추출
+async function fetchOverlappingRegulations(sigunguCd: string, bjdongCd: string, bun: string, ji: string, molitKey: string): Promise<OverlappingRegulation[]> {
+  try {
+    const jijiguUrl = `https://apis.data.go.kr/1613000${MOLIT_ENDPOINTS.buildingJijuk}?serviceKey=${encodeURIComponent(molitKey)}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=50&pageNo=1&resultType=json`
+    console.log('[MOLIT-REG] 중첩 규제 조회...')
+    const res = await fetch(jijiguUrl, { signal: AbortSignal.timeout(8000) })
+    if (res.ok) {
+      const json = await res.json()
+      const items = json?.response?.body?.items?.item
+      if (items) {
+        const arr = Array.isArray(items) ? items : [items]
+        const regulations: OverlappingRegulation[] = arr
+          .map((it: Record<string, string>) => {
+            const name = (it.jijiguCdNm || '').trim()
+            const gbNm = (it.jijiguGbCdNm || '').trim()
+            if (!name) return null
+            const reg = classifyRegulation(name)
+            if (gbNm.includes('용도지역')) reg.category = '용도지역'
+            else if (gbNm.includes('용도지구')) reg.category = '용도지구'
+            else if (gbNm.includes('구역')) reg.category = '구역'
+            return reg
+          })
+          .filter((r: OverlappingRegulation | null): r is OverlappingRegulation => r !== null)
+        console.log(`[MOLIT-REG] 중첩 규제 ${regulations.length}개:`, regulations.map(r => `${r.name}(${r.severity})`).join(', '))
+        return regulations
+      }
+    }
+  } catch (e) {
+    console.warn('[MOLIT-REG] 중첩 규제 조회 실패:', e)
+  }
+  return []
+}
+
 // VWorld 좌표 기반 용도지역 조회 (5단계 fallback)
 async function fetchZoneTypeByCoord(lng: number, lat: number): Promise<string | undefined> {
   if (!lng || !lat) return undefined
@@ -1919,6 +1954,29 @@ export async function lookupSiteData(
       if (!siteData.bjdongCd) siteData.bjdongCd = bjdongCd
       if (!siteData.bun) siteData.bun = bun
       if (!siteData.ji) siteData.ji = ji
+      
+      // 중첩 규제 자동 분석 (자연경관지구, 고도지구, 대공방어협조구역 등)
+      try {
+        const overlapping = await fetchOverlappingRegulations(sigunguCd, bjdongCd, bun, ji, getApiKey())
+        if (overlapping.length > 0) {
+          siteData.overlappingRegulations = overlapping
+          // 가장 제한적인 건폐율/높이 자동 적용
+          const strictestCoverage = overlapping
+            .filter(r => r.coverageOverride)
+            .reduce((min, r) => Math.min(min, r.coverageOverride!), 100)
+          const strictestHeight = overlapping
+            .filter(r => r.heightLimit)
+            .reduce((min, r) => Math.min(min, r.heightLimit!), 999)
+          if (strictestCoverage < 100) {
+            console.log(`[MOLIT-REG] 건폐율 보정: ${siteData.buildingCoverage}% → ${strictestCoverage}% (중첩 규제)`)
+          }
+          if (strictestHeight < 999) {
+            console.log(`[MOLIT-REG] 높이 제한: ${strictestHeight}m (중첩 규제)`)
+          }
+        }
+      } catch (e) {
+        console.warn('[MOLIT-REG] 중첩 규제 조회 실패 (무시):', e)
+      }
       
       diagnostics.apiResponse = {
         status: 'success-with-data',

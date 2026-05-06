@@ -228,6 +228,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         groundFloors: result.data?.groundFloors || null,
         buildingCoverage: result.data?.buildingCoverage || null,
         floorAreaRatio: result.data?.floorAreaRatio || null,
+        overlappingRegulations: result.data?.overlappingRegulations || [],
         diagnostics: result.diagnostics,
       })
     } catch (e) {

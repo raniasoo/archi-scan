@@ -70,7 +70,7 @@ const REGULATION_IMPACT: Record<string, Partial<OverlappingRegulation>> = {
   '지구단위계획구역': { category: '구역', severity: 'info', description: '지구단위계획에 따른 별도 건축 기준' },
 }
 
-function classifyRegulation(name: string): OverlappingRegulation {
+export function classifyRegulation(name: string): OverlappingRegulation {
   const base: OverlappingRegulation = { name, category: '기타', severity: 'info' }
   
   for (const [key, impact] of Object.entries(REGULATION_IMPACT)) {
