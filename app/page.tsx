@@ -1854,16 +1854,40 @@ export default function ArchiScanPage() {
 
       {/* Main Content */}
       <main className="mx-auto max-w-7xl px-4 md:px-6 py-6 md:py-8 pb-16 md:pb-8">
-        {/* Mobile Step Indicator */}
+        {/* Mobile Step Indicator — 3 Phase View */}
         <div className="xl:hidden mb-6">
-          <div className="flex items-center justify-between bg-secondary/50 rounded-lg p-3">
-            <span className="text-sm font-medium text-foreground">
-              단계 {steps.findIndex(s => s.id === currentStep) + 1} / {steps.length}
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {steps.find(s => s.id === currentStep)?.label}
-            </span>
-          </div>
+          {(() => {
+            const phases = [
+              { label: '정보 입력', steps: ['input', 'strategy'], color: 'from-blue-500 to-cyan-500' },
+              { label: 'AI 분석', steps: ['regulation', 'layouts', 'floorplan'], color: 'from-emerald-500 to-teal-500' },
+              { label: '결과 확인', steps: ['financial', 'report'], color: 'from-amber-500 to-orange-500' },
+            ]
+            const currentPhaseIdx = phases.findIndex(p => p.steps.includes(currentStep))
+            const currentPhase = phases[currentPhaseIdx] || phases[0]
+            const stepLabel = steps.find(s => s.id === currentStep)?.label || ''
+            return (
+              <>
+                <div className="flex items-center justify-between bg-secondary/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r ${currentPhase.color} text-white font-bold`}>
+                      {currentPhaseIdx + 1}/3
+                    </span>
+                    <span className="text-sm font-bold">{currentPhase.label}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{stepLabel}</span>
+                </div>
+                {/* 3-Phase Progress Bar */}
+                <div className="flex gap-1 mt-2">
+                  {phases.map((phase, i) => (
+                    <div key={i} className="flex-1 h-1.5 rounded-full overflow-hidden bg-muted/30">
+                      <div className={`h-full rounded-full bg-gradient-to-r ${phase.color} transition-all duration-500`}
+                        style={{ width: i < currentPhaseIdx ? '100%' : i === currentPhaseIdx ? `${((phase.steps.indexOf(currentStep) + 1) / phase.steps.length) * 100}%` : '0%' }} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )
+          })()}
           {/* Mobile Step Dots */}
           <div className="flex justify-center gap-1.5 mt-3">
             {steps.map((step, index) => {
