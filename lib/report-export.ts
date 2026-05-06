@@ -860,6 +860,10 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }
+      td, th {
+        line-height: 1.45 !important;
+        padding-bottom: 4px !important;
+      }
       
       /* 섹션 제목과 첫 내용 함께 유지 */
       .section-title {
@@ -989,7 +993,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         font-size: 24pt !important;
         font-weight: 700 !important;
         color: #1b5e75 !important;
-        line-height: 1.1 !important;
+        line-height: 1.4 !important;
       }
       
       /* AI 분석 요약 박스 - 텍스트 잘림 방지 + 페이지 분��� 방지 */
@@ -1220,7 +1224,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f1f5f9; color: #1f2937; line-height: 1.6;
+      background: #f1f5f9; color: #1f2937; line-height: 1.6; -webkit-font-smoothing: antialiased;
       width: 100%; min-width: 320px;
     }
     .page { max-width: 900px; margin: 0 auto; padding: 40px; background: #ffffff; }
@@ -1543,8 +1547,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       font-size: 14px;
       font-weight: 600;
       margin-bottom: 12px;
-      line-height: 1.2;
-      padding-bottom: 2px;
+      line-height: 1.45;
+      padding-bottom: 3px;
     }
     .print-scenario-block table {
       background: #ffffff;
@@ -1556,8 +1560,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       font-size: 14px;
       font-weight: 600;
       margin-bottom: 12px;
-      line-height: 1.2;
-      padding-bottom: 2px;
+      line-height: 1.45;
+      padding-bottom: 3px;
     }
     .print-scenario-block table {
       background: #ffffff;
@@ -2569,7 +2573,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f1f5f9; color: #1f2937; line-height: 1.6;
+      background: #f1f5f9; color: #1f2937; line-height: 1.6; -webkit-font-smoothing: antialiased;
       width: 100%; min-width: 320px;
     }
     .page { max-width: 900px; margin: 0 auto; padding: 40px; background: #ffffff; }
