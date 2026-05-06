@@ -556,6 +556,7 @@ export default function ArchiScanPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [siteVisuals, setSiteVisuals] = useState<SiteVisualsConfig>(EMPTY_SITE_VISUALS)
+  const [aiRenderImage, setAiRenderImage] = useState<string | null>(null)
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
   const [optimizationResult, setOptimizationResult] = useState<OptimizationReport | null>(null)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -1988,6 +1989,7 @@ export default function ArchiScanPage() {
             molitSupplementData={molitSupplementData}
             loadLayoutOptimizer={loadLayoutOptimizer}
             handleSelectLayout={handleSelectLayout}
+            onAiRenderComplete={setAiRenderImage}
           />
         )}
 
@@ -2043,6 +2045,7 @@ export default function ArchiScanPage() {
             setDownloadingExcel={setDownloadingExcel} setDownloadError={setDownloadError}
             setCurrentStep={setCurrentStep} setShowBrandingEditor={setShowBrandingEditor}
             loadExportFunctions={loadExportFunctions}
+            aiRenderImage={aiRenderImage}
           />
         )}
         

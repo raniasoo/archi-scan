@@ -26,7 +26,8 @@ import {
   Table,
   Award,
   Printer,
-  Loader2
+  Loader2,
+  Sparkles
 } from "lucide-react"
 import { downloadExcelExport } from "@/lib/report-excel-utils"
 import { 
@@ -145,6 +146,7 @@ interface ReportSummaryProps {
   // Alexander pattern quality
   userValues?: { profitVsQuality: number; privacyVsCommunity: number; efficiencyVsSpace: number; selectedPatterns: string[] }
   designStrategy?: string
+  aiRenderImage?: string | null
 }
 
 function formatKRW(value: number): string {
@@ -214,7 +216,7 @@ function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): Layout
   return bestLayout
 }
 
-export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility, userValues, designStrategy }: ReportSummaryProps) {
+export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility, userValues, designStrategy, aiRenderImage }: ReportSummaryProps) {
   // molitData 우선 적용 — regulation race condition 방지
   // regulation 한도(buildingCoverageLimit/farLimit)에서 용도지역 역추정 (zone-lookup 미완료 시 안전장치)
   const inferZoneFromLimits = (coverage?: number, far?: number): string => {
@@ -2720,6 +2722,28 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   투자수익률, 세대당 주차 확보, 법정 용적률 활용도를 종합적으로 고려할 때 가장 적합한 안으로 판단됩니다.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI 건축 렌더링 */}
+        {aiRenderImage && (
+          <div className="report-card avoid-break print-section">
+            <div className="p-4 sm:p-5">
+              <div className="report-section-title">
+                <Sparkles className="h-4 w-4" style={{ color: '#7c3aed' }} />
+                <span>AI 건축 렌더링</span>
+              </div>
+              <p className="text-xs mb-3" style={{ color: '#6B6560' }}>나노바나나 AI가 생성한 선택 배치안의 건축 외관 이미지</p>
+              <img 
+                src={aiRenderImage} 
+                alt="AI 건축 렌더링" 
+                className="w-full rounded-lg border"
+                style={{ borderColor: '#E5E0DB', maxHeight: '400px', objectFit: 'cover' }}
+              />
+              <p className="text-[9px] mt-2 text-center" style={{ color: '#9B9590' }}>
+                AI 생성 이미지로 실제 설계와 다를 수 있습니다 · Powered by Nano Banana (Gemini)
+              </p>
             </div>
           </div>
         )}

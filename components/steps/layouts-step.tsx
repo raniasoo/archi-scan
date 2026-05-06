@@ -55,6 +55,7 @@ export interface LayoutsStepProps {
   molitSupplementData: Record<string, unknown>
   loadLayoutOptimizer: () => Promise<any>
   handleSelectLayout: (id: number) => void
+  onAiRenderComplete?: (imageData: string) => void
 }
 
 export function LayoutsStep(props: LayoutsStepProps) {
@@ -416,6 +417,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
                   totalProjectCost: feasibilityResult?.totalCost || 0,
                   strategy,
                 }}
+                onRenderComplete={props.onAiRenderComplete}
               />
             )}
 

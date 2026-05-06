@@ -52,6 +52,7 @@ export interface ReportStepProps {
   setCurrentStep: Dispatch<SetStateAction<any>>
   setShowBrandingEditor: Dispatch<SetStateAction<boolean>>
   loadExportFunctions: () => Promise<any>
+  aiRenderImage?: string | null
 }
 
 export function ReportStep(props: ReportStepProps) {
@@ -360,6 +361,7 @@ export function ReportStep(props: ReportStepProps) {
                   feasibilityResult={feasibilityResult}
                   userValues={userValues}
                   designStrategy={strategy}
+                  aiRenderImage={props.aiRenderImage}
                 />
               </TabsContent>
 

@@ -46,7 +46,7 @@ function genCL(input: ConceptInput, styleId: string): string {
 ## 요청: 매스 컨셉, 파사드, 외부 공간, 차별화 포인트, 참고 사례`
 }
 
-export function AIHub({ input }: { input: ConceptInput }) {
+export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void }) {
   const [isOpen, setIsOpen] = useState(false)
   const [tab, setTab] = useState<'render'|'consult'|'proposal'|'prompt'>('render')
   const [style, setStyle] = useState('modern-luxury')
@@ -70,7 +70,7 @@ export function AIHub({ input }: { input: ConceptInput }) {
     try {
       const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ prompt:`${input.layoutName}`, style, address:input.address, layoutName:input.layoutName, floors:input.floors, units:input.units, siteArea:input.siteArea }) })
       const d = await r.json()
-      if (d.success && d.image) setRenderImg(d.image); else setError(d.error||'렌더링 실패')
+      if (d.success && d.image) { setRenderImg(d.image); onRenderComplete?.(d.image) } else setError(d.error||'렌더링 실패')
     } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
   }
 
