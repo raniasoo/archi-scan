@@ -2875,16 +2875,16 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                 <p className="label">예상매출</p>
                 <p className="value text-base">{(financials.projectedRevenue / 100000000).toFixed(1)}<span className="unit">억원</span></p>
               </div>
-              <div className={`report-summary-card ${financials.profit >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'}`}>
+              <div className={`report-summary-card ${financials.profit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
                 <p className="label">예상수익</p>
-                <p className={`value text-base ${financials.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                <p className={`value text-base ${financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {financials.profit >= 0 ? '+' : ''}{(financials.profit / 100000000).toFixed(1)}<span className="unit">억원</span>
                 </p>
               </div>
               {/* ROI - 강조 */}
-              <div className={`report-summary-card col-span-2 sm:col-span-2 ${financials.roi >= 15 ? 'bg-primary/10 border-primary/30' : financials.roi >= 0 ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'}`}>
+              <div className={`report-summary-card col-span-2 sm:col-span-2 ${financials.roi >= 15 ? 'bg-primary/10 border-primary/30' : financials.roi >= 0 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
                 <p className="label">ROI (투자수익률)</p>
-                <p className={`value text-2xl ${financials.roi >= 15 ? 'report-text-primary' : financials.roi >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
+                <p className={`value text-2xl ${financials.roi >= 15 ? 'report-text-primary' : financials.roi >= 0 ? 'text-amber-600' : 'text-red-600'}`}>
                   {financials.roi.toFixed(1)}<span className="unit">%</span>
                 </p>
                 <p className="text-[10px] report-text-muted">손익분기점 분양률: {financials.breakEvenRate.toFixed(1)}%</p>
@@ -3012,9 +3012,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   }, userValues)
                   const topPatterns = [...pq.patterns].sort((a, b) => b.score - a.score).slice(0, 3)
                   return (
-                    <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3.5">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3.5">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                        <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
                           📖 설계 품질 평가
                         </p>
                         <div className="flex items-center gap-2">
@@ -3027,16 +3027,16 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                       <p className="text-[11px] text-foreground/70 leading-relaxed mb-3">{pq.philosophy}</p>
                       <div className="grid grid-cols-3 gap-2 mb-2">
                         {topPatterns.map(p => (
-                          <div key={p.id} className="bg-white/60 dark:bg-gray-800/60 rounded-md p-2 text-center">
+                          <div key={p.id} className="bg-white/60 rounded-md p-2 text-center">
                             <p className="text-[9px] text-muted-foreground">#{p.id} {p.nameKr}</p>
                             <p className="text-base font-black" style={{ color: p.score >= 80 ? '#059669' : p.score >= 60 ? '#2563eb' : '#d97706' }}>{p.score}</p>
-                            <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full mt-1">
+                            <div className="h-1 bg-gray-200 rounded-full mt-1">
                               <div className="h-full rounded-full" style={{ width: `${p.score}%`, backgroundColor: p.score >= 80 ? '#10b981' : p.score >= 60 ? '#3b82f6' : '#f59e0b' }} />
                             </div>
                           </div>
                         ))}
                       </div>
-                      <div className="flex gap-3 text-[10px] text-muted-foreground border-t border-emerald-200 dark:border-emerald-800 pt-2">
+                      <div className="flex gap-3 text-[10px] text-muted-foreground border-t border-emerald-200 pt-2">
                         <span>패턴 {pq.totalPatternScore}/100</span>
                         <span>Living {pq.totalLivingScore}/100</span>
                       </div>
@@ -3048,8 +3048,8 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
               {/* 추천 이유 및 유의 사항 */}
               {layout.reasoning && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">추천 이유</p>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-emerald-700 mb-2">추천 이유</p>
                     <ul className="space-y-1">
                       {layout.reasoning.profitabilityAdvantages.slice(0, 3).map((item, idx) => (
                         <li key={idx} className="text-[11px] report-text-muted flex items-start gap-1.5">
@@ -3059,8 +3059,8 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                       ))}
                     </ul>
                   </div>
-                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2">유의 사항</p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-amber-700 mb-2">유의 사항</p>
                     <ul className="space-y-1">
                       {layout.reasoning.risksAndChallenges.slice(0, 3).map((item, idx) => (
                         <li key={idx} className="text-[11px] report-text-muted flex items-start gap-1.5">
