@@ -3,6 +3,7 @@
 import { type Dispatch, type SetStateAction } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
+import { ContributionSimulator } from "@/components/contribution-simulator"
 import { ChevronRight, ChevronLeft, TrendingUp, Calculator, FileText } from "lucide-react"
 import type { LayoutOption } from "@/app/page"
 import type { ZoningRegulation } from "@/lib/regulation-types"
@@ -179,6 +180,18 @@ export function FinancialStep(props: FinancialStepProps) {
               baseTotalCost={feasibilityResult?.totalCost ?? 0}
               baseProfit={feasibilityResult?.profit ?? 0}
             />
+
+            {/* 분담금 시뮬레이션 (재건축 사업) */}
+            {feasibilityResult && (
+              <ContributionSimulator
+                totalProjectCost={(feasibilityResult.totalCost || 0) / 100000000}
+                totalUnits={selectedLayoutData.units}
+                salePricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
+                  ? marketPrice.suggestedSalePrice 
+                  : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000}
+                avgUnitArea={selectedLayoutData.gfa ? Math.round(selectedLayoutData.gfa / Math.max(selectedLayoutData.units, 1)) : 84}
+              />
+            )}
 
             <div className="flex flex-col items-center gap-2 pt-4">
               <Button onClick={() => setCurrentStep("report")} size="lg" className="gap-2 w-full md:w-auto">
