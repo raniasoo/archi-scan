@@ -34,11 +34,18 @@ export function LandingPage({ onStart }: LandingPageProps) {
               </span>
             </h1>
 
-            <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed">
-              대지 분석부터 법규 검토, 배치안 생성, 사업수지 분석까지
+            <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto mb-4 leading-relaxed">
+              국토부 건축물대장 실데이터 · AI 3종(나노바나나 · Claude · ChatGPT)
               <br className="hidden sm:block" />
-              AI 기반 건축 기획 솔루션
+              5분 만에 사업성 분석 보고서 완성
             </p>
+
+            {/* 신뢰 지표 */}
+            <div className="flex items-center justify-center gap-3 mb-10 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-medium">🏛 국토부 실데이터</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] text-blue-400 font-medium">🤖 AI 3종 연동</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-[10px] text-purple-400 font-medium">⚡ 5분 완성</span>
+            </div>
 
             {/* CTA */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -243,18 +250,42 @@ export function LandingPage({ onStart }: LandingPageProps) {
           
           <div className="grid sm:grid-cols-2 gap-3">
             {[
-              "건축물대장 + VWorld 5단계 자동 조회",
-              "법규 7항목 자동 검토 (건폐율, 용적률, 일조권 등)",
-              "국토부 실거래가 기반 분양가 산출",
-              "배치안 4종+ 자동 생성 & 비교",
-              "PDF / HTML / Excel 보고서",
-              "DXF CAD 파일 출력",
-              "수익성 극대화 시뮬레이션",
-              "모바일 완벽 지원 (PWA)",
+              "국토부 건축물대장 + VWorld 자동 조회",
+              "중첩 규제 자동 분석 (자연경관지구·고도지구·대공방어)",
+              "AI 배치안 5종+ 자동 생성 & 비교",
+              "🎨 나노바나나 AI 건축 렌더링",
+              "💬 Claude AI 설계 컨설팅",
+              "📝 ChatGPT 사업 제안서 자동 작성",
+              "분담금 시뮬레이션 + 시나리오 비교",
+              "PDF / HTML / Excel 보고서 + DXF CAD",
             ].map((item) => (
               <div key={item} className="flex items-start gap-2.5 py-2">
                 <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <span className="text-sm text-foreground/80">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* AI 3종 연동 */}
+      <section className="py-16 md:py-24 border-t border-border/50 bg-gradient-to-br from-violet-500/5 to-blue-500/5">
+        <div className="max-w-4xl mx-auto px-5">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold text-violet-400 tracking-widest uppercase mb-3">AI 허브</p>
+            <h2 className="text-2xl md:text-3xl font-bold">3개 AI가 함께 일합니다</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { emoji: "🎨", name: "나노바나나", role: "건축 렌더링", desc: "배치안 기반 4K 건물 외관 이미지를 자동 생성합니다", color: "emerald" },
+              { emoji: "💬", name: "Claude", role: "설계 컨설팅", desc: "법규 해석, 배치안 평가, 리스크 진단을 AI가 상담합니다", color: "blue" },
+              { emoji: "📝", name: "ChatGPT", role: "사업 제안서", desc: "투자자용 제안서, 주민설명회 자료를 자동 작성합니다", color: "amber" },
+            ].map(ai => (
+              <div key={ai.name} className={`rounded-xl border border-${ai.color}-500/20 bg-${ai.color}-500/5 p-5 text-center`}>
+                <span className="text-3xl block mb-3">{ai.emoji}</span>
+                <h3 className="font-bold text-sm mb-1">{ai.name}</h3>
+                <p className={`text-xs font-semibold text-${ai.color}-400 mb-2`}>{ai.role}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{ai.desc}</p>
               </div>
             ))}
           </div>
@@ -275,7 +306,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
                 name: "무료",
                 price: "₩0",
                 period: "",
-                features: ["프로젝트 3건", "기본 배치안 4종", "PDF 보고서", "국토부 자동 조회"],
+                features: ["프로젝트 3건", "기본 배치안 4종", "PDF 보고서", "국토부 자동 조회", "AI 기능 일 3회"],
                 cta: "무료로 시작",
                 highlight: false,
               },
@@ -283,7 +314,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
                 name: "프로",
                 price: "₩29,900",
                 period: "/월",
-                features: ["프로젝트 무제한", "AI 최적화 시뮬레이션", "Excel + DXF 출력", "클라우드 저장", "우선 지원"],
+                features: ["프로젝트 무제한", "AI 렌더링 무제한", "AI 설계상담 무제한", "AI 사업 제안서", "분담금 시뮬레이션", "클라우드 저장"],
                 cta: "프로 시작하기",
                 highlight: true,
               },
@@ -341,7 +372,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
           </div>
           <h2 className="text-2xl md:text-3xl font-bold mb-4">지금 바로 시작하세요</h2>
           <p className="text-sm text-muted-foreground mb-8">
-            주소 하나로 건축 사업성을 3분 만에 파악할 수 있습니다
+            주소 하나로 건축 사업성을 5분 만에 파악할 수 있습니다
           </p>
           <button
             onClick={onStart}
