@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, ChevronDown, FileText, Sparkles } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, ChevronDown, FileText, Sparkles, ImageIcon } from "lucide-react"
 
 interface QuickAnalysisProps {
   onDetailedAnalysis: (address: string, siteArea: number, data: any) => void
@@ -31,11 +31,52 @@ export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
   const [error, setError] = useState<string | null>(null)
   const [showMore, setShowMore] = useState(false)
 
+  // AI 렌더링 상태
+  const [renderImage, setRenderImage] = useState<string | null>(null)
+  const [renderLoading, setRenderLoading] = useState(false)
+
+  // 결과가 나오면 AI 렌더링 자동 시작
+  useEffect(() => {
+    if (!result) return
+    setRenderImage(null)
+    setRenderLoading(true)
+
+    let cancelled = false
+    const fetchRender = async () => {
+      try {
+        const res = await fetch('/api/ai-render', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `${result.zoneName} ${result.bestLayout.floors}층 ${result.bestLayout.units}세대 주거건물, 대지면적 ${result.siteArea}㎡`,
+            style: 'modern-luxury',
+            address: result.address,
+            layoutName: 'AI 추천 배치안',
+            floors: result.bestLayout.floors,
+            units: result.bestLayout.units,
+            siteArea: result.siteArea,
+          }),
+        })
+        const data = await res.json()
+        if (!cancelled && data.success && data.image) {
+          setRenderImage(data.image)
+        }
+      } catch (e) {
+        console.warn('AI render failed:', e)
+      } finally {
+        if (!cancelled) setRenderLoading(false)
+      }
+    }
+    fetchRender()
+    return () => { cancelled = true }
+  }, [result])
+
   const analyze = async () => {
     if (!address.trim()) return
     setLoading(true)
     setError(null)
     setResult(null)
+    setRenderImage(null)
 
     try {
       // 1단계: 국토부 조회
@@ -69,12 +110,10 @@ export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
         'residential-exclusive-1': { name: '제1종전용주거지역', coverage: 50, far: 100, height: 10 },
         'residential-exclusive-2': { name: '제2종전용주거지역', coverage: 50, far: 150, height: 12 },
       }
-      // 한글 용도지역명 → 영문코드 역매핑 (MOLIT API는 한글로 반환)
       const koreanToCode: Record<string, string> = {}
       for (const [code, info] of Object.entries(zoneMap)) {
         koreanToCode[info.name] = code
       }
-      // 부분매칭: "제1종일반주거지역" 또는 "제1종 일반주거지역" 등 공백 유무 대응
       const normalizedZone = rawZoneType.replace(/\s+/g, '')
       const zoneCode = koreanToCode[normalizedZone] || koreanToCode[rawZoneType] || rawZoneType
       const zone = zoneMap[zoneCode] || zoneMap['residential-2']
@@ -195,6 +234,43 @@ export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
           <>
             {/* 결과 카드 */}
             <div className="w-full space-y-4">
+
+              {/* AI 렌더링 이미지 */}
+              {(renderLoading || renderImage) && (
+                <div className="rounded-2xl overflow-hidden border border-border relative">
+                  {renderImage ? (
+                    <div className="relative">
+                      <img
+                        src={renderImage}
+                        alt="AI 건축 렌더링"
+                        className="w-full aspect-[16/9] object-cover"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3 text-emerald-400" />
+                          <span className="text-[10px] text-white/90 font-medium">AI 건축 렌더링</span>
+                          <span className="text-[9px] text-white/50 ml-auto">Nano Banana</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full aspect-[16/9] bg-card flex flex-col items-center justify-center gap-3">
+                      <div className="relative">
+                        <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
+                        <Loader2 className="h-4 w-4 text-primary animate-spin absolute -bottom-1 -right-1" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[11px] text-muted-foreground">🎨 AI 건축 렌더링 생성 중...</p>
+                        <p className="text-[9px] text-muted-foreground/60 mt-0.5">약 15~30초 소요</p>
+                      </div>
+                      <div className="w-32 h-1 bg-border/50 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary/60 rounded-full animate-pulse" style={{ width: '60%' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 주소 + 판정 */}
               <div className="rounded-2xl border border-border bg-card p-5">
                 <div className="flex items-start justify-between mb-4">
@@ -268,7 +344,7 @@ export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
                 </button>
 
                 <button
-                  onClick={() => { setResult(null); setAddress('') }}
+                  onClick={() => { setResult(null); setAddress(''); setRenderImage(null) }}
                   className="w-full py-2.5 rounded-xl border border-border text-sm text-muted-foreground"
                 >
                   다른 주소 분석
