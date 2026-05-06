@@ -109,7 +109,7 @@ export function AIConceptGenerator({ input }: { input: ConceptInput }) {
   }
 
   return (
-    <div className="border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-950/80 dark:to-blue-950/80">
+    <div className="border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-950 dark:to-blue-950">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-4 hover:bg-purple-50/50 dark:hover:bg-purple-900/40 transition-colors"
@@ -120,7 +120,7 @@ export function AIConceptGenerator({ input }: { input: ConceptInput }) {
           </div>
           <div className="text-left">
             <h3 className="font-semibold text-sm">AI 건축 컨셉 프롬프트</h3>
-            <p className="text-xs text-muted-foreground">Midjourney · ChatGPT · Claude용 프롬프트 자동 생성</p>
+            <p className="text-xs text-gray-500 dark:text-gray-300">Midjourney · ChatGPT · Claude용 프롬프트 자동 생성</p>
           </div>
         </div>
         {isOpen ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
@@ -130,7 +130,7 @@ export function AIConceptGenerator({ input }: { input: ConceptInput }) {
         <div className="px-4 pb-4 space-y-4">
           {/* 스타일 선택 */}
           <div>
-            <p className="text-xs font-semibold text-foreground mb-2">디자인 스타일 선택</p>
+            <p className="text-xs font-semibold text-gray-900 dark:text-white mb-2">디자인 스타일 선택</p>
             <div className="grid grid-cols-3 gap-2">
               {STYLE_PRESETS.map(style => (
                 <button
@@ -138,8 +138,8 @@ export function AIConceptGenerator({ input }: { input: ConceptInput }) {
                   onClick={() => setSelectedStyle(style.id)}
                   className={`p-2 rounded-lg text-center text-xs transition-all ${
                     selectedStyle === style.id
-                      ? "bg-purple-100 dark:bg-purple-900/60 border-2 border-purple-400 dark:border-purple-500 font-semibold"
-                      : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:border-purple-300"
+                      ? "bg-purple-100 dark:bg-purple-900 border-2 border-purple-400 dark:border-purple-400 text-gray-900 dark:text-white font-semibold"
+                      : "bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100 hover:border-purple-300"
                   }`}
                 >
                   <span className="text-lg block mb-0.5">{style.emoji}</span>

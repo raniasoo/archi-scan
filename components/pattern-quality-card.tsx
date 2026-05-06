@@ -9,7 +9,7 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
   const [showLiving, setShowLiving] = useState(false)
 
   return (
-    <div className="border border-emerald-200 dark:border-emerald-800 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/80 dark:to-teal-950/80">
+    <div className="border border-emerald-200 dark:border-emerald-800 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950 dark:to-teal-950">
       {/* Header — 항상 보이는 요약 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -21,7 +21,7 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
           </div>
           <div className="text-left">
             <h3 className="font-semibold text-sm">설계 품질 평가</h3>
-            <p className="text-xs text-muted-foreground">Alexander Pattern Language 기반</p>
+            <p className="text-xs text-gray-500 dark:text-gray-300">Alexander Pattern Language 기반</p>
           </div>
         </div>
 
@@ -47,26 +47,26 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
         <div className="px-4 pb-4 space-y-4">
           {/* 점수 요약 바 */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-3">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-3 shadow-sm">
               <div className="flex items-center gap-1.5 mb-1">
                 <BookOpen className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="text-xs font-bold text-foreground">패턴 점수</span>
+                <span className="text-xs font-bold text-gray-900 dark:text-white">패턴 점수</span>
               </div>
               <div className="flex items-end gap-1">
-                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{result.totalPatternScore}</span>
+                <span className="text-xl font-black text-emerald-800 dark:text-emerald-200">{result.totalPatternScore}</span>
                 <span className="text-[10px] text-muted-foreground mb-0.5">/ 100</span>
               </div>
               <div className="mt-1.5 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${result.totalPatternScore}%` }} />
               </div>
             </div>
-            <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-3">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-3 shadow-sm">
               <div className="flex items-center gap-1.5 mb-1">
                 <Hexagon className="h-3.5 w-3.5 text-teal-500" />
-                <span className="text-xs font-bold text-foreground">Living Structure</span>
+                <span className="text-xs font-bold text-gray-900 dark:text-white">Living Structure</span>
               </div>
               <div className="flex items-end gap-1">
-                <span className="text-xl font-black text-teal-600 dark:text-teal-400">{result.totalLivingScore}</span>
+                <span className="text-xl font-black text-teal-700 dark:text-teal-300">{result.totalLivingScore}</span>
                 <span className="text-[10px] text-muted-foreground mb-0.5">/ 100</span>
               </div>
               <div className="mt-1.5 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -76,9 +76,9 @@ export function PatternQualityCard({ result }: { result: PatternQualityResult })
           </div>
 
           {/* 설계 철학 서술 */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-l-4 border-emerald-500">
-            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mb-1.5">📖 설계 철학</p>
-            <p className="text-xs text-foreground leading-relaxed">{result.philosophy}</p>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border-l-4 border-emerald-500 shadow-sm">
+            <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200 mb-1.5">📖 설계 철학</p>
+            <p className="text-xs text-gray-800 dark:text-gray-100 leading-relaxed">{result.philosophy}</p>
           </div>
 
           {/* 패턴 상세 — 상위 6개 */}
