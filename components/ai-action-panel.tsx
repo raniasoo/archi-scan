@@ -23,7 +23,7 @@ export function AIActionPanel(props: AIActionPanelProps) {
   const [proposalContent, setProposalContent] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [consultQuestion, setConsultQuestion] = useState('')
-  const [renderStyle, setRenderStyle] = useState('modern-luxury')
+  // 스타일은 전략에서 자동 결정
 
   const handleRender = async () => {
     setLoading(true)
@@ -34,7 +34,7 @@ export function AIActionPanel(props: AIActionPanelProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `${props.layoutName} building design`,
-          style: renderStyle,
+          style: 'modern-luxury',
           address: props.address,
           layoutName: props.layoutName,
           floors: props.floors,
@@ -125,12 +125,7 @@ export function AIActionPanel(props: AIActionPanelProps) {
     }
   }
 
-  const styles = [
-    { id: 'modern-luxury', label: '모던 럭셔리' },
-    { id: 'eco-green', label: '친환경' },
-    { id: 'korean-modern', label: '한국 모던' },
-    { id: 'minimalism', label: '미니멀' },
-  ]
+
 
   return (
     <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
@@ -185,14 +180,7 @@ export function AIActionPanel(props: AIActionPanelProps) {
       {/* 렌더링 탭 */}
       {activeTab === 'render' && (
         <div className="space-y-3">
-          <div className="flex gap-1.5 flex-wrap">
-            {styles.map(s => (
-              <button key={s.id} onClick={() => setRenderStyle(s.id)}
-                className={`text-[10px] px-2 py-1 rounded-full border ${
-                  renderStyle === s.id ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-card/30 border-border/50 text-muted-foreground'
-                }`}>{s.label}</button>
-            ))}
-          </div>
+
           <button onClick={handleRender} disabled={loading}
             className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
             {loading ? <><Loader2 className="h-4 w-4 animate-spin" />생성 중...</> : <>🎨 건축 렌더링 생성</>}
