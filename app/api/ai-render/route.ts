@@ -19,35 +19,50 @@ export async function POST(req: NextRequest) {
       prompt, style, address, layoutName, floors, units, siteArea
     })
 
-    // Gemini API 호출 (이미지 생성)
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GOOGLE_AI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: architecturePrompt
-            }]
-          }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-          },
-        }),
+    // Gemini API 호출 — 모델 fallback 체인
+    const models = [
+      'gemini-2.0-flash-exp-image-generation',
+      'gemini-2.0-flash-preview-image-generation', 
+      'gemini-2.5-flash-preview-image-generation',
+    ]
+    
+    let data: any = null
+    let lastError = ''
+    
+    for (const model of models) {
+      try {
+        console.log(`[GEMINI] Trying model: ${model}`)
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_AI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: architecturePrompt }] }],
+              generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+            }),
+          }
+        )
+        
+        if (response.ok) {
+          data = await response.json()
+          console.log(`[GEMINI] Success with model: ${model}`)
+          break
+        } else {
+          lastError = `${model}: ${response.status}`
+          console.warn(`[GEMINI] ${model} failed: ${response.status}`)
+        }
+      } catch (e) {
+        lastError = `${model}: ${e instanceof Error ? e.message : 'error'}`
+        console.warn(`[GEMINI] ${model} error:`, e)
       }
-    )
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('[GEMINI] API error:', response.status, errorText.slice(0, 500))
-      return NextResponse.json({ 
-        error: `Gemini API error: ${response.status}`,
-        details: errorText.slice(0, 200)
-      }, { status: response.status })
     }
-
-    const data = await response.json()
+    
+    if (!data) {
+      return NextResponse.json({ 
+        error: `모든 Gemini 모델 실패: ${lastError}`,
+      }, { status: 500 })
+    }
     
     // 응답에서 이미지와 텍스트 추출
     const parts = data?.candidates?.[0]?.content?.parts || []
@@ -131,7 +146,7 @@ Generate ONE high-quality architectural rendering image.`
 export async function GET() {
   return NextResponse.json({
     configured: !!GOOGLE_AI_API_KEY,
-    model: 'gemini-2.0-flash-exp-image-generation',
+    model: 'nano-banana (gemini fallback chain)',
     capabilities: ['image-generation', 'text'],
     service: 'Nano Banana (Gemini)',
   })
