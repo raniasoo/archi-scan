@@ -354,6 +354,15 @@ export interface ExportData {
     recommendation?: string;
     caution?: string;
   };
+  patternQuality?: {
+    overallQuality: number;
+    grade: string;
+    gradeColor: string;
+    totalPatternScore: number;
+    totalLivingScore: number;
+    philosophy: string;
+    topPatterns: { id: number; nameKr: string; score: number }[];
+  };
 }
 
 // ExportData를 ReportDataV250으로 변환
@@ -1902,6 +1911,47 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       </div>
     </section>
 
+    
+    <!-- 8.5 설계 품질 평가 (Alexander Pattern Language) -->
+    ${data.patternQuality ? `
+    <section class="pdf-section pdf-card-group">
+      <h2 class="section-title" style="margin-bottom:12px;">설계 품질 평가</h2>
+      <p style="font-size:11px; color:#64748b; margin-bottom:12px;">Alexander Pattern Language · The Nature of Order 기반</p>
+      
+      <div style="display:grid; grid-template-columns:1fr 2fr; gap:12px; margin-bottom:14px;">
+        <div style="text-align:center; padding:16px; background:${data.patternQuality.gradeColor}15; border:2px solid ${data.patternQuality.gradeColor}; border-radius:12px;">
+          <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">종합 등급</p>
+          <p style="font-size:36px; font-weight:800; color:${data.patternQuality.gradeColor}; margin:0; line-height:1;">${data.patternQuality.grade}</p>
+          <p style="font-size:18px; font-weight:700; color:#1e293b; margin:4px 0 0 0;">${data.patternQuality.overallQuality}점</p>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div style="padding:12px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; text-align:center;">
+            <p style="font-size:10px; color:#64748b; margin:0 0 4px 0;">패턴 점수</p>
+            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${data.patternQuality.totalPatternScore}</p>
+          </div>
+          <div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; text-align:center;">
+            <p style="font-size:10px; color:#64748b; margin:0 0 4px 0;">Living Structure</p>
+            <p style="font-size:22px; font-weight:700; color:#0369a1; margin:0;">${data.patternQuality.totalLivingScore}</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#f8fafb; border:1px solid #e2e8f0; border-left:4px solid #14b8a6; border-radius:8px; padding:12px; margin-bottom:14px;">
+        <p style="font-size:11px; font-weight:700; color:#0f766e; margin:0 0 6px 0;">설계 철학</p>
+        <p style="font-size:11px; color:#334155; line-height:1.6; margin:0;">${data.patternQuality.philosophy}</p>
+      </div>
+
+      <p style="font-size:11px; font-weight:600; color:#334155; margin-bottom:8px;">핵심 패턴 평가</p>
+      <table style="width:100%; border-collapse:collapse; font-size:11px;">
+        <thead><tr style="background:#f1f5f9;"><th style="padding:6px 8px; text-align:left; color:#64748b;">패턴</th><th style="padding:6px 8px; text-align:left; color:#64748b;">이름</th><th style="padding:6px 8px; text-align:right; color:#64748b;">점수</th></tr></thead>
+        <tbody>
+          ${data.patternQuality.topPatterns.map(p => `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:5px 8px; color:#14b8a6; font-weight:600;">#${p.id}</td><td style="padding:5px 8px; color:#334155;">${p.nameKr}</td><td style="padding:5px 8px; text-align:right; font-weight:600;">${p.score}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <p style="font-size:9px; color:#94a3b8; margin-top:8px; text-align:center;">Christopher Alexander, A Pattern Language (1977)</p>
+    </section>
+    ` : ''}
+
     <!-- 8. 시나리오 및 사업기간 분석 -->
     <section class="pdf-section pdf-section">
       <div class="print-title-group">
@@ -2087,7 +2137,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 export async function downloadPdf(data: ExportData): Promise<{ success: boolean; error?: string }> {
   try {
     const report = convertToV250(data);
-    let htmlContent = generateFullHtmlReport(report, data.address);
+    let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality);
     
     // 도면 SVG 삽입
     try {
@@ -2449,7 +2499,7 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
 export function openPrintPreview(data: ExportData): { success: boolean; error?: string } {
   try {
     const report = convertToV250(data);
-    let htmlContent = generateFullHtmlReport(report, data.address);
+    let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality);
     
     // 도면 SVG 삽입 (HTML 다운로드와 동일)
     try {
@@ -2508,7 +2558,7 @@ export function openPrintPreview(data: ExportData): { success: boolean; error?: 
 }
 
 // 공통 HTML 생성 함수 (HTML 다운로드��� 프린트 미리보기 공유)
-function generateFullHtmlReport(report: ReportDataV250, address: string): string {
+function generateFullHtmlReport(report: ReportDataV250, address: string, patternQuality?: ExportData["patternQuality"]): string {
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -3795,6 +3845,47 @@ function generateFullHtmlReport(report: ReportDataV250, address: string): string
         </div>
       </div>
     </section>
+
+    
+    <!-- 8.5 설계 품질 평가 (Alexander Pattern Language) -->
+    ${patternQuality ? `
+    <section class="pdf-section pdf-card-group">
+      <h2 class="section-title" style="margin-bottom:12px;">설계 품질 평가</h2>
+      <p style="font-size:11px; color:#64748b; margin-bottom:12px;">Alexander Pattern Language · The Nature of Order 기반</p>
+      
+      <div style="display:grid; grid-template-columns:1fr 2fr; gap:12px; margin-bottom:14px;">
+        <div style="text-align:center; padding:16px; background:${patternQuality.gradeColor}15; border:2px solid ${patternQuality.gradeColor}; border-radius:12px;">
+          <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">종합 등급</p>
+          <p style="font-size:36px; font-weight:800; color:${patternQuality.gradeColor}; margin:0; line-height:1;">${patternQuality.grade}</p>
+          <p style="font-size:18px; font-weight:700; color:#1e293b; margin:4px 0 0 0;">${patternQuality.overallQuality}점</p>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div style="padding:12px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; text-align:center;">
+            <p style="font-size:10px; color:#64748b; margin:0 0 4px 0;">패턴 점수</p>
+            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${patternQuality.totalPatternScore}</p>
+          </div>
+          <div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; text-align:center;">
+            <p style="font-size:10px; color:#64748b; margin:0 0 4px 0;">Living Structure</p>
+            <p style="font-size:22px; font-weight:700; color:#0369a1; margin:0;">${patternQuality.totalLivingScore}</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#f8fafb; border:1px solid #e2e8f0; border-left:4px solid #14b8a6; border-radius:8px; padding:12px; margin-bottom:14px;">
+        <p style="font-size:11px; font-weight:700; color:#0f766e; margin:0 0 6px 0;">설계 철학</p>
+        <p style="font-size:11px; color:#334155; line-height:1.6; margin:0;">${patternQuality.philosophy}</p>
+      </div>
+
+      <p style="font-size:11px; font-weight:600; color:#334155; margin-bottom:8px;">핵심 패턴 평가</p>
+      <table style="width:100%; border-collapse:collapse; font-size:11px;">
+        <thead><tr style="background:#f1f5f9;"><th style="padding:6px 8px; text-align:left; color:#64748b;">패턴</th><th style="padding:6px 8px; text-align:left; color:#64748b;">이름</th><th style="padding:6px 8px; text-align:right; color:#64748b;">점수</th></tr></thead>
+        <tbody>
+          ${patternQuality.topPatterns.map(p => `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:5px 8px; color:#14b8a6; font-weight:600;">#${p.id}</td><td style="padding:5px 8px; color:#334155;">${p.nameKr}</td><td style="padding:5px 8px; text-align:right; font-weight:600;">${p.score}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <p style="font-size:9px; color:#94a3b8; margin-top:8px; text-align:center;">Christopher Alexander, A Pattern Language (1977)</p>
+    </section>
+    ` : ''}
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
     <section class="pdf-section pdf-section">

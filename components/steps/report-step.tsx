@@ -68,7 +68,7 @@ export function ReportStep(props: ReportStepProps) {
   const getExportData = () => buildExportData({
     address, siteAreaNum, branding, selectedLayoutData, layouts,
     feasibilityResult, marketPrice, regionalPricing, landPriceData,
-    regulation, molitSupplementData,
+    regulation, molitSupplementData, strategy, userValues,
   })
 
   return (
@@ -132,7 +132,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues });
                       // PDF 파일 다운로드 (인쇄 미리보기 아님)
                       const { downloadPdf } = await loadExportFunctions(); const result = await downloadPdf(exportData);
                       if (!result.success) {
@@ -173,7 +173,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues });
                       const { downloadHtml } = await loadExportFunctions(); const result = downloadHtml(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || 'HTML 다운로드 중 오류가 발생했습니다.');
@@ -214,7 +214,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues });
                       const { downloadExcel } = await loadExportFunctions(); const result = downloadExcel(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || '엑셀 다운로드 중 오류가 발생했습니다.');
@@ -253,7 +253,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues });
                       const { openPrintPreview } = await loadExportFunctions(); const result = openPrintPreview(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || '인쇄 준비 중 오류가 발생했습니다.');

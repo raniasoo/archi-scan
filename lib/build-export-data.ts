@@ -6,6 +6,7 @@ import type { BrandingConfig } from "@/lib/branding-config"
 import type { RegionalPricing } from "@/lib/regional-pricing"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 import { getZoneMultiplier } from "@/lib/regional-pricing"
+import { evaluatePatternQuality, type UserValues } from "@/lib/pattern-quality"
 
 interface BuildExportDataParams {
   address: string
@@ -19,6 +20,8 @@ interface BuildExportDataParams {
   landPriceData: { pricePerM2: number }
   regulation: ZoningRegulation
   molitSupplementData: Record<string, unknown>
+  strategy?: string
+  userValues?: UserValues
 }
 
 export function buildExportData(params: BuildExportDataParams): ExportData {
@@ -103,5 +106,32 @@ export function buildExportData(params: BuildExportDataParams): ExportData {
       market: ["분양가 상한제 적용 여부", "인근 경쟁 물량 현황", "금리 변동에 따른 수요 변화"],
       construction: ["공사비 상승 리스크", "공사기간 지연 가능성", "하자보수 책임"],
     },
+    patternQuality: (() => {
+      try {
+        const pq = evaluatePatternQuality({
+          type: selectedLayoutData.type || 'tower',
+          name: selectedLayoutData.name,
+          coverage: selectedLayoutData.coverage ?? 0,
+          floors: selectedLayoutData.floors,
+          units: selectedLayoutData.units || 0,
+          parking: selectedLayoutData.parking || 0,
+          gfa: selectedLayoutData.gfa || 0,
+          siteArea: siteAreaNum,
+          strategy: (params.strategy as string) || 'profitability',
+        }, params.userValues)
+        return {
+          overallQuality: pq.overallQuality,
+          grade: pq.grade,
+          gradeColor: pq.gradeColor,
+          totalPatternScore: pq.totalPatternScore,
+          totalLivingScore: pq.totalLivingScore,
+          philosophy: pq.philosophy,
+          topPatterns: pq.patterns
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 6)
+            .map(p => ({ id: p.id, nameKr: p.nameKr, score: p.score })),
+        }
+      } catch { return undefined }
+    })(),
   }
 }
