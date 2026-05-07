@@ -1,5 +1,6 @@
 "use client"
 
+import { buildSiteContextPrompt } from "@/lib/site-context-builder"
 /**
  * @version STABLE-v195
  * @checkpoint performance-optimization
@@ -484,6 +485,7 @@ export default function ArchiScanPage() {
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
+  const [analysisRawData, setAnalysisRawData] = useState<any>(null)
   const [siteCoords, setSiteCoords] = useState<{ lng: number, lat: number } | null>(null)
   const [show3DVolume, setShow3DVolume] = useState(false)
   const [showBrandingEditor, setShowBrandingEditor] = useState(false)
@@ -1567,6 +1569,7 @@ export default function ArchiScanPage() {
         // Quick 분석 데이터를 Full 분석에 주입
         setAddress(addr)
         setSiteArea(String(area))
+        setAnalysisRawData(rawData)
         if (rawData) {
           const zc = rawData.zoneType || ''
           if (zc) {
@@ -2034,11 +2037,11 @@ export default function ArchiScanPage() {
             loadLayoutOptimizer={loadLayoutOptimizer}
             handleSelectLayout={handleSelectLayout}
             onAiRenderComplete={setAiRenderImage}
-            satelliteUrl={(rawData as any)?.satelliteUrl}
+            satelliteUrl={analysisRawData?.satelliteUrl}
             surroundingContext={(() => {
               try {
-                const { buildSiteContextPrompt } = require('@/lib/site-context-builder')
-                const rd = rawData as any
+                
+                const rd = analysisRawData
                 const ctx = buildSiteContextPrompt({
                   address,
                   siteArea: parseFloat(siteArea) || 660,
