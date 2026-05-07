@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, ChevronDown, FileText, Sparkles, ImageIcon, Mountain } from "lucide-react"
 import { analyzeTerrrain, type TerrainAnalysis } from "@/lib/terrain-analysis"
+import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
 
 interface QuickAnalysisProps {
   onDetailedAnalysis: (address: string, siteArea: number, data: any) => void
@@ -40,6 +41,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
   const [satelliteUrl, setSatelliteUrl] = useState<string | null>(null)
   const [siteContext, setSiteContext] = useState<any>(null)
   const [terrain, setTerrain] = useState<TerrainAnalysis | null>(null)
+  const [sunAnalysis, setSunAnalysis] = useState<SunAnalysisResult | null>(null)
 
   // 결과가 나오면 AI 렌더링 자동 시작
   useEffect(() => {
@@ -73,6 +75,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
             surroundingContext: [
               siteContext ? `Surrounding: ${siteContext.buildingCount} buildings nearby, max ${siteContext.maxFloors} floors, avg ${siteContext.avgFloors} floors` : '',
               terrainResult ? `Terrain: ${terrainResult.renderHint}` : '',
+              sunResult ? `Sun: ${sunResult.renderHint}` : '',
             ].filter(Boolean).join('. '),
           }),
         })
@@ -189,6 +192,16 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
       const unitsPerFloor = Math.floor(buildingArea * 0.65 / unitArea)
       const totalUnits = unitsPerFloor * Math.max(floors - 1, 1)
 
+      // 3.5단계: 일조/조망 분석
+      let sunResult: SunAnalysisResult | null = null
+      const buildingH = floors * 3.3
+      const nearbyBldgs = vworldData?.nearbyBuildings || []
+      if (nearbyBldgs.length > 0 || buildingH > 0) {
+        setProgress('☀️ 일조·조망 분석 중...')
+        sunResult = analyzeSunAndView(floors, buildingH, nearbyBldgs, entY || 37.55)
+        setSunAnalysis(sunResult)
+      }
+
       // 사업성 계산
       setProgress('💰 사업성 분석 중...')
       const constructionCostPerM2 = 2800000
@@ -232,6 +245,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           nearbyBuildings: vworldData?.nearbyBuildings,
           siteContext: vworldData?.context,
           terrain: terrainResult,
+          sunAnalysis: sunResult,
         },
       })
 
@@ -357,6 +371,53 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                       <br/>🏗️ 추천 기초: {terrain.foundationType}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* 일조/조망 분석 */}
+              {sunAnalysis && (
+                <div className="rounded-xl border border-border p-3 bg-card/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-base">☀️</span>
+                      <span className="text-xs font-semibold">일조·조망 분석</span>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                      sunAnalysis.sunlightGrade === 'excellent' ? 'bg-emerald-500/10 text-emerald-500' :
+                      sunAnalysis.sunlightGrade === 'good' ? 'bg-blue-500/10 text-blue-500' :
+                      sunAnalysis.sunlightGrade === 'fair' ? 'bg-amber-500/10 text-amber-500' :
+                      'bg-red-500/10 text-red-500'
+                    }`}>
+                      {sunAnalysis.sunlightGrade === 'excellent' ? '매우 양호' : sunAnalysis.sunlightGrade === 'good' ? '양호' : sunAnalysis.sunlightGrade === 'fair' ? '보통' : '불량'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">동지 일조</p>
+                      <p className="text-sm font-bold">{sunAnalysis.sunlightHours}h</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">그림자</p>
+                      <p className="text-sm font-bold">{sunAnalysis.shadowLength}m</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">최적 조망</p>
+                      <p className="text-sm font-bold">{sunAnalysis.viewDirection}</p>
+                    </div>
+                  </div>
+                  {/* 4방향 조망 */}
+                  <div className="grid grid-cols-4 gap-1 text-center">
+                    {(['north','east','south','west'] as const).map(dir => {
+                      const d = sunAnalysis.directions[dir]
+                      const names: Record<string,string> = { north:'북', south:'남', east:'동', west:'서' }
+                      return (
+                        <div key={dir} className={`p-1.5 rounded text-[9px] ${d.blocked ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                          <p className="font-bold">{names[dir]}</p>
+                          <p>{d.blocked ? '차폐' : '개방'}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 
