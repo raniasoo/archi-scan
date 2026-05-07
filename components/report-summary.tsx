@@ -2378,6 +2378,25 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           </div>
         </div>
 
+        {/* AI 건축 렌더링 — 표지 바로 다음 */}
+        {aiRenderImage && (
+          <div className="report-card avoid-break print-section overflow-hidden">
+            <img 
+              src={aiRenderImage} 
+              alt="AI 건축 렌더링" 
+              className="w-full"
+              style={{ maxHeight: '320px', objectFit: 'cover' }}
+            />
+            <div className="px-4 py-2 flex items-center justify-between bg-secondary/20">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3" style={{ color: '#7c3aed' }} />
+                <span className="text-[10px] font-medium">AI 건축 렌더링</span>
+              </div>
+              <span className="text-[9px] text-muted-foreground">Powered by Nano Banana (Gemini)</span>
+            </div>
+          </div>
+        )}
+
         {/* Executive Summary Card - Redesigned */}
         {(() => {
           const safeRoi = Number.isFinite(financials.roi) ? financials.roi : 0
@@ -2769,28 +2788,6 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   투자수익률, 세대당 주차 확보, 법정 용적률 활용도를 종합적으로 고려할 때 가장 적합한 안으로 판단됩니다.
                 </p>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* AI 건축 렌더링 */}
-        {aiRenderImage && (
-          <div className="report-card avoid-break print-section">
-            <div className="p-4 sm:p-5">
-              <div className="report-section-title">
-                <Sparkles className="h-4 w-4" style={{ color: '#7c3aed' }} />
-                <span>AI 건축 렌더링</span>
-              </div>
-              <p className="text-xs mb-3" style={{ color: '#6B6560' }}>나노바나나 AI가 생성한 선택 배치안의 건축 외관 이미지</p>
-              <img 
-                src={aiRenderImage} 
-                alt="AI 건축 렌더링" 
-                className="w-full rounded-lg border"
-                style={{ borderColor: '#E5E0DB', maxHeight: '400px', objectFit: 'cover' }}
-              />
-              <p className="text-[9px] mt-2 text-center" style={{ color: '#9B9590' }}>
-                AI 생성 이미지로 실제 설계와 다를 수 있습니다 · Powered by Nano Banana (Gemini)
-              </p>
             </div>
           </div>
         )}
