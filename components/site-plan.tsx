@@ -25,20 +25,56 @@ export function SitePlan({
   const W = 500, H = 520
   const PAD = 50
 
-  // 대지 크기 (미터 → SVG 좌표)
-  const siteRealW = Math.sqrt(siteArea * 1.25)
-  const siteRealH = siteArea / siteRealW
-  const scale = Math.min((W - PAD * 2) / siteRealW, (H - PAD * 2 - 40) / siteRealH)
+  // ━━━ 실제 필지 형상 변환 (sitePolygon → SVG 좌표) ━━━
+  const hasRealShape = sitePolygon && sitePolygon.coords.length > 2
+  let polyPoints = '' // SVG polygon points
+  let siteW: number, siteH: number, siteX: number, siteY: number, svgScale: number
 
-  const siteW = siteRealW * scale
-  const siteH = siteRealH * scale
-  const siteX = (W - siteW) / 2
-  const siteY = PAD
+  if (hasRealShape) {
+    // 경위도 → 미터 변환 (centroid 기준)
+    const [cLng, cLat] = sitePolygon!.centroid
+    const LM = Math.cos(cLat * Math.PI / 180) * 111319
+    const meterCoords = sitePolygon!.coords.map(([lng, lat]) => [
+      (lng - cLng) * LM,
+      -(lat - cLat) * 111319 // Y축 반전 (SVG는 아래가 +)
+    ])
+
+    // 바운딩 박스
+    const xs = meterCoords.map(c => c[0])
+    const ys = meterCoords.map(c => c[1])
+    const minX = Math.min(...xs), maxX = Math.max(...xs)
+    const minY = Math.min(...ys), maxY = Math.max(...ys)
+    const realW = maxX - minX || 1
+    const realH = maxY - minY || 1
+
+    // SVG 스케일링
+    svgScale = Math.min((W - PAD * 2) / realW, (H - PAD * 2 - 40) / realH)
+    siteW = realW * svgScale
+    siteH = realH * svgScale
+    siteX = (W - siteW) / 2
+    siteY = PAD
+
+    // 폴리곤 포인트 변환
+    polyPoints = meterCoords.map(([mx, my]) => {
+      const px = siteX + (mx - minX) * svgScale
+      const py = siteY + (my - minY) * svgScale
+      return `${px},${py}`
+    }).join(' ')
+  } else {
+    // 기존 사각형 방식
+    const siteRealW = Math.sqrt(siteArea * 1.25)
+    const siteRealH = siteArea / siteRealW
+    svgScale = Math.min((W - PAD * 2) / siteRealW, (H - PAD * 2 - 40) / siteRealH)
+    siteW = siteRealW * svgScale
+    siteH = siteRealH * svgScale
+    siteX = (W - siteW) / 2
+    siteY = PAD
+  }
 
   // 이격거리 (미터 → SVG)
-  const sf = setbacks.front * scale
-  const ss = setbacks.side * scale
-  const sr = setbacks.rear * scale
+  const sf = setbacks.front * svgScale
+  const ss = setbacks.side * svgScale
+  const sr = setbacks.rear * svgScale
 
   // 건축가능영역
   const bldZoneX = siteX + ss
@@ -114,7 +150,7 @@ export function SitePlan({
   // 조경 영역
   const landscapeArea = siteArea * landscapingRatio / 100
   const lsW = siteW * 0.2
-  const lsH = landscapeArea > 0 ? Math.min(siteH * 0.15, landscapeArea * scale * scale / lsW) : 0
+  const lsH = landscapeArea > 0 ? Math.min(siteH * 0.15, landscapeArea * svgScale * svgScale / lsW) : 0
 
   // 출입구
   const entryX = siteX + siteW / 2
@@ -155,8 +191,12 @@ export function SitePlan({
         </text>
 
         {/* 대지 경계선 */}
-        <rect x={siteX} y={siteY} width={siteW} height={siteH}
-          fill="#0f172a" stroke="#3b82f6" strokeWidth="1.5" />
+        {hasRealShape ? (
+          <polygon points={polyPoints} fill="#0f172a" stroke="#3b82f6" strokeWidth="1.5" />
+        ) : (
+          <rect x={siteX} y={siteY} width={siteW} height={siteH}
+            fill="#0f172a" stroke="#3b82f6" strokeWidth="1.5" />
+        )}
 
         {/* 이격거리 영역 (해칭) */}
         {/* 전면(하단) */}
