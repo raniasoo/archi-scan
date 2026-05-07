@@ -8,14 +8,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext } = await req.json()
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
     }
 
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext
     })
 
     // Gemini API 호출 — 모델 fallback 체인
@@ -113,8 +113,9 @@ function buildArchitecturePrompt(params: {
   strategy?: string
   values?: { profitVsQuality?: number; privacyVsCommunity?: number; efficiencyVsSpace?: number }
   patterns?: string[]
+  surroundingContext?: string
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
@@ -230,6 +231,7 @@ CONTEXT:
 - Location: ${address || 'Seoul, South Korea'}
 - Project: ${layoutName || '주거 건물'}
 - Style: ${styleDesc}
+${surroundingContext ? `\nSURROUNDING ENVIRONMENT:\n${surroundingContext}\nThe rendering should show the building in context with its actual neighborhood.` : ''}
 
 RENDERING:
 - Photorealistic 3D architectural rendering

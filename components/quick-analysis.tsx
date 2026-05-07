@@ -36,6 +36,8 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
   // AI 렌더링 상태
   const [renderImage, setRenderImage] = useState<string | null>(null)
   const [renderLoading, setRenderLoading] = useState(false)
+  const [satelliteUrl, setSatelliteUrl] = useState<string | null>(null)
+  const [siteContext, setSiteContext] = useState<any>(null)
 
   // 결과가 나오면 AI 렌더링 자동 시작
   useEffect(() => {
@@ -66,6 +68,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
               efficiencyVsSpace: userValues.efficiencyVsSpace,
             } : undefined,
             patterns: userValues?.selectedPatterns,
+            surroundingContext: siteContext ? `Surrounding: ${siteContext.buildingCount} buildings nearby, max ${siteContext.maxFloors} floors, avg ${siteContext.avgFloors} floors` : undefined,
           }),
         })
         const data = await res.json()
@@ -107,6 +110,29 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
       const siteArea = molitData.data?.siteArea || molitData.data?.platArea || 660
       const rawZoneType = molitData.data?.zoneType || 'residential-2'
       const overlapping = molitData.data?.overlappingRegulations || []
+
+      // 1.5단계: 대지 위치 + 주변환경 조회 (VWORLD)
+      const entX = molitData.data?.entX
+      const entY = molitData.data?.entY
+      let vworldData: any = null
+      if (entX && entY) {
+        setProgress('🗺️ 대지 위치·주변환경 조회 중...')
+        try {
+          const vRes = await fetch('/api/vworld', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: entY, lng: entX }),
+          })
+          const vJson = await vRes.json()
+          if (vJson.success) {
+            vworldData = vJson
+            setSatelliteUrl(vJson.satelliteUrl)
+            setSiteContext(vJson.context)
+          }
+        } catch (e) {
+          console.warn('[VWORLD] 조회 실패:', e)
+        }
+      }
 
       // 2단계: 법규 확인
       setProgress('⚖️ 건축 법규 분석 중...')
@@ -176,7 +202,14 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         },
         verdict, verdictColor, verdictEmoji,
         overlappingCount: overlapping.length,
-        rawData: molitData.data,
+        rawData: {
+          ...molitData.data,
+          vworld: vworldData,
+          satelliteUrl: vworldData?.satelliteUrl,
+          parcelPolygon: vworldData?.parcel?.polygon,
+          nearbyBuildings: vworldData?.nearbyBuildings,
+          siteContext: vworldData?.context,
+        },
       })
 
     } catch (e) {
@@ -245,6 +278,24 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           <>
             {/* 결과 카드 */}
             <div className="w-full space-y-4">
+
+              {/* 위성사진 + 주변환경 */}
+              {satelliteUrl && (
+                <div className="rounded-2xl overflow-hidden border border-border">
+                  <img src={satelliteUrl} alt="위성사진" className="w-full aspect-[3/2] object-cover" />
+                  <div className="p-3 bg-card/50 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3 text-primary" />
+                      <span className="text-[10px] font-medium">대지 위성사진</span>
+                    </div>
+                    {siteContext && (
+                      <span className="text-[9px] text-muted-foreground">
+                        주변 건물 {siteContext.buildingCount}동 · 평균 {siteContext.avgFloors}층 · 최고 {siteContext.maxFloors}층
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* AI 렌더링 이미지 */}
               {(renderLoading || renderImage) && (
