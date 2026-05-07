@@ -61,6 +61,26 @@ export function FloorplanStep(props: FloorplanStepProps) {
   const totalFloors = safeNumber(selectedLayoutData.floors, selectedFloor)
   const isFloorTab = drawingTab === 'floor'
 
+  // 건물 용도 판정 (기본 평면과 동일 로직)
+  const buildingUse: 'house' | 'villa' | 'apartment' | 'commercial' = (() => {
+    const zt = molit.zoneCode || regulation.zoneType || ''
+    const u = selectedLayoutData.units || 0
+    const f = selectedLayoutData.floors || 1
+    if (zt.includes('exclusive-1')) return 'house'
+    if (zt.includes('exclusive-2')) return f <= 3 && u <= 2 ? 'house' : 'villa'
+    if (zt.includes('commercial') || zt === 'semi-residential') return 'commercial'
+    if (zt === 'residential-1') return f <= 3 && u <= 2 ? 'house' : 'villa'
+    if (zt === 'residential-2') {
+      if (f <= 3 && u <= 2) return 'house'
+      if (f <= 5 && u <= 20) return 'villa'
+      return 'apartment'
+    }
+    // 용도지역 없으면 규모로 판단
+    if (f <= 3 && u <= 2) return 'house'
+    if (f <= 5 && u <= 20) return 'villa'
+    return 'apartment'
+  })()
+
   // 통합 탭 목록
   const tabs = [
     { id: "floor" as const, label: "기본 평면" },
@@ -180,6 +200,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
               address={address}
               zoneType={molit.zoneCode || regulation.zoneType}
               heightLimit={molit.heightLimit || regulation.maxHeight}
+              buildingUse={buildingUse}
               setbacks={{
                 front: molit.hasDistrictPlan ? 2 : 3,
                 side: (molit.zoneCode || regulation.zoneType)?.includes('residential') ? 1.5 : 1,
