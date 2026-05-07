@@ -165,17 +165,10 @@ export interface AIFloorPlanProps {
 }
 
 export function AIFloorPlan(props: AIFloorPlanProps) {
-  const { floors, units, zoneType, buildingUse } = props
+  const { siteArea, buildingCoverage, floors, units, zoneType, buildingUse } = props
   const [fullscreen, setFullscreen] = useState(false)
   const [variantIdx, setVariantIdx] = useState(0)
   const [selectedUnit, setSelectedUnit] = useState<UnitLayout | null>(null)
-
-  // buildingUse에 따른 기본 믹스 결정
-  const defaultMix = buildingUse === 'house' ? '쓰리룸+ 단독' :
-                     buildingUse === 'villa' ? '투룸+쓰리룸' :
-                     buildingUse === 'commercial' ? '원룸+투룸' :
-                     '투룸+쓰리룸'
-  const [selectedMix, setSelectedMix] = useState(defaultMix)
 
   const ZONE_NAMES: Record<string,string> = {
     'residential-1':'제1종일반주거지역','residential-2':'제2종일반주거지역','residential-3':'제3종일반주거지역',
@@ -185,26 +178,55 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
   const unitsPerFloor = Math.min(Math.max(Math.ceil(units / Math.max(floors-1,1)),2),4)
   const catalog = getCatalog()
 
-  const mixPresets: Record<string, {type:string;size:'S'|'M'|'L';variant:string}[]> = buildingUse === 'house' ? {
-    '쓰리룸+ 단독': Array.from({length:Math.min(unitsPerFloor,2)},(_,i)=>({type:'쓰리룸+',size:'M' as const,variant:'ABCD'[i%4]})),
-    '포룸 단독': Array.from({length:Math.min(unitsPerFloor,2)},(_,i)=>({type:'포룸',size:'M' as const,variant:'ABCD'[i%4]})),
-    '복층 단독': Array.from({length:Math.min(unitsPerFloor,2)},(_,i)=>({type:'복층',size:'M' as const,variant:'ABCD'[i%4]})),
-  } : buildingUse === 'commercial' ? {
-    '원룸+투룸': [{type:'원룸',size:'M' as const,variant:'A'},{type:'투룸',size:'S' as const,variant:'A'},{type:'원룸',size:'M' as const,variant:'B'},{type:'투룸',size:'S' as const,variant:'B'}].slice(0,unitsPerFloor),
-    '원룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'원룸',size:('SML'[i%3]) as any,variant:'ABCD'[i%4]})),
-    '투룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'투룸',size:'S' as const,variant:'ABCD'[i%4]})),
-  } : {
-    '투룸+쓰리룸': [{type:'투룸',size:'M',variant:'A'},{type:'쓰리룸',size:'M',variant:'A'},{type:'쓰리룸',size:'M',variant:'B'},{type:'투룸',size:'M',variant:'B'}].slice(0,unitsPerFloor),
-    '원룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'원룸',size:('SML'[i%3]) as any,variant:'ABCD'[i%4]})),
-    '투룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'투룸',size:'M' as const,variant:'ABCD'[i%4]})),
-    '쓰리룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'쓰리룸',size:'M' as const,variant:'ABCD'[i%4]})),
-    '쓰리룸+': Array.from({length:Math.min(unitsPerFloor,2)},(_,i)=>({type:'쓰리룸+',size:'M' as const,variant:'ABCD'[i%4]})),
-    '포룸': Array.from({length:Math.min(unitsPerFloor,2)},(_,i)=>({type:'포룸',size:'M' as const,variant:'ABCD'[i%4]})),
-    '복층': Array.from({length:Math.min(unitsPerFloor,2)},(_,i)=>({type:'복층',size:'M' as const,variant:'ABCD'[i%4]})),
+  // ━━━ 세대당 면적 자동 계산 ━━━
+  const coreArea = 15
+  const footprint = siteArea * ((buildingCoverage || 50) / 100)
+  const areaPerUnit = Math.round((footprint - coreArea) / Math.max(unitsPerFloor, 1))
+
+  function bestType(area: number): { type: string; size: 'S'|'M'|'L' } {
+    if (area >= 130) return { type: '포룸', size: 'L' }
+    if (area >= 115) return { type: '포룸', size: 'M' }
+    if (area >= 100) return { type: '쓰리룸+', size: 'L' }
+    if (area >= 84)  return { type: '쓰리룸+', size: 'M' }
+    if (area >= 72)  return { type: '쓰리룸', size: 'L' }
+    if (area >= 59)  return { type: '쓰리룸', size: 'M' }
+    if (area >= 52)  return { type: '투룸+', size: 'L' }
+    if (area >= 46)  return { type: '투룸+', size: 'M' }
+    if (area >= 42)  return { type: '투룸', size: 'L' }
+    if (area >= 33)  return { type: '투룸', size: 'M' }
+    if (area >= 28)  return { type: '1.5룸', size: 'L' }
+    if (area >= 24)  return { type: '1.5룸', size: 'M' }
+    if (area >= 20)  return { type: '원룸', size: 'L' }
+    return { type: '원룸', size: 'M' }
   }
 
-  const currentMix = (mixPresets[selectedMix] || mixPresets['투룸+쓰리룸']).map((m,i) => ({...m, variant: 'ABCD'[(i+variantIdx)%4]}))
-  const layout = useMemo(() => buildFloor(currentMix), [selectedMix, variantIdx, unitsPerFloor])
+  const auto = bestType(areaPerUnit)
+  const autoLabel = `✨ 자동 (${auto.type} ${areaPerUnit}㎡)`
+  const autoPreset = Array.from({length: unitsPerFloor}, (_, i) => ({
+    type: auto.type, size: auto.size, variant: 'ABCD'[i % 4],
+  }))
+
+  // 자동 + 수동 프리셋
+  const mixPresets: Record<string, {type:string;size:'S'|'M'|'L';variant:string}[]> = {
+    [autoLabel]: autoPreset,
+    ...(buildingUse === 'house' ? {
+      '쓰리룸+': Array.from({length:Math.min(unitsPerFloor,2)},(_,i)=>({type:'쓰리룸+',size:'M' as const,variant:'ABCD'[i%4]})),
+      '포룸': Array.from({length:Math.min(unitsPerFloor,2)},(_,i)=>({type:'포룸',size:'M' as const,variant:'ABCD'[i%4]})),
+    } : buildingUse === 'commercial' ? {
+      '원룸+투룸': [{type:'원룸',size:'M' as const,variant:'A'},{type:'투룸',size:'S' as const,variant:'A'},{type:'원룸',size:'M' as const,variant:'B'},{type:'투룸',size:'S' as const,variant:'B'}].slice(0,unitsPerFloor),
+      '원룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'원룸',size:'M' as const,variant:'ABCD'[i%4]})),
+    } : {
+      '투룸+쓰리룸': [{type:'투룸',size:'M',variant:'A'},{type:'쓰리룸',size:'M',variant:'A'},{type:'쓰리룸',size:'M',variant:'B'},{type:'투룸',size:'M',variant:'B'}].slice(0,unitsPerFloor),
+      '쓰리룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'쓰리룸',size:'M' as const,variant:'ABCD'[i%4]})),
+      '투룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'투룸',size:'M' as const,variant:'ABCD'[i%4]})),
+    }),
+  }
+
+  const [selectedMix, setSelectedMix] = useState(autoLabel)
+
+  const firstKey = Object.keys(mixPresets)[0] || autoLabel
+  const currentMix = (mixPresets[selectedMix] || mixPresets[firstKey] || autoPreset).map((m,i) => ({...m, variant: 'ABCD'[(i+variantIdx)%4]}))
+  const layout = useMemo(() => buildFloor(currentMix), [selectedMix, variantIdx, unitsPerFloor, areaPerUnit])
 
   return (
     <div className="space-y-3">
