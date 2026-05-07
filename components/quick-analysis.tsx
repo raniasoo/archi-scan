@@ -335,7 +335,16 @@ export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
               {/* 액션 버튼 */}
               <div className="space-y-2">
                 <button
-                  onClick={() => onDetailedAnalysis(result.address, result.siteArea, result.rawData)}
+                  onClick={() => onDetailedAnalysis(result.address, result.siteArea, {
+                    ...result.rawData,
+                    // Quick에서 계산된 법규 데이터 추가
+                    _quickZoneCode: result.zoneType,
+                    _quickZoneName: result.zoneName,
+                    _quickCoverage: result.buildingCoverage,
+                    _quickFAR: result.floorAreaRatio,
+                    _quickHeight: result.heightLimit,
+                    _quickOverlapping: result.overlappingCount,
+                  })}
                   className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary to-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2"
                 >
                   <Sparkles className="h-4 w-4" />

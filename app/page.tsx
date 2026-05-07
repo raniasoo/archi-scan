@@ -480,7 +480,7 @@ export default function ArchiScanPage() {
   const [selectedFloor, setSelectedFloor] = useState(1)
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
-  const [drawingTab, setDrawingTab] = useState<"floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "ai-generate">("site")
+  const [drawingTab, setDrawingTab] = useState<"floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "ai-generate">("ai-generate")
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
@@ -1580,6 +1580,17 @@ export default function ArchiScanPage() {
               entX: rawData.entX,
               entY: rawData.entY,
               overlappingRegulations: rawData.overlappingRegulations,
+            }))
+          }
+          // Quick에서 계산된 법규 데이터를 regulation에 직접 반영
+          if (rawData._quickZoneCode) {
+            setRegulation(prev => ({
+              ...prev,
+              zoneType: rawData._quickZoneCode,
+              zoneName: rawData._quickZoneName || prev.zoneName,
+              buildingCoverage: rawData._quickCoverage || prev.buildingCoverage,
+              far: rawData._quickFAR || prev.far,
+              maxHeight: rawData._quickHeight || prev.maxHeight,
             }))
           }
         }
