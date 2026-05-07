@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, ChevronDown, FileText, Sparkles, ImageIcon } from "lucide-react"
+import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, ChevronDown, FileText, Sparkles, ImageIcon, Mountain } from "lucide-react"
+import { analyzeTerrrain, type TerrainAnalysis } from "@/lib/terrain-analysis"
 
 interface QuickAnalysisProps {
   onDetailedAnalysis: (address: string, siteArea: number, data: any) => void
@@ -38,6 +39,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
   const [renderLoading, setRenderLoading] = useState(false)
   const [satelliteUrl, setSatelliteUrl] = useState<string | null>(null)
   const [siteContext, setSiteContext] = useState<any>(null)
+  const [terrain, setTerrain] = useState<TerrainAnalysis | null>(null)
 
   // 결과가 나오면 AI 렌더링 자동 시작
   useEffect(() => {
@@ -68,7 +70,10 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
               efficiencyVsSpace: userValues.efficiencyVsSpace,
             } : undefined,
             patterns: userValues?.selectedPatterns,
-            surroundingContext: siteContext ? `Surrounding: ${siteContext.buildingCount} buildings nearby, max ${siteContext.maxFloors} floors, avg ${siteContext.avgFloors} floors` : undefined,
+            surroundingContext: [
+              siteContext ? `Surrounding: ${siteContext.buildingCount} buildings nearby, max ${siteContext.maxFloors} floors, avg ${siteContext.avgFloors} floors` : '',
+              terrainResult ? `Terrain: ${terrainResult.renderHint}` : '',
+            ].filter(Boolean).join('. '),
           }),
         })
         const data = await res.json()
@@ -134,6 +139,22 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         }
       }
 
+      // 1.6단계: 표고 데이터 → 경사도 분석
+      let terrainResult: TerrainAnalysis | null = null
+      if (entX && entY) {
+        try {
+          setProgress('⛰️ 지형·경사도 분석 중...')
+          const eRes = await fetch(`/api/elevation-grid?lat=${entY}&lng=${entX}&grid=10&range=0.0006`)
+          const eData = await eRes.json()
+          if (eData.elevations?.length) {
+            terrainResult = analyzeTerrrain(eData.elevations, 10, siteArea, 66)
+            setTerrain(terrainResult)
+          }
+        } catch (e) {
+          console.warn('[TERRAIN] 조회 실패:', e)
+        }
+      }
+
       // 2단계: 법규 확인
       setProgress('⚖️ 건축 법규 분석 중...')
       const zoneMap: Record<string, { name: string; coverage: number; far: number; height: number }> = {
@@ -171,7 +192,8 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
       // 사업성 계산
       setProgress('💰 사업성 분석 중...')
       const constructionCostPerM2 = 2800000
-      const totalCost = gfa * constructionCostPerM2 + siteArea * 5000000
+      const earthworkCost = terrainResult?.earthworkCost || 0
+      const totalCost = gfa * constructionCostPerM2 + siteArea * 5000000 + earthworkCost
       const salesPricePerM2 = 8000000
       const totalRevenue = gfa * 0.85 * salesPricePerM2
       const profit = totalRevenue - totalCost
@@ -209,6 +231,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           parcelPolygon: vworldData?.parcel?.polygon,
           nearbyBuildings: vworldData?.nearbyBuildings,
           siteContext: vworldData?.context,
+          terrain: terrainResult,
         },
       })
 
@@ -294,6 +317,46 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                       </span>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* 지형 분석 결과 */}
+              {terrain && terrain.elevationDiff > 0.3 && (
+                <div className="rounded-xl border border-border p-3 bg-card/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Mountain className="h-3.5 w-3.5 text-amber-500" />
+                      <span className="text-xs font-semibold">지형 분석</span>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                      terrain.slopeGrade === 'flat' ? 'bg-emerald-500/10 text-emerald-500' :
+                      terrain.slopeGrade === 'gentle' ? 'bg-blue-500/10 text-blue-500' :
+                      terrain.slopeGrade === 'moderate' ? 'bg-amber-500/10 text-amber-500' :
+                      'bg-red-500/10 text-red-500'
+                    }`}>
+                      {terrain.slopeGrade === 'flat' ? '평탄' : terrain.slopeGrade === 'gentle' ? '완만' : terrain.slopeGrade === 'moderate' ? '보통 경사' : '급경사'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">고저차</p>
+                      <p className="text-sm font-bold">{terrain.elevationDiff}m</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">평균 경사</p>
+                      <p className="text-sm font-bold">{terrain.avgSlope}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">경사 방향</p>
+                      <p className="text-[10px] font-bold">{terrain.slopeDirection}</p>
+                    </div>
+                  </div>
+                  {terrain.earthworkCost > 0 && (
+                    <div className="text-[10px] text-muted-foreground bg-secondary/30 rounded-lg p-2">
+                      📊 예상 토공량 {terrain.earthworkVolume.toLocaleString()}㎥ · 토공비 약 {Math.round(terrain.earthworkCost / 10000).toLocaleString()}만원
+                      <br/>🏗️ 추천 기초: {terrain.foundationType}
+                    </div>
+                  )}
                 </div>
               )}
 
