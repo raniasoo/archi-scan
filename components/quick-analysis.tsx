@@ -41,6 +41,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
   const [renderLoading, setRenderLoading] = useState(false)
   
   const [siteContext, setSiteContext] = useState<any>(null)
+  const [vworldState, setVworldState] = useState<any>(null)
   const [terrain, setTerrain] = useState<TerrainAnalysis | null>(null)
   const [sunAnalysis, setSunAnalysis] = useState<SunAnalysisResult | null>(null)
 
@@ -74,24 +75,26 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
             } : undefined,
             patterns: userValues?.selectedPatterns,
             surroundingContext: (() => {
-              const ctx = buildSiteContextPrompt({
-                address: result.address,
-                siteArea: result.siteArea,
-                polygon: vworldData?.parcel?.polygon,
-                centroid: vworldData?.parcel?.centroid,
-                nearbyBuildings: vworldData?.nearbyBuildings,
-                siteContext: vworldData?.context,
-                terrain: terrainResult,
-                sunAnalysis: sunResult,
-                elevation: terrainResult?.maxElevation,
-                floors: result.bestLayout.floors,
-                buildingHeight: result.bestLayout.floors * 3.3,
-                directions: vworldData?.directions,
-                roadSummary: vworldData?.roadSummary,
-                shadowBlockers: vworldData?.shadowBlockers,
-                nearbyRenderPrompt: vworldData?.renderPrompt,
-              })
-              return ctx.fullPrompt || undefined
+              try {
+                const ctx = buildSiteContextPrompt({
+                  address: result.address,
+                  siteArea: result.siteArea,
+                  polygon: vworldState?.parcel?.polygon,
+                  centroid: vworldState?.parcel?.centroid,
+                  nearbyBuildings: vworldState?.nearbyBuildings,
+                  siteContext: vworldState?.context,
+                  terrain: terrain,
+                  sunAnalysis: sunAnalysis,
+                  elevation: terrain?.maxElevation,
+                  floors: result.bestLayout.floors,
+                  buildingHeight: result.bestLayout.floors * 3.3,
+                  directions: vworldState?.directions,
+                  roadSummary: vworldState?.roadSummary,
+                  shadowBlockers: vworldState?.shadowBlockers,
+                  nearbyRenderPrompt: vworldState?.renderPrompt,
+                })
+                return ctx.fullPrompt || undefined
+              } catch { return undefined }
             })(),
           }),
         })
@@ -150,7 +153,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           const vJson = await vRes.json()
           if (vJson.success) {
             vworldData = vJson
-            
+            setVworldState(vJson)
             setSiteContext(vJson.context)
           }
         } catch (e) {
