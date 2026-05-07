@@ -320,15 +320,14 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
   }
   const zoneName = (zoneType && ZONE_NAMES[zoneType]) || zoneType || '제2종일반주거지역'
 
-  const footprintArea = siteArea * (buildingCoverage / 100)
-  // AI 생성에 적합한 건물 치수 (최대 세대 6개로 제한)
+  // AI용 현실적 건물 크기 (세대수 기반)
   const rawUnitsPerFloor = Math.max(Math.ceil(units / Math.max(floors - 1, 1)), 2)
-  const unitsPerFloor = Math.min(rawUnitsPerFloor, 4) // Claude가 처리 가능한 최대 세대수
-  const bW = Math.round(Math.sqrt(footprintArea * 1.6) * 10) / 10
-  const bD = Math.round(footprintArea / bW * 10) / 10
-  // AI용 건물 크기는 세대수에 비례하여 조정
-  const aiBW = Math.min(bW, unitsPerFloor * 8 + 6) // 세대당 약 8m + 코어
-  const aiBD = Math.min(bD, 14) // 깊이 최대 14m (투룸/쓰리룸 기준)
+  const unitsPerFloor = Math.min(rawUnitsPerFloor, 4)
+  // AI용 현실적 건물 크기 (세대수 기반)
+  const unitWidth = 7.5
+  const coreWidth = 3.0
+  const aiBW = Math.round((unitsPerFloor / 2) * unitWidth + coreWidth)
+  const aiBD = 12
 
   const generate = async () => {
     setLoading(true)
