@@ -8,15 +8,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns } = await req.json()
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
     }
 
-    // 건축 렌더링 최적화 프롬프트 생성
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns
     })
 
     // Gemini API 호출 — 모델 fallback 체인
@@ -111,8 +110,11 @@ function buildArchitecturePrompt(params: {
   siteArea?: number
   buildingType?: string
   coverage?: number
+  strategy?: string
+  values?: { profitVsQuality?: number; privacyVsCommunity?: number; efficiencyVsSpace?: number }
+  patterns?: string[]
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
@@ -125,54 +127,98 @@ function buildArchitecturePrompt(params: {
 
   const styleDesc = style ? (styleMap[style] || style) : '현대적 고급 주거'
 
-  // 건물 형태 설명 (도면과 일치)
   const f = floors || 3
   const u = units || 6
   const footprint = siteArea && coverage ? Math.round(siteArea * coverage / 100) : 200
   const bW = Math.round(Math.sqrt(footprint * 1.5))
   const bD = Math.round(footprint / bW)
 
+  // 건물 규모별 형태
   let buildingForm = ''
   if (f <= 2 && u <= 4) {
-    buildingForm = `A low-rise detached house, ${f} stories, compact and elegant. Building footprint approximately ${bW}m × ${bD}m. Residential entrance with small garden. No commercial space on ground floor.`
+    buildingForm = `A low-rise detached house, ${f} stories, compact and elegant. Footprint ~${bW}m × ${bD}m. Residential entrance with garden.`
   } else if (f <= 5 && u <= 20) {
-    buildingForm = `A low-rise multi-family residential building (다세대/빌라), ${f} stories, ${u} units. Building footprint approximately ${bW}m × ${bD}m. Ground floor has entrance hall and parking. Upper floors are residential units. Simple, clean facade with balconies.`
+    buildingForm = `A low-rise multi-family villa, ${f} stories, ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: entrance hall + parking. Upper: residential.`
   } else if (f <= 10) {
-    buildingForm = `A mid-rise apartment building, ${f} stories, ${u} units. Building footprint approximately ${bW}m × ${bD}m. Ground floor has lobby, small retail, and parking entrance. Rectangular massing with regular window pattern.`
+    buildingForm = `A mid-rise apartment, ${f} stories, ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: lobby + retail + parking.`
   } else {
-    buildingForm = `A high-rise residential tower, ${f} stories, ${u} units. Slender tower form with podium. Ground level retail and grand lobby entrance.`
+    buildingForm = `A high-rise tower, ${f} stories, ${u} units. Slender tower with podium.`
   }
 
-  // 배치 타입별 형태 조정
   const typeHints: Record<string, string> = {
-    'tower': 'Single tower form, vertical emphasis',
-    'courtyard': 'U-shaped or courtyard layout, central garden visible',
-    'lshape': 'L-shaped building form, asymmetric massing',
-    'linear': 'Linear/slab building, elongated horizontal form',
-    'cluster': 'Multiple small buildings clustered together',
+    'tower': 'Single tower, vertical emphasis',
+    'courtyard': 'U-shaped, central garden visible',
+    'lshape': 'L-shaped building',
+    'linear': 'Elongated horizontal slab',
+    'cluster': 'Multiple small buildings clustered',
   }
   const typeHint = buildingType ? (typeHints[buildingType] || '') : ''
 
+  // ━━━ 설계 전략 → 렌더링 스타일 ━━━
+  const strategyStyles: Record<string, string> = {
+    'profitability': 'Efficient, dense, maximized floor area. Clean modern facade with regular grid windows.',
+    'livability': 'Warm, inviting, with generous balconies, community gardens, and playground visible. Family-friendly atmosphere.',
+    'view-priority': 'Open views emphasized, large windows, stepped terraces, panoramic balconies. Premium glass facade.',
+    'privacy-priority': 'Screened balconies, staggered units, vegetation buffers between units. Private feel.',
+    'area-maximize': 'Maximum building volume, flush facade, minimal setbacks. Dense but modern.',
+    'parking-efficient': 'Ground level parking visible, efficient layout, practical design.',
+  }
+  const strategyStyle = strategy ? (strategyStyles[strategy] || '') : ''
+
+  // ━━━ 가치관 슬라이더 → 분위기 ━━━
+  let atmosphereHints: string[] = []
+  if (values) {
+    if (values.profitVsQuality !== undefined) {
+      if (values.profitVsQuality > 70) atmosphereHints.push('Emphasis on quality of life: lush landscaping, wide walkways, playground, rooftop garden')
+      else if (values.profitVsQuality < 30) atmosphereHints.push('Efficient and modern: clean lines, maximized usable space')
+    }
+    if (values.privacyVsCommunity !== undefined) {
+      if (values.privacyVsCommunity > 70) atmosphereHints.push('Strong community feel: shared courtyard, outdoor seating areas, gathering spaces')
+      else if (values.privacyVsCommunity < 30) atmosphereHints.push('Privacy-focused: screened balconies, hedges between units, minimal shared space')
+    }
+    if (values.efficiencyVsSpace !== undefined) {
+      if (values.efficiencyVsSpace > 70) atmosphereHints.push('Spacious feeling: generous setbacks, open green areas, wide corridors')
+      else if (values.efficiencyVsSpace < 30) atmosphereHints.push('Compact and efficient: tight footprint, vertical emphasis')
+    }
+  }
+
+  // ━━━ 선택 패턴 → 구체적 요소 ━━━
+  const patternElements: Record<string, string> = {
+    'courtyard': 'Include a visible courtyard/playground where children can play',
+    'south-light': 'Show south-facing windows with warm sunlight streaming in',
+    'shop-street': 'Ground floor has inviting cafe/retail storefronts',
+    'trees': 'Show mature trees near windows, visible greenery from units',
+    'neighbor': 'Include semi-public gathering area, benches, community garden',
+    'two-light': 'Show rooms with windows on two sides, corner units',
+    'safe-walk': 'Show safe pedestrian paths separated from vehicles',
+    'earth': 'Building connects to ground with garden terraces, earth tones',
+    'transition': 'Show gradual transition from public street to private entrance',
+  }
+  const patternHints = (patterns || []).map(p => patternElements[p]).filter(Boolean)
+
   return `Generate a photorealistic architectural exterior rendering.
 
-BUILDING FORM (MUST match exactly):
+BUILDING FORM:
 ${buildingForm}
 ${typeHint ? `Layout: ${typeHint}` : ''}
+
+DESIGN DIRECTION:
+${strategyStyle || 'Modern residential design'}
+${atmosphereHints.length > 0 ? `\nATMOSPHERE:\n${atmosphereHints.map(h => `- ${h}`).join('\n')}` : ''}
+${patternHints.length > 0 ? `\nMUST INCLUDE THESE ELEMENTS:\n${patternHints.map(h => `- ${h}`).join('\n')}` : ''}
 
 CONTEXT:
 - Location: ${address || 'Seoul, South Korea'}
 - Project: ${layoutName || '주거 건물'}
-- Design style: ${styleDesc}
+- Style: ${styleDesc}
 
-RENDERING REQUIREMENTS:
+RENDERING:
 - Photorealistic 3D architectural rendering
-- Eye-level perspective showing main facade and entrance
-- Beautiful landscaping with trees
+- Eye-level perspective, main facade + entrance
+- Beautiful landscaping
 - Warm afternoon lighting
-- High-end materials
-- Korean residential neighborhood
 - 16:9 aspect ratio
-- The building MUST appear as ${f}-story structure (count the floors!)
+- MUST be ${f}-story structure
 
 ${prompt}
 

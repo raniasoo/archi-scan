@@ -1563,7 +1563,7 @@ export default function ArchiScanPage() {
 
   if (showQuickMode) {
     return (
-      <QuickAnalysis onDetailedAnalysis={(addr, area, rawData) => {
+      <QuickAnalysis strategy={strategy} userValues={userValues} onDetailedAnalysis={(addr, area, rawData) => {
         // Quick 분석 데이터를 Full 분석에 주입
         setAddress(addr)
         setSiteArea(String(area))

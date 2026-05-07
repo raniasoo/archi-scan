@@ -5,6 +5,8 @@ import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, Chev
 
 interface QuickAnalysisProps {
   onDetailedAnalysis: (address: string, siteArea: number, data: any) => void
+  strategy?: string
+  userValues?: { profitVsQuality: number; privacyVsCommunity: number; efficiencyVsSpace: number; selectedPatterns: string[] }
 }
 
 interface QuickResult {
@@ -23,7 +25,7 @@ interface QuickResult {
   rawData: any
 }
 
-export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
+export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: QuickAnalysisProps) {
   const [address, setAddress] = useState('')
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
@@ -57,6 +59,13 @@ export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
             siteArea: result.siteArea,
             buildingType: result.bestLayout.type,
             coverage: result.buildingCoverage,
+            strategy: strategy || 'profitability',
+            values: userValues ? {
+              profitVsQuality: userValues.profitVsQuality,
+              privacyVsCommunity: userValues.privacyVsCommunity,
+              efficiencyVsSpace: userValues.efficiencyVsSpace,
+            } : undefined,
+            patterns: userValues?.selectedPatterns,
           }),
         })
         const data = await res.json()
