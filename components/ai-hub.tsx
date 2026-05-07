@@ -17,12 +17,18 @@ interface ConceptInput {
 }
 
 const STYLES = [
-  { id: "modern-luxury", label: "모던 럭셔리", emoji: "🏢", prompt: "sleek modern luxury, glass curtain wall, premium finishes" },
-  { id: "eco-green", label: "친환경 녹색", emoji: "🌿", prompt: "eco-friendly green building, vertical garden, sustainable materials" },
-  { id: "korean-modern", label: "한국 모던", emoji: "🏛", prompt: "korean contemporary architecture, hanok-inspired, warm tones" },
-  { id: "minimalist", label: "미니멀리즘", emoji: "◻️", prompt: "minimalist architecture, clean white surfaces, geometric forms" },
-  { id: "urban-mixed", label: "도시 복합", emoji: "🌆", prompt: "urban mixed-use complex, street-level retail, vibrant streetscape" },
-  { id: "premium-resi", label: "프리미엄 주거", emoji: "🏠", prompt: "premium residential, terrace balconies, landscaped courtyard" },
+  { id: "modern-luxury", label: "모던 럭셔리", emoji: "🏢", prompt: "sleek modern luxury, glass curtain wall, premium finishes", engine: "gemini" },
+  { id: "eco-green", label: "친환경 녹색", emoji: "🌿", prompt: "eco-friendly green building, vertical garden, sustainable materials", engine: "gemini" },
+  { id: "korean-modern", label: "한국 모던", emoji: "🏛", prompt: "korean contemporary architecture, hanok-inspired, warm tones", engine: "gemini" },
+  { id: "minimalist", label: "미니멀리즘", emoji: "◻️", prompt: "minimalist architecture, clean white surfaces, geometric forms", engine: "gemini" },
+  { id: "urban-mixed", label: "도시 복합", emoji: "🌆", prompt: "urban mixed-use complex, street-level retail, vibrant streetscape", engine: "gemini" },
+  { id: "premium-resi", label: "프리미엄 주거", emoji: "🏠", prompt: "premium residential, terrace balconies, landscaped courtyard", engine: "gemini" },
+  // 한국 건축 LoRA (Flux via Replicate)
+  { id: "khanok-modern", label: "한옥 현대화", emoji: "🏯", prompt: "korean hanok modern reinterpretation", engine: "flux" },
+  { id: "kvilla", label: "한국 빌라", emoji: "🏘️", prompt: "korean multi-family villa", engine: "flux" },
+  { id: "kapartment", label: "한국 아파트", emoji: "🏢", prompt: "korean apartment complex", engine: "flux" },
+  { id: "kcommercial", label: "상가주택", emoji: "🏪", prompt: "korean commercial-residential mixed", engine: "flux" },
+  { id: "kluxury", label: "고급 단독", emoji: "🏡", prompt: "korean luxury single house", engine: "flux" },
 ]
 
 function genMJ(input: ConceptInput, styleId: string): string {
@@ -101,21 +107,37 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
     setCopied(id); setTimeout(() => setCopied(null), 2000)
   }
 
-  // #5: 재시도 로직 내장
+  // #5: 재시도 로직 + Gemini/Flux 엔진 라우팅
   const doRender = async (retry = 0) => {
-    setLoading(true); setError(null); setRetryCount(retry)
+    setLoading(true); setError(null); setRetryCount(retry); setMultiImages(null)
+    const selectedStyle = STYLES.find(s => s.id === style)
+    const engine = selectedStyle?.engine || 'gemini'
+
     try {
-      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-        prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
-        style, address:input.address, layoutName:input.layoutName,
-        floors:input.floors, units:input.units, siteArea:input.siteArea,
-        buildingType:input.buildingType, coverage:input.buildingCoverageRatio,
-        strategy:input.strategy, values:input.values, patterns:input.patterns,
-        surroundingContext:input.surroundingContext,
-        cameraAngle: angle, sceneMode: scene,
-        satelliteUrl: input.satelliteUrl,
-        material: materialId ? { type: materialId } : undefined,
-      }) })
+      let r: Response
+      if (engine === 'flux') {
+        // Flux + LoRA (Replicate)
+        r = await fetch('/api/ai-render-flux', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+          loraStyle: style, address:input.address, layoutName:input.layoutName,
+          floors:input.floors, units:input.units, siteArea:input.siteArea,
+          surroundingContext:input.surroundingContext,
+          cameraAngle: angle, sceneMode: scene,
+          material: materialId ? { type: materialId } : undefined,
+        }) })
+      } else {
+        // Gemini (기존)
+        r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+          prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
+          style, address:input.address, layoutName:input.layoutName,
+          floors:input.floors, units:input.units, siteArea:input.siteArea,
+          buildingType:input.buildingType, coverage:input.buildingCoverageRatio,
+          strategy:input.strategy, values:input.values, patterns:input.patterns,
+          surroundingContext:input.surroundingContext,
+          cameraAngle: angle, sceneMode: scene,
+          satelliteUrl: input.satelliteUrl,
+          material: materialId ? { type: materialId } : undefined,
+        }) })
+      }
       const d = await r.json()
       if (d.success && d.image) {
         setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0)
@@ -194,12 +216,24 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
         <div className="px-4 pb-4 space-y-3">
           {/* 스타일 선택 */}
           <div className="grid grid-cols-3 gap-1.5">
-            {STYLES.map(s => (
+            {STYLES.filter(s => s.engine === 'gemini').map(s => (
               <button key={s.id} onClick={() => setStyle(s.id)}
                 className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-violet-500/20 border-2 border-violet-400 font-semibold' : 'bg-card/30 border border-border/50 hover:border-violet-300'}`}>
                 <span className="text-base block">{s.emoji}</span>{s.label}
               </button>
             ))}
+          </div>
+          {/* 한국 건축 LoRA */}
+          <div className="space-y-1">
+            <p className="text-[9px] text-amber-400/70 font-medium">🇰🇷 한국 건축 스타일 (Flux+LoRA)</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {STYLES.filter(s => s.engine === 'flux').map(s => (
+                <button key={s.id} onClick={() => setStyle(s.id)}
+                  className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-card/30 border border-amber-900/30 hover:border-amber-400'}`}>
+                  <span className="text-base block">{s.emoji}</span>{s.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* 탭 */}
