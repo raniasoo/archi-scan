@@ -2091,6 +2091,7 @@ export default function ArchiScanPage() {
             setCurrentStep={setCurrentStep} setShowBrandingEditor={setShowBrandingEditor}
             loadExportFunctions={loadExportFunctions}
             aiRenderImage={aiRenderImage}
+            sitePolygon={sitePolygon}
           />
         )}
         

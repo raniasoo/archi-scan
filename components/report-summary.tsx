@@ -147,6 +147,7 @@ interface ReportSummaryProps {
   userValues?: { profitVsQuality: number; privacyVsCommunity: number; efficiencyVsSpace: number; selectedPatterns: string[] }
   designStrategy?: string
   aiRenderImage?: string | null
+  sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
 }
 
 function formatKRW(value: number): string {
@@ -216,7 +217,7 @@ function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): Layout
   return bestLayout
 }
 
-export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility, userValues, designStrategy, aiRenderImage }: ReportSummaryProps) {
+export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility, userValues, designStrategy, aiRenderImage, sitePolygon }: ReportSummaryProps) {
   // molitData 우선 적용 — regulation race condition 방지
   // regulation 한도(buildingCoverageLimit/farLimit)에서 용도지역 역추정 (zone-lookup 미완료 시 안전장치)
   const inferZoneFromLimits = (coverage?: number, far?: number): string => {
@@ -353,7 +354,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       units: layout.units, parking: layout.parking, type: layout.type,
       roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
       setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-      layoutName: layout.name, gfa,
+      layoutName: layout.name, gfa, sitePolygon,
     }
     
     let sitePlanImg = '', sectionImg = '', isoImg = '', elevImg = '', perspImg = '', floorPlanImg = ''
@@ -1796,7 +1797,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           units: layout.units, parking: layout.parking, type: layout.type,
           roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
           setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-          layoutName: layout.name, gfa,
+          layoutName: layout.name, gfa, sitePolygon,
         }
 
         const isoSvg = generateIsometricSvg(drawingInput)
@@ -2911,7 +2912,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                 units: layout.units, parking: layout.parking, type: layout.type,
                 roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
                 setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-                layoutName: layout.name, gfa,
+                layoutName: layout.name, gfa, sitePolygon,
               }) }} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2922,7 +2923,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   units: layout.units, parking: layout.parking, type: layout.type,
                   roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
                   setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-                  layoutName: layout.name, gfa,
+                  layoutName: layout.name, gfa, sitePolygon,
                 }) }} />
               </div>
               <div>
@@ -2932,7 +2933,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   units: layout.units, parking: layout.parking, type: layout.type,
                   roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
                   setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-                  layoutName: layout.name, gfa,
+                  layoutName: layout.name, gfa, sitePolygon,
                 }) }} />
               </div>
               <div>
@@ -2942,7 +2943,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   units: layout.units, parking: layout.parking, type: layout.type,
                   roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
                   setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-                  layoutName: layout.name, gfa,
+                  layoutName: layout.name, gfa, sitePolygon,
                 }) }} />
               </div>
               <div>
@@ -2952,7 +2953,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                   units: layout.units, parking: layout.parking, type: layout.type,
                   roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
                   setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-                  layoutName: layout.name, gfa,
+                  layoutName: layout.name, gfa, sitePolygon,
                 }) }} />
               </div>
             </div>
@@ -2963,7 +2964,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                 units: layout.units, parking: layout.parking, type: layout.type,
                 roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
                 setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
-                layoutName: layout.name, gfa,
+                layoutName: layout.name, gfa, sitePolygon,
               }) }} />
             </div>
             <p className="text-[10px] text-center" style={{ color: '#94a3b8' }}>※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>

@@ -107,26 +107,52 @@ interface DrawingInput {
   heightLimit: number
   layoutName: string
   gfa: number
+  sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
 }
 
 // ===== 배치도 SVG =====
 export function generateSitePlanSvg(d: DrawingInput): string {
   const W = 360, H = 300, PAD = 35
-  const siteRealW = Math.sqrt(d.siteArea * 1.25)
-  const siteRealH = d.siteArea / siteRealW
-  const scale = Math.min((W - PAD * 2) / siteRealW, (H - PAD * 2 - 30) / siteRealH)
-  const siteW = siteRealW * scale, siteH = siteRealH * scale
-  const siteX = (W - siteW) / 2, siteY = PAD
+  
+  // 실제 필지 형상 변환
+  const hasPolygon = d.sitePolygon && d.sitePolygon.coords.length > 2
+  let siteW: number, siteH: number, siteX: number, siteY: number, scale: number
+  let polyPoints = ''
+
+  if (hasPolygon) {
+    const [cLng, cLat] = d.sitePolygon!.centroid
+    const LM = Math.cos(cLat * Math.PI / 180) * 111319
+    const mCoords = d.sitePolygon!.coords.map(([lng, lat]) => [(lng - cLng) * LM, -(lat - cLat) * 111319])
+    const xs = mCoords.map(c => c[0]), ys = mCoords.map(c => c[1])
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys)
+    const rW = maxX - minX || 1, rH = maxY - minY || 1
+    scale = Math.min((W - PAD * 2) / rW, (H - PAD * 2 - 30) / rH)
+    siteW = rW * scale; siteH = rH * scale
+    siteX = (W - siteW) / 2; siteY = PAD
+    polyPoints = mCoords.map(([mx, my]) => `${siteX + (mx - minX) * scale},${siteY + (my - minY) * scale}`).join(' ')
+  } else {
+    const siteRealW = Math.sqrt(d.siteArea * 1.25)
+    const siteRealH = d.siteArea / siteRealW
+    scale = Math.min((W - PAD * 2) / siteRealW, (H - PAD * 2 - 30) / siteRealH)
+    siteW = siteRealW * scale; siteH = siteRealH * scale
+    siteX = (W - siteW) / 2; siteY = PAD
+  }
+
   const sf = d.setbacks.front * scale, ss = d.setbacks.side * scale, sr = d.setbacks.rear * scale
   const bldZoneX = siteX + ss, bldZoneY = siteY + sr
   const bldZoneW = siteW - ss * 2, bldZoneH = siteH - sf - sr
   const bW = bldZoneW * 0.8, bH = bldZoneH * 0.65
   const bX = bldZoneX + (bldZoneW - bW) / 2, bY = bldZoneY + (bldZoneH - bH) / 2
+  const siteRealW = Math.sqrt(d.siteArea * 1.25), siteRealH = d.siteArea / siteRealW
+
+  const siteSvg = hasPolygon
+    ? `<polygon points="${polyPoints}" fill="#f1f5f9" stroke="#3b82f6" stroke-width="1.5"/>`
+    : `<rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="#f1f5f9" stroke="#3b82f6" stroke-width="1.5"/>`
 
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
   <style>text{font-family:sans-serif;}</style>
   <!-- 대지 -->
-  <rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="#f1f5f9" stroke="#3b82f6" stroke-width="1.5"/>
+  ${siteSvg}
   <!-- 이격거리선 -->
   <rect x="${bldZoneX}" y="${bldZoneY}" width="${bldZoneW}" height="${bldZoneH}" fill="none" stroke="#22d3ee" stroke-width="0.7" stroke-dasharray="4 3" opacity="0.6"/>
   <!-- 건물 -->

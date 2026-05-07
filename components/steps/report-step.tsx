@@ -53,6 +53,7 @@ export interface ReportStepProps {
   setShowBrandingEditor: Dispatch<SetStateAction<boolean>>
   loadExportFunctions: () => Promise<any>
   aiRenderImage?: string | null
+  sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
 }
 
 export function ReportStep(props: ReportStepProps) {
@@ -362,6 +363,7 @@ export function ReportStep(props: ReportStepProps) {
                   userValues={userValues}
                   designStrategy={strategy}
                   aiRenderImage={props.aiRenderImage}
+                  sitePolygon={props.sitePolygon}
                 />
               </TabsContent>
 
