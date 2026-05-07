@@ -368,9 +368,9 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : '네트워크 오류'
-      setError(msg.includes('abort') || msg.includes('timeout') 
-        ? 'AI 응답 시간이 초과되었습니다. 다시 시도해주세요.' 
-        : msg.includes('fetch') ? 'AI 서버 연결에 실패했습니다. 다시 시도해주세요.' : msg)
+      setError(msg.includes('abort') || msg.includes('timed') || msg.includes('timeout') || msg.includes('signal')
+        ? 'AI 응답 시간 초과. 다시 시도해주세요.' 
+        : msg.includes('fetch') || msg.includes('Failed') ? 'AI 서버 연결 실패. 다시 시도해주세요.' : msg)
     } finally {
       setLoading(false)
     }
@@ -401,7 +401,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-emerald-600 text-white font-bold text-sm disabled:opacity-50 inline-flex items-center gap-2"
           >
             {loading ? (
-              <><Loader2 className="h-4 w-4 animate-spin" />AI 평면 생성 중... (약 10~20초)</>
+              <><Loader2 className="h-4 w-4 animate-spin" />AI 평면 생성 중... (약 5~10초)</>
             ) : (
               <><Sparkles className="h-4 w-4" />AI 평면 생성하기</>
             )}
@@ -415,7 +415,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
             <div className="flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs font-bold">AI 생성 평면도</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">Claude Sonnet 4</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">Claude Haiku 4.5</span>
             </div>
             <div className="flex items-center gap-1">
               <button onClick={() => setScale(s => Math.max(s - 4, 12))} className="p-1 rounded hover:bg-secondary/50"><ZoomOut className="h-3.5 w-3.5" /></button>
