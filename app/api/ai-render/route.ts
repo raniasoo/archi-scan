@@ -8,14 +8,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode } = await req.json()
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
     }
 
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode
     })
 
     // Gemini API 호출 — 모델 fallback 체인
@@ -114,8 +114,10 @@ function buildArchitecturePrompt(params: {
   values?: { profitVsQuality?: number; privacyVsCommunity?: number; efficiencyVsSpace?: number }
   patterns?: string[]
   surroundingContext?: string
+  cameraAngle?: string
+  sceneMode?: string
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
@@ -183,7 +185,24 @@ function buildArchitecturePrompt(params: {
     }
   }
 
-  // ━━━ 선택 패턴 → 구체적 요소 ━━━
+  // ━━━ 카메라 앵글 ━━━
+  const angleDesc: Record<string, string> = {
+    'eye-level': 'Eye-level perspective (1.6m height), showing main facade and entrance. Slight 3/4 angle to show depth.',
+    'birds-eye': 'Aerial bird\'s-eye view from 45-degree angle above, showing the building roof, landscaping layout, parking, and surrounding context. Like a drone photo from 50m height.',
+    'entrance': 'Close-up of the main entrance at eye level. Focus on entrance canopy, door details, landscaping, and ground-floor facade materials. Welcoming perspective.',
+  }
+  const cameraDesc = angleDesc[cameraAngle || 'eye-level'] || angleDesc['eye-level']
+
+  // ━━━ 계절/시간대 ━━━
+  const sceneDesc: Record<string, string> = {
+    'afternoon': 'Warm afternoon sunlight (3-4 PM), clear sky, long gentle shadows. Golden warm tone.',
+    'golden': 'Golden hour / twilight (6-7 PM), dramatic warm orange sky, building silhouette with warm interior lights beginning to glow. Romantic atmosphere.',
+    'night': 'Nighttime scene, building exterior illuminated by architectural lighting. Warm interior lights visible through windows. Cool blue sky, street lights.',
+    'spring': 'Spring season, cherry blossoms or magnolia blooming near the building. Fresh green leaves. Bright, cheerful atmosphere.',
+    'summer': 'Lush summer greenery, deep green mature trees providing shade. Vibrant landscaping. Bright daylight.',
+    'winter': 'Winter scene, bare tree branches, possible light snow on the ground and roof edges. Warm interior lights contrast with cool exterior. Cozy atmosphere.',
+  }
+  const sceneText = sceneDesc[sceneMode || 'afternoon'] || sceneDesc['afternoon']
   const patternElements: Record<string, string> = {
     // 단지·외부
     'courtyard': 'Include a visible courtyard/playground where children can play',
@@ -237,9 +256,8 @@ CRITICAL REQUIREMENTS:
 - The building MUST have EXACTLY ${f} floors. Count them: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. This is non-negotiable.
 - ${f <= 2 ? 'This is a LOW-RISE building, maximum 2 stories tall. Do NOT make it taller.' : f <= 5 ? `This is a LOW to MID-RISE building with exactly ${f} visible floor levels.` : `This is a ${f}-story building. Each floor must be clearly visible and countable.`}
 - Photorealistic 3D architectural rendering
-- Eye-level perspective showing main facade + entrance
-- Beautiful landscaping with mature trees
-- Warm afternoon golden-hour lighting
+- CAMERA: ${cameraDesc}
+- SCENE: ${sceneText}
 - 16:9 aspect ratio
 
 AVOID (do NOT include):

@@ -50,10 +50,27 @@ function genCL(input: ConceptInput, styleId: string): string {
 ## 요청: 매스 컨셉, 파사드, 외부 공간, 차별화 포인트, 참고 사례`
 }
 
+const ANGLES = [
+  { id: 'eye-level', label: '눈높이', emoji: '👁️' },
+  { id: 'birds-eye', label: '조감도', emoji: '🦅' },
+  { id: 'entrance', label: '입구', emoji: '🚪' },
+]
+
+const SCENES = [
+  { id: 'afternoon', label: '오후', emoji: '☀️' },
+  { id: 'golden', label: '황혼', emoji: '🌅' },
+  { id: 'night', label: '야경', emoji: '🌙' },
+  { id: 'spring', label: '봄', emoji: '🌸' },
+  { id: 'summer', label: '여름', emoji: '🌿' },
+  { id: 'winter', label: '겨울', emoji: '❄️' },
+]
+
 export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void }) {
   const [isOpen, setIsOpen] = useState(false)
   const [tab, setTab] = useState<'render'|'consult'|'proposal'|'prompt'>('render')
   const [style, setStyle] = useState('modern-luxury')
+  const [angle, setAngle] = useState('eye-level')
+  const [scene, setScene] = useState('afternoon')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
   const [copied, setCopied] = useState<string|null>(null)
@@ -61,6 +78,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<string|null>(null)
   const [proposal, setProposal] = useState<string|null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   const styleName = STYLES.find(s => s.id === style)?.label || '모던 럭셔리'
 
@@ -69,13 +87,36 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
     setCopied(id); setTimeout(() => setCopied(null), 2000)
   }
 
-  const doRender = async () => {
-    setLoading(true); setError(null)
+  // #5: 재시도 로직 내장
+  const doRender = async (retry = 0) => {
+    setLoading(true); setError(null); setRetryCount(retry)
     try {
-      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`, style, address:input.address, layoutName:input.layoutName, floors:input.floors, units:input.units, siteArea:input.siteArea, buildingType:input.buildingType, coverage:input.buildingCoverageRatio, strategy:input.strategy, values:input.values, patterns:input.patterns, surroundingContext:input.surroundingContext }) })
+      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+        prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
+        style, address:input.address, layoutName:input.layoutName,
+        floors:input.floors, units:input.units, siteArea:input.siteArea,
+        buildingType:input.buildingType, coverage:input.buildingCoverageRatio,
+        strategy:input.strategy, values:input.values, patterns:input.patterns,
+        surroundingContext:input.surroundingContext,
+        cameraAngle: angle, sceneMode: scene,
+      }) })
       const d = await r.json()
-      if (d.success && d.image) { setRenderImg(d.image); onRenderComplete?.(d.image) } else setError(d.error||'렌더링 실패')
-    } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
+      if (d.success && d.image) {
+        setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0)
+      } else if (retry < 2) {
+        // 재시도 (최대 2회)
+        await new Promise(r => setTimeout(r, 1500))
+        return doRender(retry + 1)
+      } else {
+        setError(d.error||'렌더링 실패'); setRetryCount(0)
+      }
+    } catch(e) {
+      if (retry < 2) {
+        await new Promise(r => setTimeout(r, 1500))
+        return doRender(retry + 1)
+      }
+      setError(e instanceof Error ? e.message : '오류'); setRetryCount(0)
+    } finally { setLoading(false) }
   }
 
   const doConsult = async () => {
@@ -136,8 +177,26 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
           {/* 렌더링 */}
           {tab === 'render' && <div className="space-y-2">
             <p className="text-[10px] text-muted-foreground">스타일: <span className="text-emerald-400 font-medium">{styleName}</span></p>
-            <button onClick={doRender} disabled={loading} className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
-              {loading ? <><Loader2 className="h-4 w-4 animate-spin" />생성 중...</> : '🎨 건축 렌더링 생성'}
+            {/* #4: 카메라 앵글 */}
+            <div className="flex gap-1">
+              {ANGLES.map(a => (
+                <button key={a.id} onClick={() => setAngle(a.id)}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] text-center transition-all ${angle === a.id ? 'bg-blue-500/20 border border-blue-400 font-semibold text-blue-300' : 'bg-card/20 border border-border/30 text-muted-foreground'}`}>
+                  {a.emoji} {a.label}
+                </button>
+              ))}
+            </div>
+            {/* #6: 계절/시간대 */}
+            <div className="flex gap-1 flex-wrap">
+              {SCENES.map(s => (
+                <button key={s.id} onClick={() => setScene(s.id)}
+                  className={`px-2 py-1 rounded-full text-[10px] transition-all ${scene === s.id ? 'bg-amber-500/20 border border-amber-400 font-semibold text-amber-300' : 'bg-card/20 border border-border/30 text-muted-foreground'}`}>
+                  {s.emoji} {s.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => doRender(0)} disabled={loading} className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+              {loading ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2...` : '생성 중...'}</> : '🎨 건축 렌더링 생성'}
             </button>
             {renderImg && <div className="space-y-2"><img src={renderImg} alt="렌더링" className="w-full rounded-lg border border-border" /><a href={renderImg} download={`render-${Date.now()}.png`} className="flex items-center justify-center gap-1 text-xs text-emerald-400"><Download className="h-3 w-3" />다운로드</a></div>}
           </div>}
