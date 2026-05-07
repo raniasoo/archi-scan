@@ -1,246 +1,255 @@
 "use client"
 
-import React, { useState } from "react"
-import { Loader2, Sparkles, RotateCcw, ZoomIn, ZoomOut, Maximize2, Minimize2, X } from "lucide-react"
+import React, { useState, useMemo } from "react"
+import { Loader2, Sparkles, RotateCcw, ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 타입 정의 (Claude API 응답 형식)
+// 설계 상수 (한국 주거 표준)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-interface FurnitureDef { type: string; x: number; y: number; w: number; h: number }
-interface RoomDef { name: string; x: number; y: number; w: number; h: number; furniture?: FurnitureDef[] }
-interface DoorDef { x: number; y: number; wall: 'top'|'bottom'|'left'|'right'; width: number; type?: 'swing'|'slide'|'entrance' }
-interface WindowDef { x: number; y: number; wall: 'top'|'bottom'|'left'|'right'; width: number }
-interface CoreElement { type: string; x: number; y: number; w: number; h: number }
-interface UnitDef {
-  id: string; type: string; exclusiveArea: number
-  x: number; y: number; w: number; h: number
-  rooms: RoomDef[]; doors?: DoorDef[]; windows?: WindowDef[]
-}
-interface FloorPlanData {
-  floorPlan: {
-    buildingWidth: number; buildingDepth: number; floorType?: string
-    core: { x: number; y: number; w: number; h: number; elements?: CoreElement[] }
-    units: UnitDef[]
+const WALL_EXT = 3
+const WALL_INT = 1.5
+
+interface RoomT { name: string; rx: number; ry: number; rw: number; rh: number; fill: string; furniture?: string }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 투룸 템플릿 (전용 59㎡)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function twoRoomTemplate(uw: number, uh: number, mirror: boolean): RoomT[] {
+  const livingW = uw * 0.55, kitchenW = uw - livingW
+  const topH = uh * 0.52, botH = uh - topH
+  const brW = uw * 0.42, br2W = uw * 0.32, bathW = uw - brW - br2W
+  const entH = botH * 0.4, hallH = botH - entH
+
+  const rooms: RoomT[] = [
+    { name: '거실', rx: 0, ry: 0, rw: livingW, rh: topH, fill: '#f0fdf4', furniture: 'sofa' },
+    { name: '주방/식당', rx: livingW, ry: 0, rw: kitchenW, rh: topH, fill: '#fef3c7', furniture: 'kitchen' },
+    { name: '안방', rx: 0, ry: topH, rw: brW, rh: botH, fill: '#eff6ff', furniture: 'bed-master' },
+    { name: '침실2', rx: brW, ry: topH, rw: br2W, rh: botH, fill: '#f0f9ff', furniture: 'bed-single' },
+    { name: '욕실', rx: brW + br2W, ry: topH, rw: bathW, rh: entH, fill: '#e0f2fe', furniture: 'toilet' },
+    { name: '현관', rx: brW + br2W, ry: topH + entH, rw: bathW, rh: hallH, fill: '#f1f5f9', furniture: 'shoe' },
+  ]
+  if (mirror) {
+    return rooms.map(r => ({ ...r, rx: uw - r.rx - r.rw }))
   }
-  summary?: { totalUnits?: number; unitMix?: Record<string,number>; coreArea?: number; totalExclusiveArea?: number; serviceRatio?: number }
+  return rooms
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 스케일 상수
+// 쓰리룸 템플릿 (전용 84㎡)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const PX_PER_M = 20 // 1m = 20px
+function threeRoomTemplate(uw: number, uh: number, mirror: boolean): RoomT[] {
+  const livingW = uw * 0.52, kitchenW = uw - livingW
+  const topH = uh * 0.42
+  const midH = uh * 0.33, botH = uh - topH - midH
+  const mrW = uw * 0.38, r2W = uw * 0.32, bathW = uw - mrW - r2W
+  const r3W = uw * 0.35, drW = uw * 0.25, b2W = uw * 0.2, hallW = uw - r3W - drW - b2W
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 실 색상 맵
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const ROOM_COLORS: Record<string, string> = {
-  '현관': '#f1f5f9', '거실': '#f0fdf4', '주방': '#fef3c7', '주침실': '#eff6ff',
-  '침실2': '#f0f9ff', '침실3': '#f5f3ff', '주욕실': '#e0f2fe', '보조욕실': '#e0f2fe',
-  '욕실': '#e0f2fe', '욕실1': '#e0f2fe', '욕실2': '#e0f2fe',
-  '드레스룸': '#faf5ff', '발코니': '#ecfdf5', '다용도실': '#fef9c3',
-  '복도': '#f8fafc', '서재': '#fdf2f8', '팬트리': '#fff7ed',
-}
-
-function getRoomColor(name: string): string {
-  for (const [key, color] of Object.entries(ROOM_COLORS)) {
-    if (name.includes(key)) return color
+  const rooms: RoomT[] = [
+    { name: '거실', rx: 0, ry: 0, rw: livingW, rh: topH, fill: '#f0fdf4', furniture: 'sofa' },
+    { name: '주방/식당', rx: livingW, ry: 0, rw: kitchenW, rh: topH, fill: '#fef3c7', furniture: 'kitchen' },
+    { name: '안방', rx: 0, ry: topH, rw: mrW, rh: midH, fill: '#eff6ff', furniture: 'bed-master' },
+    { name: '침실2', rx: mrW, ry: topH, rw: r2W, rh: midH, fill: '#f0f9ff', furniture: 'bed-single' },
+    { name: '주욕실', rx: mrW + r2W, ry: topH, rw: bathW, rh: midH, fill: '#e0f2fe', furniture: 'bath' },
+    { name: '침실3', rx: 0, ry: topH + midH, rw: r3W, rh: botH, fill: '#f5f3ff', furniture: 'bed-single' },
+    { name: '드레스룸', rx: r3W, ry: topH + midH, rw: drW, rh: botH, fill: '#faf5ff', furniture: 'closet' },
+    { name: '보조욕실', rx: r3W + drW, ry: topH + midH, rw: b2W, rh: botH, fill: '#e0f2fe', furniture: 'toilet' },
+    { name: '현관', rx: r3W + drW + b2W, ry: topH + midH, rw: hallW, rh: botH, fill: '#f1f5f9', furniture: 'shoe' },
+  ]
+  if (mirror) {
+    return rooms.map(r => ({ ...r, rx: uw - r.rx - r.rw }))
   }
-  return '#f8fafc'
+  return rooms
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 가구 렌더러
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function FurnitureSVG({ f, scale }: { f: FurnitureDef; scale: number }) {
-  const x = f.x * scale, y = f.y * scale, w = f.w * scale, h = f.h * scale
-  const cx = x + w/2, cy = y + h/2
-  
-  switch (f.type) {
-    case 'bed':
-      return <g opacity="0.4"><rect x={x} y={y} width={w} height={h} rx={1} fill="#93c5fd" stroke="#60a5fa" strokeWidth="0.5" />
-        <rect x={x+1} y={y+1} width={w-2} height={h*0.3} rx={0.5} fill="#bfdbfe" stroke="#60a5fa" strokeWidth="0.3" /></g>
+function Furn({ type, x, y, w, h }: { type: string; x: number; y: number; w: number; h: number }) {
+  const cx = x + w / 2, cy = y + h / 2
+  switch (type) {
+    case 'bed-master':
+      return <g opacity="0.45"><rect x={x+w*0.08} y={y+h*0.05} width={w*0.84} height={h*0.85} rx={2} fill="#93c5fd" stroke="#60a5fa" strokeWidth="0.5" />
+        <rect x={x+w*0.12} y={y+h*0.08} width={w*0.36} height={h*0.22} rx={1} fill="#bfdbfe" stroke="#60a5fa" strokeWidth="0.3" />
+        <rect x={x+w*0.52} y={y+h*0.08} width={w*0.36} height={h*0.22} rx={1} fill="#bfdbfe" stroke="#60a5fa" strokeWidth="0.3" /></g>
+    case 'bed-single':
+      return <g opacity="0.4"><rect x={x+w*0.15} y={y+h*0.1} width={w*0.7} height={h*0.75} rx={2} fill="#a5b4fc" stroke="#818cf8" strokeWidth="0.5" />
+        <rect x={x+w*0.2} y={y+h*0.12} width={w*0.6} height={h*0.2} rx={1} fill="#c7d2fe" stroke="#818cf8" strokeWidth="0.3" /></g>
     case 'sofa':
-      return <g opacity="0.35"><rect x={x} y={y} width={w} height={h*0.7} rx={1} fill="#86efac" stroke="#4ade80" strokeWidth="0.5" />
-        <rect x={x} y={y+h*0.7} width={w} height={h*0.3} rx={0.5} fill="#4ade80" stroke="#22c55e" strokeWidth="0.3" /></g>
-    case 'dining':
-      return <g opacity="0.3"><rect x={x} y={y} width={w} height={h} rx={1} fill="none" stroke="#a16207" strokeWidth="0.5" />
-        {[0.25,0.75].map(px => [0,1].map(py => <circle key={`${px}-${py}`} cx={x+w*px} cy={y+(py===0?-1:h+1)*1} r={0.8} fill="none" stroke="#a16207" strokeWidth="0.3" />))}</g>
-    case 'sink':
-      return <g opacity="0.4"><rect x={x} y={y} width={w} height={h} rx={1} fill="#e0f2fe" stroke="#38bdf8" strokeWidth="0.5" />
-        <circle cx={cx} cy={cy} r={Math.min(w,h)*0.2} fill="none" stroke="#0ea5e9" strokeWidth="0.3" /></g>
+      return <g opacity="0.35"><rect x={cx-w*0.3} y={cy+h*0.08} width={w*0.6} height={h*0.18} rx={2} fill="#86efac" stroke="#4ade80" strokeWidth="0.5" />
+        <rect x={cx-w*0.15} y={cy-h*0.15} width={w*0.3} height={h*0.1} rx={1} fill="none" stroke="#94a3b8" strokeWidth="0.4" />
+        <rect x={cx-w*0.2} y={cy-h*0.3} width={w*0.4} height={1.5} fill="#64748b" rx={0.5} /></g>
+    case 'kitchen':
+      return <g opacity="0.4"><rect x={x+2} y={y+2} width={w-4} height={7} rx={1} fill="#fbbf24" stroke="#f59e0b" strokeWidth="0.5" />
+        <rect x={x+w*0.3} y={y+3} width={8} height={4} rx={1} fill="none" stroke="#d97706" strokeWidth="0.4" />
+        <circle cx={x+w*0.3+4} cy={y+5} r={1} fill="#d97706" />
+        <rect x={cx-8} y={cy+4} width={16} height={10} rx={1.5} fill="none" stroke="#a16207" strokeWidth="0.4" /></g>
     case 'toilet':
-      return <g opacity="0.4"><ellipse cx={cx} cy={cy+h*0.1} rx={w*0.35} ry={h*0.35} fill="#e0f2fe" stroke="#38bdf8" strokeWidth="0.5" />
-        <rect x={cx-w*0.25} y={cy+h*0.3} width={w*0.5} height={h*0.15} rx={0.5} fill="#bae6fd" stroke="#38bdf8" strokeWidth="0.3" /></g>
-    case 'tub':
-      return <g opacity="0.35"><rect x={x} y={y} width={w} height={h} rx={2} fill="#bae6fd" stroke="#38bdf8" strokeWidth="0.5" />
-        <circle cx={x+w*0.8} cy={y+2} r={0.8} fill="#0ea5e9" /></g>
-    case 'washer':
-      return <g opacity="0.35"><circle cx={cx} cy={cy} r={Math.min(w,h)*0.35} fill="#d1d5db" stroke="#6b7280" strokeWidth="0.5" />
-        <circle cx={cx} cy={cy} r={Math.min(w,h)*0.2} fill="none" stroke="#6b7280" strokeWidth="0.3" /></g>
-    case 'fridge':
-      return <g opacity="0.3"><rect x={x} y={y} width={w} height={h} rx={0.5} fill="#94a3b8" stroke="#64748b" strokeWidth="0.4" /></g>
-    case 'range':
-      return <g opacity="0.3"><rect x={x} y={y} width={w} height={h} rx={0.5} fill="#fca5a5" stroke="#ef4444" strokeWidth="0.4" />
-        {[0.3,0.7].map(px => <circle key={px} cx={x+w*px} cy={cy} r={Math.min(w,h)*0.15} fill="none" stroke="#dc2626" strokeWidth="0.3" />)}</g>
-    case 'shoes':
-      return <g opacity="0.3"><rect x={x} y={y} width={w} height={h} rx={0.5} fill="#e2e8f0" stroke="#94a3b8" strokeWidth="0.4" /></g>
+      return <g opacity="0.45"><ellipse cx={cx} cy={cy+h*0.1} rx={3.5} ry={4.5} fill="#e0f2fe" stroke="#38bdf8" strokeWidth="0.5" />
+        <rect x={cx-2.5} y={cy+h*0.1+4} width={5} height={2.5} rx={1} fill="#bae6fd" stroke="#38bdf8" strokeWidth="0.3" />
+        <rect x={x+2} y={y+2} width={9} height={5} rx={2} fill="#e0f2fe" stroke="#38bdf8" strokeWidth="0.5" /></g>
+    case 'bath':
+      return <g opacity="0.4"><rect x={x+w*0.35} y={y+3} width={w*0.6} height={h*0.4} rx={3} fill="#bae6fd" stroke="#38bdf8" strokeWidth="0.5" />
+        <ellipse cx={x+10} cy={y+h*0.6} rx={3.5} ry={4.5} fill="#e0f2fe" stroke="#38bdf8" strokeWidth="0.5" />
+        <rect x={x+2} y={y+2} width={10} height={6} rx={2} fill="#e0f2fe" stroke="#38bdf8" strokeWidth="0.5" /></g>
     case 'closet':
-      return <g opacity="0.25"><rect x={x} y={y} width={w} height={h} rx={0.5} fill="none" stroke="#a855f7" strokeWidth="0.5" strokeDasharray="2 1" /></g>
-    case 'desk':
-      return <g opacity="0.3"><rect x={x} y={y} width={w} height={h} rx={0.5} fill="none" stroke="#64748b" strokeWidth="0.5" />
-        <circle cx={x+w*0.7} cy={cy} r={Math.min(w,h)*0.2} fill="none" stroke="#64748b" strokeWidth="0.3" /></g>
-    default:
-      return null
+      return <g opacity="0.25"><rect x={x+2} y={y+2} width={w-4} height={h-4} rx={1} fill="none" stroke="#a855f7" strokeWidth="0.5" strokeDasharray="2 1" />
+        <line x1={x+2} y1={cy} x2={x+w-2} y2={cy} stroke="#a855f7" strokeWidth="0.3" /></g>
+    case 'shoe':
+      return <g opacity="0.3"><rect x={x+2} y={y+2} width={w-4} height={6} rx={1} fill="#e2e8f0" stroke="#94a3b8" strokeWidth="0.3" /></g>
+    default: return null
   }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 문 렌더러
+// 코어 렌더러
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function DoorSVG({ d, unitX, unitY, scale }: { d: DoorDef; unitX: number; unitY: number; scale: number }) {
-  const dx = (unitX + d.x) * scale, dy = (unitY + d.y) * scale
-  const dw = d.width * scale
-  const isSlide = d.type === 'slide'
-  const isEntrance = d.type === 'entrance'
+function Core({ x, y, w, h, scale }: { x: number; y: number; w: number; h: number; scale: number }) {
+  const evW = w * 0.35, stairW = w - evW * 2 - 4
+  return <g>
+    <rect x={x} y={y} width={w} height={h} fill="#47556920" stroke="#475569" strokeWidth={1.5} rx={1} />
+    <rect x={x+2} y={y+2} width={evW} height={h-4} fill="#334155" rx={1} />
+    <text x={x+2+evW/2} y={y+h/2+1.5} fontSize="4.5" textAnchor="middle" fill="white" fontWeight="500">EV1</text>
+    <rect x={x+evW+3} y={y+2} width={evW} height={h-4} fill="#334155" rx={1} />
+    <text x={x+evW+3+evW/2} y={y+h/2+1.5} fontSize="4.5" textAnchor="middle" fill="white" fontWeight="500">EV2</text>
+    <rect x={x+evW*2+4} y={y+2} width={stairW} height={h-4} fill="#475569" rx={1} />
+    <text x={x+evW*2+4+stairW/2} y={y+h/2+1.5} fontSize="4" textAnchor="middle" fill="white">계단</text>
+    {Array.from({length:Math.floor((h-6)/3)},(_,i) => <line key={i} x1={x+evW*2+5} y1={y+3+i*3} x2={x+w-2} y2={y+3+i*3} stroke="#94a3b8" strokeWidth="0.3" />)}
+  </g>
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 층 평면도 생성 (템플릿 기반)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+interface UnitLayout { id: string; type: '투룸'|'쓰리룸'; x: number; y: number; w: number; h: number; rooms: RoomT[]; mirror: boolean }
+
+function generateFloorLayout(unitsPerFloor: number, unitMix: string[]): { bW: number; bD: number; coreX: number; coreW: number; coreH: number; units: UnitLayout[] } {
+  const coreW = 30 // px
+  const coreH_ratio = 0.6 // 코어는 건물 깊이의 60%
+  const unitH = 120 // 세대 깊이 (px)
   
-  if (d.wall === 'top' || d.wall === 'bottom') {
-    const py = d.wall === 'top' ? dy : dy
-    if (isSlide) {
-      return <g><line x1={dx} y1={py} x2={dx+dw} y2={py} stroke="#ef4444" strokeWidth="1.5" />
-        <line x1={dx+dw*0.3} y1={py-1} x2={dx+dw*0.7} y2={py-1} stroke="#ef4444" strokeWidth="0.5" /></g>
-    }
-    const r = dw
-    const sweep = d.wall === 'top' ? 1 : 0
-    return <g>
-      <line x1={dx} y1={py} x2={dx+dw} y2={py} stroke={isEntrance ? '#2dd4bf' : '#f97316'} strokeWidth={isEntrance ? 2 : 1} />
-      <path d={`M ${dx} ${py} A ${r} ${r} 0 0 ${sweep} ${dx+dw} ${py + (d.wall==='top'?dw:-dw)}`} fill="none" stroke="#f97316" strokeWidth="0.5" strokeDasharray="2 1" />
-    </g>
+  // 좌우 세대 배분
+  const leftCount = Math.ceil(unitsPerFloor / 2)
+  const rightCount = unitsPerFloor - leftCount
+
+  // 세대 폭 계산
+  const unitW_two = 90 // 투룸 폭
+  const unitW_three = 110 // 쓰리룸 폭
+
+  // 유닛 배치 생성
+  const units: UnitLayout[] = []
+  let leftX = 0
+  let rightX = 0
+
+  // 세대 타입 결정
+  const types: ('투룸'|'쓰리룸')[] = []
+  for (let i = 0; i < unitsPerFloor; i++) {
+    if (unitMix.includes('쓰리룸') && (i === 1 || i === 2)) types.push('쓰리룸')
+    else types.push('투룸')
   }
-  // left/right walls
-  const px = d.wall === 'left' ? dx : dx
-  if (isSlide) {
-    return <g><line x1={px} y1={dy} x2={px} y2={dy+dw} stroke="#ef4444" strokeWidth="1.5" /></g>
+
+  // 좌측 세대
+  let lx = 0
+  for (let i = 0; i < leftCount; i++) {
+    const t = types[i]
+    const uw = t === '쓰리룸' ? unitW_three : unitW_two
+    units.push({
+      id: String.fromCharCode(65 + i), type: t,
+      x: lx, y: 0, w: uw, h: unitH,
+      rooms: t === '쓰리룸' ? threeRoomTemplate(uw, unitH, false) : twoRoomTemplate(uw, unitH, false),
+      mirror: false,
+    })
+    lx += uw
   }
-  return <g>
-    <line x1={px} y1={dy} x2={px} y2={dy+dw} stroke={isEntrance ? '#2dd4bf' : '#f97316'} strokeWidth={isEntrance ? 2 : 1} />
-  </g>
+
+  const leftTotalW = lx
+  const coreX = leftTotalW
+
+  // 우측 세대
+  let rx = leftTotalW + coreW
+  for (let i = 0; i < rightCount; i++) {
+    const t = types[leftCount + i]
+    const uw = t === '쓰리룸' ? unitW_three : unitW_two
+    units.push({
+      id: String.fromCharCode(65 + leftCount + i), type: t,
+      x: rx, y: 0, w: uw, h: unitH,
+      rooms: t === '쓰리룸' ? threeRoomTemplate(uw, unitH, true) : twoRoomTemplate(uw, unitH, true),
+      mirror: true,
+    })
+    rx += uw
+  }
+
+  const bW = rx
+  return { bW, bD: unitH, coreX, coreW, coreH: unitH, units }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 창문 렌더러
+// SVG 렌더러
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function WindowSVG({ w, unitX, unitY, scale }: { w: WindowDef; unitX: number; unitY: number; scale: number }) {
-  const wx = (unitX + w.x) * scale, wy = (unitY + w.y) * scale
-  const ww = w.width * scale
-  if (w.wall === 'top' || w.wall === 'bottom') {
-    return <g>
-      <line x1={wx} y1={wy} x2={wx+ww} y2={wy} stroke="#0ea5e9" strokeWidth="2.5" />
-      <line x1={wx} y1={wy-1.5} x2={wx+ww} y2={wy-1.5} stroke="#0ea5e9" strokeWidth="0.3" />
-      <line x1={wx} y1={wy+1.5} x2={wx+ww} y2={wy+1.5} stroke="#0ea5e9" strokeWidth="0.3" />
-    </g>
-  }
-  return <g>
-    <line x1={wx} y1={wy} x2={wx} y2={wy+ww} stroke="#0ea5e9" strokeWidth="2.5" />
-    <line x1={wx-1.5} y1={wy} x2={wx-1.5} y2={wy+ww} stroke="#0ea5e9" strokeWidth="0.3" />
-    <line x1={wx+1.5} y1={wy} x2={wx+1.5} y2={wy+ww} stroke="#0ea5e9" strokeWidth="0.3" />
-  </g>
-}
+function FloorPlanSVG({ layout, scale }: { layout: ReturnType<typeof generateFloorLayout>; scale: number }) {
+  const { bW, bD, coreX, coreW, coreH, units } = layout
+  const pad = 35
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 메인 렌더러
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function FloorPlanSVG({ data, scale }: { data: FloorPlanData; scale: number }) {
-  const fp = data.floorPlan
-  const bW = fp.buildingWidth * scale
-  const bD = fp.buildingDepth * scale
-  const pad = 40
+  const unitColors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b']
 
   return (
-    <svg viewBox={`0 0 ${bW + pad * 2} ${bD + pad * 2 + 20}`} className="w-full h-auto" style={{ minWidth: 300 }}>
-      <g transform={`translate(${pad}, ${pad})`}>
+    <svg viewBox={`0 0 ${bW + pad*2} ${bD + pad*2 + 16}`} className="w-full h-auto" style={{ minWidth: 300 }}>
+      <g transform={`translate(${pad},${pad})`}>
         {/* 건물 외곽 */}
-        <rect x={0} y={0} width={bW} height={bD} fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
+        <rect x={0} y={0} width={bW} height={bD} fill="none" stroke="currentColor" strokeWidth={WALL_EXT} className="text-foreground" />
 
         {/* 코어 */}
-        {fp.core && (() => {
-          const cx = fp.core.x * scale, cy = fp.core.y * scale
-          const cw = fp.core.w * scale, ch = fp.core.h * scale
-          return <g>
-            <rect x={cx} y={cy} width={cw} height={ch} fill="#33415520" stroke="#475569" strokeWidth="1.5" rx="1" />
-            {fp.core.elements?.map((el, i) => {
-              const ex = el.x * scale, ey = el.y * scale, ew = el.w * scale, eh = el.h * scale
-              const fills: Record<string,string> = { stair: '#475569', elevator: '#334155', corridor: '#94a3b810', pipe: '#64748b' }
-              return <g key={i}>
-                <rect x={ex} y={ey} width={ew} height={eh} fill={fills[el.type] || '#64748b'} rx="0.5" />
-                <text x={ex+ew/2} y={ey+eh/2+1.5} fontSize="3.5" textAnchor="middle" fill={el.type === 'corridor' ? '#64748b' : 'white'}>
-                  {el.type === 'stair' ? '계단' : el.type === 'elevator' ? 'EV' : el.type === 'corridor' ? '복도' : 'PS'}
-                </text>
-              </g>
-            })}
-            {!fp.core.elements?.length && <text x={cx+cw/2} y={cy+ch/2+2} fontSize="5" textAnchor="middle" fill="#475569" fontWeight="600">코어</text>}
-          </g>
-        })()}
+        <Core x={coreX} y={bD * 0.15} w={coreW} h={bD * 0.7} scale={1} />
+        {/* 복도 */}
+        <rect x={coreX} y={0} width={coreW} height={bD*0.15} fill="#f1f5f910" stroke="#64748b" strokeWidth={0.3} />
+        <text x={coreX+coreW/2} y={bD*0.08+1} fontSize="3.5" textAnchor="middle" fill="#64748b">복도</text>
+        <rect x={coreX} y={bD*0.85} width={coreW} height={bD*0.15} fill="#f1f5f910" stroke="#64748b" strokeWidth={0.3} />
+        <text x={coreX+coreW/2} y={bD*0.92+1} fontSize="3.5" textAnchor="middle" fill="#64748b">복도</text>
 
         {/* 세대 */}
-        {fp.units.map((unit, ui) => {
-          const ux = unit.x * scale, uy = unit.y * scale
-          const uw = unit.w * scale, uh = unit.h * scale
-          const unitColor = ui % 2 === 0 ? '#10b981' : '#3b82f6'
-
+        {units.map((unit, ui) => {
+          const color = unitColors[ui % unitColors.length]
+          const area = Math.round(unit.w * unit.h / 20) // 근사 전용면적
           return <g key={unit.id}>
             {/* 세대 외곽 */}
-            <rect x={ux} y={uy} width={uw} height={uh} fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
+            <rect x={unit.x} y={unit.y} width={unit.w} height={unit.h} fill="none" stroke="currentColor" strokeWidth={2} className="text-foreground" />
 
             {/* 실 */}
             {unit.rooms.map((room, ri) => {
-              const rx = (unit.x + room.x) * scale, ry = (unit.y + room.y) * scale
-              const rw = room.w * scale, rh = room.h * scale
-              const area = Math.round(room.w * room.h * 10) / 10
+              const rx = unit.x + room.rx, ry = unit.y + room.ry
               const isBal = room.name.includes('발코니')
+              const roomArea = Math.round(room.rw * room.rh / 10) / 10
               return <g key={ri}>
-                <rect x={rx} y={ry} width={rw} height={rh}
-                  fill={getRoomColor(room.name)} stroke="currentColor"
-                  strokeWidth={isBal ? 0.5 : 1} className="text-foreground"
-                  strokeDasharray={isBal ? '3 1.5' : undefined} />
-                <text x={rx+rw/2} y={ry+rh/2-1} fontSize={rw > 30 ? 5 : 3.5} textAnchor="middle" fill="#374151" fontWeight="600">{room.name}</text>
-                <text x={rx+rw/2} y={ry+rh/2+4} fontSize={rw > 30 ? 3.5 : 2.5} textAnchor="middle" fill="#9ca3af">{area}㎡</text>
-                {/* 가구 */}
-                {room.furniture?.map((f, fi) => (
-                  <FurnitureSVG key={fi} f={{ ...f, x: unit.x + room.x + f.x, y: unit.y + room.y + f.y }} scale={scale} />
-                ))}
+                <rect x={rx} y={ry} width={room.rw} height={room.rh}
+                  fill={room.fill} stroke="currentColor" strokeWidth={isBal ? 0.5 : WALL_INT}
+                  className="text-foreground" strokeDasharray={isBal ? '3 1.5' : undefined} />
+                <text x={rx+room.rw/2} y={ry+room.rh/2 - (room.furniture ? 3 : 0)} fontSize={room.rw > 30 ? 5.5 : 4} textAnchor="middle" fill="#374151" fontWeight="600">{room.name}</text>
+                <text x={rx+room.rw/2} y={ry+room.rh/2 + (room.furniture ? 1 : 5)} fontSize={room.rw > 30 ? 3.5 : 2.5} textAnchor="middle" fill="#9ca3af">{roomArea}㎡</text>
+                {room.furniture && <Furn type={room.furniture} x={rx} y={ry} w={room.rw} h={room.rh} />}
               </g>
             })}
 
-            {/* 문 */}
-            {unit.doors?.map((d, di) => <DoorSVG key={di} d={d} unitX={unit.x} unitY={unit.y} scale={scale} />)}
-
-            {/* 창 */}
-            {unit.windows?.map((w, wi) => <WindowSVG key={wi} w={w} unitX={unit.x} unitY={unit.y} scale={scale} />)}
-
             {/* 세대 라벨 */}
-            <text x={ux+uw/2} y={uy+uh+10} fontSize="5" textAnchor="middle" fill={unitColor} fontWeight="700">
-              {unit.id}호 ({unit.type} · {unit.exclusiveArea}㎡)
+            <text x={unit.x + unit.w / 2} y={unit.y + unit.h + 10} fontSize="5" textAnchor="middle" fill={color} fontWeight="700">
+              {unit.id}호 ({unit.type} · {area}㎡)
             </text>
           </g>
         })}
 
         {/* 치수선 */}
-        <g>
-          <line x1={0} y1={-12} x2={bW} y2={-12} stroke="#94a3b8" strokeWidth="0.5" />
-          <line x1={0} y1={-14} x2={0} y2={-10} stroke="#94a3b8" strokeWidth="0.5" />
-          <line x1={bW} y1={-14} x2={bW} y2={-10} stroke="#94a3b8" strokeWidth="0.5" />
-          <text x={bW/2} y={-16} fontSize="4.5" textAnchor="middle" fill="#64748b">{fp.buildingWidth}m</text>
+        <line x1={0} y1={-14} x2={bW} y2={-14} stroke="#94a3b8" strokeWidth="0.5" />
+        <line x1={0} y1={-16} x2={0} y2={-12} stroke="#94a3b8" strokeWidth="0.5" />
+        <line x1={bW} y1={-16} x2={bW} y2={-12} stroke="#94a3b8" strokeWidth="0.5" />
+        <text x={bW/2} y={-18} fontSize="4.5" textAnchor="middle" fill="#64748b">{(bW*0.1).toFixed(0)}m</text>
 
-          <line x1={-12} y1={0} x2={-12} y2={bD} stroke="#94a3b8" strokeWidth="0.5" />
-          <line x1={-14} y1={0} x2={-10} y2={0} stroke="#94a3b8" strokeWidth="0.5" />
-          <line x1={-14} y1={bD} x2={-10} y2={bD} stroke="#94a3b8" strokeWidth="0.5" />
-          <text x={-18} y={bD/2} fontSize="4.5" textAnchor="middle" fill="#64748b" transform={`rotate(-90, -18, ${bD/2})`}>{fp.buildingDepth}m</text>
-        </g>
+        <line x1={-14} y1={0} x2={-14} y2={bD} stroke="#94a3b8" strokeWidth="0.5" />
+        <line x1={-16} y1={0} x2={-12} y2={0} stroke="#94a3b8" strokeWidth="0.5" />
+        <line x1={-16} y1={bD} x2={-12} y2={bD} stroke="#94a3b8" strokeWidth="0.5" />
+        <text x={-20} y={bD/2} fontSize="4.5" textAnchor="middle" fill="#64748b" transform={`rotate(-90,-20,${bD/2})`}>{(bD*0.1).toFixed(0)}m</text>
 
         {/* 방위 */}
-        <g transform={`translate(${bW+20}, 10)`}>
-          <line x1={0} y1={12} x2={0} y2={-2} stroke="currentColor" strokeWidth="1" className="text-foreground" />
-          <polygon points="0,-4 -3,2 3,2" fill="currentColor" className="text-foreground" />
+        <g transform={`translate(${bW+16},8)`}>
+          <line x1={0} y1={10} x2={0} y2={-2} stroke="currentColor" strokeWidth={1} className="text-foreground" />
+          <polygon points="0,-4 -2.5,1.5 2.5,1.5" fill="currentColor" className="text-foreground" />
           <text x={0} y={-6} fontSize="5" textAnchor="middle" fill="currentColor" fontWeight="700" className="text-foreground">N</text>
         </g>
       </g>
@@ -251,7 +260,8 @@ function FloorPlanSVG({ data, scale }: { data: FloorPlanData; scale: number }) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 면적표
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function AIAreaTable({ data }: { data: FloorPlanData }) {
+function AreaTable({ units }: { units: UnitLayout[] }) {
+  const total = units.reduce((s, u) => s + Math.round(u.w * u.h / 20), 0)
   return (
     <div className="text-[11px] border border-border rounded-lg overflow-hidden">
       <div className="bg-primary/10 px-3 py-1.5 font-bold text-xs flex items-center gap-1.5">
@@ -265,21 +275,19 @@ function AIAreaTable({ data }: { data: FloorPlanData }) {
           <th className="px-2 py-1 text-right">실 수</th>
         </tr></thead>
         <tbody>
-          {data.floorPlan.units.map(u => (
+          {units.map(u => (
             <tr key={u.id} className="border-t border-border/30">
               <td className="px-2 py-0.5 font-semibold">{u.id}호</td>
               <td className="px-2 py-0.5">{u.type}</td>
-              <td className="px-2 py-0.5 text-right font-mono">{u.exclusiveArea}㎡</td>
+              <td className="px-2 py-0.5 text-right font-mono">{Math.round(u.w * u.h / 20)}㎡</td>
               <td className="px-2 py-0.5 text-right">{u.rooms.length}실</td>
             </tr>
           ))}
-          {data.summary && (
-            <tr className="border-t border-border bg-emerald-500/10 font-bold">
-              <td className="px-2 py-1" colSpan={2}>합계 ({data.summary.totalUnits || data.floorPlan.units.length}세대)</td>
-              <td className="px-2 py-1 text-right font-mono">{data.summary.totalExclusiveArea || data.floorPlan.units.reduce((s,u)=>s+u.exclusiveArea,0)}㎡</td>
-              <td className="px-2 py-1 text-right">{data.summary.serviceRatio ? `${data.summary.serviceRatio}%` : '-'}</td>
-            </tr>
-          )}
+          <tr className="border-t border-border bg-emerald-500/10 font-bold">
+            <td className="px-2 py-1" colSpan={2}>합계 ({units.length}세대)</td>
+            <td className="px-2 py-1 text-right font-mono">{total}㎡</td>
+            <td className="px-2 py-1 text-right">-</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -290,206 +298,97 @@ function AIAreaTable({ data }: { data: FloorPlanData }) {
 // 메인 컴포넌트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 interface AIFloorPlanProps {
-  siteArea: number
-  buildingCoverage: number
-  floors: number
-  units: number
-  type?: string
-  layoutName?: string
-  address?: string
-  zoneType?: string
-  heightLimit?: number
-  setbacks?: { front?: number; side?: number; rear?: number }
+  siteArea: number; buildingCoverage: number; floors: number; units: number
+  type?: string; layoutName?: string; address?: string; zoneType?: string
+  heightLimit?: number; setbacks?: { front?: number; side?: number; rear?: number }
 }
 
 export function AIFloorPlan(props: AIFloorPlanProps) {
-  const { siteArea, buildingCoverage, floors, units, type, layoutName, address, zoneType, heightLimit, setbacks } = props
-  const [loading, setLoading] = useState(false)
-  const [data, setData] = useState<FloorPlanData | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [scale, setScale] = useState(PX_PER_M)
+  const { siteArea, buildingCoverage, floors, units, type, layoutName, address, zoneType } = props
   const [fullscreen, setFullscreen] = useState(false)
+  const [mixIndex, setMixIndex] = useState(0)
 
-  // 용도지역 한글 매핑
   const ZONE_NAMES: Record<string, string> = {
     'residential-1': '제1종일반주거지역', 'residential-2': '제2종일반주거지역',
     'residential-3': '제3종일반주거지역', 'semi-residential': '준주거지역',
     'commercial-neighborhood': '근린상업지역', 'commercial-general': '일반상업지역',
-    'commercial-central': '중심상업지역',
-    'residential-exclusive-1': '제1종전용주거지역', 'residential-exclusive-2': '제2종전용주거지역',
   }
   const zoneName = (zoneType && ZONE_NAMES[zoneType]) || zoneType || '제2종일반주거지역'
 
-  // AI용 현실적 건물 크기 (세대수 기반)
   const rawUnitsPerFloor = Math.max(Math.ceil(units / Math.max(floors - 1, 1)), 2)
   const unitsPerFloor = Math.min(rawUnitsPerFloor, 4)
-  // AI용 현실적 건물 크기 (세대수 기반)
-  const unitWidth = 7.5
-  const coreWidth = 3.0
-  const aiBW = Math.round((unitsPerFloor / 2) * unitWidth + coreWidth)
-  const aiBD = 12
 
-  const generate = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/generate-floorplan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(55000), // 55초 타임아웃
-        body: JSON.stringify({
-          site: {
-            address: address || '서울특별시',
-            siteArea,
-            zoning: zoneName,
-            heightLimit: heightLimit || 21,
-            setbacks: setbacks || { front: 3, side: 1.5, rear: 2 },
-          },
-          layout: {
-            type: layoutName || type || '타워형',
-            floors,
-            units: unitsPerFloor * Math.max(floors - 1, 1),
-            buildingCoverage,
-            far: Math.round(buildingCoverage * floors),
-            footprint: { width: aiBW, depth: aiBD },
-          },
-          preferences: {
-            unitTypes: unitsPerFloor <= 2 ? ['쓰리룸'] : ['투룸', '쓰리룸'],
-            balconyExpansion: true,
-            koreanStandard: true,
-          },
-        }),
-      })
-      const result = await res.json()
-      if (result.success && result.data) {
-        setData(result.data)
-      } else {
-        setError(result.error || 'AI 평면 생성에 실패했습니다')
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : '네트워크 오류'
-      setError(msg.includes('abort') || msg.includes('timed') || msg.includes('timeout') || msg.includes('signal')
-        ? 'AI 응답 시간 초과. 다시 시도해주세요.' 
-        : msg.includes('fetch') || msg.includes('Failed') ? 'AI 서버 연결 실패. 다시 시도해주세요.' : msg)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // 세대 믹스 옵션
+  const mixOptions = [
+    ['투룸', '쓰리룸'],
+    ['쓰리룸', '쓰리룸'],
+    ['투룸', '투룸'],
+  ]
+
+  const layout = useMemo(() => 
+    generateFloorLayout(unitsPerFloor, mixOptions[mixIndex]),
+    [unitsPerFloor, mixIndex]
+  )
 
   return (
     <div className="space-y-4">
-      {!data ? (
-        <div className="text-center py-8 space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10">
-            <Sparkles className="h-8 w-8 text-primary" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold mb-1">AI 평면 자동 생성</h3>
-            <p className="text-[11px] text-muted-foreground">
-              Claude AI가 대지 조건·법규·배치안을 분석하여<br />
-              한국 주거 표준에 맞는 평면도를 자동 설계합니다
-            </p>
-          </div>
-          <div className="text-[10px] text-muted-foreground space-y-0.5">
-            <p>건물: {aiBW}m × {aiBD}m · 기준층 {unitsPerFloor}세대</p>
-            <p>{zoneName} · {floors}층 · {units}세대</p>
-            {rawUnitsPerFloor > 4 && <p className="text-amber-400">※ AI 생성은 대표 {unitsPerFloor}세대 기준</p>}
-          </div>
-          <button
-            onClick={generate}
-            disabled={loading}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-emerald-600 text-white font-bold text-sm disabled:opacity-50 inline-flex items-center gap-2"
-          >
-            {loading ? (
-              <><Loader2 className="h-4 w-4 animate-spin" />AI 평면 생성 중... (약 5~10초)</>
-            ) : (
-              <><Sparkles className="h-4 w-4" />AI 평면 생성하기</>
-            )}
-          </button>
-          {error && <p className="text-xs text-red-400">{error}</p>}
-        </div>
-      ) : (
-        <>
-          {/* 전체화면 모드 */}
-          {fullscreen && (
-            <div className="fixed inset-0 z-50 bg-background flex flex-col">
-              {/* 전체화면 헤더 */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/95">
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-bold">AI 생성 평면도</span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">Claude Haiku 4.5</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => setScale(s => Math.max(s - 4, 8))} className="p-2 rounded-lg hover:bg-secondary/50"><ZoomOut className="h-4 w-4" /></button>
-                  <button onClick={() => setScale(s => Math.min(s + 4, 48))} className="p-2 rounded-lg hover:bg-secondary/50"><ZoomIn className="h-4 w-4" /></button>
-                  <button onClick={() => setFullscreen(false)} className="p-2 rounded-lg hover:bg-secondary/50 ml-2"><X className="h-4 w-4" /></button>
-                </div>
-              </div>
-              {/* 전체화면 SVG */}
-              <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
-                <FloorPlanSVG data={data} scale={scale} />
-              </div>
-              {/* 전체화면 하단 */}
-              <div className="px-4 py-2 border-t border-border bg-background/95 flex items-center justify-between">
-                <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><span className="w-3 h-1.5 bg-[#0ea5e9] rounded-sm inline-block" />창문</span>
-                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#f97316] inline-block" />문</span>
-                  <span className="flex items-center gap-1"><span className="w-3 h-1 bg-[#334155] rounded-sm inline-block" />코어</span>
-                </div>
-                <span className="text-[9px] text-muted-foreground">핀치 줌 또는 +/- 버튼으로 확대</span>
-              </div>
-            </div>
-          )}
-
-          {/* 일반 모드 */}
-          {/* 도구바 */}
-          <div className="flex items-center justify-between">
+      {/* 전체화면 */}
+      {fullscreen && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-bold">AI 생성 평면도</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">Claude Haiku 4.5</span>
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-bold">AI 평면도</span>
             </div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setScale(s => Math.max(s - 4, 12))} className="p-1 rounded hover:bg-secondary/50"><ZoomOut className="h-3.5 w-3.5" /></button>
-              <button onClick={() => setScale(s => Math.min(s + 4, 36))} className="p-1 rounded hover:bg-secondary/50"><ZoomIn className="h-3.5 w-3.5" /></button>
-              <button onClick={() => setFullscreen(true)} className="p-1 rounded hover:bg-secondary/50"><Maximize2 className="h-3.5 w-3.5" /></button>
-              <button onClick={() => { setData(null); setError(null) }} className="p-1 rounded hover:bg-secondary/50"><RotateCcw className="h-3.5 w-3.5" /></button>
-            </div>
+            <button onClick={() => setFullscreen(false)} className="p-2 rounded-lg hover:bg-secondary/50"><X className="h-4 w-4" /></button>
           </div>
-
-          {/* SVG 평면도 — 클릭 시 전체화면 */}
-          <div className="rounded-xl border border-border bg-card p-2 overflow-x-auto cursor-pointer" onClick={() => setFullscreen(true)}>
-            <FloorPlanSVG data={data} scale={scale} />
-            <p className="text-[9px] text-center text-muted-foreground/50 mt-1">탭하여 전체화면</p>
+          <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+            <FloorPlanSVG layout={layout} scale={1} />
           </div>
-
-          {/* 면적표 */}
-          <AIAreaTable data={data} />
-
-          {/* 범례 */}
-          <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground px-1">
-            <span className="flex items-center gap-1"><span className="w-3 h-1.5 bg-[#0ea5e9] rounded-sm inline-block" />창문</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#f97316] inline-block" />문</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-1 bg-[#ef4444] inline-block" />슬라이딩</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-1 bg-[#334155] rounded-sm inline-block" />코어</span>
-          </div>
-
-          <p className="text-[9px] text-muted-foreground text-center">
-            ※ AI 생성 평면은 참고용이며, 실시설계 시 건축사 검토가 필요합니다
-          </p>
-
-          {/* 재생성 */}
-          <button
-            onClick={generate}
-            disabled={loading}
-            className="w-full py-2.5 rounded-xl border border-primary/30 text-primary text-xs font-medium flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-            다른 평면으로 재생성
-          </button>
-        </>
+        </div>
       )}
+
+      {/* 세대 믹스 선택 */}
+      <div className="flex gap-1.5">
+        {mixOptions.map((mix, i) => (
+          <button key={i} onClick={() => setMixIndex(i)}
+            className={`flex-1 py-2 px-2 rounded-lg text-[11px] font-medium ${
+              mixIndex === i ? 'bg-primary text-primary-foreground' : 'bg-secondary/30 text-muted-foreground hover:bg-secondary/50'
+            }`}>
+            {mix[0] === mix[1] ? `${mix[0]} 중심` : `${mix[0]}+${mix[1]} 믹스`}
+          </button>
+        ))}
+      </div>
+
+      {/* 도구바 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <span className="text-xs font-bold">AI 평면도</span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">기준층 {unitsPerFloor}세대</span>
+        </div>
+        <button onClick={() => setFullscreen(true)} className="p-1 rounded hover:bg-secondary/50"><Maximize2 className="h-3.5 w-3.5" /></button>
+      </div>
+
+      {/* SVG */}
+      <div className="rounded-xl border border-border bg-card p-2 overflow-x-auto cursor-pointer" onClick={() => setFullscreen(true)}>
+        <FloorPlanSVG layout={layout} scale={1} />
+        <p className="text-[9px] text-center text-muted-foreground/50 mt-1">탭하여 전체화면</p>
+      </div>
+
+      {/* 면적표 */}
+      <AreaTable units={layout.units} />
+
+      {/* 범례 */}
+      <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground px-1">
+        <span className="flex items-center gap-1"><span className="w-3 h-1.5 bg-[#0ea5e9] rounded-sm inline-block" />창문</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#f97316] inline-block" />문</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-1 bg-[#334155] rounded-sm inline-block" />코어</span>
+      </div>
+
+      <p className="text-[9px] text-muted-foreground text-center">
+        {zoneName} · {floors}층 · {units}세대 기준 · 실시설계 시 건축사 검토 필요
+      </p>
     </div>
   )
 }
