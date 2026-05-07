@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage } = await req.json()
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     // 건축 렌더링 최적화 프롬프트 생성
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage
     })
 
     // Gemini API 호출 — 모델 fallback 체인
@@ -109,8 +109,10 @@ function buildArchitecturePrompt(params: {
   floors?: number
   units?: number
   siteArea?: number
+  buildingType?: string
+  coverage?: number
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
@@ -123,29 +125,58 @@ function buildArchitecturePrompt(params: {
 
   const styleDesc = style ? (styleMap[style] || style) : '현대적 고급 주거'
 
-  return `Generate a photorealistic architectural exterior rendering of a residential building in South Korea.
+  // 건물 형태 설명 (도면과 일치)
+  const f = floors || 3
+  const u = units || 6
+  const footprint = siteArea && coverage ? Math.round(siteArea * coverage / 100) : 200
+  const bW = Math.round(Math.sqrt(footprint * 1.5))
+  const bD = Math.round(footprint / bW)
 
-Building specifications:
+  let buildingForm = ''
+  if (f <= 2 && u <= 4) {
+    buildingForm = `A low-rise detached house, ${f} stories, compact and elegant. Building footprint approximately ${bW}m × ${bD}m. Residential entrance with small garden. No commercial space on ground floor.`
+  } else if (f <= 5 && u <= 20) {
+    buildingForm = `A low-rise multi-family residential building (다세대/빌라), ${f} stories, ${u} units. Building footprint approximately ${bW}m × ${bD}m. Ground floor has entrance hall and parking. Upper floors are residential units. Simple, clean facade with balconies.`
+  } else if (f <= 10) {
+    buildingForm = `A mid-rise apartment building, ${f} stories, ${u} units. Building footprint approximately ${bW}m × ${bD}m. Ground floor has lobby, small retail, and parking entrance. Rectangular massing with regular window pattern.`
+  } else {
+    buildingForm = `A high-rise residential tower, ${f} stories, ${u} units. Slender tower form with podium. Ground level retail and grand lobby entrance.`
+  }
+
+  // 배치 타입별 형태 조정
+  const typeHints: Record<string, string> = {
+    'tower': 'Single tower form, vertical emphasis',
+    'courtyard': 'U-shaped or courtyard layout, central garden visible',
+    'lshape': 'L-shaped building form, asymmetric massing',
+    'linear': 'Linear/slab building, elongated horizontal form',
+    'cluster': 'Multiple small buildings clustered together',
+  }
+  const typeHint = buildingType ? (typeHints[buildingType] || '') : ''
+
+  return `Generate a photorealistic architectural exterior rendering.
+
+BUILDING FORM (MUST match exactly):
+${buildingForm}
+${typeHint ? `Layout: ${typeHint}` : ''}
+
+CONTEXT:
 - Location: ${address || 'Seoul, South Korea'}
-- Building name: ${layoutName || '주거 건물'}
-- Number of floors: ${floors || 3}
-- Total units: ${units || 30}
-- Site area: ${siteArea ? `${siteArea}㎡` : 'medium-scale'}
+- Project: ${layoutName || '주거 건물'}
 - Design style: ${styleDesc}
 
-Requirements:
+RENDERING REQUIREMENTS:
 - Photorealistic 3D architectural rendering
-- Eye-level perspective view showing the main facade
-- Beautiful landscaping with trees and pedestrian walkways
-- Warm golden hour lighting
-- High-end materials and finishes
-- Korean residential neighborhood context
-- Professional architectural photography quality
+- Eye-level perspective showing main facade and entrance
+- Beautiful landscaping with trees
+- Warm afternoon lighting
+- High-end materials
+- Korean residential neighborhood
 - 16:9 aspect ratio
+- The building MUST appear as ${f}-story structure (count the floors!)
 
-Additional style notes: ${prompt}
+${prompt}
 
-Generate ONE high-quality architectural rendering image.`
+Generate ONE high-quality image.`
 }
 
 // GET: API 상태 확인

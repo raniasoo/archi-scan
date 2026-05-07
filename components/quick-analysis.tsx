@@ -51,10 +51,12 @@ export function QuickAnalysis({ onDetailedAnalysis }: QuickAnalysisProps) {
             prompt: `${result.zoneName} ${result.bestLayout.floors}층 ${result.bestLayout.units}세대 주거건물, 대지면적 ${result.siteArea}㎡`,
             style: 'modern-luxury',
             address: result.address,
-            layoutName: 'AI 추천 배치안',
+            layoutName: result.bestLayout.name || 'AI 추천 배치안',
             floors: result.bestLayout.floors,
             units: result.bestLayout.units,
             siteArea: result.siteArea,
+            buildingType: result.bestLayout.type,
+            coverage: result.buildingCoverage,
           }),
         })
         const data = await res.json()
