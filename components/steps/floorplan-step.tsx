@@ -64,7 +64,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
   // 통합 탭 목록
   const tabs = [
     { id: "floor" as const, label: "기본 평면" },
-    { id: "ai-generate" as const, label: "📐 평면도" },
+    { id: "ai-generate" as const, label: "📐 상세평면도" },
     { id: "site" as const, label: "배치도" },
     { id: "iso" as const, label: "아이소" },
     { id: "perspective" as const, label: "투시도" },
