@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react"
 import { Sparkles, Maximize2, X, ArrowLeft, ChevronDown } from "lucide-react"
-import { getCatalog, getTypes, getSizeSpec, getVariants, type RoomDef } from "@/lib/floorplan-templates"
+import { getCatalog, getTypes, getSizeSpec, getVariants, applyPatternModifiers, type RoomDef } from "@/lib/floorplan-templates"
 
 const WALL_EXT = 3, WALL_INT = 1.5
 
@@ -162,10 +162,11 @@ export interface AIFloorPlanProps {
   type?: string; layoutName?: string; address?: string; zoneType?: string
   heightLimit?: number; setbacks?: { front?: number; side?: number; rear?: number }
   buildingUse?: 'house' | 'villa' | 'apartment' | 'commercial'
+  selectedPatterns?: string[]
 }
 
 export function AIFloorPlan(props: AIFloorPlanProps) {
-  const { siteArea, buildingCoverage, floors, units, zoneType, buildingUse } = props
+  const { siteArea, buildingCoverage, floors, units, zoneType, buildingUse, selectedPatterns } = props
   const [fullscreen, setFullscreen] = useState(false)
   const [variantIdx, setVariantIdx] = useState(0)
   const [selectedUnit, setSelectedUnit] = useState<UnitLayout | null>(null)
@@ -226,7 +227,17 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
 
   const firstKey = Object.keys(mixPresets)[0] || autoLabel
   const currentMix = (mixPresets[selectedMix] || mixPresets[firstKey] || autoPreset).map((m,i) => ({...m, variant: 'ABCD'[(i+variantIdx)%4]}))
-  const layout = useMemo(() => buildFloor(currentMix), [selectedMix, variantIdx, unitsPerFloor, areaPerUnit])
+  const layout = useMemo(() => {
+    const base = buildFloor(currentMix)
+    // 패턴 선택이 있으면 각 세대의 실 배치에 반영
+    if (selectedPatterns?.length) {
+      base.units = base.units.map(u => ({
+        ...u,
+        rooms: applyPatternModifiers(u.rooms, selectedPatterns),
+      }))
+    }
+    return base
+  }, [selectedMix, variantIdx, unitsPerFloor, areaPerUnit, selectedPatterns])
 
   return (
     <div className="space-y-3">

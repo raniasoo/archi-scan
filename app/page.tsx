@@ -2060,6 +2060,7 @@ export default function ArchiScanPage() {
             sitePolygon={sitePolygon}
             molitSupplementData={molitSupplementData}
             loadDxfGenerator={loadDxfGenerator}
+            selectedPatterns={userValues.selectedPatterns}
           />
         )}
         {currentStep === "financial" && selectedLayoutData && (

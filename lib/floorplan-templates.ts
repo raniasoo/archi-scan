@@ -525,3 +525,102 @@ export function getTypes(): string[] {
 export function getSizeSpec(type: string, size: 'S'|'M'|'L'): SizeSpec {
   return SIZES[type]?.[size] || { area: 59, w: 90, h: 110 }
 }
+
+// ============================================================
+// 패턴 기반 실 비율 조정 (사용자 선택 패턴 → 평면 반영)
+// ============================================================
+
+interface RoomModifier {
+  target: string[]      // 대상 실 이름 (부분 매칭)
+  scaleW?: number       // 폭 배율 (1.1 = +10%)
+  scaleH?: number       // 높이 배율
+  rename?: string       // 이름 변경
+  addFurniture?: string // 가구 추가/변경
+  fill?: string         // 색상 변경
+}
+
+const PATTERN_ROOM_MODIFIERS: Record<string, RoomModifier[]> = {
+  // 🏠 실·생활 패턴
+  'child-realm': [
+    { target: ['침실2', '침실3'], scaleW: 1.08, scaleH: 1.08 }, // 아이 방 확대
+  ],
+  'couple-realm': [
+    { target: ['안방', '주침실'], scaleW: 1.1, scaleH: 1.05 }, // 안방 확대
+  ],
+  'storage-wall': [
+    { target: ['드레스룸', 'DR'], scaleW: 1.15, scaleH: 1.1 }, // 수납 확대
+  ],
+  'bathing-room': [
+    { target: ['주욕실', '욕실'], scaleW: 1.1, scaleH: 1.1 }, // 욕실 확대
+  ],
+  'open-kitchen': [
+    { target: ['주방', '주방/식당'], scaleW: 1.12 }, // 주방 확대
+  ],
+  'home-workshop': [
+    { target: ['다용도', '서재'], rename: '홈오피스', addFurniture: 'desk', fill: '#fdf4ff' },
+  ],
+  'window-place': [
+    { target: ['거실'], fill: '#f0fdf4' }, // 거실 강조 (창가 자리)
+  ],
+  'indoor-sun': [
+    { target: ['거실'], scaleW: 1.08 }, // 거실 확대 (밝은 실내)
+  ],
+  'private-terrace': [
+    { target: ['발코니'], scaleW: 1.2, scaleH: 1.15 }, // 테라스 확대
+  ],
+  'sleeping-sun': [
+    { target: ['안방', '주침실'], fill: '#fef9c3' }, // 동향 침실 강조
+  ],
+
+  // 🏢 건물·동선 패턴
+  'balcony': [
+    { target: ['발코니'], scaleW: 1.2 },
+  ],
+  'ceiling-height': [], // 평면에는 미반영 (단면에 반영)
+  'natural-vent': [
+    { target: ['거실', '안방'], fill: '#ecfdf5' }, // 환기 좋은 실 표시
+  ],
+  'rooftop': [], // 평면에는 미반영
+
+  // 🏘️ 단지·외부 패턴 — 단위세대 평면에는 미반영 (배치도에 반영)
+  'courtyard': [], 'neighbors': [], 'accessible-green': [], 'walk-safe': [],
+  'shop-street': [], 'tree-view': [], 'small-parking': [], 'connected-play': [],
+  'garden-wall': [], 'outdoor-room': [], 'main-entrance': [], 'local-sports': [],
+  'fruit-trees': [], 'earth-connect': [],
+}
+
+export function applyPatternModifiers(rooms: RoomDef[], selectedPatterns: string[]): RoomDef[] {
+  if (!selectedPatterns?.length) return rooms
+
+  // 원본 보존을 위해 깊은 복사
+  let modified = rooms.map(r => ({ ...r }))
+
+  for (const patternId of selectedPatterns) {
+    const modifiers = PATTERN_ROOM_MODIFIERS[patternId]
+    if (!modifiers?.length) continue
+
+    for (const mod of modifiers) {
+      modified = modified.map(room => {
+        const isTarget = mod.target.some(t => room.name.includes(t))
+        if (!isTarget) return room
+
+        const updated = { ...room }
+        if (mod.scaleW) {
+          const dw = room.rw * (mod.scaleW - 1)
+          updated.rw = room.rw + dw
+        }
+        if (mod.scaleH) {
+          const dh = room.rh * (mod.scaleH - 1)
+          updated.rh = room.rh + dh
+        }
+        if (mod.rename) updated.name = mod.rename
+        if (mod.addFurniture) updated.furniture = mod.addFurniture
+        if (mod.fill) updated.fill = mod.fill
+
+        return updated
+      })
+    }
+  }
+
+  return modified
+}
