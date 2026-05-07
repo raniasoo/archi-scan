@@ -17,13 +17,14 @@ const SectionView = dynamic(() => import("@/components/section-view").then(m => 
 const ElevationView = dynamic(() => import("@/components/elevation-view").then(m => ({ default: m.ElevationView })), { ssr: false, loading: LoadingBox })
 const PerspectiveView = dynamic(() => import("@/components/perspective-view").then(m => ({ default: m.PerspectiveView })), { ssr: false, loading: LoadingBox })
 const SitePlan = dynamic(() => import("@/components/site-plan").then(m => ({ default: m.SitePlan })), { ssr: false, loading: LoadingBox })
+const DetailedFloorPlan = dynamic(() => import("@/components/detailed-floor-plan").then(m => ({ default: m.DetailedFloorPlan })), { ssr: false, loading: LoadingBox })
 
 export interface FloorplanStepProps {
   selectedLayoutData: LayoutOption
   selectedFloor: number
   setSelectedFloor: Dispatch<SetStateAction<number>>
-  drawingTab: "floor" | "site" | "iso" | "section" | "elevation" | "perspective"
-  setDrawingTab: Dispatch<SetStateAction<"floor" | "site" | "iso" | "section" | "elevation" | "perspective">>
+  drawingTab: "floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "detailed"
+  setDrawingTab: Dispatch<SetStateAction<"floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "detailed">>
   floorPlanViewMode: "fit" | "original"
   setFloorPlanViewMode: Dispatch<SetStateAction<"fit" | "original">>
   isFloorPlanFullscreen: boolean
@@ -394,6 +395,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
                 <div className="flex border-b border-border overflow-x-auto">
                   {([
                     { id: "site" as const, label: "배치도" },
+                    { id: "detailed" as const, label: "✨ 상세 평면도" },
                     { id: "iso" as const, label: "아이소메트릭" },
                     { id: "perspective" as const, label: "투시도" },
                     { id: "section" as const, label: "단면도" },
@@ -474,6 +476,16 @@ export function FloorplanStep(props: FloorplanStepProps) {
                       layoutName={selectedLayoutData.name}
                       roadWidth={molit.roadWidth || regulation.roadWidth || 8}
                       heightLimit={molit.heightLimit || regulation.maxHeight}
+                    />
+                  )}
+                  {drawingTab === "detailed" && (
+                    <DetailedFloorPlan
+                      siteArea={siteAreaNum}
+                      buildingCoverage={selectedLayoutData.coverage}
+                      floors={selectedLayoutData.floors}
+                      units={selectedLayoutData.units}
+                      type={selectedLayoutData.type}
+                      layoutName={selectedLayoutData.name}
                     />
                   )}
                 </div>
