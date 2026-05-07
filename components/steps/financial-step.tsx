@@ -211,9 +211,11 @@ export function FinancialStep(props: FinancialStepProps) {
             {feasibilityResult && (() => {
               const isSmall = selectedLayoutData.units <= 200 && siteAreaNum < 10000
               const roi = feasibilityResult.roi ?? 0
-              // ScenarioComparison과 동일한 추천 로직
+              // ScenarioComparison과 동일한 추천 로직 (ROI + 건물연식)
+              const buildingAge = (molitSupplementData as any)?.buildingAge || 0
+              const isOldEnough = buildingAge >= 30
               const scenario: 'reconstruction' | 'remodeling' | 'bulk-sale' = 
-                roi > 15 ? 'reconstruction' : 'remodeling'
+                (roi > 15 && isOldEnough) ? 'reconstruction' : 'remodeling'
               return (
                 <ProjectRoadmap
                   scenarioType={scenario}

@@ -3,7 +3,7 @@
 import { type Dispatch, type SetStateAction } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
-import { ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, ChevronDown } from "lucide-react"
+import { ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, ChevronDown, Maximize2, Minimize2 } from "lucide-react"
 import type { LayoutOption } from "@/app/page"
 import type { ZoningRegulation } from "@/lib/regulation-types"
 import type { DesignStrategy } from "@/lib/design-strategy"
@@ -11,6 +11,7 @@ import { safeNumber } from "@/lib/project-analysis-state"
 import { useState } from "react"
 
 const LoadingBox = () => <div className="flex items-center justify-center p-8 text-muted-foreground"><span className="animate-spin mr-2">⏳</span>로딩 중...</div>
+const FloorPlan = dynamic(() => import("@/components/floor-plan").then(m => ({ default: m.FloorPlan })), { ssr: false, loading: LoadingBox })
 const IsometricView = dynamic(() => import("@/components/isometric-view").then(m => ({ default: m.IsometricView })), { ssr: false, loading: LoadingBox })
 const SectionView = dynamic(() => import("@/components/section-view").then(m => ({ default: m.SectionView })), { ssr: false, loading: LoadingBox })
 const ElevationView = dynamic(() => import("@/components/elevation-view").then(m => ({ default: m.ElevationView })), { ssr: false, loading: LoadingBox })
@@ -58,9 +59,11 @@ export function FloorplanStep(props: FloorplanStepProps) {
 
   const [showInfo, setShowInfo] = useState(false)
   const totalFloors = safeNumber(selectedLayoutData.floors, selectedFloor)
+  const isFloorTab = drawingTab === 'floor'
 
   // 통합 탭 목록
   const tabs = [
+    { id: "floor" as const, label: "기본 평면" },
     { id: "ai-generate" as const, label: "📐 평면도" },
     { id: "site" as const, label: "배치도" },
     { id: "iso" as const, label: "아이소" },
@@ -120,9 +123,52 @@ export function FloorplanStep(props: FloorplanStepProps) {
           ))}
         </div>
 
+        {/* 층 선택 (기본 평면일 때만) */}
+        {isFloorTab && (
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-secondary/10">
+            <Button variant="outline" size="sm" disabled={selectedFloor === 1} onClick={() => setSelectedFloor(f => f - 1)} className="h-7 w-7 p-0">
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <div className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide">
+              {Array.from({ length: totalFloors }, (_, i) => i + 1).map(f => (
+                <button key={f} onClick={() => setSelectedFloor(f)}
+                  className={`shrink-0 px-2 py-1 rounded text-[10px] font-medium ${
+                    selectedFloor === f ? "bg-primary text-primary-foreground" : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                  }`}>{f}층{f === 1 ? ' 로비' : f === totalFloors ? ' 최상' : ''}</button>
+              ))}
+            </div>
+            <Button variant="outline" size="sm" disabled={selectedFloor >= totalFloors} onClick={() => setSelectedFloor(f => f + 1)} className="h-7 w-7 p-0">
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+
         {/* 도면 뷰어 */}
         <div className="p-3">
-          {/* 평면도 */}
+          {/* 기본 평면 */}
+          {drawingTab === "floor" && (
+            <div>
+              <div className="w-full" style={{ aspectRatio: '3/2', minHeight: 260, maxHeight: 420 }}>
+                <FloorPlan
+                  type={selectedLayoutData.type}
+                  floor={selectedFloor}
+                  totalFloors={selectedLayoutData.floors}
+                  strategy={strategy}
+                  zoneType={molit.zoneCode || regulation.zoneType}
+                  units={selectedLayoutData.units}
+                  gfa={selectedLayoutData.gfa || gfa}
+                />
+              </div>
+              <div className="grid grid-cols-4 gap-x-1 mt-2">
+                <span className="inline-flex items-center gap-0.5 text-[9px]"><span className="w-2 h-2 rounded bg-primary/30 border border-primary" /><span className="text-muted-foreground">세대</span></span>
+                <span className="inline-flex items-center gap-0.5 text-[9px]"><span className="w-2 h-2 rounded bg-amber-500/20 border border-amber-500" /><span className="text-muted-foreground">상가</span></span>
+                <span className="inline-flex items-center gap-0.5 text-[9px]"><span className="w-2 h-2 rounded bg-cyan-500/20 border border-cyan-500" /><span className="text-muted-foreground">로비</span></span>
+                <span className="inline-flex items-center gap-0.5 text-[9px]"><span className="w-2 h-2 rounded bg-slate-500/30 border border-slate-500" /><span className="text-muted-foreground">코어</span></span>
+              </div>
+            </div>
+          )}
+
+          {/* 📐 평면도 */}
           {drawingTab === "ai-generate" && (
             <AIFloorPlan
               siteArea={siteAreaNum}
