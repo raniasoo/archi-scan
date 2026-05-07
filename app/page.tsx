@@ -2034,6 +2034,7 @@ export default function ArchiScanPage() {
             loadLayoutOptimizer={loadLayoutOptimizer}
             handleSelectLayout={handleSelectLayout}
             onAiRenderComplete={setAiRenderImage}
+            satelliteUrl={(rawData as any)?.satelliteUrl}
             surroundingContext={(() => {
               try {
                 const { buildSiteContextPrompt } = require('@/lib/site-context-builder')

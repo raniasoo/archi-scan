@@ -8,22 +8,79 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, material, multiAngle } = await req.json()
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
     }
 
+    // #7: 위성사진 → base64 변환 (Gemini 멀티모달 입력)
+    let satelliteBase64: string | null = null
+    if (satelliteUrl) {
+      try {
+        const imgRes = await fetch(satelliteUrl, { signal: AbortSignal.timeout(8000) })
+        if (imgRes.ok) {
+          const buf = await imgRes.arrayBuffer()
+          satelliteBase64 = Buffer.from(buf).toString('base64')
+          console.log(`[GEMINI] Satellite image loaded: ${Math.round(buf.byteLength / 1024)}KB`)
+        }
+      } catch (e) {
+        console.warn('[GEMINI] Satellite image fetch failed:', e)
+      }
+    }
+
+    // #9: 멀티앵글 — 3장 일괄 생성
+    if (multiAngle) {
+      const angles = [
+        { angle: 'eye-level', scene: sceneMode || 'afternoon' },
+        { angle: 'birds-eye', scene: sceneMode || 'afternoon' },
+        { angle: 'entrance', scene: sceneMode || 'afternoon' },
+      ]
+      const images: { angle: string; image: string | null; error?: string }[] = []
+      
+      for (const a of angles) {
+        const aPrompt = buildArchitecturePrompt({
+          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material
+        })
+        
+        const parts: any[] = [{ text: aPrompt }]
+        if (satelliteBase64) {
+          parts.push({ inlineData: { mimeType: 'image/png', data: satelliteBase64 } })
+          parts.push({ text: 'The image above shows the actual satellite view of the site. Match the surrounding buildings, roads, vegetation, and terrain visible in this photo.' })
+        }
+
+        try {
+          const r = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_AI_API_KEY}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } }) }
+          )
+          if (r.ok) {
+            const d = await r.json()
+            const imgPart = d?.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.mimeType?.startsWith('image/'))
+            images.push({ angle: a.angle, image: imgPart ? `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}` : null })
+          } else {
+            images.push({ angle: a.angle, image: null, error: `${r.status}` })
+          }
+        } catch (e) {
+          images.push({ angle: a.angle, image: null, error: 'timeout' })
+        }
+        // rate limit 대응
+        await new Promise(r => setTimeout(r, 1000))
+      }
+      
+      return NextResponse.json({ success: true, multiAngle: true, images, model: 'gemini-2.5-flash-image' })
+    }
+
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material
     })
 
     // Gemini API 호출 — 모델 fallback 체인
-    // 나노바나나 모델 — API 모델 목록 직접 확인 (2026.05.06)
     const models = [
-      'gemini-2.5-flash-image',         // Nano Banana (1순위)
-      'gemini-3.1-flash-image-preview',  // Nano Banana 2
-      'gemini-3-pro-image-preview',      // Nano Banana Pro
+      'gemini-2.5-flash-image',
+      'gemini-3.1-flash-image-preview',
+      'gemini-3-pro-image-preview',
     ]
     
     let data: any = null
@@ -32,13 +89,21 @@ export async function POST(req: NextRequest) {
     for (const model of models) {
       try {
         console.log(`[GEMINI] Trying model: ${model}`)
+        
+        // #7: 위성사진을 멀티모달로 전달
+        const parts: any[] = [{ text: architecturePrompt }]
+        if (satelliteBase64) {
+          parts.push({ inlineData: { mimeType: 'image/png', data: satelliteBase64 } })
+          parts.push({ text: 'The image above shows the actual satellite/aerial view of the site and surrounding neighborhood. The rendering should match the real buildings, roads, vegetation, and terrain visible in this photo. Place the new building on the empty lot shown.' })
+        }
+        
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_AI_API_KEY}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: [{ parts: [{ text: architecturePrompt }] }],
+              contents: [{ parts }],
               generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
             }),
           }
@@ -116,8 +181,9 @@ function buildArchitecturePrompt(params: {
   surroundingContext?: string
   cameraAngle?: string
   sceneMode?: string
+  material?: { type?: string; color?: string; accent?: string }
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
@@ -185,6 +251,24 @@ function buildArchitecturePrompt(params: {
     }
   }
 
+  // ━━━ 재질/색상 ━━━
+  const materialDescs: Record<string, string> = {
+    'glass-curtain': 'Glass curtain wall facade, reflective blue-tinted glass panels with slim aluminum mullions',
+    'exposed-concrete': 'Exposed concrete (béton brut), raw concrete texture with formwork patterns visible',
+    'brick': 'Brick facade, warm-toned clay bricks in running bond pattern',
+    'stone': 'Natural stone cladding, honed granite or limestone panels',
+    'metal-panel': 'Metal panel cladding, brushed aluminum or zinc panels with clean joints',
+    'wood-louver': 'Wood louver screen facade, natural timber slats creating rhythm and shadow',
+    'stucco': 'White stucco finish, smooth rendered walls with clean edges',
+    'composite': 'Mixed materials — stone base, glass middle floors, metal panel top',
+  }
+  let materialHint = ''
+  if (material?.type) {
+    materialHint = materialDescs[material.type] || material.type
+    if (material.color) materialHint += `. Primary color: ${material.color}`
+    if (material.accent) materialHint += `. Accent material/color: ${material.accent}`
+  }
+
   // ━━━ 카메라 앵글 ━━━
   const angleDesc: Record<string, string> = {
     'eye-level': 'Eye-level perspective (1.6m height), showing main facade and entrance. Slight 3/4 angle to show depth.',
@@ -243,6 +327,7 @@ ${typeHint ? `Layout: ${typeHint}` : ''}
 
 DESIGN DIRECTION:
 ${strategyStyle || 'Modern residential design'}
+${materialHint ? `\nMATERIALS AND FINISH:\n${materialHint}` : ''}
 ${atmosphereHints.length > 0 ? `\nATMOSPHERE:\n${atmosphereHints.map(h => `- ${h}`).join('\n')}` : ''}
 ${patternHints.length > 0 ? `\nMUST INCLUDE THESE ELEMENTS:\n${patternHints.map(h => `- ${h}`).join('\n')}` : ''}
 

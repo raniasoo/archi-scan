@@ -13,6 +13,7 @@ interface ConceptInput {
   values?: { profitVsQuality?: number; privacyVsCommunity?: number; efficiencyVsSpace?: number }
   patterns?: string[]
   surroundingContext?: string
+  satelliteUrl?: string
 }
 
 const STYLES = [
@@ -65,12 +66,25 @@ const SCENES = [
   { id: 'winter', label: '겨울', emoji: '❄️' },
 ]
 
+const MATERIALS = [
+  { id: 'glass-curtain', label: '유리 커튼월', emoji: '🪟' },
+  { id: 'exposed-concrete', label: '노출 콘크리트', emoji: '🧱' },
+  { id: 'brick', label: '벽돌', emoji: '🏠' },
+  { id: 'stone', label: '석재', emoji: '🪨' },
+  { id: 'metal-panel', label: '금속 패널', emoji: '🔩' },
+  { id: 'wood-louver', label: '목재 루버', emoji: '🪵' },
+  { id: 'stucco', label: '스타코', emoji: '⬜' },
+  { id: 'composite', label: '복합 재질', emoji: '🎨' },
+]
+
 export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void }) {
   const [isOpen, setIsOpen] = useState(false)
   const [tab, setTab] = useState<'render'|'consult'|'proposal'|'prompt'>('render')
   const [style, setStyle] = useState('modern-luxury')
   const [angle, setAngle] = useState('eye-level')
   const [scene, setScene] = useState('afternoon')
+  const [materialId, setMaterialId] = useState<string | null>(null)
+  const [multiImages, setMultiImages] = useState<{angle:string; image:string|null}[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
   const [copied, setCopied] = useState<string|null>(null)
@@ -99,6 +113,8 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
         strategy:input.strategy, values:input.values, patterns:input.patterns,
         surroundingContext:input.surroundingContext,
         cameraAngle: angle, sceneMode: scene,
+        satelliteUrl: input.satelliteUrl,
+        material: materialId ? { type: materialId } : undefined,
       }) })
       const d = await r.json()
       if (d.success && d.image) {
@@ -117,6 +133,30 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
       }
       setError(e instanceof Error ? e.message : '오류'); setRetryCount(0)
     } finally { setLoading(false) }
+  }
+
+  // #9: 멀티앵글 일괄 생성
+  const doMultiRender = async () => {
+    setLoading(true); setError(null); setMultiImages(null)
+    try {
+      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+        prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
+        style, address:input.address, layoutName:input.layoutName,
+        floors:input.floors, units:input.units, siteArea:input.siteArea,
+        buildingType:input.buildingType, coverage:input.buildingCoverageRatio,
+        strategy:input.strategy, values:input.values, patterns:input.patterns,
+        surroundingContext:input.surroundingContext, sceneMode: scene,
+        satelliteUrl: input.satelliteUrl,
+        material: materialId ? { type: materialId } : undefined,
+        multiAngle: true,
+      }) })
+      const d = await r.json()
+      if (d.success && d.images) {
+        setMultiImages(d.images)
+        const first = d.images.find((i: any) => i.image)
+        if (first) onRenderComplete?.(first.image)
+      } else setError(d.error || '멀티앵글 생성 실패')
+    } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
   }
 
   const doConsult = async () => {
@@ -195,10 +235,49 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
                 </button>
               ))}
             </div>
-            <button onClick={() => doRender(0)} disabled={loading} className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
-              {loading ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2...` : '생성 중...'}</> : '🎨 건축 렌더링 생성'}
-            </button>
-            {renderImg && <div className="space-y-2"><img src={renderImg} alt="렌더링" className="w-full rounded-lg border border-border" /><a href={renderImg} download={`render-${Date.now()}.png`} className="flex items-center justify-center gap-1 text-xs text-emerald-400"><Download className="h-3 w-3" />다운로드</a></div>}
+            {/* #8: 재질/색상 선택 */}
+            <div className="flex gap-1 flex-wrap">
+              <button onClick={() => setMaterialId(null)}
+                className={`px-2 py-1 rounded-full text-[10px] transition-all ${!materialId ? 'bg-emerald-500/20 border border-emerald-400 font-semibold text-emerald-300' : 'bg-card/20 border border-border/30 text-muted-foreground'}`}>
+                🏗️ 자동
+              </button>
+              {MATERIALS.map(m => (
+                <button key={m.id} onClick={() => setMaterialId(m.id)}
+                  className={`px-2 py-1 rounded-full text-[10px] transition-all ${materialId === m.id ? 'bg-purple-500/20 border border-purple-400 font-semibold text-purple-300' : 'bg-card/20 border border-border/30 text-muted-foreground'}`}>
+                  {m.emoji} {m.label}
+                </button>
+              ))}
+            </div>
+            {/* 렌더링 버튼 (단일 + 멀티) */}
+            <div className="flex gap-2">
+              <button onClick={() => doRender(0)} disabled={loading} className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+                {loading && !multiImages ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2` : '생성 중'}</> : '🎨 렌더링'}
+              </button>
+              <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1" title="정면+조감+입구 3장">
+                {loading && multiImages !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '📐 3장'}
+              </button>
+            </div>
+            {/* #7: 위성사진 참조 표시 */}
+            {input.satelliteUrl && <p className="text-[9px] text-emerald-400/60 text-center">🛰️ 위성사진이 AI 참조 이미지로 전달됩니다</p>}
+            {/* 단일 렌더링 결과 */}
+            {renderImg && !multiImages && <div className="space-y-2"><img src={renderImg} alt="렌더링" className="w-full rounded-lg border border-border" /><a href={renderImg} download={`render-${Date.now()}.png`} className="flex items-center justify-center gap-1 text-xs text-emerald-400"><Download className="h-3 w-3" />다운로드</a></div>}
+            {/* #9: 멀티앵글 결과 */}
+            {multiImages && <div className="space-y-2">
+              <p className="text-[10px] text-violet-400 font-medium text-center">📐 멀티앵글 ({multiImages.filter(i => i.image).length}/3장 성공)</p>
+              {multiImages.map((mi, idx) => mi.image && (
+                <div key={idx} className="space-y-1">
+                  <p className="text-[9px] text-muted-foreground">{mi.angle === 'eye-level' ? '👁️ 눈높이' : mi.angle === 'birds-eye' ? '🦅 조감도' : '🚪 입구'}</p>
+                  <img src={mi.image} alt={mi.angle} className="w-full rounded-lg border border-border" />
+                </div>
+              ))}
+              <div className="flex gap-1">
+                {multiImages.filter(i => i.image).map((mi, idx) => (
+                  <a key={idx} href={mi.image!} download={`render-${mi.angle}-${Date.now()}.png`} className="flex-1 text-center text-[10px] text-violet-400 py-1 rounded bg-violet-500/10 border border-violet-500/20">
+                    <Download className="h-3 w-3 inline" /> {mi.angle === 'eye-level' ? '정면' : mi.angle === 'birds-eye' ? '조감' : '입구'}
+                  </a>
+                ))}
+              </div>
+            </div>}
           </div>}
 
           {/* 상담 */}
