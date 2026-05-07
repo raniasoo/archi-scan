@@ -20,13 +20,18 @@ interface SiteContextInput {
   siteArea?: number
   polygon?: [number, number][]  // [lng, lat][]
   centroid?: [number, number]   // [lng, lat]
-  nearbyBuildings?: { name?: string; floors?: number; use?: string }[]
+  nearbyBuildings?: { name?: string; floors?: number; use?: string; direction?: string; distance?: number; height?: number }[]
   siteContext?: { buildingCount?: number; maxFloors?: number; avgFloors?: number }
   terrain?: TerrainAnalysis | null
   sunAnalysis?: SunAnalysisResult | null
   elevation?: number  // 해발고도
   floors?: number
   buildingHeight?: number
+  // 신규: 방향별 요약 + 도로 + 그림자
+  directions?: { north?: { desc?: string }; south?: { desc?: string }; east?: { desc?: string }; west?: { desc?: string } }
+  roadSummary?: string
+  shadowBlockers?: string[]
+  nearbyRenderPrompt?: string  // API에서 생성한 주변건물 프롬프트
 }
 
 // ━━━ 1. 필지 형상 분석 ━━━
@@ -235,6 +240,23 @@ ${neighborhood}`)
   if (sunViewDesc) {
     sections.push(`SUNLIGHT AND VIEWS:
 ${sunViewDesc}`)
+  }
+
+  // 주변건물 상세 (API에서 생성된 프롬프트)
+  if (input.nearbyRenderPrompt) {
+    sections.push(input.nearbyRenderPrompt)
+  } else if (input.directions) {
+    // fallback: 방향별 요약
+    const dirParts = ['NEIGHBORING BUILDINGS:']
+    if (input.directions.north?.desc) dirParts.push(`  North: ${input.directions.north.desc}`)
+    if (input.directions.south?.desc) dirParts.push(`  South: ${input.directions.south.desc}`)
+    if (input.directions.east?.desc) dirParts.push(`  East: ${input.directions.east.desc}`)
+    if (input.directions.west?.desc) dirParts.push(`  West: ${input.directions.west.desc}`)
+    if (input.roadSummary) dirParts.push(`  Roads: ${input.roadSummary}`)
+    if (input.shadowBlockers?.length) {
+      dirParts.push(`  ⚠️ Shadow blocking: ${input.shadowBlockers.join('; ')}`)
+    }
+    sections.push(dirParts.join('\n'))
   }
 
   const fullPrompt = sections.join('\n\n')

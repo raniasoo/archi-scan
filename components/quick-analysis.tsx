@@ -86,6 +86,10 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                 elevation: terrainResult?.maxElevation,
                 floors: result.bestLayout.floors,
                 buildingHeight: result.bestLayout.floors * 3.3,
+                directions: vworldData?.directions,
+                roadSummary: vworldData?.roadSummary,
+                shadowBlockers: vworldData?.shadowBlockers,
+                nearbyRenderPrompt: vworldData?.renderPrompt,
               })
               return ctx.fullPrompt || undefined
             })(),
@@ -256,6 +260,10 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           parcelPolygon: vworldData?.parcel?.polygon,
           nearbyBuildings: vworldData?.nearbyBuildings,
           siteContext: vworldData?.context,
+          roads: vworldData?.roads,
+          directions: vworldData?.directions,
+          shadowBlockers: vworldData?.shadowBlockers,
+          roadSummary: vworldData?.roadSummary,
           terrain: terrainResult,
           sunAnalysis: sunResult,
         },
