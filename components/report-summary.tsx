@@ -701,7 +701,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <!-- 설계 컨셉/철학 섹션 -->
-  <div class="section">
+  <div class="section" id="rpt-s6">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '6' : '5'}</span> 설계 컨셉</div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
       <div style="padding: 12px; background: #f0fdf4; border-radius: 8px; border: 1px solid #dcfce7;">
@@ -743,7 +743,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <!-- 설계 도면 섹션 -->
-  <div class="section" style="page-break-before: always;">
+  <div class="section" id="rpt-s7" style="page-break-before: always;">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '7' : '6'}</span> 설계 도면</div>
     <div style="margin-bottom: 12px;">
       <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">기준층 평면도</p>
@@ -2312,9 +2312,11 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
             { id: 'rpt-s3', label: '법규' },
             { id: 'rpt-s4', label: '배치' },
             { id: 'rpt-s5', label: '규모' },
-            { id: 'rpt-s7', label: '사업성' },
-            { id: 'rpt-s8', label: 'AI' },
-            { id: 'rpt-s9', label: '리스크' },
+            { id: 'rpt-s6', label: '설계' },
+            { id: 'rpt-s7', label: '도면' },
+            { id: 'rpt-s8', label: '사업성' },
+            { id: 'rpt-s9', label: 'AI' },
+            { id: 'rpt-s10', label: '리스크' },
           ].map(s => (
             <button key={s.id} onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               className="px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap border border-border/50 bg-card/50 text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors shrink-0">{s.label}</button>
@@ -2855,11 +2857,65 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* Section 6: 설계 도면 */}
-        <div className="report-card avoid-break print-section">
+        {/* Section 6: 설계 컨셉 */}
+        <div id="rpt-s6" className="report-card avoid-break print-section">
+          <div className="p-4 sm:p-5 space-y-4">
+            <div className="report-section-title">
+              <Sparkles className="h-4 w-4" style={{ color: '#2F6B4F' }} />
+              <span>{sn(6)}. 설계 컨셉</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <p className="text-[10px] text-muted-foreground mb-1">설계 전략</p>
+                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{
+                  designStrategy === 'view-priority' ? '조망 극대화' :
+                  designStrategy === 'privacy-priority' ? '프라이버시 중심' :
+                  designStrategy === 'area-maximize' ? '면적 효율 극대화' :
+                  designStrategy === 'parking-efficient' ? '주차 효율화' :
+                  designStrategy === 'livability' ? '실거주 최적화' :
+                  '수익성 극대화'
+                }</p>
+              </div>
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-[10px] text-muted-foreground mb-1">배치 타입</p>
+                <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{layout.name}</p>
+              </div>
+            </div>
+            <div className="p-3 bg-secondary/30 rounded-lg border report-border/30 text-xs leading-relaxed">
+              <p className="font-semibold mb-1">설계 철학</p>
+              <p className="text-muted-foreground">
+                본 배치안은 대지면적 {siteArea.toLocaleString()}㎡, {regulation?.zoneName || '일반주거지역'} 조건에서 {layout.name} 형태를 통해 
+                건폐율 {layout.coverage}%, 용적률 {far}%를 달성합니다.
+                지상 {layout.floors}층, 총 {layout.units}세대, 주차 {layout.parking}대 규모이며, {
+                  designStrategy === 'view-priority' ? '조망권 확보와 일조 조건 개선을 최우선으로 고려하여 건물 배치를 최적화했습니다.' :
+                  designStrategy === 'privacy-priority' ? '세대 간 프라이버시 확보와 소음 차단을 최우선으로 설계했습니다.' :
+                  designStrategy === 'area-maximize' ? '전용면적을 극대화하여 분양 경쟁력을 높이는 데 중점을 두었습니다.' :
+                  designStrategy === 'parking-efficient' ? '법정 주차대수를 효율적으로 확보하면서 지상 공간 활용도를 높였습니다.' :
+                  designStrategy === 'livability' ? '입주자 생활 편의성과 커뮤니티 공간 확보를 최우선으로 설계했습니다.' :
+                  '투자수익률 극대화를 목표로 시공비 효율과 분양가 경쟁력의 균형을 추구했습니다.'
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 7: 설계 도면 */}
+        <div id="rpt-s8" className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <Ruler className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>{sn(6)}. 설계 도면</span>
+              <span>{sn(7)}. 설계 도면</span>
+            </div>
+            {/* 기준층 평면도 */}
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#2F2A24' }}>기준층 평면도</p>
+              <div dangerouslySetInnerHTML={{ __html: generateFloorPlanSvg({
+                siteArea, buildingCoverage: layout.coverage, floors: layout.floors,
+                units: layout.units, parking: layout.parking, type: layout.type,
+                roadWidth: regulation?.roadWidth ?? 8, heightLimit: regulation?.maxHeight ?? 30,
+                setbacks: { front: regulation?.setbackFront ?? 1, side: regulation?.setbackSide ?? 0.5, rear: regulation?.setbackRear ?? 1 },
+                layoutName: layout.name, gfa,
+              }) }} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -2918,11 +2974,11 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* Section 7: 사업성 검토 */}
-        <div id="rpt-s7" className="report-card avoid-break print-section">
+        <div id="rpt-s8" className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <Banknote className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>{sn(7)}. 사업성 검토</span>
+              <span>{sn(8)}. 사업성 검토</span>
             </div>
 
             {/* 사업비 추정 테이블 */}
@@ -3046,7 +3102,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <TrendingUp className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>{sn(8)}. AI 분석</span>
+              <span>{sn(9)}. AI 분석</span>
             </div>
             
             {/* AI 점수 그리드 - 4개 카드 (종합 점수 강조) */}
@@ -3167,11 +3223,11 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* Section 8: 리스크 및 고려사항 */}
-        <div id="rpt-s9" className="report-card avoid-break print-section">
+        <div id="rpt-s10" className="report-card avoid-break print-section">
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <span>{sn(9)}. 리스크 및 고려사항</span>
+              <span>{sn(10)}. 리스크 및 고려사항</span>
             </div>
             
             <div className="report-risk-grid">
@@ -3199,7 +3255,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           <div className="p-4 sm:p-5 space-y-4">
             <div className="report-section-title">
               <TrendingUp className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-              <span>{sn(10)}. 결론 및 제안</span>
+              <span>{sn(11)}. 결론 및 제안</span>
             </div>
             
             {/* 결론 문장 - 핵심 수치만 강조 */}
