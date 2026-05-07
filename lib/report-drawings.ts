@@ -489,10 +489,13 @@ export function generatePerspectiveSvg(d: DrawingInput): string {
 
 // ===== 기준층 평면도 SVG =====
 export function generateFloorPlanSvg(d: DrawingInput): string {
-  // 동적 import 대신 인라인 구현 (report-drawings는 순수 함수)
   const W = 400, H = 280, PAD = 30
   const coreW = 24
-  const unitsPerFloor = Math.min(Math.max(Math.ceil(d.units / Math.max(d.floors - 1, 1)), 2), 4)
+  // 상세평면도와 동일한 세대수 계산 (buildingUse 기반)
+  const u = d.units || 4, f = d.floors || 2
+  const isVillaOrApt = u > 2 && f > 1
+  const residentialFloors = isVillaOrApt ? Math.max(f - 1, 1) : Math.max(f, 1)
+  const unitsPerFloor = Math.min(Math.max(Math.ceil(u / residentialFloors), 2), 8)
   const leftCount = Math.ceil(unitsPerFloor / 2)
   const rightCount = unitsPerFloor - leftCount
 

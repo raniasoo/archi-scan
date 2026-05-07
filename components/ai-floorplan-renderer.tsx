@@ -206,7 +206,8 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
   }
 
   const auto = bestType(areaPerUnit)
-  const autoLabel = `✨ 자동 (${auto.type} ${areaPerUnit}㎡)`
+  const autoSpec = getSizeSpec(auto.type, auto.size)
+  const autoLabel = `✨ 자동 (${auto.type} ${autoSpec.area}㎡)`
   const autoPreset = Array.from({length: unitsPerFloor}, (_, i) => ({
     type: auto.type, size: auto.size, variant: 'ABCD'[i % 4],
   }))

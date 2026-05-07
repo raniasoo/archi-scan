@@ -785,6 +785,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       <tbody>
         <tr><td>토지비</td><td class="text-right" style="font-weight: 500;">${formatKRW(financials.landCost)}</td><td style="font-size: 9pt; color: #94a3b8;">15,000천원/㎡ 적용</td></tr>
         <tr><td>공사비</td><td class="text-right" style="font-weight: 500;">${formatKRW(financials.constructionCost)}</td><td style="font-size: 9pt; color: #94a3b8;">4,500천원/㎡ + 간접비 15%</td></tr>
+        ${(feasibilityResult as any)?.earthworkCost > 0 ? `<tr><td>토공비</td><td class="text-right" style="font-weight: 500;">${formatKRW((feasibilityResult as any).earthworkCost)}</td><td style="font-size: 9pt; color: #94a3b8;">경사지 성토/절토</td></tr>` : ''}
         <tr><td>기타비용</td><td class="text-right" style="font-weight: 500;">${formatKRW(financials.softCost)}</td><td style="font-size: 9pt; color: #94a3b8;">설계/감리/인허가 등 8%</td></tr>
         <tr class="total-row"><td style="font-weight: 700;">총 사업비</td><td class="text-right" style="font-size: 13pt; font-weight: 700;">${formatKRW(financials.totalInvestment)}</td><td></td></tr>
       </tbody>
