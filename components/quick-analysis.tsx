@@ -39,7 +39,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
   // AI 렌더링 상태
   const [renderImage, setRenderImage] = useState<string | null>(null)
   const [renderLoading, setRenderLoading] = useState(false)
-  const [satelliteUrl, setSatelliteUrl] = useState<string | null>(null)
+  
   const [siteContext, setSiteContext] = useState<any>(null)
   const [terrain, setTerrain] = useState<TerrainAnalysis | null>(null)
   const [sunAnalysis, setSunAnalysis] = useState<SunAnalysisResult | null>(null)
@@ -150,7 +150,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           const vJson = await vRes.json()
           if (vJson.success) {
             vworldData = vJson
-            setSatelliteUrl(vJson.satelliteUrl)
+            
             setSiteContext(vJson.context)
           }
         } catch (e) {
@@ -256,7 +256,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         rawData: {
           ...molitData.data,
           vworld: vworldData,
-          satelliteUrl: vworldData?.satelliteUrl,
+          
           parcelPolygon: vworldData?.parcel?.polygon,
           nearbyBuildings: vworldData?.nearbyBuildings,
           siteContext: vworldData?.context,
@@ -336,21 +336,16 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
             {/* 결과 카드 */}
             <div className="w-full space-y-4">
 
-              {/* 위성사진 + 주변환경 */}
-              {satelliteUrl && (
-                <div className="rounded-2xl overflow-hidden border border-border">
-                  <img src={satelliteUrl} alt="위성사진" className="w-full aspect-[3/2] object-cover" />
-                  <div className="p-3 bg-card/50 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3 w-3 text-primary" />
-                      <span className="text-[10px] font-medium">대지 위성사진</span>
-                    </div>
-                    {siteContext && (
-                      <span className="text-[9px] text-muted-foreground">
-                        주변 건물 {siteContext.buildingCount}동 · 평균 {siteContext.avgFloors}층 · 최고 {siteContext.maxFloors}층
-                      </span>
-                    )}
+              {/* 주변환경 요약 */}
+              {siteContext && siteContext.buildingCount > 0 && (
+                <div className="rounded-xl border border-border p-2.5 bg-card/50 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-3 w-3 text-primary" />
+                    <span className="text-[10px] font-medium">주변환경</span>
                   </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    건물 {siteContext.buildingCount}동 · 평균 {siteContext.avgFloors}층 · 최고 {siteContext.maxFloors}층
+                  </span>
                 </div>
               )}
 
