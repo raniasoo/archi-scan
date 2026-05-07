@@ -2035,12 +2035,23 @@ export default function ArchiScanPage() {
             handleSelectLayout={handleSelectLayout}
             onAiRenderComplete={setAiRenderImage}
             surroundingContext={(() => {
-              const ctx: string[] = []
-              const rd = rawData as any
-              if (rd?.siteContext) ctx.push(`Surrounding: ${rd.siteContext.buildingCount} buildings nearby, max ${rd.siteContext.maxFloors} floors`)
-              if (rd?.terrain?.renderHint) ctx.push(`Terrain: ${rd.terrain.renderHint}`)
-              if (rd?.sunAnalysis?.renderHint) ctx.push(`Sun: ${rd.sunAnalysis.renderHint}`)
-              return ctx.length ? ctx.join('. ') : undefined
+              try {
+                const { buildSiteContextPrompt } = require('@/lib/site-context-builder')
+                const rd = rawData as any
+                const ctx = buildSiteContextPrompt({
+                  address,
+                  siteArea: parseFloat(siteArea) || 660,
+                  polygon: rd?.parcelPolygon,
+                  nearbyBuildings: rd?.nearbyBuildings,
+                  siteContext: rd?.siteContext,
+                  terrain: rd?.terrain,
+                  sunAnalysis: rd?.sunAnalysis,
+                  elevation: rd?.terrain?.maxElevation,
+                  floors: selectedLayoutData?.floors,
+                  buildingHeight: selectedLayoutData ? selectedLayoutData.floors * 3.3 : 10,
+                })
+                return ctx.fullPrompt || undefined
+              } catch { return undefined }
             })()}
           />
         )}

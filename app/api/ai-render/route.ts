@@ -231,7 +231,7 @@ CONTEXT:
 - Location: ${address || 'Seoul, South Korea'}
 - Project: ${layoutName || '주거 건물'}
 - Style: ${styleDesc}
-${surroundingContext ? `\nSURROUNDING ENVIRONMENT:\n${surroundingContext}\nThe rendering should show the building in context with its actual neighborhood.` : ''}
+${surroundingContext ? `\nSITE-SPECIFIC CONTEXT (IMPORTANT — render must reflect this):\n${surroundingContext}\n\nThe rendering MUST show the building responding to its actual site conditions described above.` : ''}
 
 CRITICAL REQUIREMENTS:
 - The building MUST have EXACTLY ${f} floors. Count them: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. This is non-negotiable.

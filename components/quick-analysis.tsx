@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, ChevronDown, FileText, Sparkles, ImageIcon, Mountain } from "lucide-react"
 import { analyzeTerrrain, type TerrainAnalysis } from "@/lib/terrain-analysis"
 import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
+import { buildSiteContextPrompt } from "@/lib/site-context-builder"
 
 interface QuickAnalysisProps {
   onDetailedAnalysis: (address: string, siteArea: number, data: any) => void
@@ -72,11 +73,22 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
               efficiencyVsSpace: userValues.efficiencyVsSpace,
             } : undefined,
             patterns: userValues?.selectedPatterns,
-            surroundingContext: [
-              siteContext ? `Surrounding: ${siteContext.buildingCount} buildings nearby, max ${siteContext.maxFloors} floors, avg ${siteContext.avgFloors} floors` : '',
-              terrainResult ? `Terrain: ${terrainResult.renderHint}` : '',
-              sunResult ? `Sun: ${sunResult.renderHint}` : '',
-            ].filter(Boolean).join('. '),
+            surroundingContext: (() => {
+              const ctx = buildSiteContextPrompt({
+                address: result.address,
+                siteArea: result.siteArea,
+                polygon: vworldData?.parcel?.polygon,
+                centroid: vworldData?.parcel?.centroid,
+                nearbyBuildings: vworldData?.nearbyBuildings,
+                siteContext: vworldData?.context,
+                terrain: terrainResult,
+                sunAnalysis: sunResult,
+                elevation: terrainResult?.maxElevation,
+                floors: result.bestLayout.floors,
+                buildingHeight: result.bestLayout.floors * 3.3,
+              })
+              return ctx.fullPrompt || undefined
+            })(),
           }),
         })
         const data = await res.json()
