@@ -46,6 +46,7 @@ export interface LayoutsStepProps {
   regulation: ZoningRegulation
   strategy: DesignStrategy
   userValues: UserValues
+  surroundingContext?: string
   gfa: number
   landPriceData: { pricePerM2: number }
   marketPrice: { loaded: boolean; suggestedSalePrice: number }
@@ -416,6 +417,14 @@ export function LayoutsStep(props: LayoutsStepProps) {
                   roi: feasibilityResult?.roi || 0,
                   totalProjectCost: feasibilityResult?.totalCost || 0,
                   strategy,
+                  buildingType: selectedLayoutData.type,
+                  values: props.userValues ? {
+                    profitVsQuality: props.userValues.profitVsQuality,
+                    privacyVsCommunity: props.userValues.privacyVsCommunity,
+                    efficiencyVsSpace: props.userValues.efficiencyVsSpace,
+                  } : undefined,
+                  patterns: props.userValues?.selectedPatterns,
+                  surroundingContext: props.surroundingContext,
                 }}
                 onRenderComplete={props.onAiRenderComplete}
               />

@@ -9,6 +9,10 @@ interface ConceptInput {
   buildingCoverageRatio: number; floorAreaRatio: number
   roi: number; totalProjectCost: number; strategy: string
   slope?: { grade: string; average: number; direction: string }
+  buildingType?: string
+  values?: { profitVsQuality?: number; privacyVsCommunity?: number; efficiencyVsSpace?: number }
+  patterns?: string[]
+  surroundingContext?: string
 }
 
 const STYLES = [
@@ -68,7 +72,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
   const doRender = async () => {
     setLoading(true); setError(null)
     try {
-      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ prompt:`${input.layoutName}`, style, address:input.address, layoutName:input.layoutName, floors:input.floors, units:input.units, siteArea:input.siteArea }) })
+      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`, style, address:input.address, layoutName:input.layoutName, floors:input.floors, units:input.units, siteArea:input.siteArea, buildingType:input.buildingType, coverage:input.buildingCoverageRatio, strategy:input.strategy, values:input.values, patterns:input.patterns, surroundingContext:input.surroundingContext }) })
       const d = await r.json()
       if (d.success && d.image) { setRenderImg(d.image); onRenderComplete?.(d.image) } else setError(d.error||'렌더링 실패')
     } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }

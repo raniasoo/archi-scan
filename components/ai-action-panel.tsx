@@ -14,6 +14,11 @@ interface AIActionPanelProps {
   roi: number
   totalCost: number
   selectedStyle?: string
+  buildingType?: string
+  strategy?: string
+  values?: { profitVsQuality?: number; privacyVsCommunity?: number; efficiencyVsSpace?: number }
+  patterns?: string[]
+  surroundingContext?: string
 }
 
 export function AIActionPanel(props: AIActionPanelProps) {
@@ -39,13 +44,19 @@ export function AIActionPanel(props: AIActionPanelProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `${props.layoutName} building design`,
+          prompt: `${props.layoutName} ${props.floors}층 ${props.units}세대 building design`,
           style: props.selectedStyle || 'modern-luxury',
           address: props.address,
           layoutName: props.layoutName,
           floors: props.floors,
           units: props.units,
           siteArea: props.siteArea,
+          buildingType: props.buildingType,
+          coverage: props.coverage,
+          strategy: props.strategy,
+          values: props.values,
+          patterns: props.patterns,
+          surroundingContext: props.surroundingContext,
         }),
       })
       const data = await res.json()

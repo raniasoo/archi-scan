@@ -2034,6 +2034,14 @@ export default function ArchiScanPage() {
             loadLayoutOptimizer={loadLayoutOptimizer}
             handleSelectLayout={handleSelectLayout}
             onAiRenderComplete={setAiRenderImage}
+            surroundingContext={(() => {
+              const ctx: string[] = []
+              const rd = rawData as any
+              if (rd?.siteContext) ctx.push(`Surrounding: ${rd.siteContext.buildingCount} buildings nearby, max ${rd.siteContext.maxFloors} floors`)
+              if (rd?.terrain?.renderHint) ctx.push(`Terrain: ${rd.terrain.renderHint}`)
+              if (rd?.sunAnalysis?.renderHint) ctx.push(`Sun: ${rd.sunAnalysis.renderHint}`)
+              return ctx.length ? ctx.join('. ') : undefined
+            })()}
           />
         )}
 

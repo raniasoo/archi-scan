@@ -233,17 +233,25 @@ CONTEXT:
 - Style: ${styleDesc}
 ${surroundingContext ? `\nSURROUNDING ENVIRONMENT:\n${surroundingContext}\nThe rendering should show the building in context with its actual neighborhood.` : ''}
 
-RENDERING:
+CRITICAL REQUIREMENTS:
+- The building MUST have EXACTLY ${f} floors. Count them: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. This is non-negotiable.
+- ${f <= 2 ? 'This is a LOW-RISE building, maximum 2 stories tall. Do NOT make it taller.' : f <= 5 ? `This is a LOW to MID-RISE building with exactly ${f} visible floor levels.` : `This is a ${f}-story building. Each floor must be clearly visible and countable.`}
 - Photorealistic 3D architectural rendering
-- Eye-level perspective, main facade + entrance
-- Beautiful landscaping
-- Warm afternoon lighting
+- Eye-level perspective showing main facade + entrance
+- Beautiful landscaping with mature trees
+- Warm afternoon golden-hour lighting
 - 16:9 aspect ratio
-- MUST be ${f}-story structure
+
+AVOID (do NOT include):
+- Extra floors beyond ${f} stories
+- Distorted or unrealistic proportions
+- Text, watermarks, or labels on the image
+- Floating elements or physically impossible structures
+- Cars or people that look artificial
 
 ${prompt}
 
-Generate ONE high-quality image.`
+Generate ONE high-quality photorealistic image.`
 }
 
 // GET: API 상태 확인
