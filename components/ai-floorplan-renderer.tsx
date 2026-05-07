@@ -309,10 +309,25 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
   const [error, setError] = useState<string | null>(null)
   const [scale, setScale] = useState(PX_PER_M)
 
+  // 용도지역 한글 매핑
+  const ZONE_NAMES: Record<string, string> = {
+    'residential-1': '제1종일반주거지역', 'residential-2': '제2종일반주거지역',
+    'residential-3': '제3종일반주거지역', 'semi-residential': '준주거지역',
+    'commercial-neighborhood': '근린상업지역', 'commercial-general': '일반상업지역',
+    'commercial-central': '중심상업지역',
+    'residential-exclusive-1': '제1종전용주거지역', 'residential-exclusive-2': '제2종전용주거지역',
+  }
+  const zoneName = (zoneType && ZONE_NAMES[zoneType]) || zoneType || '제2종일반주거지역'
+
   const footprintArea = siteArea * (buildingCoverage / 100)
+  // AI 생성에 적합한 건물 치수 (최대 세대 6개로 제한)
+  const rawUnitsPerFloor = Math.max(Math.ceil(units / Math.max(floors - 1, 1)), 2)
+  const unitsPerFloor = Math.min(rawUnitsPerFloor, 6) // Claude가 처리 가능한 최대 세대수
   const bW = Math.round(Math.sqrt(footprintArea * 1.6) * 10) / 10
   const bD = Math.round(footprintArea / bW * 10) / 10
-  const unitsPerFloor = Math.max(Math.ceil(units / Math.max(floors - 1, 1)), 2)
+  // AI용 건물 크기는 세대수에 비례하여 조정
+  const aiBW = Math.min(bW, unitsPerFloor * 8 + 6) // 세대당 약 8m + 코어
+  const aiBD = Math.min(bD, 14) // 깊이 최대 14m (투룸/쓰리룸 기준)
 
   const generate = async () => {
     setLoading(true)
@@ -321,21 +336,22 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
       const res = await fetch('/api/generate-floorplan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(55000), // 55초 타임아웃
         body: JSON.stringify({
           site: {
             address: address || '서울특별시',
             siteArea,
-            zoning: zoneType || '제2종일반주거지역',
+            zoning: zoneName,
             heightLimit: heightLimit || 21,
             setbacks: setbacks || { front: 3, side: 1.5, rear: 2 },
           },
           layout: {
             type: layoutName || type || '타워형',
             floors,
-            units,
+            units: unitsPerFloor * Math.max(floors - 1, 1),
             buildingCoverage,
             far: Math.round(buildingCoverage * floors),
-            footprint: { width: bW, depth: bD },
+            footprint: { width: aiBW, depth: aiBD },
           },
           preferences: {
             unitTypes: unitsPerFloor <= 2 ? ['쓰리룸'] : ['투룸', '쓰리룸'],
@@ -351,7 +367,10 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
         setError(result.error || 'AI 평면 생성에 실패했습니다')
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : '네트워크 오류')
+      const msg = e instanceof Error ? e.message : '네트워크 오류'
+      setError(msg.includes('abort') || msg.includes('timeout') 
+        ? 'AI 응답 시간이 초과되었습니다. 다시 시도해주세요.' 
+        : msg.includes('fetch') ? 'AI 서버 연결에 실패했습니다. 다시 시도해주세요.' : msg)
     } finally {
       setLoading(false)
     }
@@ -372,8 +391,9 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
             </p>
           </div>
           <div className="text-[10px] text-muted-foreground space-y-0.5">
-            <p>건물: {bW}m × {bD}m · 기준층 {unitsPerFloor}세대</p>
-            <p>{zoneType || '제2종일반주거지역'} · {floors}층 · {units}세대</p>
+            <p>건물: {aiBW}m × {aiBD}m · 기준층 {unitsPerFloor}세대</p>
+            <p>{zoneName} · {floors}층 · {units}세대</p>
+            {rawUnitsPerFloor > 6 && <p className="text-amber-400">※ AI 생성은 대표 {unitsPerFloor}세대 기준</p>}
           </div>
           <button
             onClick={generate}

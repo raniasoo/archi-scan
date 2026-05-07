@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Vercel Serverless 타임아웃 60초 (Claude API 응답 대기)
+export const maxDuration = 60
+
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 
 const SYSTEM_PROMPT = `당신은 한국 건축법규를 완벽히 이해하는 건축 평면 설계 전문 AI입니다.
@@ -123,7 +126,7 @@ export async function POST(req: NextRequest) {
 
 ${OUTPUT_SCHEMA}
 
-위 JSON 형식으로만 응답하세요. 설명 없이 JSON만 출력.`
+위 JSON 형식으로만 응답하세요. 마크다운 코드블록(\`\`\`) 없이 순수 JSON만 출력. 설명 텍스트 절대 불가.`
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -134,9 +137,12 @@ ${OUTPUT_SCHEMA}
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
+        max_tokens: 6000,
         system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userPrompt }],
+        messages: [
+          { role: 'user', content: userPrompt },
+          { role: 'assistant', content: '{' }, // JSON 출력 강제
+        ],
       }),
     })
 
@@ -153,10 +159,11 @@ ${OUTPUT_SCHEMA}
     const data = await response.json()
     const text = data.content?.[0]?.text || ''
 
-    // JSON 파싱 (마크다운 코드블록 제거)
+    // JSON 파싱 (prefill '{' + 마크다운 코드블록 제거)
     let floorPlanData
     try {
-      const jsonStr = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+      const rawText = '{' + (text || '')  // prefill '{' 이어붙이기
+      const jsonStr = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
       floorPlanData = JSON.parse(jsonStr)
     } catch (parseErr) {
       console.error('[FLOORPLAN] JSON parse error:', parseErr, 'Raw:', text.substring(0, 500))
