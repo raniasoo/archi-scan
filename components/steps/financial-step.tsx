@@ -212,8 +212,8 @@ export function FinancialStep(props: FinancialStepProps) {
               const isSmall = selectedLayoutData.units <= 200 && siteAreaNum < 10000
               const roi = feasibilityResult.roi ?? 0
               // ScenarioComparison과 동일한 추천 로직 (ROI + 건물연식)
-              const buildingAge = (molitSupplementData as any)?.buildingAge || 0
-              const isOldEnough = buildingAge >= 30
+              // 건물연식 데이터가 없으면 신축으로 간주 → 리모델링 우선
+              const isOldEnough = false // TODO: 건축물대장에서 준공년도 확보 시 활성화
               const scenario: 'reconstruction' | 'remodeling' | 'bulk-sale' = 
                 (roi > 15 && isOldEnough) ? 'reconstruction' : 'remodeling'
               return (
