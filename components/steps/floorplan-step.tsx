@@ -18,13 +18,14 @@ const ElevationView = dynamic(() => import("@/components/elevation-view").then(m
 const PerspectiveView = dynamic(() => import("@/components/perspective-view").then(m => ({ default: m.PerspectiveView })), { ssr: false, loading: LoadingBox })
 const SitePlan = dynamic(() => import("@/components/site-plan").then(m => ({ default: m.SitePlan })), { ssr: false, loading: LoadingBox })
 const DetailedFloorPlan = dynamic(() => import("@/components/detailed-floor-plan").then(m => ({ default: m.DetailedFloorPlan })), { ssr: false, loading: LoadingBox })
+const AIFloorPlan = dynamic(() => import("@/components/ai-floorplan-renderer").then(m => ({ default: m.AIFloorPlan })), { ssr: false, loading: LoadingBox })
 
 export interface FloorplanStepProps {
   selectedLayoutData: LayoutOption
   selectedFloor: number
   setSelectedFloor: Dispatch<SetStateAction<number>>
-  drawingTab: "floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "detailed"
-  setDrawingTab: Dispatch<SetStateAction<"floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "detailed">>
+  drawingTab: "floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "detailed" | "ai-generate"
+  setDrawingTab: Dispatch<SetStateAction<"floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "detailed" | "ai-generate">>
   floorPlanViewMode: "fit" | "original"
   setFloorPlanViewMode: Dispatch<SetStateAction<"fit" | "original">>
   isFloorPlanFullscreen: boolean
@@ -396,6 +397,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
                   {([
                     { id: "site" as const, label: "배치도" },
                     { id: "detailed" as const, label: "✨ 상세 평면도" },
+                    { id: "ai-generate" as const, label: "🤖 AI 평면" },
                     { id: "iso" as const, label: "아이소메트릭" },
                     { id: "perspective" as const, label: "투시도" },
                     { id: "section" as const, label: "단면도" },
@@ -486,6 +488,24 @@ export function FloorplanStep(props: FloorplanStepProps) {
                       units={selectedLayoutData.units}
                       type={selectedLayoutData.type}
                       layoutName={selectedLayoutData.name}
+                    />
+                  )}
+                  {drawingTab === "ai-generate" && (
+                    <AIFloorPlan
+                      siteArea={siteAreaNum}
+                      buildingCoverage={selectedLayoutData.coverage}
+                      floors={selectedLayoutData.floors}
+                      units={selectedLayoutData.units}
+                      type={selectedLayoutData.type}
+                      layoutName={selectedLayoutData.name}
+                      address={address}
+                      zoneType={molit.zoneCode || regulation.zoneType}
+                      heightLimit={molit.heightLimit || regulation.maxHeight}
+                      setbacks={{
+                        front: molit.hasDistrictPlan ? 2 : 3,
+                        side: (molit.zoneCode || regulation.zoneType)?.includes('residential') ? 1.5 : 1,
+                        rear: (molit.zoneCode || regulation.zoneType)?.includes('residential') ? 2 : 1.5,
+                      }}
                     />
                   )}
                 </div>
