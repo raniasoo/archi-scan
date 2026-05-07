@@ -460,3 +460,112 @@ export function generatePerspectiveSvg(d: DrawingInput): string {
   <text x="${vpX}" y="${H-8}" text-anchor="middle" font-size="5" fill="#64748b">투시도 · ${d.layoutName} · ${d.floors}F · ${d.units}세대</text>
 </svg>`
 }
+
+// ===== 기준층 평면도 SVG =====
+export function generateFloorPlanSvg(d: DrawingInput): string {
+  // 동적 import 대신 인라인 구현 (report-drawings는 순수 함수)
+  const W = 400, H = 280, PAD = 30
+  const coreW = 24
+  const unitsPerFloor = Math.min(Math.max(Math.ceil(d.units / Math.max(d.floors - 1, 1)), 2), 4)
+  const leftCount = Math.ceil(unitsPerFloor / 2)
+  const rightCount = unitsPerFloor - leftCount
+
+  // 건물 크기 계산
+  const unitW = (W - PAD * 2 - coreW) / unitsPerFloor
+  const bldgW = W - PAD * 2
+  const bldgH = H - PAD * 2 - 16
+  const coreX = leftCount * unitW
+
+  // 색상
+  const roomColors: Record<string, string> = {
+    '거실': '#dcfce7', '주방': '#fef3c7', '안방': '#dbeafe', '침실': '#e0e7ff',
+    '욕실': '#cffafe', '현관': '#f1f5f9', '드레스룸': '#f3e8ff',
+  }
+
+  // 실 배치 (투룸/쓰리룸 자동 결정)
+  function unitRooms(uw: number, uh: number, isThreeRoom: boolean): { name: string; x: number; y: number; w: number; h: number; color: string }[] {
+    if (isThreeRoom) {
+      const topH = uh * 0.42, midH = uh * 0.33, botH = uh - topH - midH
+      return [
+        { name: '거실', x: 0, y: 0, w: uw * 0.52, h: topH, color: roomColors['거실'] },
+        { name: '주방', x: uw * 0.52, y: 0, w: uw * 0.48, h: topH, color: roomColors['주방'] },
+        { name: '안방', x: 0, y: topH, w: uw * 0.38, h: midH, color: roomColors['안방'] },
+        { name: '침실2', x: uw * 0.38, y: topH, w: uw * 0.32, h: midH, color: roomColors['침실'] },
+        { name: '욕실', x: uw * 0.7, y: topH, w: uw * 0.3, h: midH, color: roomColors['욕실'] },
+        { name: '침실3', x: 0, y: topH + midH, w: uw * 0.35, h: botH, color: roomColors['침실'] },
+        { name: 'DR', x: uw * 0.35, y: topH + midH, w: uw * 0.22, h: botH, color: roomColors['드레스룸'] },
+        { name: '욕실2', x: uw * 0.57, y: topH + midH, w: uw * 0.2, h: botH, color: roomColors['욕실'] },
+        { name: '현관', x: uw * 0.77, y: topH + midH, w: uw * 0.23, h: botH, color: roomColors['현관'] },
+      ]
+    }
+    const topH = uh * 0.52, botH = uh - topH
+    return [
+      { name: '거실', x: 0, y: 0, w: uw * 0.55, h: topH, color: roomColors['거실'] },
+      { name: '주방', x: uw * 0.55, y: 0, w: uw * 0.45, h: topH, color: roomColors['주방'] },
+      { name: '안방', x: 0, y: topH, w: uw * 0.42, h: botH, color: roomColors['안방'] },
+      { name: '침실2', x: uw * 0.42, y: topH, w: uw * 0.32, h: botH, color: roomColors['침실'] },
+      { name: '욕실', x: uw * 0.74, y: topH, w: uw * 0.26, h: botH * 0.55, color: roomColors['욕실'] },
+      { name: '현관', x: uw * 0.74, y: topH + botH * 0.55, w: uw * 0.26, h: botH * 0.45, color: roomColors['현관'] },
+    ]
+  }
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;background:#f8fafc;border-radius:8px;font-family:system-ui,sans-serif">`
+
+  // 건물 외곽
+  svg += `<rect x="${PAD}" y="${PAD}" width="${bldgW}" height="${bldgH}" fill="none" stroke="#1e293b" stroke-width="2.5" rx="1"/>`
+
+  // 코어
+  const coreActualX = PAD + coreX
+  svg += `<rect x="${coreActualX}" y="${PAD + bldgH * 0.15}" width="${coreW}" height="${bldgH * 0.7}" fill="#33415530" stroke="#475569" stroke-width="1" rx="1"/>`
+  svg += `<rect x="${coreActualX + 2}" y="${PAD + bldgH * 0.18}" width="${coreW * 0.35}" height="${bldgH * 0.64}" fill="#334155" rx="1"/>`
+  svg += `<text x="${coreActualX + 2 + coreW * 0.175}" y="${PAD + bldgH * 0.5}" font-size="4" text-anchor="middle" fill="white" font-weight="500">EV</text>`
+  svg += `<rect x="${coreActualX + coreW * 0.4}" y="${PAD + bldgH * 0.18}" width="${coreW * 0.55}" height="${bldgH * 0.64}" fill="#475569" rx="1"/>`
+  svg += `<text x="${coreActualX + coreW * 0.67}" y="${PAD + bldgH * 0.5}" font-size="4" text-anchor="middle" fill="white">계단</text>`
+  // 복도
+  svg += `<rect x="${coreActualX}" y="${PAD}" width="${coreW}" height="${bldgH * 0.15}" fill="#f1f5f908" stroke="#94a3b8" stroke-width="0.3"/>`
+  svg += `<rect x="${coreActualX}" y="${PAD + bldgH * 0.85}" width="${coreW}" height="${bldgH * 0.15}" fill="#f1f5f908" stroke="#94a3b8" stroke-width="0.3"/>`
+
+  const unitColors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b']
+
+  // 세대
+  for (let i = 0; i < unitsPerFloor; i++) {
+    const isLeft = i < leftCount
+    const idx = isLeft ? i : i - leftCount
+    const ux = isLeft ? PAD + idx * unitW : PAD + leftCount * unitW + coreW + (i - leftCount) * unitW
+    const isThreeRoom = (i === 1 || i === 2) && unitsPerFloor >= 3
+    const rooms = unitRooms(unitW, bldgH, isThreeRoom)
+    const mirror = !isLeft
+    const color = unitColors[i % unitColors.length]
+    const label = String.fromCharCode(65 + i)
+    const area = isThreeRoom ? 84 : 59
+
+    // 세대 외곽
+    svg += `<rect x="${ux}" y="${PAD}" width="${unitW}" height="${bldgH}" fill="none" stroke="#1e293b" stroke-width="1.5"/>`
+
+    // 실
+    for (const room of rooms) {
+      const rx = mirror ? ux + unitW - room.x - room.w : ux + room.x
+      const ry = PAD + room.y
+      svg += `<rect x="${rx}" y="${ry}" width="${room.w}" height="${room.h}" fill="${room.color}" stroke="#64748b" stroke-width="0.6"/>`
+      svg += `<text x="${rx + room.w / 2}" y="${ry + room.h / 2 + 1.5}" font-size="${room.w > 25 ? 5 : 3.5}" text-anchor="middle" fill="#374151" font-weight="500">${room.name}</text>`
+    }
+
+    // 라벨
+    svg += `<text x="${ux + unitW / 2}" y="${PAD + bldgH + 11}" font-size="5.5" text-anchor="middle" fill="${color}" font-weight="700">${label}호 (${isThreeRoom ? '쓰리룸' : '투룸'} ${area}㎡)</text>`
+  }
+
+  // 치수
+  svg += `<line x1="${PAD}" y1="${PAD - 10}" x2="${PAD + bldgW}" y2="${PAD - 10}" stroke="#94a3b8" stroke-width="0.5"/>`
+  svg += `<text x="${PAD + bldgW / 2}" y="${PAD - 14}" font-size="5" text-anchor="middle" fill="#64748b">${Math.round(bldgW * 0.08)}m</text>`
+
+  // 방위
+  svg += `<line x1="${PAD + bldgW + 14}" y1="${PAD + 12}" x2="${PAD + bldgW + 14}" y2="${PAD}" stroke="#1e293b" stroke-width="1"/>`
+  svg += `<polygon points="${PAD + bldgW + 14},${PAD - 3} ${PAD + bldgW + 11.5},${PAD + 2} ${PAD + bldgW + 16.5},${PAD + 2}" fill="#1e293b"/>`
+  svg += `<text x="${PAD + bldgW + 14}" y="${PAD - 5}" font-size="5" text-anchor="middle" fill="#1e293b" font-weight="700">N</text>`
+
+  // 제목
+  svg += `<text x="${W / 2}" y="${H - 4}" font-size="6" text-anchor="middle" fill="#64748b">기준층 평면도 · ${unitsPerFloor}세대 · ${d.layoutName}</text>`
+
+  svg += `</svg>`
+  return svg
+}

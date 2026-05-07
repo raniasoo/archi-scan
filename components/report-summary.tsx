@@ -2,7 +2,7 @@
 // @version STABLE-v195-png-fix | @checkpoint release-candidate | 2026-04-30
 
 import { useRef, useState, useEffect } from "react"
-import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, svgToImgTag } from "@/lib/report-drawings"
+import { generateSitePlanSvg, generateSectionSvg, generateIsometricSvg, generateElevationSvg, generatePerspectiveSvg, generateFloorPlanSvg, svgToImgTag } from "@/lib/report-drawings"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 import { evaluatePatternQuality } from "@/lib/pattern-quality"
 // Card components replaced with native divs for isolated styling
@@ -356,7 +356,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       layoutName: layout.name, gfa,
     }
     
-    let sitePlanImg = '', sectionImg = '', isoImg = '', elevImg = '', perspImg = ''
+    let sitePlanImg = '', sectionImg = '', isoImg = '', elevImg = '', perspImg = '', floorPlanImg = ''
     try {
       const results = await Promise.all([
         convertSvgToPng(generateSitePlanSvg(drawingInput)),
@@ -364,17 +364,16 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         convertSvgToPng(generateIsometricSvg(drawingInput)),
         convertSvgToPng(generateElevationSvg(drawingInput)),
         convertSvgToPng(generatePerspectiveSvg(drawingInput)),
+        convertSvgToPng(generateFloorPlanSvg(drawingInput)),
       ])
-      sitePlanImg = results[0]; sectionImg = results[1]; isoImg = results[2]; elevImg = results[3]; perspImg = results[4]
+      sitePlanImg = results[0]; sectionImg = results[1]; isoImg = results[2]; elevImg = results[3]; perspImg = results[4]; floorPlanImg = results[5]
     } catch {
       sitePlanImg = svgToImgTag(generateSitePlanSvg(drawingInput))
       sectionImg = svgToImgTag(generateSectionSvg(drawingInput))
       isoImg = svgToImgTag(generateIsometricSvg(drawingInput))
       elevImg = svgToImgTag(generateElevationSvg(drawingInput))
       perspImg = svgToImgTag(generatePerspectiveSvg(drawingInput))
-      isoImg = svgToImgTag(generateIsometricSvg(drawingInput))
-      elevImg = svgToImgTag(generateElevationSvg(drawingInput))
-      perspImg = svgToImgTag(generatePerspectiveSvg(drawingInput))
+      floorPlanImg = svgToImgTag(generateFloorPlanSvg(drawingInput))
     }
     
     const htmlContent = `<!DOCTYPE html>
@@ -704,6 +703,10 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   <!-- 설계 도면 섹션 -->
   <div class="section" style="page-break-before: always;">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '6' : '5'}</span> 설계 도면</div>
+    <div style="margin-bottom: 12px;">
+      <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">기준층 평면도</p>
+      ${floorPlanImg}
+    </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
       <div>
         <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">배치도</p>
