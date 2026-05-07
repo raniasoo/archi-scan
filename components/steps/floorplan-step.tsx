@@ -17,15 +17,14 @@ const SectionView = dynamic(() => import("@/components/section-view").then(m => 
 const ElevationView = dynamic(() => import("@/components/elevation-view").then(m => ({ default: m.ElevationView })), { ssr: false, loading: LoadingBox })
 const PerspectiveView = dynamic(() => import("@/components/perspective-view").then(m => ({ default: m.PerspectiveView })), { ssr: false, loading: LoadingBox })
 const SitePlan = dynamic(() => import("@/components/site-plan").then(m => ({ default: m.SitePlan })), { ssr: false, loading: LoadingBox })
-const DetailedFloorPlan = dynamic(() => import("@/components/detailed-floor-plan").then(m => ({ default: m.DetailedFloorPlan })), { ssr: false, loading: LoadingBox })
 const AIFloorPlan = dynamic(() => import("@/components/ai-floorplan-renderer").then(m => ({ default: m.AIFloorPlan })), { ssr: false, loading: LoadingBox })
 
 export interface FloorplanStepProps {
   selectedLayoutData: LayoutOption
   selectedFloor: number
   setSelectedFloor: Dispatch<SetStateAction<number>>
-  drawingTab: "floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "detailed" | "ai-generate"
-  setDrawingTab: Dispatch<SetStateAction<"floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "detailed" | "ai-generate">>
+  drawingTab: "floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "ai-generate"
+  setDrawingTab: Dispatch<SetStateAction<"floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "ai-generate">>
   floorPlanViewMode: "fit" | "original"
   setFloorPlanViewMode: Dispatch<SetStateAction<"fit" | "original">>
   isFloorPlanFullscreen: boolean
@@ -65,8 +64,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
   // 통합 탭 목록
   const tabs = [
     { id: "floor" as const, label: "기본 평면" },
-    { id: "ai-generate" as const, label: "🤖 AI 평면" },
-    { id: "detailed" as const, label: "상세 평면" },
+    { id: "ai-generate" as const, label: "📐 평면도" },
     { id: "site" as const, label: "배치도" },
     { id: "iso" as const, label: "아이소" },
     { id: "perspective" as const, label: "투시도" },
@@ -204,18 +202,6 @@ export function FloorplanStep(props: FloorplanStepProps) {
                 side: (molit.zoneCode || regulation.zoneType)?.includes('residential') ? 1.5 : 1,
                 rear: (molit.zoneCode || regulation.zoneType)?.includes('residential') ? 2 : 1.5,
               }}
-            />
-          )}
-
-          {/* 상세 평면 */}
-          {drawingTab === "detailed" && (
-            <DetailedFloorPlan
-              siteArea={siteAreaNum}
-              buildingCoverage={selectedLayoutData.coverage}
-              floors={selectedLayoutData.floors}
-              units={selectedLayoutData.units}
-              type={selectedLayoutData.type}
-              layoutName={selectedLayoutData.name}
             />
           )}
 
