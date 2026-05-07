@@ -188,9 +188,19 @@ function evaluatePatterns(layout: LayoutForPattern, values?: UserValues): Patter
   // ============================================================
   if (values?.selectedPatterns?.length) {
     const patternIdMap: Record<string, number> = {
-      'courtyard': 115, 'south-light': 105, 'shop-street': 87,
-      'tree-view': 171, 'quiet-entry': 112, 'neighbors': 36,
-      'walk-safe': 79, 'two-light': 106,
+      // 단지·외부
+      'courtyard': 115, 'neighbors': 36, 'accessible-green': 60, 'walk-safe': 79,
+      'shop-street': 87, 'tree-view': 171, 'small-parking': 22, 'connected-play': 73,
+      'garden-wall': 173, 'outdoor-room': 163, 'main-entrance': 110, 'local-sports': 72, 'fruit-trees': 170,
+      // 건물·동선
+      'south-light': 105, 'quiet-entry': 112, 'intimacy-grad': 127, 'short-corridor': 132,
+      'stair-seat': 125, 'rooftop': 118, 'balcony': 167, 'building-edge': 160,
+      'common-area': 67, 'ground-floor': 96, 'ceiling-height': 190, 'natural-vent': 162,
+      'gallery-surround': 119, 'visible-roof': 117, 'cascade-roof': 116,
+      // 실·생활
+      'two-light': 106, 'window-place': 180, 'open-kitchen': 184, 'private-terrace': 140,
+      'sleeping-sun': 138, 'couple-realm': 136, 'child-realm': 137, 'storage-wall': 197,
+      'bathing-room': 144, 'indoor-sun': 128, 'earth-connect': 168, 'home-workshop': 157,
     }
     const boostedIds = new Set(
       values.selectedPatterns.map(sp => patternIdMap[sp]).filter(Boolean)
@@ -207,72 +217,91 @@ function evaluatePatterns(layout: LayoutForPattern, values?: UserValues): Patter
 }
 
 // ============================================================
-// 15가지 근본 속성 (The Nature of Order) — 자동 측정 가능 7개
+// 15가지 근본 속성 (The Nature of Order) — 완전 구현
 // ============================================================
 
 function evaluateLivingStructure(layout: LayoutForPattern): LivingStructureScore[] {
   const scores: LivingStructureScore[] = []
   const openSpace = 100 - layout.coverage
+  const isCourtyard = layout.type === "courtyard"
+  const isBar = layout.type === "bar"
+  const isTower = layout.type === "tower"
+  const isLShape = layout.type === "l-shape"
 
-  // 1. 강한 중심 (Strong Centers)
-  const centerScore = layout.type === "courtyard" ? 90 : layout.type === "l-shape" ? 75 :
-    layout.type === "tower" ? 65 : 70
-  scores.push({
-    property: "Strong Centers", propertyKr: "강한 중심",
-    score: centerScore,
-    reason: layout.type === "courtyard" ? "중정이 명확한 공간적 중심을 형성합니다" : "공용공간이 시각적 중심 역할을 합니다"
-  })
+  // 1. 스케일의 단계 (Levels of Scale)
+  const scaleScore = layout.floors > 10 ? 75 : layout.floors > 5 ? 80 : 85
+  scores.push({ property: "Levels of Scale", propertyKr: "스케일의 단계", score: scaleScore,
+    reason: "단지→동→세대→실 스케일 전이의 자연스러움" })
 
-  // 2. 두꺼운 경계 (Boundaries)
-  const boundaryScore = layout.type === "courtyard" ? 85 : openSpace > 40 ? 75 : 60
-  scores.push({
-    property: "Boundaries", propertyKr: "두꺼운 경계",
-    score: boundaryScore,
-    reason: "외부→내부 전이 구간의 풍부함 정도"
-  })
+  // 2. 강한 중심 (Strong Centers)
+  scores.push({ property: "Strong Centers", propertyKr: "강한 중심",
+    score: isCourtyard ? 90 : isLShape ? 75 : isTower ? 65 : 70,
+    reason: isCourtyard ? "중정이 명확한 공간적 중심을 형성합니다" : "공용공간이 시각적 중심 역할을 합니다" })
 
-  // 3. 교대 반복 (Alternating Repetition)
-  const repetitionScore = layout.units > 20 ? 80 : layout.units > 10 ? 70 : 60
-  scores.push({
-    property: "Alternating Repetition", propertyKr: "교대 반복",
-    score: repetitionScore,
-    reason: "동 배치와 세대 구성의 리듬감"
-  })
+  // 3. 두꺼운 경계 (Boundaries)
+  scores.push({ property: "Boundaries", propertyKr: "두꺼운 경계",
+    score: isCourtyard ? 85 : openSpace > 40 ? 75 : 60,
+    reason: "외부→내부 전이 구간의 풍부함" })
 
-  // 4. 양의 공간 (Positive Space)
-  const positiveScore = layout.type === "courtyard" ? 90 : layout.type === "l-shape" ? 80 :
-    openSpace > 50 ? 75 : 55
-  scores.push({
-    property: "Positive Space", propertyKr: "양의 공간",
-    score: positiveScore,
-    reason: layout.type === "courtyard" ? "건물이 감싸는 외부공간이 명확한 형태를 가집니다" : "동 사이 외부공간의 형태적 완결성"
-  })
+  // 4. 교대 반복 (Alternating Repetition)
+  scores.push({ property: "Alternating Repetition", propertyKr: "교대 반복",
+    score: layout.units > 20 ? 80 : layout.units > 10 ? 70 : 60,
+    reason: "동 배치와 세대 구성의 리듬감" })
 
-  // 5. 좋은 형태 (Good Shape)
-  const shapeScore = layout.coverage > 30 && layout.coverage < 60 ? 80 :
-    layout.coverage >= 60 ? 55 : 70
-  scores.push({
-    property: "Good Shape", propertyKr: "좋은 형태",
-    score: shapeScore,
-    reason: "건물 매스의 비례와 조형적 완성도"
-  })
+  // 5. 양의 공간 (Positive Space)
+  scores.push({ property: "Positive Space", propertyKr: "양의 공간",
+    score: isCourtyard ? 90 : isLShape ? 80 : openSpace > 50 ? 75 : 55,
+    reason: "건물 사이 외부공간이 의미 있는 형태를 가지는 정도" })
 
-  // 6. 대비 (Contrast)
-  const contrastScore = layout.floors > 10 ? 80 : layout.floors > 5 ? 70 : 60
-  scores.push({
-    property: "Contrast", propertyKr: "대비",
-    score: contrastScore,
-    reason: "저층부와 고층부, 매스와 공간의 대비감"
-  })
+  // 6. 좋은 형태 (Good Shape)
+  scores.push({ property: "Good Shape", propertyKr: "좋은 형태",
+    score: layout.coverage > 30 && layout.coverage < 60 ? 80 : layout.coverage >= 60 ? 55 : 70,
+    reason: "건물 매스의 비례와 조형적 완성도" })
 
-  // 7. 점진적 변이 (Gradients)
-  const gradientScore = layout.type === "l-shape" ? 80 : layout.type === "courtyard" ? 75 :
-    layout.type === "tower" ? 70 : 65
-  scores.push({
-    property: "Gradients", propertyKr: "점진적 변이",
-    score: gradientScore,
-    reason: "공간의 크기·밀도·높이가 점진적으로 변화하는 정도"
-  })
+  // 7. 국소 대칭 (Local Symmetries)
+  scores.push({ property: "Local Symmetries", propertyKr: "국소 대칭",
+    score: isBar ? 85 : isTower ? 75 : isCourtyard ? 80 : 70,
+    reason: "세대 배치의 좌우 균형과 대칭성" })
+
+  // 8. 깊은 맞물림 (Deep Interlock and Ambiguity)
+  scores.push({ property: "Deep Interlock", propertyKr: "깊은 맞물림",
+    score: isCourtyard ? 85 : isLShape ? 80 : isTower ? 55 : 65,
+    reason: "내부와 외부가 서로 맞물리는 복잡성 (테라스, 발코니, 필로티)" })
+
+  // 9. 대비 (Contrast)
+  scores.push({ property: "Contrast", propertyKr: "대비",
+    score: layout.floors > 10 ? 80 : layout.floors > 5 ? 70 : 60,
+    reason: "저층부와 고층부, 매스와 공간의 대비감" })
+
+  // 10. 점진적 변이 (Gradients)
+  scores.push({ property: "Gradients", propertyKr: "점진적 변이",
+    score: isLShape ? 80 : isCourtyard ? 75 : isTower ? 70 : 65,
+    reason: "공공→반공적→사적 공간의 점진적 전이" })
+
+  // 11. 거침 (Roughness)
+  scores.push({ property: "Roughness", propertyKr: "거침",
+    score: layout.floors <= 3 ? 80 : layout.floors <= 5 ? 70 : 55,
+    reason: "자연 소재, 비정형 요소, 손으로 만진 듯한 질감" })
+
+  // 12. 반향 (Echoes)
+  scores.push({ property: "Echoes", propertyKr: "반향",
+    score: isBar ? 80 : isCourtyard ? 75 : 65,
+    reason: "건물 전체에서 반복되는 형태적 모티브의 일관성" })
+
+  // 13. 여백 (The Void)
+  scores.push({ property: "The Void", propertyKr: "여백",
+    score: isCourtyard ? 90 : openSpace > 50 ? 80 : openSpace > 35 ? 65 : 45,
+    reason: "비움의 공간이 주는 여유와 숨쉴 틈" })
+
+  // 14. 단순함과 내적 고요 (Simplicity and Inner Calm)
+  scores.push({ property: "Simplicity", propertyKr: "단순함",
+    score: layout.units <= 10 ? 85 : layout.units <= 30 ? 70 : 55,
+    reason: "과도하지 않은 디자인의 명료함" })
+
+  // 15. 비분리 (Not-Separateness)
+  scores.push({ property: "Not-Separateness", propertyKr: "비분리",
+    score: layout.floors <= 5 ? 85 : layout.floors <= 10 ? 70 : 55,
+    reason: "주변 도시 맥락과의 조화, 동네에 자연스럽게 어울림" })
 
   return scores
 }
@@ -378,13 +407,63 @@ export function evaluatePatternQuality(
 // 사용자가 선택할 수 있는 패턴 카드 데이터
 // ============================================================
 
+// ============================================================
+// 사용자가 선택할 수 있는 패턴 카드 데이터 — 40개 (3카테고리)
+// 크리스토퍼 알렉산더 "A Pattern Language" 253개 중 한국 개발사업 적용 핵심
+// ============================================================
+
+export type PatternCategory = 'site' | 'building' | 'living'
+
+export const PATTERN_CATEGORIES = [
+  { id: 'site' as const, emoji: '🏘️', label: '단지·외부', desc: '배치, 녹지, 보행, 주차' },
+  { id: 'building' as const, emoji: '🏢', label: '건물·동선', desc: '층 구성, 진입, 복도, 외관' },
+  { id: 'living' as const, emoji: '🏠', label: '실·생활', desc: '채광, 환기, 주방, 수납' },
+]
+
 export const SELECTABLE_PATTERNS = [
-  { id: "courtyard", emoji: "🏡", label: "아이들이 놀 수 있는 마당", pattern: "#115 활기 있는 안마당", strategies: ["livability"] },
-  { id: "south-light", emoji: "☀️", label: "햇빛이 잘 드는 거실", pattern: "#105 남향 외부공간", strategies: ["view-priority", "livability"] },
-  { id: "shop-street", emoji: "🏪", label: "1층에 카페와 상점", pattern: "#87 가로 활성화 상점", strategies: ["profitability"] },
-  { id: "tree-view", emoji: "🌳", label: "창에서 나무가 보이면 좋겠다", pattern: "#171 나무가 있는 곳", strategies: ["livability", "view-priority"] },
-  { id: "quiet-entry", emoji: "🚶", label: "조용하게 집에 들어오는 느낌", pattern: "#112 진입 전이공간", strategies: ["privacy-priority"] },
-  { id: "neighbors", emoji: "👋", label: "이웃과 자연스러운 만남", pattern: "#36 단계적 공공성", strategies: ["livability"] },
-  { id: "walk-safe", emoji: "🛡", label: "차 없이 안전한 보행 동선", pattern: "#79 보차분리", strategies: ["livability", "parking-efficient"] },
-  { id: "two-light", emoji: "💡", label: "방마다 두 방향 빛이 들면 좋겠다", pattern: "#106 양면 채광", strategies: ["view-priority", "livability"] },
+  // ━━━ 🏘️ 단지·외부 (13개) ━━━
+  { id: "courtyard", emoji: "🏡", label: "아이들이 놀 수 있는 마당", pattern: "#115 활기 있는 안마당", strategies: ["livability"], category: "site" as PatternCategory },
+  { id: "neighbors", emoji: "👋", label: "이웃과 자연스러운 만남", pattern: "#36 단계적 공공성", strategies: ["livability"], category: "site" },
+  { id: "accessible-green", emoji: "🌿", label: "집 앞에 녹지가 있으면 좋겠다", pattern: "#60 접근 가능한 녹지", strategies: ["livability", "view-priority"], category: "site" },
+  { id: "walk-safe", emoji: "🛡", label: "차 없이 안전한 보행 동선", pattern: "#79 보행과 차량의 분리", strategies: ["livability", "parking-efficient"], category: "site" },
+  { id: "shop-street", emoji: "🏪", label: "1층에 카페와 상점", pattern: "#87 가로 활성화 상점", strategies: ["profitability"], category: "site" },
+  { id: "tree-view", emoji: "🌳", label: "창에서 나무가 보이면 좋겠다", pattern: "#171 나무가 있는 곳", strategies: ["livability", "view-priority"], category: "site" },
+  { id: "small-parking", emoji: "🅿️", label: "주차장이 눈에 띄지 않게", pattern: "#22 소규모 주차", strategies: ["livability", "view-priority"], category: "site" },
+  { id: "connected-play", emoji: "🧒", label: "아이들이 안전하게 뛰어놀 공간", pattern: "#73 모험 놀이터", strategies: ["livability"], category: "site" },
+  { id: "garden-wall", emoji: "🧱", label: "담장 대신 생울타리나 텃밭", pattern: "#173 정원 담장", strategies: ["livability", "privacy-priority"], category: "site" },
+  { id: "outdoor-room", emoji: "🪑", label: "밖에서도 앉아 쉴 수 있는 공간", pattern: "#163 야외 방", strategies: ["livability"], category: "site" },
+  { id: "main-entrance", emoji: "🚪", label: "건물 입구가 품격 있으면 좋겠다", pattern: "#110 메인 입구", strategies: ["view-priority", "profitability"], category: "site" },
+  { id: "local-sports", emoji: "🏃", label: "운동할 수 있는 공간", pattern: "#72 지역 스포츠", strategies: ["livability"], category: "site" },
+  { id: "fruit-trees", emoji: "🍎", label: "열매 맺는 나무가 있으면", pattern: "#170 과실수", strategies: ["livability"], category: "site" },
+
+  // ━━━ 🏢 건물·동선 (15개) ━━━
+  { id: "south-light", emoji: "☀️", label: "햇빛이 잘 드는 거실", pattern: "#105 남향 외부공간", strategies: ["view-priority", "livability"], category: "building" },
+  { id: "quiet-entry", emoji: "🚶", label: "조용하게 집에 들어오는 느낌", pattern: "#112 진입 전이공간", strategies: ["privacy-priority"], category: "building" },
+  { id: "intimacy-grad", emoji: "🔒", label: "공용→개인 공간 점진적 전환", pattern: "#127 친밀도 기울기", strategies: ["privacy-priority"], category: "building" },
+  { id: "short-corridor", emoji: "🚶‍♂️", label: "복도가 짧고 밝으면 좋겠다", pattern: "#132 짧은 복도", strategies: ["livability"], category: "building" },
+  { id: "stair-seat", emoji: "🪜", label: "계단에서도 잠깐 앉을 수 있게", pattern: "#125 계단 의자", strategies: ["livability"], category: "building" },
+  { id: "rooftop", emoji: "🏙️", label: "옥상에서 하늘이 보이면", pattern: "#118 옥상 정원", strategies: ["view-priority", "livability"], category: "building" },
+  { id: "balcony", emoji: "🌅", label: "발코니에서 바깥을 바라보고 싶다", pattern: "#167 6피트 발코니", strategies: ["view-priority", "livability"], category: "building" },
+  { id: "building-edge", emoji: "🏛️", label: "건물 1층이 활기차면 좋겠다", pattern: "#160 건물 가장자리", strategies: ["profitability", "livability"], category: "building" },
+  { id: "common-area", emoji: "🤝", label: "이웃끼리 모일 수 있는 공간", pattern: "#67 공용 공간", strategies: ["livability"], category: "building" },
+  { id: "ground-floor", emoji: "🛍️", label: "1층은 주거보다 상가/커뮤니티", pattern: "#96 지상층 활용", strategies: ["profitability"], category: "building" },
+  { id: "ceiling-height", emoji: "📐", label: "천장이 높으면 좋겠다", pattern: "#190 천장 높이 변화", strategies: ["view-priority", "area-maximize"], category: "building" },
+  { id: "natural-vent", emoji: "🌬️", label: "자연 환기가 잘 되면 좋겠다", pattern: "#162 가벽", strategies: ["livability"], category: "building" },
+  { id: "gallery-surround", emoji: "🏰", label: "건물이 마당을 감싸는 형태", pattern: "#119 아케이드", strategies: ["livability", "privacy-priority"], category: "building" },
+  { id: "visible-roof", emoji: "🏠", label: "지붕이 보이는 집다운 모습", pattern: "#117 보호하는 지붕", strategies: ["livability"], category: "building" },
+  { id: "cascade-roof", emoji: "⛰️", label: "주변 건물과 높이가 어울리게", pattern: "#116 캐스케이드 지붕", strategies: ["view-priority"], category: "building" },
+
+  // ━━━ 🏠 실·생활 (12개) ━━━
+  { id: "two-light", emoji: "💡", label: "방마다 두 방향 빛이 들면", pattern: "#106 양면 채광", strategies: ["view-priority", "livability"], category: "living" },
+  { id: "window-place", emoji: "🪟", label: "창가에 앉을 수 있는 자리", pattern: "#180 창가의 자리", strategies: ["livability"], category: "living" },
+  { id: "open-kitchen", emoji: "🍳", label: "주방에서 가족이 보이면 좋겠다", pattern: "#184 요리하는 자리", strategies: ["livability"], category: "living" },
+  { id: "private-terrace", emoji: "🌺", label: "나만의 작은 테라스/정원", pattern: "#140 사적 테라스", strategies: ["privacy-priority", "livability"], category: "living" },
+  { id: "sleeping-sun", emoji: "🌄", label: "침실에 아침 햇살이 들면", pattern: "#138 잠자는 곳의 동향", strategies: ["livability"], category: "living" },
+  { id: "couple-realm", emoji: "💑", label: "부부만의 독립된 공간", pattern: "#136 커플의 영역", strategies: ["privacy-priority"], category: "living" },
+  { id: "child-realm", emoji: "👶", label: "아이 방이 독립적이면 좋겠다", pattern: "#137 아이의 영역", strategies: ["livability"], category: "living" },
+  { id: "storage-wall", emoji: "🗄️", label: "수납이 넉넉하면 좋겠다", pattern: "#197 두꺼운 벽", strategies: ["livability", "area-maximize"], category: "living" },
+  { id: "bathing-room", emoji: "🛁", label: "욕실이 쾌적하면 좋겠다", pattern: "#144 욕실", strategies: ["livability"], category: "living" },
+  { id: "indoor-sun", emoji: "🌤️", label: "실내가 밝으면 좋겠다", pattern: "#128 실내 일조", strategies: ["livability", "view-priority"], category: "living" },
+  { id: "earth-connect", emoji: "🌏", label: "1층은 땅과 연결된 느낌", pattern: "#168 땅과의 연결", strategies: ["livability"], category: "living" },
+  { id: "home-workshop", emoji: "💻", label: "집에서 일할 수 있는 공간", pattern: "#157 홈오피스", strategies: ["livability"], category: "living" },
 ]

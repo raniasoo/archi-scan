@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { ChevronDown, ChevronUp, Heart, Check } from "lucide-react"
-import { SELECTABLE_PATTERNS, type UserValues } from "@/lib/pattern-quality"
+import { SELECTABLE_PATTERNS, PATTERN_CATEGORIES, type UserValues } from "@/lib/pattern-quality"
 
 interface Props {
   values: UserValues
@@ -33,6 +33,7 @@ function Slider({ label, leftLabel, rightLabel, value, onChange }: {
 
 export function ValuePrioritySelector({ values, onChange }: Props) {
   const [isOpen, setIsOpen] = useState(true)
+  const [patternCat, setPatternCat] = useState<'site' | 'building' | 'living'>('site')
 
   const togglePattern = (id: string) => {
     const selected = values.selectedPatterns.includes(id)
@@ -93,9 +94,24 @@ export function ValuePrioritySelector({ values, onChange }: Props) {
             <div className="h-px flex-1 bg-border" />
           </div>
 
+          {/* 카테고리 탭 */}
+          <div className="flex gap-1">
+            {PATTERN_CATEGORIES.map(cat => {
+              const count = SELECTABLE_PATTERNS.filter(p => (p as any).category === cat.id && values.selectedPatterns.includes(p.id)).length
+              return (
+                <button key={cat.id} onClick={() => setPatternCat(cat.id)}
+                  className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-medium ${
+                    patternCat === cat.id ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-400' : 'bg-white/60 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700'
+                  }`}>
+                  {cat.emoji} {cat.label} {count > 0 && <span className="ml-0.5 text-amber-500">({count})</span>}
+                </button>
+              )
+            })}
+          </div>
+
           {/* 패턴 카드 선택 */}
-          <div className="grid grid-cols-2 gap-2">
-            {SELECTABLE_PATTERNS.map(p => {
+          <div className="grid grid-cols-2 gap-2 max-h-[280px] overflow-y-auto scrollbar-hide">
+            {SELECTABLE_PATTERNS.filter(p => (p as any).category === patternCat).map(p => {
               const selected = values.selectedPatterns.includes(p.id)
               return (
                 <button
@@ -120,9 +136,11 @@ export function ValuePrioritySelector({ values, onChange }: Props) {
             })}
           </div>
 
-          <p className="text-[10px] text-muted-foreground text-center">
-            선택한 가치관이 배치안 품질 평가에 반영됩니다
-          </p>
+          {values.selectedPatterns.length > 0 && (
+            <p className="text-[10px] text-amber-600 dark:text-amber-400 text-center font-medium">
+              {values.selectedPatterns.length}개 패턴 선택됨 · 배치안 품질 평가 + AI 렌더링에 반영
+            </p>
+          )}
         </div>
       )}
     </div>

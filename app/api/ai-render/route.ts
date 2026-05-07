@@ -184,15 +184,34 @@ function buildArchitecturePrompt(params: {
 
   // ━━━ 선택 패턴 → 구체적 요소 ━━━
   const patternElements: Record<string, string> = {
+    // 단지·외부
     'courtyard': 'Include a visible courtyard/playground where children can play',
-    'south-light': 'Show south-facing windows with warm sunlight streaming in',
-    'shop-street': 'Ground floor has inviting cafe/retail storefronts',
-    'trees': 'Show mature trees near windows, visible greenery from units',
-    'neighbor': 'Include semi-public gathering area, benches, community garden',
-    'two-light': 'Show rooms with windows on two sides, corner units',
-    'safe-walk': 'Show safe pedestrian paths separated from vehicles',
-    'earth': 'Building connects to ground with garden terraces, earth tones',
-    'transition': 'Show gradual transition from public street to private entrance',
+    'neighbors': 'Show semi-public gathering area where neighbors naturally meet',
+    'accessible-green': 'Show green park or garden directly accessible from the building',
+    'walk-safe': 'Show safe pedestrian paths clearly separated from vehicles',
+    'shop-street': 'Ground floor has inviting cafe/retail storefronts with outdoor seating',
+    'tree-view': 'Show mature trees near windows, visible greenery from units',
+    'small-parking': 'Parking is hidden underground or behind landscaping, not visible from front',
+    'connected-play': 'Include adventure playground with natural materials for children',
+    'garden-wall': 'Replace walls with hedges, small gardens, or planting beds',
+    'outdoor-room': 'Show outdoor seating area with shade structure',
+    'main-entrance': 'Prominent, welcoming building entrance with architectural detail',
+    'local-sports': 'Include visible outdoor exercise area or sports court',
+    'fruit-trees': 'Show fruit-bearing trees in the landscaping',
+    // 건물·동선
+    'south-light': 'South-facing windows with warm sunlight streaming in',
+    'quiet-entry': 'Gradual transition from public street to private entrance',
+    'rooftop': 'Show rooftop garden or terrace with sky views',
+    'balcony': 'Generous 2m deep balconies with plants on each unit',
+    'building-edge': 'Active ground floor with display windows and awnings',
+    'ceiling-height': 'Emphasize tall ceiling heights, especially on ground floor',
+    'visible-roof': 'Show a distinctive roof form (pitched, green roof, or terrace)',
+    'cascade-roof': 'Building steps down to match neighboring building heights',
+    // 실·생활
+    'two-light': 'Corner units with windows on two sides, bright interiors visible',
+    'window-place': 'Window seats or reading nooks visible from outside',
+    'private-terrace': 'Each unit has a small private terrace or garden',
+    'earth-connect': 'Ground floor units connect directly to garden/earth',
   }
   const patternHints = (patterns || []).map(p => patternElements[p]).filter(Boolean)
 
