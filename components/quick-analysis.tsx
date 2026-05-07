@@ -118,7 +118,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
       if (entX && entY) {
         setProgress('🗺️ 대지 위치·주변환경 조회 중...')
         try {
-          const vRes = await fetch('/api/vworld', {
+          const vRes = await fetch('/api/vworld-site', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ lat: entY, lng: entX }),
