@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Loader2, Sparkles, RotateCcw, ZoomIn, ZoomOut } from "lucide-react"
+import { Loader2, Sparkles, RotateCcw, ZoomIn, ZoomOut, Maximize2, Minimize2, X } from "lucide-react"
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 타입 정의 (Claude API 응답 형식)
@@ -156,7 +156,7 @@ function FloorPlanSVG({ data, scale }: { data: FloorPlanData; scale: number }) {
   const pad = 40
 
   return (
-    <svg viewBox={`0 0 ${bW + pad * 2} ${bD + pad * 2 + 20}`} className="w-full" style={{ minWidth: 300, maxHeight: 500 }}>
+    <svg viewBox={`0 0 ${bW + pad * 2} ${bD + pad * 2 + 20}`} className="w-full h-auto" style={{ minWidth: 300 }}>
       <g transform={`translate(${pad}, ${pad})`}>
         {/* 건물 외곽 */}
         <rect x={0} y={0} width={bW} height={bD} fill="none" stroke="currentColor" strokeWidth="3" className="text-foreground" />
@@ -308,6 +308,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
   const [data, setData] = useState<FloorPlanData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [scale, setScale] = useState(PX_PER_M)
+  const [fullscreen, setFullscreen] = useState(false)
 
   // 용도지역 한글 매핑
   const ZONE_NAMES: Record<string, string> = {
@@ -410,6 +411,39 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
         </div>
       ) : (
         <>
+          {/* 전체화면 모드 */}
+          {fullscreen && (
+            <div className="fixed inset-0 z-50 bg-background flex flex-col">
+              {/* 전체화면 헤더 */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/95">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-bold">AI 생성 평면도</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">Claude Haiku 4.5</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setScale(s => Math.max(s - 4, 8))} className="p-2 rounded-lg hover:bg-secondary/50"><ZoomOut className="h-4 w-4" /></button>
+                  <button onClick={() => setScale(s => Math.min(s + 4, 48))} className="p-2 rounded-lg hover:bg-secondary/50"><ZoomIn className="h-4 w-4" /></button>
+                  <button onClick={() => setFullscreen(false)} className="p-2 rounded-lg hover:bg-secondary/50 ml-2"><X className="h-4 w-4" /></button>
+                </div>
+              </div>
+              {/* 전체화면 SVG */}
+              <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+                <FloorPlanSVG data={data} scale={scale} />
+              </div>
+              {/* 전체화면 하단 */}
+              <div className="px-4 py-2 border-t border-border bg-background/95 flex items-center justify-between">
+                <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1"><span className="w-3 h-1.5 bg-[#0ea5e9] rounded-sm inline-block" />창문</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#f97316] inline-block" />문</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-1 bg-[#334155] rounded-sm inline-block" />코어</span>
+                </div>
+                <span className="text-[9px] text-muted-foreground">핀치 줌 또는 +/- 버튼으로 확대</span>
+              </div>
+            </div>
+          )}
+
+          {/* 일반 모드 */}
           {/* 도구바 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -420,13 +454,15 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
             <div className="flex items-center gap-1">
               <button onClick={() => setScale(s => Math.max(s - 4, 12))} className="p-1 rounded hover:bg-secondary/50"><ZoomOut className="h-3.5 w-3.5" /></button>
               <button onClick={() => setScale(s => Math.min(s + 4, 36))} className="p-1 rounded hover:bg-secondary/50"><ZoomIn className="h-3.5 w-3.5" /></button>
+              <button onClick={() => setFullscreen(true)} className="p-1 rounded hover:bg-secondary/50"><Maximize2 className="h-3.5 w-3.5" /></button>
               <button onClick={() => { setData(null); setError(null) }} className="p-1 rounded hover:bg-secondary/50"><RotateCcw className="h-3.5 w-3.5" /></button>
             </div>
           </div>
 
-          {/* SVG 평면도 */}
-          <div className="rounded-xl border border-border bg-card p-2 overflow-x-auto">
+          {/* SVG 평면도 — 클릭 시 전체화면 */}
+          <div className="rounded-xl border border-border bg-card p-2 overflow-x-auto cursor-pointer" onClick={() => setFullscreen(true)}>
             <FloorPlanSVG data={data} scale={scale} />
+            <p className="text-[9px] text-center text-muted-foreground/50 mt-1">탭하여 전체화면</p>
           </div>
 
           {/* 면적표 */}
