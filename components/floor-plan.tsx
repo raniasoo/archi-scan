@@ -115,7 +115,7 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
   const bUse: 'house' | 'villa' | 'apartment' | 'commercial' = (() => {
     if (!zoneType) {
       // 용도지역 없으면 규모로 판단
-      if (totalFloors <= 3 && (units || 0) <= 4) return 'house'
+      if (totalFloors <= 3 && (units || 0) <= 2) return 'house'
       if (totalFloors <= 5 && (units || 0) <= 20) return 'villa'
       return 'apartment'
     }
@@ -126,11 +126,11 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
     if (zoneType.includes('commercial') || zoneType === 'semi-residential') return 'commercial'
     // 일반주거 → 규모로 세분화
     if (zoneType === 'residential-1') {
-      if (totalFloors <= 3 && (units || 0) <= 6) return 'house'
+      if (totalFloors <= 3 && (units || 0) <= 2) return 'house'
       return 'villa'
     }
     if (zoneType === 'residential-2') {
-      if (totalFloors <= 3 && (units || 0) <= 4) return 'house'
+      if (totalFloors <= 3 && (units || 0) <= 2) return 'house'
       if (totalFloors <= 5 && (units || 0) <= 20) return 'villa'
       return 'apartment'
     }

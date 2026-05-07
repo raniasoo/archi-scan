@@ -700,9 +700,51 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     </div>
   </div>
 
+  <!-- 설계 컨셉/철학 섹션 -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '6' : '5'}</span> 설계 컨셉</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+      <div style="padding: 12px; background: #f0fdf4; border-radius: 8px; border: 1px solid #dcfce7;">
+        <p style="font-size: 8pt; color: #64748b; margin-bottom: 4px;">설계 전략</p>
+        <p style="font-size: 11pt; font-weight: 700; color: #166534;">${
+          designStrategy === 'view-priority' ? '조망 극대화' :
+          designStrategy === 'privacy-priority' ? '프라이버시 중심' :
+          designStrategy === 'area-maximize' ? '면적 효율 극대화' :
+          designStrategy === 'parking-efficient' ? '주차 효율화' :
+          designStrategy === 'livability' ? '실거주 최적화' :
+          '수익성 극대화'
+        }</p>
+      </div>
+      <div style="padding: 12px; background: #eff6ff; border-radius: 8px; border: 1px solid #dbeafe;">
+        <p style="font-size: 8pt; color: #64748b; margin-bottom: 4px;">배치 타입</p>
+        <p style="font-size: 11pt; font-weight: 700; color: #1e40af;">${layout.name}</p>
+      </div>
+    </div>
+    <div style="padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.7;">
+      <p style="font-size: 9pt; font-weight: 600; color: #1e293b; margin-bottom: 6px;">설계 철학</p>
+      <p style="font-size: 8.5pt; color: #374151;">
+        본 배치안은 대지면적 ${siteArea}㎡, ${
+          (() => {
+            const z = regulation?.zoneName || '일반주거지역'
+            return z
+          })()
+        } 조건에서 
+        ${layout.name} 형태를 통해 건폐율 ${layout.coverage}%, 용적률 ${Math.round((layout.gfa || gfa) / parseFloat(siteArea || '1') * 100)}%를 
+        달성하는 것을 목표로 설계되었습니다.
+        지상 ${layout.floors}층, 총 ${layout.units}세대 규모로 주차 ${layout.parking}대를 확보하며,
+        ${designStrategy === 'view-priority' ? '조망권 확보와 일조 조건 개선을 최우선으로 고려하여 건물 배치를 최적화했습니다.' :
+          designStrategy === 'privacy-priority' ? '세대 간 프라이버시 확보와 소음 차단을 최우선으로 고려하여 세대 배치를 설계했습니다.' :
+          designStrategy === 'area-maximize' ? '법적 용적률 한도 내에서 전용면적을 극대화하여 분양 경쟁력을 높이는 데 중점을 두었습니다.' :
+          designStrategy === 'parking-efficient' ? '법정 주차대수를 효율적으로 확보하면서 지상 공간 활용도를 높이는 데 중점을 두었습니다.' :
+          designStrategy === 'livability' ? '입주자의 실제 생활 편의성과 커뮤니티 공간 확보를 최우선으로 설계했습니다.' :
+          '투자수익률(ROI) 극대화를 목표로 시공비 효율과 분양가 경쟁력의 균형을 추구했습니다.'}
+      </p>
+    </div>
+  </div>
+
   <!-- 설계 도면 섹션 -->
   <div class="section" style="page-break-before: always;">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '6' : '5'}</span> 설계 도면</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '7' : '6'}</span> 설계 도면</div>
     <div style="margin-bottom: 12px;">
       <p style="font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e293b;">기준층 평면도</p>
       ${floorPlanImg}
@@ -733,7 +775,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="section" style="page-break-before: auto;">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '7' : '6'}</span> 사업성 검토</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '8' : '7'}</span> 사업성 검토</div>
     <table style="page-break-before: avoid; break-before: avoid;">
       <caption style="font-weight: 500; text-align: left; padding: 0 0 8px 0; color: #374151;">사업비 추정</caption>
       <thead>
@@ -771,7 +813,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="section">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '8' : '7'}</span> AI 분석</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '9' : '8'}</span> AI 분석</div>
     <div class="ai-score-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">
       <div class="ai-score-card" style="background:#f8fafc;padding:12px 8px;border-radius:6px;border:1px solid #e2e8f0;text-align:center;">
         <div class="stat-label">법규 적합성</div>
@@ -896,7 +938,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="section">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '9' : '8'}</span> 리스크 및 고려사항</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '10' : '9'}</span> 리스크 및 고려사항</div>
     <div class="risk-grid">
       <div class="risk-box">
         <div class="risk-title">토지 관련</div>
@@ -934,7 +976,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="section">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '10' : '9'}</span> 결론 및 제안</div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '11' : '10'}</span> 결론 및 제안</div>
     
     <div class="stat-box" style="margin-bottom: 20px;">
       <p style="line-height: 1.8;">

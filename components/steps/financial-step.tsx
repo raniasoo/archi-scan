@@ -183,38 +183,55 @@ export function FinancialStep(props: FinancialStepProps) {
               baseProfit={feasibilityResult?.profit ?? 0}
             />
 
-            {/* 분담금 시뮬레이션 (재건축 사업) */}
-            {feasibilityResult && (
-              <ContributionSimulator
-                totalProjectCost={(feasibilityResult.totalCost || 0) / 100000000}
-                totalUnits={selectedLayoutData.units}
-                salePricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
-                  ? marketPrice.suggestedSalePrice 
-                  : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000}
-                avgUnitArea={selectedLayoutData.gfa ? Math.round(selectedLayoutData.gfa / Math.max(selectedLayoutData.units, 1)) : 84}
-              />
-            )}
+            {/* 분담금 시뮬레이션 + 사업 시나리오 (기존 건물 재개발 시에만) */}
+            {feasibilityResult && (() => {
+              const buildingAge = (selectedLayoutData as any)?.buildingAge || 0
+              const isExistingBuilding = buildingAge >= 15 // 15년 이상 기존 건물만
+              if (!isExistingBuilding) return (
+                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs text-muted-foreground">
+                  <span className="font-semibold text-emerald-500">신축 사업</span> — 본 프로젝트는 신규 건축으로 분담금 시뮬레이션 및 재건축/리모델링 시나리오가 적용되지 않습니다.
+                </div>
+              )
+              return (<>
+                <ContributionSimulator
+                  totalProjectCost={(feasibilityResult.totalCost || 0) / 100000000}
+                  totalUnits={selectedLayoutData.units}
+                  salePricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
+                    ? marketPrice.suggestedSalePrice 
+                    : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000}
+                  avgUnitArea={selectedLayoutData.gfa ? Math.round(selectedLayoutData.gfa / Math.max(selectedLayoutData.units, 1)) : 84}
+                />
+                <ScenarioComparison
+                  siteArea={siteAreaNum}
+                  totalUnits={selectedLayoutData.units}
+                  floors={selectedLayoutData.floors}
+                  buildingCoverage={selectedLayoutData.coverage ?? 60}
+                  totalProjectCost={feasibilityResult.totalCost || 0}
+                  roi={feasibilityResult.roi ?? 0}
+                />
+              </>)
+            })()}
 
-            {/* 사업 시나리오 비교 */}
-            {feasibilityResult && (
-              <ScenarioComparison
-                siteArea={siteAreaNum}
-                totalUnits={selectedLayoutData.units}
-                floors={selectedLayoutData.floors}
-                buildingCoverage={selectedLayoutData.coverage ?? 60}
-                totalProjectCost={feasibilityResult.totalCost || 0}
-                roi={feasibilityResult.roi ?? 0}
-              />
-            )}
-
-            {/* 프로젝트 로드맵 — 시나리오 추천에 따라 자동 전환 */}
+            {/* 프로젝트 로드맵 */}
             {feasibilityResult && (() => {
               const isSmall = selectedLayoutData.units <= 200 && siteAreaNum < 10000
+              const buildingAge = (selectedLayoutData as any)?.buildingAge || 0
+              const isExisting = buildingAge >= 15
+              
+              if (!isExisting) {
+                // 신축 사업 로드맵
+                return (
+                  <ProjectRoadmap
+                    scenarioType={'new-construction' as any}
+                    totalUnits={selectedLayoutData.units}
+                    isSmallScale={isSmall}
+                  />
+                )
+              }
+              
               const roi = feasibilityResult.roi ?? 0
-              // ScenarioComparison과 동일한 추천 로직 (ROI + 건물연식)
-              // 건물연식 데이터가 없으면 신축으로 간주 → 리모델링 우선
-              const isOldEnough = false // TODO: 건축물대장에서 준공년도 확보 시 활성화
-              const scenario: 'reconstruction' | 'remodeling' | 'bulk-sale' = 
+              const isOldEnough = buildingAge >= 30
+              const scenario: 'reconstruction' | 'remodeling' = 
                 (roi > 15 && isOldEnough) ? 'reconstruction' : 'remodeling'
               return (
                 <ProjectRoadmap

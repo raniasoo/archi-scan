@@ -4,12 +4,22 @@ import { useState } from "react"
 import { ChevronDown, Clock } from "lucide-react"
 
 interface ProjectRoadmapProps {
-  scenarioType?: 'reconstruction' | 'remodeling' | 'bulk-sale'
+  scenarioType?: 'reconstruction' | 'remodeling' | 'bulk-sale' | 'new-construction'
   totalUnits?: number
   isSmallScale?: boolean
 }
 
 const ROADMAPS = {
+  'new-construction': {
+    name: '신축 사업',
+    totalDuration: '24~36개월 (착공~준공)',
+    steps: [
+      { phase: 'STEP 01', title: '사업기획', desc: '대지분석, 법규검토, 사업성 분석', duration: '2~3개월', color: '#3b82f6', flex: 3 },
+      { phase: 'STEP 02', title: '인허가', desc: '건축허가, 심의, 인허가 취득', duration: '4~6개월', color: '#8b5cf6', flex: 5 },
+      { phase: 'STEP 03', title: '시공', desc: '착공, 골조, 마감, 준공', duration: '18~24개월', color: '#10b981', flex: 21 },
+      { phase: 'STEP 04', title: '분양/입주', desc: '분양, 입주자 모집, 입주', duration: '3~6개월', color: '#f59e0b', flex: 5 },
+    ],
+  },
   reconstruction: {
     name: '소규모재건축',
     totalDuration: '12~18개월 (인허가까지)',
