@@ -35,8 +35,11 @@ export function ValuePrioritySelector({ values, onChange }: Props) {
   const [isOpen, setIsOpen] = useState(true)
   const [patternCat, setPatternCat] = useState<'site' | 'building' | 'living'>('site')
 
+  const MAX_PATTERNS = 10
   const togglePattern = (id: string) => {
-    const selected = values.selectedPatterns.includes(id)
+    const isSelected = values.selectedPatterns.includes(id)
+    if (!isSelected && values.selectedPatterns.length >= MAX_PATTERNS) return // 최대 10개
+    const selected = isSelected
       ? values.selectedPatterns.filter(p => p !== id)
       : [...values.selectedPatterns, id]
     onChange({ ...values, selectedPatterns: selected })
@@ -137,8 +140,8 @@ export function ValuePrioritySelector({ values, onChange }: Props) {
           </div>
 
           {values.selectedPatterns.length > 0 && (
-            <p className="text-[10px] text-amber-600 dark:text-amber-400 text-center font-medium">
-              {values.selectedPatterns.length}개 패턴 선택됨 · 배치안 품질 평가 + AI 렌더링에 반영
+            <p className={`text-[10px] text-center font-medium ${values.selectedPatterns.length >= MAX_PATTERNS ? 'text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+              {values.selectedPatterns.length}/{MAX_PATTERNS}개 패턴 선택됨{values.selectedPatterns.length >= MAX_PATTERNS ? ' (최대)' : ''} · 배치안 품질 평가 + AI 렌더링에 반영
             </p>
           )}
         </div>

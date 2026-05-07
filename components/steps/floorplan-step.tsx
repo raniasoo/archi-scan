@@ -67,8 +67,8 @@ export function FloorplanStep(props: FloorplanStepProps) {
     const zt = molit.zoneCode || regulation.zoneType || ''
     const u = selectedLayoutData.units || 0
     const f = selectedLayoutData.floors || 1
-    if (zt.includes('exclusive-1')) return 'house'
-    if (zt.includes('exclusive-2')) return f <= 3 && u <= 2 ? 'house' : 'villa'
+    if (zt.includes('exclusive-1')) return u <= 2 ? 'house' : 'villa'
+    if (zt.includes('exclusive-2')) return u <= 2 ? 'house' : u <= 20 ? 'villa' : 'apartment'
     if (zt.includes('commercial') || zt === 'semi-residential') return 'commercial'
     if (zt === 'residential-1') return f <= 3 && u <= 2 ? 'house' : 'villa'
     if (zt === 'residential-2') {

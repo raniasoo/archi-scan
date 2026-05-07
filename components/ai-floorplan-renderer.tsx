@@ -176,7 +176,11 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
     'semi-residential':'준주거지역','commercial-neighborhood':'근린상업지역','commercial-general':'일반상업지역',
   }
   const zoneName = (zoneType && ZONE_NAMES[zoneType]) || zoneType || '제2종일반주거지역'
-  const unitsPerFloor = Math.min(Math.max(Math.ceil(units / Math.max(floors-1,1)),2),4)
+  // 층당 세대수 — buildingUse에 따라 1층 비주거 고려
+  const residentialFloors = (buildingUse === 'villa' || buildingUse === 'apartment') && floors > 1
+    ? Math.max(floors - 1, 1) // 1층 = 로비/주차 (비주거)
+    : Math.max(floors, 1)     // house/commercial = 전 층 사용
+  const unitsPerFloor = Math.min(Math.max(Math.ceil(units / residentialFloors), 2), 8)
   const catalog = getCatalog()
 
   // ━━━ 세대당 면적 자동 계산 ━━━
@@ -217,7 +221,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
       '원룸+투룸': [{type:'원룸',size:'M' as const,variant:'A'},{type:'투룸',size:'S' as const,variant:'A'},{type:'원룸',size:'M' as const,variant:'B'},{type:'투룸',size:'S' as const,variant:'B'}].slice(0,unitsPerFloor),
       '원룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'원룸',size:'M' as const,variant:'ABCD'[i%4]})),
     } : {
-      '투룸+쓰리룸': [{type:'투룸',size:'M',variant:'A'},{type:'쓰리룸',size:'M',variant:'A'},{type:'쓰리룸',size:'M',variant:'B'},{type:'투룸',size:'M',variant:'B'}].slice(0,unitsPerFloor),
+      '투룸+쓰리룸': Array.from({length:unitsPerFloor},(_,i)=>({type:i%2===0?'투룸':'쓰리룸',size:'M' as 'M',variant:'ABCD'[i%4]})),
       '쓰리룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'쓰리룸',size:'M' as const,variant:'ABCD'[i%4]})),
       '투룸 중심': Array.from({length:unitsPerFloor},(_,i)=>({type:'투룸',size:'M' as const,variant:'ABCD'[i%4]})),
     }),

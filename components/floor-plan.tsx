@@ -113,28 +113,34 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
 
   // 용도지역 + 규모 → 건물 용도 세분화
   const bUse: 'house' | 'villa' | 'apartment' | 'commercial' = (() => {
+    const u = units || 0
     if (!zoneType) {
-      // 용도지역 없으면 규모로 판단
-      if (totalFloors <= 3 && (units || 0) <= 2) return 'house'
-      if (totalFloors <= 5 && (units || 0) <= 20) return 'villa'
+      if (totalFloors <= 3 && u <= 2) return 'house'
+      if (totalFloors <= 5 && u <= 20) return 'villa'
       return 'apartment'
     }
-    // 전용주거 → 단독주택
-    if (zoneType.includes('exclusive-1')) return 'house'
-    if (zoneType.includes('exclusive-2')) return 'villa'
     // 상업/준주거 → 상가복합
     if (zoneType.includes('commercial') || zoneType === 'semi-residential') return 'commercial'
+    // 전용주거 — 세대수로 세분화 (13세대는 villa)
+    if (zoneType.includes('exclusive-1')) {
+      if (u <= 2) return 'house'
+      return 'villa'
+    }
+    if (zoneType.includes('exclusive-2')) {
+      if (u <= 2) return 'house'
+      if (u <= 20) return 'villa'
+      return 'apartment'
+    }
     // 일반주거 → 규모로 세분화
     if (zoneType === 'residential-1') {
-      if (totalFloors <= 3 && (units || 0) <= 2) return 'house'
+      if (totalFloors <= 3 && u <= 2) return 'house'
       return 'villa'
     }
     if (zoneType === 'residential-2') {
-      if (totalFloors <= 3 && (units || 0) <= 2) return 'house'
-      if (totalFloors <= 5 && (units || 0) <= 20) return 'villa'
+      if (totalFloors <= 3 && u <= 2) return 'house'
+      if (totalFloors <= 5 && u <= 20) return 'villa'
       return 'apartment'
     }
-    // 제3종 이상 → 아파트
     return 'apartment'
   })()
 
