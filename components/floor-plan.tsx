@@ -110,7 +110,17 @@ function CoreBlock({ x, y, w, h }: { x: number; y: number; w: number; h: number 
 export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType, units = 0, gfa = 0 }: FloorPlanProps) {
   const isGF = floor === 1
   const isTop = floor === totalFloors
-  const allowComm = !zoneType || (!zoneType.includes('exclusive') && zoneType !== 'green-natural' && zoneType !== 'green-production')
+
+  // 용도지역 → 건물 용도 판별
+  const bUse: 'house' | 'villa' | 'apartment' | 'commercial' = (() => {
+    if (!zoneType) return 'apartment'
+    if (zoneType.includes('exclusive-1')) return 'house'
+    if (zoneType.includes('exclusive-2') || zoneType === 'residential-1') return 'villa'
+    if (zoneType.includes('commercial') || zoneType === 'semi-residential') return 'commercial'
+    return 'apartment'
+  })()
+
+  const allowComm = bUse === 'apartment' || bUse === 'commercial'
   const gfL = allowComm ? '상가' : '세대'
   const gfC = allowComm ? '#f59e0b' : '#22c55e'
   const gfF = allowComm ? '#f59e0b15' : '#22c55e15'
@@ -136,7 +146,12 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
   }
   const c = gc()
 
-  const desc = isGF ? `1층 (${gfU}${gfL}+로비)` : isTop ? `${floor}층 (최상층)` : `${floor}층 (기준층 ${curU}세대)`
+  const desc = isGF 
+    ? bUse === 'house' ? `1층 (거실+주방+현관)` 
+    : bUse === 'villa' ? `1층 (${gfU}세대+현관홀+주차)` 
+    : bUse === 'commercial' ? `1층 (${gfU}상가+코어+주차)` 
+    : `1층 (${gfU}${gfL}+로비)` 
+    : isTop ? `${floor}층 (최상층)` : `${floor}층 (기준층 ${curU}세대)`
   const sL = strategy === "view-priority" ? "조망형" : strategy === "privacy-priority" ? "프라이버시형" : strategy === "area-maximize" ? "면적형" : strategy === "parking-efficient" ? "주차형" : strategy === "profitability" ? "사업성형" : "실거주형"
 
   return (
@@ -171,7 +186,63 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
       })()}
 
       {type === "tower" && isGF && (() => {
-        const ox = 25, oy = 10, bW = 250, bH = 170, gN = Math.min(gfU, 4)
+        const ox = 25, oy = 10, bW = 250, bH = 170
+
+        // 단독주택: 거실+주방+안방+욕실+현관
+        if (bUse === 'house') return (<g>
+          <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          <rect x={ox+5} y={oy+5} width={bW*0.55-5} height={bH*0.55} fill="#f0fdf4" stroke="#22c55e" strokeWidth="1" rx="1" />
+          <text x={ox+bW*0.275} y={oy+bH*0.28+3} fontSize="8" textAnchor="middle" fill="#22c55e" fontWeight="600">거실</text>
+          <rect x={ox+bW*0.55} y={oy+5} width={bW*0.45-5} height={bH*0.55} fill="#fef3c7" stroke="#f59e0b" strokeWidth="1" rx="1" />
+          <text x={ox+bW*0.775} y={oy+bH*0.28+3} fontSize="8" textAnchor="middle" fill="#d97706" fontWeight="600">주방/식당</text>
+          <rect x={ox+5} y={oy+bH*0.55+5} width={bW*0.4} height={bH*0.45-10} fill="#eff6ff" stroke="#3b82f6" strokeWidth="1" rx="1" />
+          <text x={ox+5+bW*0.2} y={oy+bH*0.77} fontSize="8" textAnchor="middle" fill="#3b82f6" fontWeight="600">안방</text>
+          <rect x={ox+bW*0.4+8} y={oy+bH*0.55+5} width={bW*0.28} height={bH*0.45-10} fill="#e0f2fe" stroke="#0ea5e9" strokeWidth="1" rx="1" />
+          <text x={ox+bW*0.4+8+bW*0.14} y={oy+bH*0.77} fontSize="7" textAnchor="middle" fill="#0ea5e9">욕실</text>
+          <rect x={ox+bW*0.68+10} y={oy+bH*0.55+5} width={bW*0.32-15} height={bH*0.22} fill="#f1f5f9" stroke="#64748b" strokeWidth="1" rx="1" />
+          <text x={ox+bW*0.84} y={oy+bH*0.66} fontSize="7" textAnchor="middle" fill="#64748b">현관</text>
+          <rect x={ox+bW*0.68+10} y={oy+bH*0.55+5+bH*0.22+3} width={bW*0.32-15} height={bH*0.23-13} fill="#f5f3ff" stroke="#8b5cf6" strokeWidth="1" rx="1" />
+          <text x={ox+bW*0.84} y={oy+bH*0.88} fontSize="6" textAnchor="middle" fill="#8b5cf6">다용도</text>
+          <rect x={ox+bW/2-10} y={oy+bH-4} width={20} height={5} fill="#2dd4bf" rx="1" />
+          <text x={ox+bW/2} y={oy+bH+8} fontSize="6" textAnchor="middle" fill="#2dd4bf">현관</text>
+        </g>)
+
+        // 빌라/다세대: 세대+현관홀+주차
+        if (bUse === 'villa') {
+          const n = Math.min(gfU, 3)
+          const uw = Math.floor((bW - 10) / n)
+          return (<g>
+            <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+            {Array.from({ length: n }, (_, i) => (
+              <UnitInterior key={i} x={ox+5+i*uw} y={oy+5} w={uw-4} h={80} label={`${String.fromCharCode(65+i)}호`} area={uA} color={c.p} mirror={i%2===1} compact={uw<55} />
+            ))}
+            <CoreBlock x={ox+bW/2-25} y={oy+92} w={50} h={22} />
+            <rect x={ox+5} y={oy+120} width={bW-10} height={40} fill="#64748b08" stroke="#64748b" strokeWidth="0.8" strokeDasharray="3 2" rx="2" />
+            <text x={ox+bW/2} y={oy+143} fontSize="7" textAnchor="middle" fill="#64748b">주차장</text>
+            <rect x={ox+bW/2-10} y={oy+bH-4} width={20} height={5} fill="#2dd4bf" rx="1" />
+          </g>)
+        }
+
+        // 상업형: 상가(대)+코어+주차
+        if (bUse === 'commercial') {
+          const gN = Math.min(gfU, 4)
+          const sw = Math.floor((bW - 10) / gN)
+          return (<g>
+            <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+            {Array.from({ length: gN }, (_, i) => {
+              const sx = ox+5+i*sw
+              return <g key={i}><rect x={sx} y={oy+5} width={sw-4} height={70} fill="#f59e0b15" stroke="#f59e0b" strokeWidth="1" rx="1" /><text x={sx+(sw-4)/2} y={oy+40} fontSize="8" textAnchor="middle" fill="#d97706" fontWeight="600">상가 {i+1}</text></g>
+            })}
+            <CoreBlock x={ox+bW/2-25} y={oy+82} w={50} h={25} />
+            <rect x={ox+5} y={oy+115} width={bW-10} height={45} fill="#64748b08" stroke="#64748b" strokeWidth="0.8" strokeDasharray="3 2" rx="2" />
+            <text x={ox+bW/2} y={oy+140} fontSize="7" textAnchor="middle" fill="#64748b">주차장</text>
+            <rect x={ox+bW/2-10} y={oy+bH-4} width={20} height={5} fill="#2dd4bf" rx="1" />
+            <text x={ox+bW/2} y={oy+bH+8} fontSize="6" textAnchor="middle" fill="#2dd4bf">주출입구</text>
+          </g>)
+        }
+
+        // 아파트 (기본): 로비+상가+코어+주차
+        const gN = Math.min(gfU, 4)
         const sw = Math.floor((bW - 10) / (gN + 1)), li = Math.floor(gN / 2)
         return (<g>
           <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
@@ -208,7 +279,41 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
       })()}
 
       {type === "courtyard" && isGF && (() => {
-        const ox = 15, oy = 8, bW = 270, bH = 175, gN = Math.min(gfU, 4), sw = Math.floor((bW - 10) / (gN + 1)), li = Math.floor(gN / 2)
+        const ox = 15, oy = 8, bW = 270, bH = 175
+
+        if (bUse === 'house') return (<g>
+          <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          <rect x={ox+5} y={oy+5} width={bW*0.5-5} height={70} fill="#f0fdf4" stroke="#22c55e" strokeWidth="1" rx="1" />
+          <text x={ox+bW*0.25} y={oy+40} fontSize="8" textAnchor="middle" fill="#22c55e" fontWeight="600">거실</text>
+          <rect x={ox+bW*0.5} y={oy+5} width={bW*0.5-5} height={70} fill="#fef3c7" stroke="#f59e0b" strokeWidth="1" rx="1" />
+          <text x={ox+bW*0.75} y={oy+40} fontSize="8" textAnchor="middle" fill="#d97706" fontWeight="600">주방/식당</text>
+          <rect x={ox+35} y={oy+85} width={bW-70} height={45} fill="#22c55e08" stroke="#22c55e" strokeWidth="1" rx="2" />
+          <text x={ox+bW/2} y={oy+110} fontSize="8" textAnchor="middle" fill="#22c55e">정원 / 마당</text>
+          <rect x={ox+5} y={oy+140} width={bW*0.4} height={30} fill="#eff6ff" stroke="#3b82f6" strokeWidth="1" rx="1" />
+          <text x={ox+5+bW*0.2} y={oy+157} fontSize="7" textAnchor="middle" fill="#3b82f6">안방</text>
+          <rect x={ox+5+bW*0.4+3} y={oy+140} width={bW*0.25} height={30} fill="#e0f2fe" stroke="#0ea5e9" strokeWidth="1" rx="1" />
+          <text x={ox+5+bW*0.4+3+bW*0.125} y={oy+157} fontSize="7" textAnchor="middle" fill="#0ea5e9">욕실</text>
+          <rect x={ox+5+bW*0.65+6} y={oy+140} width={bW*0.35-16} height={30} fill="#f1f5f9" stroke="#64748b" strokeWidth="1" rx="1" />
+          <text x={ox+bW*0.83} y={oy+157} fontSize="7" textAnchor="middle" fill="#64748b">현관</text>
+          <rect x={ox+bW/2-10} y={oy+bH-4} width={20} height={5} fill="#2dd4bf" rx="1" />
+        </g>)
+
+        if (bUse === 'villa') {
+          const n = Math.min(gfU, 3), uw = Math.floor((bW-10)/n)
+          return (<g>
+            <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+            {Array.from({length:n},(_,i) => <UnitInterior key={i} x={ox+5+i*uw} y={oy+5} w={uw-4} h={65} label={`${String.fromCharCode(65+i)}호`} area={uA} color={c.p} mirror={i%2===1} compact={uw<55} />)}
+            <rect x={ox+35} y={oy+78} width={bW-70} height={40} fill="#22c55e08" stroke="#22c55e" strokeWidth="1" rx="2" />
+            <text x={ox+bW/2} y={oy+100} fontSize="8" textAnchor="middle" fill="#22c55e">중정 / 조경</text>
+            <CoreBlock x={ox+5} y={oy+82} w={26} h={30} />
+            <rect x={ox+5} y={oy+125} width={bW-10} height={40} fill="#64748b08" stroke="#64748b" strokeWidth="0.8" strokeDasharray="3 2" rx="2" />
+            <text x={ox+bW/2} y={oy+148} fontSize="7" textAnchor="middle" fill="#64748b">주차장</text>
+            <rect x={ox+bW/2-10} y={oy+bH-4} width={20} height={5} fill="#2dd4bf" rx="1" />
+          </g>)
+        }
+
+        // 아파트/상업 (기존 레이아웃)
+        const gN = Math.min(gfU, 4), sw = Math.floor((bW - 10) / (gN + 1)), li = Math.floor(gN / 2)
         return (<g>
           <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
           {Array.from({ length: gN + 1 }, (_, i) => { const sx = ox + 5 + i * sw; if (i === li) return <g key="l"><rect x={sx} y={oy + 5} width={sw - 4} height={35} fill="#06b6d415" stroke="#06b6d4" strokeWidth="1.5" rx="1" /><text x={sx + (sw-4)/2} y={oy + 25} fontSize="7" textAnchor="middle" fill="#06b6d4" fontWeight="600">로비</text></g>; return <g key={`g${i}`}><rect x={sx} y={oy + 5} width={sw - 4} height={35} fill={gfF} stroke={gfC} strokeWidth="1" rx="1" /><text x={sx + (sw-4)/2} y={oy + 25} fontSize="7" textAnchor="middle" fill={gfC}>{gfL}</text></g> })}
@@ -229,11 +334,20 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
           <rect x={ox} y={oy} width={80} height={130} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
           <rect x={ox} y={oy + 130} width={260} height={50} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
           {isGF ? (<>
-            {Array.from({ length: Math.min(gfU, 3) }, (_, i) => { const sh = Math.floor(120 / Math.min(gfU, 3)); return <g key={`v${i}`}><rect x={ox + 5} y={oy + 5 + i * sh} width={70} height={sh - 5} fill={gfF} stroke={gfC} strokeWidth="1" rx="1" /><text x={ox + 40} y={oy + 5 + i * sh + (sh-5)/2 + 3} fontSize="7" textAnchor="middle" fill={gfC}>{gfL}</text></g> })}
+            {bUse === 'house' ? (<>
+              <rect x={ox+5} y={oy+5} width={70} height={60} fill="#f0fdf4" stroke="#22c55e" strokeWidth="1" rx="1" /><text x={ox+40} y={oy+38} fontSize="7" textAnchor="middle" fill="#22c55e" fontWeight="600">거실</text>
+              <rect x={ox+5} y={oy+70} width={70} height={55} fill="#fef3c7" stroke="#f59e0b" strokeWidth="1" rx="1" /><text x={ox+40} y={oy+100} fontSize="7" textAnchor="middle" fill="#d97706">주방</text>
+              <CoreBlock x={ox+5} y={oy+135} w={35} h={40} />
+              <rect x={ox+45} y={oy+135} width={100} height={40} fill="#eff6ff" stroke="#3b82f6" strokeWidth="1" rx="1" /><text x={ox+95} y={oy+158} fontSize="7" textAnchor="middle" fill="#3b82f6">침실</text>
+              <rect x={ox+150} y={oy+135} width={105} height={40} fill="#64748b08" stroke="#64748b" strokeWidth="0.8" strokeDasharray="3" rx="1" /><text x={ox+200} y={oy+158} fontSize="7" textAnchor="middle" fill="#64748b">마당</text>
+              <rect x={ox+30} y={oy+175} width={20} height={5} fill="#2dd4bf" rx="1" />
+            </>) : (<>
+            {Array.from({ length: Math.min(gfU, 3) }, (_, i) => { const sh = Math.floor(120 / Math.min(gfU, 3)); return <g key={`v${i}`}><rect x={ox + 5} y={oy + 5 + i * sh} width={70} height={sh - 5} fill={bUse==='villa'?'#22c55e15':gfF} stroke={bUse==='villa'?'#22c55e':gfC} strokeWidth="1" rx="1" /><text x={ox + 40} y={oy + 5 + i * sh + (sh-5)/2 + 3} fontSize="7" textAnchor="middle" fill={bUse==='villa'?'#22c55e':gfC}>{bUse==='villa'?`${String.fromCharCode(65+i)}호`:gfL}</text></g> })}
             <CoreBlock x={ox + 5} y={oy + 135} w={35} h={40} />
             <rect x={ox + 45} y={oy + 135} width={210} height={40} fill="#64748b08" stroke="#64748b" strokeWidth="0.8" strokeDasharray="3" rx="1" />
             <text x={ox + 150} y={oy + 158} fontSize="8" textAnchor="middle" fill="#64748b">주차장</text>
             <rect x={ox + 30} y={oy + 175} width={20} height={5} fill="#2dd4bf" rx="1" />
+          </>)}
           </>) : (<>
             {(() => { const vN = Math.ceil(curU / 2), vh = Math.floor(120 / Math.max(vN, 1)); return Array.from({ length: Math.min(vN, 3) }, (_, i) => (<UnitInterior key={`v${i}`} x={ox + 3} y={oy + 3 + i * vh} w={74} h={vh - 4} label={`${String.fromCharCode(65 + i)}호`} area={uA} color={c.p} compact={vh < 35} />)) })()}
             <CoreBlock x={ox + 5} y={oy + 135} w={35} h={40} />
