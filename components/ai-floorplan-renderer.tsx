@@ -323,7 +323,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
   const footprintArea = siteArea * (buildingCoverage / 100)
   // AI 생성에 적합한 건물 치수 (최대 세대 6개로 제한)
   const rawUnitsPerFloor = Math.max(Math.ceil(units / Math.max(floors - 1, 1)), 2)
-  const unitsPerFloor = Math.min(rawUnitsPerFloor, 6) // Claude가 처리 가능한 최대 세대수
+  const unitsPerFloor = Math.min(rawUnitsPerFloor, 4) // Claude가 처리 가능한 최대 세대수
   const bW = Math.round(Math.sqrt(footprintArea * 1.6) * 10) / 10
   const bD = Math.round(footprintArea / bW * 10) / 10
   // AI용 건물 크기는 세대수에 비례하여 조정
@@ -394,7 +394,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
           <div className="text-[10px] text-muted-foreground space-y-0.5">
             <p>건물: {aiBW}m × {aiBD}m · 기준층 {unitsPerFloor}세대</p>
             <p>{zoneName} · {floors}층 · {units}세대</p>
-            {rawUnitsPerFloor > 6 && <p className="text-amber-400">※ AI 생성은 대표 {unitsPerFloor}세대 기준</p>}
+            {rawUnitsPerFloor > 4 && <p className="text-amber-400">※ AI 생성은 대표 {unitsPerFloor}세대 기준</p>}
           </div>
           <button
             onClick={generate}
