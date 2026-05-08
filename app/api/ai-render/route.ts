@@ -336,12 +336,36 @@ function buildArchitecturePrompt(params: {
 
   // 건물 규모별 형태
   let buildingForm = ''
+  let isComplex = false  // 다동 단지 여부
+  let buildingCount = 1
+  
   if (f <= 2 && u <= 4) {
     buildingForm = `A low-rise detached house, ${f} stories, compact and elegant. Footprint ~${bW}m × ${bD}m. Residential entrance with garden.`
   } else if (f <= 5 && u <= 20) {
     buildingForm = `A low-rise multi-family villa, ${f} stories, ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: entrance hall + parking. Upper: residential.`
+  } else if (f <= 5 && u > 20 && siteArea && siteArea > 1500) {
+    // ★ 저층 + 많은 세대 + 넓은 대지 = 다동(多棟) 빌라 단지
+    isComplex = true
+    const unitsPerBldg = Math.ceil(u / Math.max(Math.round(u / (f * 4)), 2))
+    buildingCount = Math.ceil(u / unitsPerBldg)
+    const eachFootprint = Math.round(footprint / buildingCount)
+    const eachW = Math.round(Math.sqrt(eachFootprint * 1.4))
+    const eachD = Math.round(eachFootprint / eachW)
+    buildingForm = `A MULTI-BUILDING RESIDENTIAL COMPLEX (빌라 단지) — NOT a single building.
+${buildingCount} separate ${f}-story villa buildings spread across a ${siteArea}㎡ site. Total ${u} units.
+Each building: ~${eachW}m × ${eachD}m footprint, ${f} stories, ~${unitsPerBldg} units per building.
+Buildings are spaced apart with landscaped gardens, walkways, and shared parking between them.
+The complex looks like a small VILLAGE of individual villa buildings, NOT one large structure.
+Each building has its own entrance, stairwell, and character.
+CRITICAL: Show ${buildingCount} SEPARATE buildings clearly visible in the image, not one monolithic block.`
   } else if (f <= 10) {
-    buildingForm = `A mid-rise apartment, ${f} stories, ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: lobby + retail + parking.`
+    if (u > 40 && siteArea && siteArea > 3000) {
+      isComplex = true
+      buildingCount = Math.max(Math.round(u / (f * 6)), 2)
+      buildingForm = `A multi-building apartment complex — ${buildingCount} separate ${f}-story buildings on a ${siteArea}㎡ site, total ${u} units. Buildings connected by landscaped walkways and shared courtyard. Each building ~${Math.round(footprint / buildingCount / 10) * 10}㎡ footprint.`
+    } else {
+      buildingForm = `A mid-rise apartment, ${f} stories, ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: lobby + parking.`
+    }
   } else {
     buildingForm = `A high-rise tower, ${f} stories, ${u} units. Slender tower with podium.`
   }
@@ -479,8 +503,13 @@ CONTEXT:
 ${surroundingContext ? `\nSITE-SPECIFIC CONTEXT (IMPORTANT — render must reflect this):\n${surroundingContext}\n\nThe rendering MUST show the building responding to its actual site conditions described above.` : ''}
 
 CRITICAL REQUIREMENTS:
-- The building MUST have EXACTLY ${f} floors. Count them: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. This is non-negotiable.
-- ${f <= 2 ? 'This is a LOW-RISE building, maximum 2 stories tall. Do NOT make it taller.' : f <= 5 ? `This is a LOW to MID-RISE building with exactly ${f} visible floor levels.` : `This is a ${f}-story building. Each floor must be clearly visible and countable.`}
+${isComplex 
+  ? `- This is a MULTI-BUILDING COMPLEX with ${buildingCount} separate ${f}-story buildings. Show MULTIPLE distinct buildings, NOT one large structure.
+- Each building MUST have EXACTLY ${f} floors. They should look like a cohesive village/community.
+- Show spaces BETWEEN buildings: gardens, walkways, small courtyards, parking areas.
+- The complex should feel like walking through a small residential neighborhood.`
+  : `- The building MUST have EXACTLY ${f} floors. Count them: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. This is non-negotiable.
+- ${f <= 2 ? 'This is a LOW-RISE building, maximum 2 stories tall. Do NOT make it taller.' : f <= 5 ? `This is a LOW to MID-RISE building with exactly ${f} visible floor levels.` : `This is a ${f}-story building. Each floor must be clearly visible and countable.`}`}
 - Photorealistic 3D architectural rendering
 - CAMERA: ${cameraDesc}
 - SCENE: ${sceneText}
@@ -488,6 +517,7 @@ CRITICAL REQUIREMENTS:
 
 AVOID (do NOT include):
 - Extra floors beyond ${f} stories
+${isComplex ? '- One single monolithic building (MUST show multiple separate buildings)\n- Identical-looking buildings (each should have slight variation)' : ''}
 - Distorted or unrealistic proportions
 - Text, watermarks, or labels on the image
 - Floating elements or physically impossible structures

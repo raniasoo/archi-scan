@@ -122,8 +122,10 @@ function analyzeNeighborhood(input: SiteContextInput): string {
   const nearby = input.nearbyBuildings || []
 
   // 주소 기반 분위기
-  if (addr.includes('평창') || addr.includes('성북') || addr.includes('부암')) {
-    hints.push('Upscale hillside residential neighborhood with mature trees')
+  if (addr.includes('평창') || addr.includes('부암')) {
+    hints.push('UPSCALE HILLSIDE VILLA NEIGHBORHOOD (평창동/부암동 style): 2-3 story luxury villas and detached houses with stone/stucco walls, SURROUNDED BY DENSE GREEN MOUNTAINS AND MATURE TREES. Narrow winding roads going uphill. Stone retaining walls. Private gardens with tall hedges. Very quiet, exclusive residential area at the foot of Bukaksan mountain. NO high-rise buildings anywhere nearby — only low-rise luxury homes.')
+  } else if (addr.includes('성북')) {
+    hints.push('Upscale hillside residential neighborhood (성북동 style): luxury villas, stone walls, traditional-style houses mixed with modern villas, surrounded by trees and hills')
   } else if (addr.includes('강남') || addr.includes('서초') || addr.includes('송파')) {
     hints.push('Modern urban district with high-rise buildings')
   } else if (addr.includes('홍대') || addr.includes('합정') || addr.includes('연남')) {
@@ -292,16 +294,27 @@ ${sunViewDesc}`)
   }
 
   // ━━━ 주변환경 렌더링 강제 (가장 중요) ━━━
+  const isUpscaleHillside = neighborhood.includes('UPSCALE') || neighborhood.includes('luxury') || neighborhood.includes('평창') || neighborhood.includes('성북')
+  const isLowRiseVilla = neighborhood.includes('villa') || neighborhood.includes('빌라') || neighborhood.includes('low-rise') || neighborhood.includes('hillside')
+  const isHighRise = neighborhood.includes('apartment') || neighborhood.includes('high-rise')
+
   const contextInstruction = `
 CRITICAL RENDERING CONTEXT (MUST FOLLOW):
 The building does NOT exist in isolation. It is surrounded by an existing Korean neighborhood.
 You MUST show neighboring buildings in the rendering background and sides:
-${neighborhood.includes('villa') || neighborhood.includes('빌라') || neighborhood.includes('low-rise') || neighborhood.includes('hillside')
+${isUpscaleHillside
+  ? `- This is an UPSCALE HILLSIDE neighborhood: show 2-3 story LUXURY villas/houses with clean stucco or stone finishes, private gardens with tall hedges
+- DENSE GREEN MOUNTAINS and mature trees MUST be visible in the background — this is at the foot of a mountain
+- Show narrow winding UPHILL roads with stone retaining walls
+- NO cheap-looking buildings, NO red corrugated roofs — these are LUXURY homes with flat or gently pitched roofs in neutral colors
+- The new building should look PREMIUM and HARMONIOUS with this quiet, exclusive neighborhood
+- Show the natural hillside terrain — the ground slopes significantly`
+  : isLowRiseVilla
   ? `- Show 2-3 story Korean villas/houses with DISTINCTIVE RED or BROWN PITCHED ROOFS on both sides and behind the new building
 - Show narrow Korean residential streets with parked cars
 - Show concrete block walls, small gardens, and typical Korean residential landscaping
 - The new building should look like it FITS INTO this existing neighborhood, not like it was dropped from space`
-  : neighborhood.includes('apartment') || neighborhood.includes('high-rise')
+  : isHighRise
   ? `- Show neighboring apartment buildings in the background
 - Show urban streetscape with sidewalks and street trees`
   : `- Show existing neighboring buildings appropriate to the area
