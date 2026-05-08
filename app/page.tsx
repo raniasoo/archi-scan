@@ -187,12 +187,12 @@ function generateLayouts(
   const floorAdj = 1.10 - pq / 100 * 0.20                 // 품질↑ → 층수↓ (여유있는 스케일)
   const openSpaceAdj = 1.0 + (pq + es) / 200 * 0.30       // 품질↑/여유↑ → 외부공간↑
   
-  // 법규 한도 계산
-  const maxCoverage = regulation.maxCoverageRatio
-  const maxFAR = regulation.maxFloorAreaRatio
+  // 법규 한도 계산 (regulation이 불완전할 경우 안전 기본값)
+  const maxCoverage = regulation?.maxCoverageRatio ?? 60
+  const maxFAR = regulation?.maxFloorAreaRatio ?? 200
   const maxFloorsByFAR = Math.ceil(maxFAR / (maxCoverage * params.coverageMultiplier))
-  const maxFloorsByHeight = Math.floor(regulation.maxHeight / 3.3)
-  const effectiveMaxFloors = Math.min(regulation.maxFloors, maxFloorsByFAR, maxFloorsByHeight)
+  const maxFloorsByHeight = Math.floor((regulation?.maxHeight ?? 30) / 3.3)
+  const effectiveMaxFloors = Math.min(regulation?.maxFloors ?? 12, maxFloorsByFAR, maxFloorsByHeight)
 
   // 배치 유형별 계산 함수
   const calculateLayout = (

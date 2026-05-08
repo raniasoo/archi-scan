@@ -134,7 +134,7 @@ export function RegulationAnalysisPanel({ siteArea, regulation, valueSources }: 
             <div className="rounded-lg bg-secondary/50 p-2.5">
               <p className="text-[10px] text-muted-foreground mb-0.5">건폐율 / 용적률</p>
               <p className="font-semibold text-foreground text-xs">
-                {regulation.maxCoverageRatio}% / {regulation.maxFloorAreaRatio}%
+                {regulation?.maxCoverageRatio ?? 60}% / {regulation?.maxFloorAreaRatio ?? 200}%
               </p>
             </div>
             <div className="rounded-lg bg-secondary/50 p-2.5">
@@ -357,8 +357,8 @@ export function RegulationAnalysisPanel({ siteArea, regulation, valueSources }: 
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">개발 밀도</p>
-                <Badge variant={regulation.maxFloorAreaRatio > 300 ? "destructive" : regulation.maxFloorAreaRatio > 200 ? "secondary" : "default"}>
-                  {regulation.maxFloorAreaRatio > 300 ? "고밀도" : regulation.maxFloorAreaRatio > 200 ? "중밀도" : "저밀도"}
+                <Badge variant={regulation?.maxFloorAreaRatio ?? 200 > 300 ? "destructive" : regulation?.maxFloorAreaRatio ?? 200 > 200 ? "secondary" : "default"}>
+                  {regulation?.maxFloorAreaRatio ?? 200 > 300 ? "고밀도" : regulation?.maxFloorAreaRatio ?? 200 > 200 ? "중밀도" : "저밀도"}
                 </Badge>
               </div>
               <div>

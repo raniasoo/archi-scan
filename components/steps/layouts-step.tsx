@@ -101,8 +101,8 @@ export function LayoutsStep(props: LayoutsStepProps) {
                       const { optimizeLayout } = await loadLayoutOptimizer()
                       const result = optimizeLayout({
                         siteArea: siteAreaNum,
-                        maxCoverage: regulation.maxCoverageRatio,
-                        maxFAR: regulation.maxFloorAreaRatio,
+                        maxCoverage: regulation?.maxCoverageRatio ?? 60,
+                        maxFAR: regulation?.maxFloorAreaRatio ?? 200,
                         maxFloors: regulation.maxFloors || 20,
                         maxHeight: regulation.maxHeight || 60,
                         parkingRatio: regulation.parkingRatio || 1.0,
@@ -119,7 +119,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {address} | 건폐율 {regulation.maxCoverageRatio}% / 용적률 {regulation.maxFloorAreaRatio}% | 
+                  {address} | 건폐율 {regulation?.maxCoverageRatio ?? 60}% / 용적률 {regulation?.maxFloorAreaRatio ?? 200}% | 
                   <span className="text-primary ml-1">
                     {strategy === "view-priority" ? "조망 우선" : 
                      strategy === "privacy-priority" ? "프라이버시 우선" :

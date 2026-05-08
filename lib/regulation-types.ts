@@ -224,9 +224,12 @@ export function analyzeRegulations(
   siteArea: number,
   regulation: ZoningRegulation
 ): RegulationAnalysis {
+  // regulation이 불완전할 경우 안전 기본값 적용
+  const r = regulation || getDefaultRegulation()
+  
   // 이격거리 반영한 유효 대지면적 계산 (간단한 근사)
-  const totalSetback = regulation.setbackFront + regulation.setbackRear
-  const sideSetback = regulation.setbackSide * 2
+  const totalSetback = (r.setbackFront ?? 3) + (r.setbackRear ?? 2)
+  const sideSetback = (r.setbackSide ?? 1.5) * 2
   
   // 대지 형상을 정사각형으로 가정하여 유효면적 계산
   const sideLength = Math.sqrt(siteArea)
@@ -235,19 +238,18 @@ export function analyzeRegulations(
   const effectiveSiteArea = effectiveLength * effectiveDepth
   
   // 사선 제한에 따른 높이 조정
-  let effectiveMaxHeight = regulation.maxHeight
-  if (regulation.setbackType !== "none") {
-    // 사선제한 적용 시 높이 감소 (간단한 계산)
-    const roadFactor = regulation.roadWidth * Math.tan((regulation.setbackAngle * Math.PI) / 180)
-    effectiveMaxHeight = Math.min(effectiveMaxHeight, roadFactor + regulation.setbackFront)
+  let effectiveMaxHeight = r.maxHeight ?? 30
+  if (r.setbackType !== "none") {
+    const roadFactor = (r.roadWidth ?? 8) * Math.tan(((r.setbackAngle ?? 45) * Math.PI) / 180)
+    effectiveMaxHeight = Math.min(effectiveMaxHeight, roadFactor + (r.setbackFront ?? 3))
   }
   
   // 최대 건축면적 (건폐율 적용)
-  const maxBuildingArea = (effectiveSiteArea * regulation.maxCoverageRatio) / 100
+  const maxBuildingArea = (effectiveSiteArea * (r.maxCoverageRatio ?? 60)) / 100
   
   // 최대 연면적: 용적률 기준과 층수 제한 기준 중 작은 값
-  const maxGFAByFAR = (siteArea * regulation.maxFloorAreaRatio) / 100
-  const maxGFAByFloors = maxBuildingArea * regulation.maxFloors  // 층수 제한 기준
+  const maxGFAByFAR = (siteArea * (r.maxFloorAreaRatio ?? 200)) / 100
+  const maxGFAByFloors = maxBuildingArea * (r.maxFloors ?? 12)
   const maxGrossFloorArea = Math.min(maxGFAByFAR, maxGFAByFloors)
   
   // 층당 평균 면적을 80%로 가정 (공용면적 제외)
@@ -255,7 +257,7 @@ export function analyzeRegulations(
   
   // 권장 층수 계산
   const recommendedMaxFloors = Math.min(
-    regulation.maxFloors,
+    r.maxFloors ?? 12,
     Math.floor(effectiveMaxHeight / 3.2), // 층고 3.2m 기준
     Math.ceil(maxGrossFloorArea / avgFloorArea)
   )
@@ -266,7 +268,7 @@ export function analyzeRegulations(
   const estimatedUnits = Math.floor(maxGrossFloorArea / avgUnitSize)
   
   // 법정 주차대수 — regulation.parkingRatio 사용 (용도지역별 이미 설정됨)
-  const requiredParking = Math.ceil(estimatedUnits * regulation.parkingRatio)
+  const requiredParking = Math.ceil(estimatedUnits * r.parkingRatio ?? 1.0)
   
   // 경고 및 유의사항 생성
   const warnings: RegulationWarning[] = []
@@ -279,13 +281,13 @@ export function analyzeRegulations(
     })
   }
   
-  if (regulation.roadWidth < 4) {
+  if (r.roadWidth ?? 8 < 4) {
     warnings.push({
       type: "error",
       title: "접도 요건 미충족",
       description: "건축법 제44조에 따라 건축물 대지는 2m 이상 도로에 접해야 합니다. 현재 접도 폭이 4m 미만으로 건축 허가에 제한이 있을 수 있습니다.",
     })
-  } else if (regulation.roadWidth < 6) {
+  } else if (r.roadWidth ?? 8 < 6) {
     warnings.push({
       type: "warning",
       title: "협소한 접도 폭",
@@ -293,7 +295,7 @@ export function analyzeRegulations(
     })
   }
   
-  if (regulation.setbackType === "both") {
+  if (r.setbackType === "both") {
     warnings.push({
       type: "info",
       title: "복합 사선제한 적용",

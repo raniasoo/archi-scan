@@ -234,8 +234,8 @@ export function calculateLayoutScores(
   const typeChars = LAYOUT_TYPE_CHARACTERISTICS[layout.type] || LAYOUT_TYPE_CHARACTERISTICS.tower
   
   // 법규 적합성 점수
-  const coverageCompliance = layout.coverage <= regulation.maxCoverageRatio ? 100 : Math.max(0, 100 - (layout.coverage - regulation.maxCoverageRatio) * 5)
-  const farCompliance = (layout.gfa / siteArea * 100) <= regulation.maxFloorAreaRatio ? 100 : Math.max(0, 100 - ((layout.gfa / siteArea * 100) - regulation.maxFloorAreaRatio) * 2)
+  const coverageCompliance = layout.coverage <= regulation?.maxCoverageRatio ?? 60 ? 100 : Math.max(0, 100 - (layout.coverage - regulation?.maxCoverageRatio ?? 60) * 5)
+  const farCompliance = (layout.gfa / siteArea * 100) <= regulation?.maxFloorAreaRatio ?? 200 ? 100 : Math.max(0, 100 - ((layout.gfa / siteArea * 100) - regulation?.maxFloorAreaRatio ?? 200) * 2)
   const heightCompliance = layout.floors <= regulation.maxFloors ? 100 : Math.max(0, 100 - (layout.floors - regulation.maxFloors) * 10)
   const parkingCompliance = (layout.parking / layout.units) >= regulation.parkingRatio ? 100 : Math.max(0, (layout.parking / layout.units / regulation.parkingRatio) * 100)
   
@@ -244,7 +244,7 @@ export function calculateLayoutScores(
   )
   
   // 사업성 점수
-  const farUtilization = Math.min(100, (layout.gfa / siteArea * 100) / regulation.maxFloorAreaRatio * 100)
+  const farUtilization = Math.min(100, (layout.gfa / siteArea * 100) / regulation?.maxFloorAreaRatio ?? 200 * 100)
   const unitCount = Math.min(100, layout.units / (siteArea / 50) * 100) // 50㎡당 1세대 기준
   const efficiencyBonus = typeChars.efficiencyScore * 0.3
   const profitability = Math.round(farUtilization * 0.4 + unitCount * 0.35 + efficiencyBonus)
@@ -397,8 +397,8 @@ export function generateAIReasoning(
     regulation.zoneType === 'green-natural' ? '자연녹지지역' : regulation.zoneType
   const regulationConsiderations: string[] = [
     `용도지역: ${zoneLabel}`,
-    `건폐율 ${regulation.maxCoverageRatio}% 이내 계획 (적용: ${far}%)`,
-    `용적률 ${regulation.maxFloorAreaRatio}% 한도 내 최적화`,
+    `건폐율 ${regulation?.maxCoverageRatio ?? 60}% 이내 계획 (적용: ${far}%)`,
+    `용적률 ${regulation?.maxFloorAreaRatio ?? 200}% 한도 내 최적화`,
     `최고 높이 ${regulation.maxHeight}m (${regulation.maxFloors}층) 제한 준수`,
   ]
   
