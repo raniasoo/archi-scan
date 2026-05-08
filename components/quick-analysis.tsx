@@ -62,6 +62,8 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           body: JSON.stringify({
             prompt: `${result.zoneName} ${result.bestLayout.floors}층 ${result.bestLayout.units}세대 주거건물, 대지면적 ${result.siteArea}㎡`,
             style: 'modern-luxury',
+            cameraAngle: 'eye-level',
+            sceneMode: 'afternoon',
             address: result.address,
             layoutName: result.bestLayout.name || 'AI 추천 배치안',
             floors: result.bestLayout.floors,

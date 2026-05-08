@@ -123,12 +123,19 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // 병렬로 이미지 수집 (위성사진 + 지적도 + 거리뷰 4방향)
+    // 병렬로 이미지 수집 — 카메라앵글에 따라 다른 참조 이미지 사용
+    // eye-level: 거리뷰(눈높이) 우선, 위성사진 제외 (위에서 내려다본 사진은 눈높이에 부적합)
+    // bird-eye: 위성사진 우선, 거리뷰 제외 (눈높이 사진은 조감도에 부적합)
+    const isEyeLevel = cameraAngle === 'eye-level' || !cameraAngle
+    const isBirdEye = cameraAngle === 'bird-eye'
     const directions = ['north', 'east', 'south', 'west']
     await Promise.all([
-      satelliteUrl ? fetchImage(satelliteUrl, 'satellite') : Promise.resolve(),
+      // 위성사진: 조감도일 때만 사용
+      (!isEyeLevel && satelliteUrl) ? fetchImage(satelliteUrl, 'satellite') : Promise.resolve(),
+      // 도로지도: 항상 사용 (작을 수 있어 skip될 수도 있음)
       cadastralMapUrl ? fetchImage(cadastralMapUrl, 'cadastral') : Promise.resolve(),
-      ...(Array.isArray(streetViewUrls) ? streetViewUrls.slice(0, 4).map((url: string, i: number) =>
+      // 거리뷰: 눈높이일 때만 사용 (최대 2장으로 제한하여 속도 개선)
+      ...(isEyeLevel && Array.isArray(streetViewUrls) ? streetViewUrls.slice(0, 2).map((url: string, i: number) =>
         fetchImage(url, `street-view-${directions[i]}`)
       ) : []),
     ])
@@ -396,7 +403,7 @@ function buildArchitecturePrompt(params: {
 
   // ━━━ 카메라 앵글 ━━━
   const angleDesc: Record<string, string> = {
-    'eye-level': 'Eye-level perspective (1.6m height), showing main facade and entrance. Slight 3/4 angle to show depth.',
+    'eye-level': 'Eye-level perspective from the street (1.6m height), showing the main facade as seen by a person standing on the road. Slight 3/4 angle to show depth. Show neighboring buildings in background. This is a GROUND-LEVEL architectural photograph, NOT an aerial or satellite view. The camera is on the street looking at the building.',
     'birds-eye': 'Aerial bird\'s-eye view from 45-degree angle above, showing the building roof, landscaping layout, parking, and surrounding context. Like a drone photo from 50m height.',
     'entrance': 'Close-up of the main entrance at eye level. Focus on entrance canopy, door details, landscaping, and ground-floor facade materials. Welcoming perspective.',
   }
