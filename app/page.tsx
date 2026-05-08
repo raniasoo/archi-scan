@@ -1542,13 +1542,24 @@ export default function ArchiScanPage() {
 
   const isStepClickable = (stepId: string) => {
     if (stepId === "input") return true
-    if (stepId === "strategy") return String(siteArea).trim() !== ""
-    if (stepId === "regulation") return String(siteArea).trim() !== ""
-    if (stepId === "layouts") return layouts.length > 0
+    const hasAddress = String(siteArea).trim() !== ""
+    if (stepId === "regulation" || stepId === "strategy") return hasAddress
+    if (stepId === "layouts") return layouts.length > 0 || hasAddress
     if (stepId === "floorplan" || stepId === "financial" || stepId === "report") {
       return selectedLayout !== null
     }
     return false
+  }
+  
+  // 탭 데이터 상태 아이콘
+  const getTabStatus = (stepId: string): 'active' | 'ready' | 'locked' => {
+    if (!isStepClickable(stepId)) return 'locked'
+    if (stepId === 'layouts' && layouts.length > 0) return 'ready'
+    if (stepId === 'regulation' && regulation) return 'ready'
+    if ((stepId === 'floorplan' || stepId === 'financial' || stepId === 'report') && selectedLayout !== null) return 'ready'
+    if (stepId === 'input' && String(siteArea).trim() !== '') return 'ready'
+    if (stepId === 'strategy' && strategy) return 'ready'
+    return 'active'
   }
 
   if (!mounted) {
@@ -1881,31 +1892,32 @@ export default function ArchiScanPage() {
 
           </div>
           
-          {/* Progress Steps - Desktop */}
-          <div className="hidden xl:flex items-center gap-1">
-            {steps.map((step, index) => {
+          {/* Tab Navigation - Desktop */}
+          <div className="hidden xl:flex items-center gap-0.5 bg-muted/50 rounded-xl p-1">
+            {steps.map((step) => {
               const Icon = step.icon
               const isActive = currentStep === step.id
-              const isPast = steps.findIndex(s => s.id === currentStep) > index
               const isClickable = isStepClickable(step.id)
+              const status = getTabStatus(step.id)
               
               return (
                 <button
                   key={step.id}
                   onClick={() => isClickable && setCurrentStep(step.id as AppStep)}
                   disabled={!isClickable}
-                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all text-xs ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-xs font-medium ${
                     isActive 
-                      ? "bg-primary text-primary-foreground" 
-                      : isPast 
-                        ? "bg-primary/20 text-primary cursor-pointer hover:bg-primary/30" 
-                        : isClickable 
-                          ? "text-muted-foreground hover:bg-secondary cursor-pointer"
-                          : "text-muted-foreground/50 cursor-not-allowed"
+                      ? "bg-background text-foreground shadow-sm" 
+                      : isClickable 
+                        ? "text-muted-foreground hover:text-foreground hover:bg-background/50 cursor-pointer"
+                        : "text-muted-foreground/30 cursor-not-allowed"
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
-                  <span className="font-medium">{step.label}</span>
+                  <span>{step.label}</span>
+                  {status === 'ready' && !isActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  )}
                 </button>
               )
             })}
@@ -1913,63 +1925,117 @@ export default function ArchiScanPage() {
         </div>
       </header>
 
+      {/* Desktop Summary Dashboard Strip */}
+      {address && String(siteArea).trim() !== '' && (
+        <div className="hidden xl:block border-b border-border/50 bg-muted/20">
+          <div className="mx-auto max-w-7xl px-6 py-2.5 flex items-center gap-6">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Building2 className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-sm font-medium truncate">{address}</p>
+              <Badge variant="secondary" className="text-[11px] shrink-0">{parseFloat(siteArea).toLocaleString()}㎡</Badge>
+            </div>
+            <div className="flex items-center gap-4 text-sm shrink-0">
+              {regulation && (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground text-xs">건폐율</span>
+                    <span className="font-semibold">{regulation.maxCoverageRatio || 60}%</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground text-xs">용적률</span>
+                    <span className="font-semibold">{regulation.maxFloorAreaRatio || 200}%</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground text-xs">높이</span>
+                    <span className="font-semibold">{regulation.heightLimit || '-'}m</span>
+                  </div>
+                </>
+              )}
+              {selectedLayoutData && (
+                <>
+                  <div className="h-4 w-px bg-border" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground text-xs">규모</span>
+                    <span className="font-semibold">{selectedLayoutData.floors}층 {selectedLayoutData.units}세대</span>
+                  </div>
+                  {feasibilityResult && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground text-xs">ROI</span>
+                      <span className={`font-bold ${feasibilityResult.roi > 0 ? 'text-emerald-600' : 'text-orange-500'}`}>
+                        {feasibilityResult.roi.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="mx-auto max-w-7xl px-4 md:px-6 py-6 md:py-8 pb-16 md:pb-8">
-        {/* Mobile Step Indicator — 3 Phase View */}
-        <div className="xl:hidden mb-6">
-          {(() => {
-            const phases = [
-              { label: '정보 입력', steps: ['input', 'strategy'], color: 'from-blue-500 to-cyan-500' },
-              { label: 'AI 분석', steps: ['regulation', 'layouts', 'floorplan'], color: 'from-emerald-500 to-teal-500' },
-              { label: '결과 확인', steps: ['financial', 'report'], color: 'from-amber-500 to-orange-500' },
-            ]
-            const currentPhaseIdx = phases.findIndex(p => p.steps.includes(currentStep))
-            const currentPhase = phases[currentPhaseIdx] || phases[0]
-            const stepLabel = steps.find(s => s.id === currentStep)?.label || ''
-            return (
-              <>
-                <div className="flex items-center justify-between bg-secondary/50 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r ${currentPhase.color} text-white font-bold`}>
-                      {currentPhaseIdx + 1}/3
-                    </span>
-                    <span className="text-sm font-bold">{currentPhase.label}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{stepLabel}</span>
-                </div>
-                {/* 3-Phase Progress Bar */}
-                <div className="flex gap-1 mt-2">
-                  {phases.map((phase, i) => (
-                    <div key={i} className="flex-1 h-1.5 rounded-full overflow-hidden bg-muted/30">
-                      <div className={`h-full rounded-full bg-gradient-to-r ${phase.color} transition-all duration-500`}
-                        style={{ width: i < currentPhaseIdx ? '100%' : i === currentPhaseIdx ? `${((phase.steps.indexOf(currentStep) + 1) / phase.steps.length) * 100}%` : '0%' }} />
-                    </div>
-                  ))}
-                </div>
-              </>
-            )
-          })()}
-          {/* Mobile Step Dots */}
-          <div className="flex justify-center gap-1.5 mt-3">
-            {steps.map((step, index) => {
+        {/* Mobile Tab Navigation + Summary Dashboard */}
+        <div className="xl:hidden mb-4 space-y-3">
+          {/* Scrollable Tab Bar */}
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+            {steps.map((step) => {
+              const Icon = step.icon
               const isActive = currentStep === step.id
-              const isPast = steps.findIndex(s => s.id === currentStep) > index
+              const isClickable = isStepClickable(step.id)
+              const status = getTabStatus(step.id)
               return (
                 <button
                   key={step.id}
-                  onClick={() => isStepClickable(step.id) && setCurrentStep(step.id as AppStep)}
-                  disabled={!isStepClickable(step.id)}
-                  className={`w-2 h-2 rounded-full transition-all ${
+                  onClick={() => isClickable && setCurrentStep(step.id as AppStep)}
+                  disabled={!isClickable}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-xs font-medium whitespace-nowrap shrink-0 ${
                     isActive 
-                      ? "bg-primary w-6" 
-                      : isPast 
-                        ? "bg-primary/50" 
-                        : "bg-muted"
+                      ? "bg-primary text-primary-foreground shadow-sm" 
+                      : isClickable 
+                        ? "bg-secondary/70 text-foreground hover:bg-secondary"
+                        : "bg-muted/30 text-muted-foreground/30"
                   }`}
-                />
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{step.label}</span>
+                  {status === 'ready' && !isActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  )}
+                </button>
               )
             })}
           </div>
+          
+          {/* Summary Dashboard Strip */}
+          {address && String(siteArea).trim() !== '' && (
+            <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/10">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-xs font-medium text-foreground truncate flex-1">{address}</p>
+                <Badge variant="secondary" className="text-[10px] shrink-0">{parseFloat(siteArea).toLocaleString()}㎡</Badge>
+              </div>
+              <div className="flex items-center gap-3 text-[11px]">
+                {regulation && (
+                  <>
+                    <span className="text-muted-foreground">건폐 <span className="text-foreground font-semibold">{regulation.maxCoverageRatio || 60}%</span></span>
+                    <span className="text-muted-foreground">용적 <span className="text-foreground font-semibold">{regulation.maxFloorAreaRatio || 200}%</span></span>
+                    <span className="text-muted-foreground">높이 <span className="text-foreground font-semibold">{regulation.heightLimit || '-'}m</span></span>
+                  </>
+                )}
+                {selectedLayoutData && (
+                  <>
+                    <span className="text-primary/70">|</span>
+                    <span className="text-muted-foreground">{selectedLayoutData.floors}층 <span className="text-foreground font-semibold">{selectedLayoutData.units}세대</span></span>
+                    {feasibilityResult && (
+                      <span className={`font-semibold ${feasibilityResult.roi > 0 ? 'text-emerald-600' : 'text-orange-500'}`}>
+                        ROI {feasibilityResult.roi.toFixed(1)}%
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Step: Input */}
@@ -2238,33 +2304,36 @@ export default function ArchiScanPage() {
         )
       })()}
       
-      {/* 모바일 하단 단계 네비게이션 */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur border-t border-border/50 px-1 py-1 safe-area-bottom">
-        <div className="flex items-center justify-between max-w-lg mx-auto">
-          {steps.map((step, index) => {
+      {/* 모바일 하단 탭 네비게이션 */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur-md border-t border-border/50 px-2 py-1.5 safe-area-bottom">
+        <div className="flex items-center justify-between max-w-lg mx-auto gap-0.5">
+          {steps.map((step) => {
             const Icon = step.icon
             const isActive = currentStep === step.id
-            const isPast = steps.findIndex(s => s.id === currentStep) > index
-            const isFuture = !isActive && !isPast
+            const isClickable = isStepClickable(step.id)
+            const status = getTabStatus(step.id)
             const shortLabels: Record<string, string> = { '대지 입력': '대지', '설계 전략': '설계', '법규 검토': '법규', '배치안': '배치', '평면도': '평면', '사업성': '사업', '보고서': '보고' }
             const shortLabel = shortLabels[step.label] || step.label
             return (
               <button key={step.id}
-                onClick={() => { if (isPast || isActive) setCurrentStep(step.id as AppStep) }}
-                disabled={isFuture}
-                className={`flex flex-col items-center gap-0.5 py-1.5 rounded-lg transition-all ${
+                onClick={() => isClickable && setCurrentStep(step.id as AppStep)}
+                disabled={!isClickable}
+                className={`flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg transition-all relative ${
                   isActive
-                    ? 'bg-primary/15 text-primary flex-[1.8] min-w-[52px]'
-                    : isPast
+                    ? 'text-primary flex-[1.5] min-w-[44px]'
+                    : isClickable
                     ? 'text-muted-foreground flex-1 min-w-[36px]'
-                    : 'text-muted-foreground/30 flex-1 min-w-[36px]'
+                    : 'text-muted-foreground/25 flex-1 min-w-[36px]'
                 }`}
               >
-                <Icon className={`${isActive ? 'h-4.5 w-4.5' : 'h-3.5 w-3.5'} transition-all`} />
-                {isActive
-                  ? <span className="text-[10px] font-bold leading-none">{shortLabel}</span>
-                  : <div className={`w-1 h-1 rounded-full mt-0.5 ${isPast ? 'bg-primary/50' : 'bg-muted-foreground/20'}`} />
-                }
+                {isActive && <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary" />}
+                <div className="relative">
+                  <Icon className={`${isActive ? 'h-5 w-5' : 'h-4 w-4'} transition-all`} />
+                  {status === 'ready' && !isActive && (
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  )}
+                </div>
+                <span className={`leading-none ${isActive ? 'text-[10px] font-bold' : 'text-[9px]'}`}>{shortLabel}</span>
               </button>
             )
           })}
