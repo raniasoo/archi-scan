@@ -553,6 +553,16 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     </div>
   </div>
 
+  ${aiRenderImage ? `
+  <div style="margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; page-break-inside: avoid;">
+    <img src="${aiRenderImage}" alt="AI 건축 렌더링" style="width: 100%; max-height: 360px; object-fit: cover; display: block;" />
+    <div style="padding: 8px 12px; background: #f8fafc; display: flex; align-items: center; justify-content: space-between;">
+      <span style="font-size: 9pt; font-weight: 600; color: #475569;">✨ AI 건축 렌더링</span>
+      <span style="font-size: 8pt; color: #94a3b8;">Powered by Gemini</span>
+    </div>
+  </div>
+  ` : ''}
+
   <div class="section">
     <div class="section-title"><span class="section-number">1</span> 검토 개요</div>
     <p style="margin-bottom: 16px;"><strong>검토 목적</strong></p>
