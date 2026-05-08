@@ -100,12 +100,24 @@ export function LayoutsStep(props: LayoutsStepProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const recommendedLayout = layouts.find(l => l.recommendation?.isRecommended) || layouts[0]
 
+  // 분양가 계산
+  const salesPrice = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
+    ? marketPrice.suggestedSalePrice
+    : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000
+  const constructionCost = regionalPricing?.constructionCostPerM2 || 2500000
+
   // ROI 전체 마이너스 여부
   const allNegativeROI = layouts.length > 0 && layouts.every(l => {
-    const f = calculateFeasibility(siteAreaNum, l, regulation, landPriceData.pricePerM2,
-      (marketPrice.loaded && marketPrice.suggestedSalePrice > 0) ? marketPrice.suggestedSalePrice
-      : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000,
-      regionalPricing?.constructionCostPerM2)
+    const f = calculateFeasibility({
+      siteArea: siteAreaNum || 1,
+      grossFloorArea: l.gfa || 1,
+      unitCount: l.units || 1,
+      floorCount: l.floors || 1,
+      parkingCount: l.parking || 0,
+      landPricePerM2: landPriceData.pricePerM2 || 5000000,
+      salesPricePerM2: salesPrice,
+      constructionCostPerM2: constructionCost,
+    })
     return (f?.roi ?? 0) < 0
   })
 
@@ -155,10 +167,16 @@ export function LayoutsStep(props: LayoutsStepProps) {
           {layouts.map((layout, idx) => {
             const isSelected = selectedLayout === layout.id
             const isRecommended = layout.recommendation?.isRecommended
-            const f = calculateFeasibility(siteAreaNum, layout, regulation, landPriceData.pricePerM2,
-              (marketPrice.loaded && marketPrice.suggestedSalePrice > 0) ? marketPrice.suggestedSalePrice
-              : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000,
-              regionalPricing?.constructionCostPerM2)
+            const f = calculateFeasibility({
+              siteArea: siteAreaNum || 1,
+              grossFloorArea: layout.gfa || 1,
+              unitCount: layout.units || 1,
+              floorCount: layout.floors || 1,
+              parkingCount: layout.parking || 0,
+              landPricePerM2: landPriceData.pricePerM2 || 5000000,
+              salesPricePerM2: salesPrice,
+              constructionCostPerM2: constructionCost,
+            })
             const roi = f?.roi ?? 0
 
             return (
