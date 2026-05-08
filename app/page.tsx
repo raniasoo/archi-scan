@@ -761,7 +761,7 @@ export default function ArchiScanPage() {
   }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, marketPrice.suggestedSalePrice, regionalPricing, regulation.zoneType])
 
   const handleSiteInputComplete = () => {
-    setCurrentStep("strategy")
+    setCurrentStep("regulation")
   }
 
   /**
@@ -1520,8 +1520,8 @@ export default function ArchiScanPage() {
   
   const steps = [
     { id: "input", label: STEP_LABELS.input, icon: Building2 },
-    { id: "strategy", label: STEP_LABELS.strategy, icon: Brain },
     { id: "regulation", label: STEP_LABELS.regulation, icon: Scale },
+    { id: "strategy", label: STEP_LABELS.strategy, icon: Brain },
     { id: "layouts", label: STEP_LABELS.layouts, icon: LayoutGrid },
     { id: "floorplan", label: STEP_LABELS.floorplan, icon: Layers },
     { id: "financial", label: STEP_LABELS.financial, icon: Banknote },
@@ -2005,6 +2005,7 @@ export default function ArchiScanPage() {
             landPriceData={landPriceData} marketPrice={marketPrice}
             molitSupplementData={molitSupplementData} siteBdMgtSn={siteBdMgtSn}
             handleGenerate={handleGenerate}
+            onNextStep={() => setCurrentStep("strategy")}
           />
         )}
 

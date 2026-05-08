@@ -28,13 +28,14 @@ export interface RegulationStepProps {
   molitSupplementData: Record<string, unknown>
   siteBdMgtSn: string
   handleGenerate: () => void
+  onNextStep?: () => void
 }
 
 export function RegulationStep(props: RegulationStepProps) {
   const {
     address, siteArea, siteAreaNum, regulation, setRegulation,
     setSiteArea, setSitePolygon, landPriceData, marketPrice,
-    molitSupplementData, siteBdMgtSn, handleGenerate,
+    molitSupplementData, siteBdMgtSn, handleGenerate, onNextStep,
   } = props
 
   return (
@@ -46,9 +47,9 @@ export function RegulationStep(props: RegulationStepProps) {
                   {address} - {Number(siteArea).toLocaleString()}㎡
                 </p>
               </div>
-              <Button onClick={handleGenerate} className="gap-2 w-full md:w-auto">
-                <Sparkles className="h-4 w-4" />
-                배치안 생성
+              <Button onClick={onNextStep || handleGenerate} className="gap-2 w-full md:w-auto">
+                <ChevronRight className="h-4 w-4" />
+                설계방향 선택으로
               </Button>
             </div>
 
