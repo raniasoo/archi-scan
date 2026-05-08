@@ -15,6 +15,7 @@ interface ConceptInput {
   surroundingContext?: string
   satelliteUrl?: string
   cadastralMapUrl?: string
+  regulation?: { heightLimit?: number; farRatio?: number; zoneName?: string; northShadow?: boolean; northShadowAngle?: number; overlappingRegs?: string[] }
 }
 
 const STYLES = [
@@ -124,6 +125,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
           surroundingContext:input.surroundingContext,
           cameraAngle: angle, sceneMode: scene,
           material: materialId ? { type: materialId } : undefined,
+        regulation: input.regulation,
         }) })
       } else {
         // Gemini (기존)
@@ -138,6 +140,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
           satelliteUrl: input.satelliteUrl,
         cadastralMapUrl: input.cadastralMapUrl,
           material: materialId ? { type: materialId } : undefined,
+        regulation: input.regulation,
         }) })
       }
       const d = await r.json()
@@ -173,6 +176,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
         satelliteUrl: input.satelliteUrl,
         cadastralMapUrl: input.cadastralMapUrl,
         material: materialId ? { type: materialId } : undefined,
+        regulation: input.regulation,
         multiAngle: true,
       }) })
       const d = await r.json()

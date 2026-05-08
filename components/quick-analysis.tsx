@@ -25,6 +25,8 @@ interface QuickResult {
   verdictColor: string
   verdictEmoji: string
   overlappingCount: number
+  overlappingNames?: string[]
+  farRatio?: number
   rawData: any
 }
 
@@ -98,6 +100,14 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
             })(),
             satelliteUrl: vworldState?.satelliteUrl,
             cadastralMapUrl: vworldState?.cadastralMapUrl,
+            regulation: {
+              heightLimit: result.heightLimit,
+              farRatio: result.farRatio,
+              zoneName: result.zoneName,
+              northShadow: true, // 한국은 기본적으로 북측사선 적용
+              northShadowAngle: 45,
+              overlappingRegs: result.overlappingNames,
+            },
           }),
         })
         const data = await res.json()
@@ -296,6 +306,8 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         },
         verdict, verdictColor, verdictEmoji,
         overlappingCount: overlapping.length,
+        overlappingNames: overlapping.map((r: any) => r.name).filter(Boolean),
+        farRatio: zone.far,
         rawData: {
           ...molitData.data,
           vworld: vworldData,

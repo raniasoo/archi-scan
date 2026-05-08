@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, material, multiAngle } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, material, multiAngle, regulation } = await req.json()
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       
       for (const a of angles) {
         const aPrompt = buildArchitecturePrompt({
-          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material
+          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, regulation
         })
         
         const parts: any[] = [{ text: aPrompt }]
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     }
 
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, regulation
     })
 
     // Gemini API 호출 — 모델 fallback 체인
@@ -199,8 +199,20 @@ function buildArchitecturePrompt(params: {
   cameraAngle?: string
   sceneMode?: string
   material?: { type?: string; color?: string; accent?: string }
+  // 법규 검토 데이터
+  regulation?: {
+    heightLimit?: number       // 높이제한 (m)
+    farRatio?: number          // 용적률 (%)
+    setbackFront?: number      // 전면 이격 (m)
+    setbackSide?: number       // 측면 이격 (m)
+    setbackRear?: number       // 후면 이격 (m)
+    northShadow?: boolean      // 북측사선제한
+    northShadowAngle?: number  // 사선 각도 (°)
+    overlappingRegs?: string[] // 중첩규제 이름 목록
+    zoneName?: string          // 용도지역 이름
+  }
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, regulation } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
@@ -341,6 +353,15 @@ function buildArchitecturePrompt(params: {
 BUILDING FORM:
 ${buildingForm}
 ${typeHint ? `Layout: ${typeHint}` : ''}
+${regulation ? `
+LEGAL CONSTRAINTS (MUST comply — these are Korean building law requirements):
+- Zone: ${regulation.zoneName || 'Residential'}
+${regulation.heightLimit ? `- Height limit: ${regulation.heightLimit}m — the building MUST look shorter than ${regulation.heightLimit}m (about ${Math.round(regulation.heightLimit / 3.3)} floors max)` : ''}
+${regulation.setbackFront ? `- Front setback: ${regulation.setbackFront}m from road — show landscaping/walkway in front` : ''}
+${regulation.setbackSide ? `- Side setback: ${regulation.setbackSide}m from neighbors — visible gap between buildings` : ''}
+${regulation.setbackRear ? `- Rear setback: ${regulation.setbackRear}m from back boundary` : ''}
+${regulation.northShadow ? `- North shadow restriction (${regulation.northShadowAngle || 45}°) — upper floors MUST step back on the NORTH side, creating a cascading/terraced form toward the north. This is a distinctive feature of Korean residential buildings.` : ''}
+${regulation.overlappingRegs?.length ? `- Special zones: ${regulation.overlappingRegs.join(', ')}${regulation.overlappingRegs.some(r => r.includes('경관') || r.includes('자연')) ? ' — building should use NATURAL materials (stone, wood, earth tones) and have a modest, harmonious appearance that blends with the natural landscape' : ''}${regulation.overlappingRegs.some(r => r.includes('고도')) ? ' — strict height control area, building must appear LOW and unobtrusive' : ''}` : ''}` : ''}
 
 DESIGN DIRECTION:
 ${strategyStyle || 'Modern residential design'}
