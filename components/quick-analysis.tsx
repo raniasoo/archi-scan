@@ -482,19 +482,6 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                 </div>
               </div>
 
-              {/* 주변환경 요약 */}
-              {siteContext && siteContext.buildingCount > 0 && (
-                <div className="rounded-xl border border-border p-2.5 bg-card/50 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3 w-3 text-primary" />
-                    <span className="text-[10px] font-medium">주변환경</span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">
-                    건물 {siteContext.buildingCount}동{siteContext.avgFloors > 0 ? ` · 평균 ${siteContext.avgFloors}층 · 최고 ${siteContext.maxFloors}층` : ''}
-                  </span>
-                </div>
-              )}
-
               {/* 지형 분석 결과 */}
               {terrain && terrain.elevationDiff > 0.3 && (
                 <div className="rounded-xl border border-border p-3 bg-card/50 space-y-2">
@@ -579,6 +566,19 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                       )
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* 주변환경 요약 */}
+              {siteContext && siteContext.buildingCount > 0 && (
+                <div className="rounded-xl border border-border p-2.5 bg-card/50 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-3 w-3 text-primary" />
+                    <span className="text-[10px] font-medium">주변환경</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    건물 {siteContext.buildingCount}동{siteContext.avgFloors > 0 ? ` · 평균 ${siteContext.avgFloors}층 · 최고 ${siteContext.maxFloors}층` : ''}
+                  </span>
                 </div>
               )}
 
