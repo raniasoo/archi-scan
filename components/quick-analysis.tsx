@@ -396,6 +396,85 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
             {/* 결과 카드 */}
             <div className="w-full space-y-4">
 
+              {/* AI 렌더링 이미지 */}
+              {(renderLoading || renderImage) && (
+                <div className="rounded-2xl overflow-hidden border border-border relative">
+                  {renderImage ? (
+                    <div className="relative">
+                      <img
+                        src={renderImage}
+                        alt="AI 건축 렌더링"
+                        className="w-full aspect-[16/9] object-cover"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3 text-emerald-400" />
+                          <span className="text-[10px] text-white/90 font-medium">AI 건축 렌더링</span>
+                          <span className="text-[9px] text-white/50 ml-auto">Nano Banana</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full aspect-[16/9] bg-card flex flex-col items-center justify-center gap-3">
+                      <div className="relative">
+                        <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
+                        <Loader2 className="h-4 w-4 text-primary animate-spin absolute -bottom-1 -right-1" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[11px] text-muted-foreground">🎨 AI 건축 렌더링 생성 중...</p>
+                        <p className="text-[9px] text-muted-foreground/60 mt-0.5">약 15~30초 소요</p>
+                      </div>
+                      <div className="w-32 h-1 bg-border/50 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary/60 rounded-full animate-pulse" style={{ width: '60%' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 주소 + 판정 */}
+              <div className="rounded-2xl border border-border bg-card p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-1">분석 대상</p>
+                    <p className="text-sm font-bold">{result.address}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {result.zoneName} · {result.siteArea.toLocaleString()}㎡
+                      {result.overlappingCount > 0 && ` · 중첩규제 ${result.overlappingCount}개`}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl">{result.verdictEmoji}</span>
+                  </div>
+                </div>
+
+                {/* 판정 */}
+                <div className="rounded-xl p-4 text-center mb-4" style={{ backgroundColor: result.verdictColor + '15', border: `2px solid ${result.verdictColor}40` }}>
+                  <p className="text-[10px] text-muted-foreground mb-1">종합 판정</p>
+                  <p className="text-lg font-black" style={{ color: result.verdictColor }}>{result.verdict}</p>
+                </div>
+
+                {/* 핵심 수치 3개 */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center p-3 rounded-xl bg-card border border-border/50">
+                    <p className="text-[9px] text-muted-foreground">예상 수익</p>
+                    <p className={`text-lg font-black ${result.bestLayout.expectedProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {result.bestLayout.expectedProfit >= 0 ? '+' : ''}{result.bestLayout.expectedProfit}억
+                    </p>
+                  </div>
+                  <div className="text-center p-3 rounded-xl bg-card border border-border/50">
+                    <p className="text-[9px] text-muted-foreground">ROI</p>
+                    <p className={`text-lg font-black ${result.bestLayout.roi >= 10 ? 'text-emerald-400' : result.bestLayout.roi >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {result.bestLayout.roi}%
+                    </p>
+                  </div>
+                  <div className="text-center p-3 rounded-xl bg-card border border-border/50">
+                    <p className="text-[9px] text-muted-foreground">총사업비</p>
+                    <p className="text-lg font-black text-foreground">{result.bestLayout.totalCost}억</p>
+                  </div>
+                </div>
+              </div>
+
               {/* 주변환경 요약 */}
               {siteContext && siteContext.buildingCount > 0 && (
                 <div className="rounded-xl border border-border p-2.5 bg-card/50 flex items-center justify-between">
@@ -495,85 +574,6 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                   </div>
                 </div>
               )}
-
-              {/* AI 렌더링 이미지 */}
-              {(renderLoading || renderImage) && (
-                <div className="rounded-2xl overflow-hidden border border-border relative">
-                  {renderImage ? (
-                    <div className="relative">
-                      <img
-                        src={renderImage}
-                        alt="AI 건축 렌더링"
-                        className="w-full aspect-[16/9] object-cover"
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                        <div className="flex items-center gap-1.5">
-                          <Sparkles className="h-3 w-3 text-emerald-400" />
-                          <span className="text-[10px] text-white/90 font-medium">AI 건축 렌더링</span>
-                          <span className="text-[9px] text-white/50 ml-auto">Nano Banana</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full aspect-[16/9] bg-card flex flex-col items-center justify-center gap-3">
-                      <div className="relative">
-                        <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
-                        <Loader2 className="h-4 w-4 text-primary animate-spin absolute -bottom-1 -right-1" />
-                      </div>
-                      <div className="text-center">
-                        <p className="text-[11px] text-muted-foreground">🎨 AI 건축 렌더링 생성 중...</p>
-                        <p className="text-[9px] text-muted-foreground/60 mt-0.5">약 15~30초 소요</p>
-                      </div>
-                      <div className="w-32 h-1 bg-border/50 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary/60 rounded-full animate-pulse" style={{ width: '60%' }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 주소 + 판정 */}
-              <div className="rounded-2xl border border-border bg-card p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <p className="text-[10px] text-muted-foreground mb-1">분석 대상</p>
-                    <p className="text-sm font-bold">{result.address}</p>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {result.zoneName} · {result.siteArea.toLocaleString()}㎡
-                      {result.overlappingCount > 0 && ` · 중첩규제 ${result.overlappingCount}개`}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-2xl">{result.verdictEmoji}</span>
-                  </div>
-                </div>
-
-                {/* 판정 */}
-                <div className="rounded-xl p-4 text-center mb-4" style={{ backgroundColor: result.verdictColor + '15', border: `2px solid ${result.verdictColor}40` }}>
-                  <p className="text-[10px] text-muted-foreground mb-1">종합 판정</p>
-                  <p className="text-lg font-black" style={{ color: result.verdictColor }}>{result.verdict}</p>
-                </div>
-
-                {/* 핵심 수치 3개 */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="text-center p-3 rounded-xl bg-card border border-border/50">
-                    <p className="text-[9px] text-muted-foreground">예상 수익</p>
-                    <p className={`text-lg font-black ${result.bestLayout.expectedProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {result.bestLayout.expectedProfit >= 0 ? '+' : ''}{result.bestLayout.expectedProfit}억
-                    </p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-card border border-border/50">
-                    <p className="text-[9px] text-muted-foreground">ROI</p>
-                    <p className={`text-lg font-black ${result.bestLayout.roi >= 10 ? 'text-emerald-400' : result.bestLayout.roi >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
-                      {result.bestLayout.roi}%
-                    </p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-card border border-border/50">
-                    <p className="text-[9px] text-muted-foreground">총사업비</p>
-                    <p className="text-lg font-black text-foreground">{result.bestLayout.totalCost}억</p>
-                  </div>
-                </div>
-              </div>
 
               {/* 더 보기 */}
               <button onClick={() => setShowMore(!showMore)} className="w-full flex items-center justify-center gap-1 py-2 text-xs text-muted-foreground">
