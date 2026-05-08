@@ -14,6 +14,7 @@ interface ConceptInput {
   patterns?: string[]
   surroundingContext?: string
   satelliteUrl?: string
+  cadastralMapUrl?: string
 }
 
 const STYLES = [
@@ -135,6 +136,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
           surroundingContext:input.surroundingContext,
           cameraAngle: angle, sceneMode: scene,
           satelliteUrl: input.satelliteUrl,
+        cadastralMapUrl: input.cadastralMapUrl,
           material: materialId ? { type: materialId } : undefined,
         }) })
       }
@@ -169,6 +171,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
         strategy:input.strategy, values:input.values, patterns:input.patterns,
         surroundingContext:input.surroundingContext, sceneMode: scene,
         satelliteUrl: input.satelliteUrl,
+        cadastralMapUrl: input.cadastralMapUrl,
         material: materialId ? { type: materialId } : undefined,
         multiAngle: true,
       }) })
@@ -292,7 +295,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
               </button>
             </div>
             {/* #7: 위성사진 참조 표시 */}
-            {input.satelliteUrl && <p className="text-[9px] text-emerald-400/60 text-center">🛰️ 위성사진이 AI 참조 이미지로 전달됩니다</p>}
+            {(input.satelliteUrl || input.cadastralMapUrl) && <p className="text-[9px] text-emerald-400/60 text-center">🛰️ 위성사진 + 지적도가 AI 참조 이미지로 전달됩니다</p>}
             {/* 단일 렌더링 결과 */}
             {renderImg && !multiImages && <div className="space-y-2"><img src={renderImg} alt="렌더링" className="w-full rounded-lg border border-border" /><a href={renderImg} download={`render-${Date.now()}.png`} className="flex items-center justify-center gap-1 text-xs text-emerald-400"><Download className="h-3 w-3" />다운로드</a></div>}
             {/* #9: 멀티앵글 결과 */}

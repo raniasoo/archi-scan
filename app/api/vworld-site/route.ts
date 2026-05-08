@@ -6,6 +6,10 @@ function getSatelliteUrl(lat: number, lng: number, zoom: number = 18): string {
   return `https://api.vworld.kr/req/image?service=image&request=getmap&key=${VWORLD_KEY}&basemap=PHOTO&center=${lng},${lat}&zoom=${zoom}&size=600,400&format=png`
 }
 
+function getCadastralMapUrl(lat: number, lng: number, zoom: number = 18): string {
+  return `https://api.vworld.kr/req/image?service=image&request=getmap&key=${VWORLD_KEY}&basemap=GRAPHIC&center=${lng},${lat}&zoom=${zoom}&size=600,400&format=png`
+}
+
 async function fetchParcelWFS(lat: number, lng: number): Promise<any> {
   const buffer = 0.001
   const bbox = `${lng - buffer},${lat - buffer},${lng + buffer},${lat + buffer}`
@@ -197,6 +201,7 @@ export async function POST(req: NextRequest) {
       nearbyBuildings: nearbyCtx.buildings,
       roads: nearbyCtx.roads,
       satelliteUrl: getSatelliteUrl(lat, lng, 18),
+      cadastralMapUrl: getCadastralMapUrl(lat, lng, 18),
       directions: {
         north: dirSummary.north,
         south: dirSummary.south,

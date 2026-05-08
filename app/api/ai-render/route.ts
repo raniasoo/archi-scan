@@ -8,26 +8,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, material, multiAngle } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, material, multiAngle } = await req.json()
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
     }
 
-    // #7: 위성사진 → base64 변환 (Gemini 멀티모달 입력)
-    let satelliteBase64: string | null = null
-    if (satelliteUrl) {
+    // 참조 이미지 수집 (위성사진 + 지적도)
+    const refImages: { base64: string; mimeType: string; label: string }[] = []
+    
+    async function fetchImage(url: string, label: string) {
       try {
-        const imgRes = await fetch(satelliteUrl, { signal: AbortSignal.timeout(8000) })
-        if (imgRes.ok) {
-          const buf = await imgRes.arrayBuffer()
-          satelliteBase64 = Buffer.from(buf).toString('base64')
-          console.log(`[GEMINI] Satellite image loaded: ${Math.round(buf.byteLength / 1024)}KB`)
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+        if (res.ok) {
+          const buf = await res.arrayBuffer()
+          const b64 = Buffer.from(buf).toString('base64')
+          console.log(`[GEMINI] ${label} loaded: ${Math.round(buf.byteLength / 1024)}KB`)
+          refImages.push({ base64: b64, mimeType: 'image/png', label })
         }
       } catch (e) {
-        console.warn('[GEMINI] Satellite image fetch failed:', e)
+        console.warn(`[GEMINI] ${label} fetch failed:`, e)
       }
     }
+    
+    // 병렬로 이미지 수집
+    await Promise.all([
+      satelliteUrl ? fetchImage(satelliteUrl, 'satellite') : Promise.resolve(),
+      cadastralMapUrl ? fetchImage(cadastralMapUrl, 'cadastral') : Promise.resolve(),
+    ])
+    
+    console.log(`[GEMINI] Reference images: ${refImages.length} loaded (${refImages.map(r => r.label).join(', ')})`)
 
     // #9: 멀티앵글 — 3장 일괄 생성
     if (multiAngle) {
@@ -44,9 +54,11 @@ export async function POST(req: NextRequest) {
         })
         
         const parts: any[] = [{ text: aPrompt }]
-        if (satelliteBase64) {
-          parts.push({ inlineData: { mimeType: 'image/png', data: satelliteBase64 } })
-          parts.push({ text: 'The image above shows the actual satellite view of the site. Match the surrounding buildings, roads, vegetation, and terrain visible in this photo.' })
+        if (refImages.length > 0) {
+          for (const img of refImages) {
+            parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
+          }
+          parts.push({ text: `The ${refImages.length} image(s) above show: ${refImages.map(r => r.label === 'satellite' ? 'SATELLITE/AERIAL VIEW of the actual site and neighborhood' : r.label === 'cadastral' ? 'CADASTRAL MAP showing the exact lot boundary shape and surrounding roads' : r.label).join(', ')}. The rendering MUST match the actual site shape, surrounding buildings, roads, and terrain visible in these reference photos.` })
         }
 
         try {
@@ -92,9 +104,14 @@ export async function POST(req: NextRequest) {
         
         // #7: 위성사진을 멀티모달로 전달
         const parts: any[] = [{ text: architecturePrompt }]
-        if (satelliteBase64) {
-          parts.push({ inlineData: { mimeType: 'image/png', data: satelliteBase64 } })
-          parts.push({ text: 'The image above shows the actual satellite/aerial view of the site and surrounding neighborhood. The rendering should match the real buildings, roads, vegetation, and terrain visible in this photo. Place the new building on the empty lot shown.' })
+        // 참조 이미지 (위성사진 + 지적도) → Gemini 멀티모달
+        if (refImages.length > 0) {
+          for (const img of refImages) {
+            parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
+          }
+          parts.push({ text: `REFERENCE IMAGES (${refImages.length}):
+${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape. The new building footprint must fit within this boundary shape.' : r.label}`).join('\n')}
+The rendering MUST reflect what is shown in these reference images. Do NOT ignore them.` })
         }
         
         const response = await fetch(

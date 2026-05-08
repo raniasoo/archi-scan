@@ -96,6 +96,8 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                 return ctx.fullPrompt || undefined
               } catch { return undefined }
             })(),
+            satelliteUrl: vworldState?.satelliteUrl,
+            cadastralMapUrl: vworldState?.cadastralMapUrl,
           }),
         })
         const data = await res.json()
@@ -307,6 +309,8 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           roadSummary: vworldData?.roadSummary,
           terrain: terrainResult,
           sunAnalysis: sunResult,
+          satelliteUrl: vworldData?.satelliteUrl,
+          cadastralMapUrl: vworldData?.cadastralMapUrl,
         },
       })
 

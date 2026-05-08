@@ -48,6 +48,7 @@ export interface LayoutsStepProps {
   userValues: UserValues
   surroundingContext?: string
   satelliteUrl?: string
+  cadastralMapUrl?: string
   gfa: number
   landPriceData: { pricePerM2: number }
   marketPrice: { loaded: boolean; suggestedSalePrice: number }
@@ -427,6 +428,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
                   patterns: props.userValues?.selectedPatterns,
                   surroundingContext: props.surroundingContext,
                   satelliteUrl: props.satelliteUrl,
+                  cadastralMapUrl: props.cadastralMapUrl,
                 }}
                 onRenderComplete={props.onAiRenderComplete}
               />

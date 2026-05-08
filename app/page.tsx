@@ -2038,6 +2038,7 @@ export default function ArchiScanPage() {
             handleSelectLayout={handleSelectLayout}
             onAiRenderComplete={setAiRenderImage}
             satelliteUrl={analysisRawData?.satelliteUrl}
+            cadastralMapUrl={analysisRawData?.cadastralMapUrl}
             surroundingContext={(() => {
               try {
                 
