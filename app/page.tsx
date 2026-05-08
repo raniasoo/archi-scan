@@ -666,19 +666,7 @@ export default function ArchiScanPage() {
         }
       }
     } catch {}
-    // AI 렌더링 이미지 복원 (sessionStorage)
-    try {
-      const savedRender = sessionStorage.getItem('archi-scan-render')
-      if (savedRender) setAiRenderImage(savedRender)
-    } catch {}
   }, [])
-
-  // AI 렌더링 이미지 sessionStorage 동기화
-  useEffect(() => {
-    try {
-      if (aiRenderImage) sessionStorage.setItem('archi-scan-render', aiRenderImage)
-    } catch {}
-  }, [aiRenderImage])
 
   // 핵심 상태 변경 시 자동 저장
   useEffect(() => {
@@ -783,32 +771,6 @@ export default function ArchiScanPage() {
     setFeasibilityResult(result)
     console.log('[v0] FeasibilityResult updated:', result, '분양가:', (effectiveSalesPrice || 8000000) / 10000, '만/㎡')
   }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, marketPrice.suggestedSalePrice, regionalPricing, regulation.zoneType])
-
-  // 보고서 진입 시 AI 렌더링 자동 생성
-  useEffect(() => {
-    if (currentStep !== 'report' || aiRenderImage || !selectedLayoutData || !address) return
-    let cancelled = false
-    const generate = async () => {
-      try {
-        const r = await fetch('/api/ai-render', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: `${selectedLayoutData.name} ${selectedLayoutData.floors}층 ${selectedLayoutData.units}세대`,
-            style: 'modern-luxury', cameraAngle: 'eye-level', sceneMode: 'afternoon',
-            address, layoutName: selectedLayoutData.name,
-            floors: selectedLayoutData.floors, units: selectedLayoutData.units,
-            siteArea: parseFloat(siteArea) || 660,
-            buildingType: selectedLayoutData.type, coverage: selectedLayoutData.coverage,
-            strategy, regulation: { heightLimit: regulation?.heightLimit || 12, zoneName: regulation?.zoneName },
-          }),
-        })
-        const d = await r.json()
-        if (!cancelled && d.success && d.image) setAiRenderImage(d.image)
-      } catch {}
-    }
-    generate()
-    return () => { cancelled = true }
-  }, [currentStep, aiRenderImage, selectedLayoutData, address])
 
   const handleSiteInputComplete = () => {
     setCurrentStep("regulation")
@@ -1626,13 +1588,11 @@ export default function ArchiScanPage() {
 
   if (showQuickMode) {
     return (
-      <QuickAnalysis strategy={strategy} userValues={userValues} onDetailedAnalysis={(addr, area, rawData, quickRenderImage) => {
+      <QuickAnalysis strategy={strategy} userValues={userValues} onDetailedAnalysis={(addr, area, rawData) => {
         // Quick 분석 데이터를 Full 분석에 주입
         setAddress(addr)
         setSiteArea(String(area))
         setAnalysisRawData(rawData)
-        // Quick에서 생성한 AI 렌더링 이미지 전달
-        if (quickRenderImage) setAiRenderImage(quickRenderImage)
         if (rawData) {
           const zc = rawData.zoneType || ''
           if (zc) {
