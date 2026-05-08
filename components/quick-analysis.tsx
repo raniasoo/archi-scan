@@ -101,6 +101,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
             satelliteUrl: vworldState?.satelliteUrl,
             cadastralMapUrl: vworldState?.cadastralMapUrl,
             streetViewUrls: vworldState?.streetViewUrls,
+            sitePolygon: vworldState?.parcel?.polygon,
             regulation: {
               heightLimit: result.heightLimit,
               farRatio: result.farRatio,

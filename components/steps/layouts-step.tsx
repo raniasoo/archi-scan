@@ -50,6 +50,7 @@ export interface LayoutsStepProps {
   satelliteUrl?: string
   cadastralMapUrl?: string
   streetViewUrls?: string[]
+  sitePolygon?: number[][]
   regulation?: any
   gfa: number
   landPriceData: { pricePerM2: number }
@@ -432,6 +433,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
                   satelliteUrl: props.satelliteUrl,
                   cadastralMapUrl: props.cadastralMapUrl,
                   streetViewUrls: props.streetViewUrls,
+                  sitePolygon: props.sitePolygon,
                   regulation: props.regulation,
                 }}
                 onRenderComplete={props.onAiRenderComplete}

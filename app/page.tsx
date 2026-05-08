@@ -2040,6 +2040,7 @@ export default function ArchiScanPage() {
             satelliteUrl={analysisRawData?.satelliteUrl}
             cadastralMapUrl={analysisRawData?.cadastralMapUrl}
             streetViewUrls={analysisRawData?.streetViewUrls}
+            sitePolygon={analysisRawData?.parcelPolygon}
             regulation={analysisRawData ? { heightLimit: analysisRawData.heightLimit || 12, zoneName: analysisRawData.zoneName, northShadow: true, northShadowAngle: 45, overlappingRegs: analysisRawData.overlappingRegulations?.map((r: any) => r.name) } : undefined}
             surroundingContext={(() => {
               try {

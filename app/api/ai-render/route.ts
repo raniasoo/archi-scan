@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, material, multiAngle, regulation } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation } = await req.json()
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
@@ -17,6 +17,93 @@ export async function POST(req: NextRequest) {
     // 참조 이미지 수집 (위성사진 + 지적도 + 거리뷰)
     const refImages: { base64: string; mimeType: string; label: string }[] = []
     
+    // ━━━ 폴리곤 → SVG 지적도 이미지 생성 ━━━
+    if (Array.isArray(sitePolygon) && sitePolygon.length >= 3) {
+      try {
+        const lats = sitePolygon.map((c: number[]) => c[1])
+        const lngs = sitePolygon.map((c: number[]) => c[0])
+        const cLat = (Math.min(...lats) + Math.max(...lats)) / 2
+        const cLng = (Math.min(...lngs) + Math.max(...lngs)) / 2
+        const LM = Math.cos(cLat * Math.PI / 180) * 111319
+
+        // 경위도 → 미터 → SVG 좌표
+        const mCoords = sitePolygon.map(([lng, lat]: number[]) => [
+          (lng - cLng) * LM,
+          -(lat - cLat) * 111319 // Y축 반전 (SVG는 아래가 +)
+        ])
+        const xs = mCoords.map((c: number[]) => c[0])
+        const ys = mCoords.map((c: number[]) => c[1])
+        const minX = Math.min(...xs), maxX = Math.max(...xs)
+        const minY = Math.min(...ys), maxY = Math.max(...ys)
+        const w = maxX - minX, h = maxY - minY
+        const pad = Math.max(w, h) * 0.15
+        const svgW = 600, svgH = 400
+        const scale = Math.min((svgW - 60) / (w + pad * 2), (svgH - 60) / (h + pad * 2))
+        const cx = svgW / 2, cy = svgH / 2
+        const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2
+
+        const points = mCoords.map(([x, y]: number[]) =>
+          `${cx + (x - midX) * scale},${cy + (y - midY) * scale}`
+        ).join(' ')
+
+        // 이격거리 경계 (안쪽 3m 축소)
+        const setback = 3 * scale
+        const innerPoints = mCoords.map(([x, y]: number[]) => {
+          const dx = x - midX, dy = y - midY
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          const shrink = dist > 0 ? Math.max(0, dist - 3) / dist : 1
+          return `${cx + dx * shrink * scale},${cy + dy * shrink * scale}`
+        }).join(' ')
+
+        // 방위 표시 + 축척
+        const scaleBarM = Math.round(w / 3 / 10) * 10 || 10
+        const scaleBarPx = scaleBarM * scale
+
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+  <rect width="${svgW}" height="${svgH}" fill="#1a1a2e"/>
+  <text x="${svgW/2}" y="25" text-anchor="middle" fill="#8b95a5" font-size="13" font-family="sans-serif">실제 지적도 기반 대지 형상 (${address || ''})</text>
+  
+  <!-- 필지 경계 -->
+  <polygon points="${points}" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="2.5" stroke-linejoin="round"/>
+  
+  <!-- 이격거리 경계 -->
+  <polygon points="${innerPoints}" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.7"/>
+  
+  <!-- 건축 가능 영역 -->
+  <polygon points="${innerPoints}" fill="rgba(34,197,94,0.08)" stroke="none"/>
+  
+  <!-- 범례 -->
+  <line x1="30" y1="${svgH-50}" x2="50" y2="${svgH-50}" stroke="#3b82f6" stroke-width="2.5"/>
+  <text x="55" y="${svgH-46}" fill="#8b95a5" font-size="10" font-family="sans-serif">대지경계</text>
+  <line x1="30" y1="${svgH-35}" x2="50" y2="${svgH-35}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="55" y="${svgH-31}" fill="#8b95a5" font-size="10" font-family="sans-serif">이격거리 경계</text>
+  <rect x="30" y="${svgH-25}" width="20" height="10" fill="rgba(34,197,94,0.3)" stroke="none"/>
+  <text x="55" y="${svgH-17}" fill="#8b95a5" font-size="10" font-family="sans-serif">건축 가능 영역</text>
+  
+  <!-- 방위 -->
+  <g transform="translate(${svgW-40},50)">
+    <circle r="15" fill="rgba(255,255,255,0.1)" stroke="#555" stroke-width="1"/>
+    <line x1="0" y1="10" x2="0" y2="-10" stroke="#ef4444" stroke-width="2"/>
+    <polygon points="0,-12 -4,-4 4,-4" fill="#ef4444"/>
+    <text x="0" y="-16" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="bold" font-family="sans-serif">N</text>
+  </g>
+  
+  <!-- 축척 -->
+  <line x1="${svgW-40-scaleBarPx}" y1="${svgH-20}" x2="${svgW-40}" y2="${svgH-20}" stroke="#888" stroke-width="2"/>
+  <text x="${svgW-40-scaleBarPx/2}" y="${svgH-25}" text-anchor="middle" fill="#888" font-size="9" font-family="sans-serif">${scaleBarM}m</text>
+  
+  <!-- 면적 -->
+  <text x="${svgW/2}" y="${svgH-10}" text-anchor="middle" fill="#6b7280" font-size="11" font-family="sans-serif">필지면적: ${siteArea ? siteArea.toLocaleString() + '㎡' : '—'}</text>
+</svg>`
+
+        const svgBase64 = Buffer.from(svg).toString('base64')
+        refImages.push({ base64: svgBase64, mimeType: 'image/svg+xml', label: 'cadastral-polygon' })
+        console.log(`[GEMINI] cadastral-polygon SVG generated: ${Math.round(svg.length / 1024)}KB ✅`)
+      } catch (e) {
+        console.warn('[GEMINI] SVG cadastral generation failed:', e)
+      }
+    }
+
     async function fetchImage(url: string, label: string) {
       try {
         const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
@@ -67,7 +154,7 @@ export async function POST(req: NextRequest) {
           for (const img of refImages) {
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
-          parts.push({ text: `The ${refImages.length} image(s) above show: ${refImages.map(r => r.label === 'satellite' ? 'SATELLITE/AERIAL VIEW of the actual site and neighborhood' : r.label === 'cadastral' ? 'CADASTRAL MAP showing the exact lot boundary shape and surrounding roads' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — eye-level photo of the actual neighborhood` : r.label).join(', ')}. The rendering MUST match the actual site shape, surrounding buildings, roads, and terrain visible in these reference photos.` })
+          parts.push({ text: `The ${refImages.length} image(s) above show: ${refImages.map(r => r.label === 'satellite' ? 'SATELLITE/AERIAL VIEW of the actual site and neighborhood' : r.label === 'cadastral' ? 'CADASTRAL MAP showing the exact lot boundary shape and surrounding roads' : r.label === 'cadastral-polygon' ? 'CADASTRAL LOT BOUNDARY — exact shape of the building site drawn from real survey data. Blue line=lot boundary, dashed orange=setback line, green=buildable area. The new building MUST fit within this shape.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — eye-level photo of the actual neighborhood` : r.label).join(', ')}. The rendering MUST match the actual site shape, surrounding buildings, roads, and terrain visible in these reference photos.` })
         }
 
         try {
@@ -119,7 +206,7 @@ export async function POST(req: NextRequest) {
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
           parts.push({ text: `REFERENCE IMAGES (${refImages.length}):
-${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape. The new building footprint must fit within this boundary shape.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label}`).join('\n')}
+${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'CADASTRAL LOT BOUNDARY from real survey data — Blue line is the exact lot boundary shape. Dashed orange is the setback line. Green area is where the building can be placed. The new building footprint MUST fit within this shape.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label}`).join('\n')}
 The rendering MUST reflect what is shown in these reference images. Do NOT ignore them.` })
         }
         
