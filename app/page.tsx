@@ -573,14 +573,14 @@ export default function ArchiScanPage() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [siteVisuals, setSiteVisuals] = useState<SiteVisualsConfig>(EMPTY_SITE_VISUALS)
   const [aiRenderImage, setAiRenderImageRaw] = useState<string | null>(null)
-  // aiRenderImage를 sessionStorage에 저장하여 탭 전환 시 유지
-  const setAiRenderImage = (img: string | null) => {
-    setAiRenderImageRaw(img)
+  // aiRenderImage를 sessionStorage에 동기화 (탭 전환 시 유지)
+  useEffect(() => {
     try {
-      if (img) sessionStorage.setItem('archi-scan-render', img)
-      else sessionStorage.removeItem('archi-scan-render')
+      if (aiRenderImage) sessionStorage.setItem('archi-scan-render', aiRenderImage)
     } catch {}
-  }
+  }, [aiRenderImage])
+  // setAiRenderImage는 setAiRenderImageRaw를 직접 사용
+  const setAiRenderImage = setAiRenderImageRaw
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
   const [optimizationResult, setOptimizationResult] = useState<OptimizationReport | null>(null)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
