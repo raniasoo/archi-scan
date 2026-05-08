@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation, terrainInfo } = await req.json()
+    const ti = terrainInfo as { slopeDirection?: string; elevationDiff?: number; avgSlope?: number } | undefined
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
@@ -59,6 +60,40 @@ export async function POST(req: NextRequest) {
         const scaleBarM = Math.round(w / 3 / 10) * 10 || 10
         const scaleBarPx = scaleBarM * scale
 
+        // ★ 경사 방향 화살표 SVG 사전 계산
+        let slopeSvg = ''
+        if (ti && ti.slopeDirection && ti.elevationDiff && ti.elevationDiff >= 2) {
+          const dir = ti.slopeDirection || ''
+          let angle = 90 // default: south
+          if (dir.includes('남서')) angle = 135
+          else if (dir.includes('남동')) angle = 45
+          else if (dir.includes('북서')) angle = 225
+          else if (dir.includes('북동')) angle = 315
+          else if (dir.includes('남')) angle = 90
+          else if (dir.includes('북')) angle = 270
+          else if (dir.includes('동')) angle = 0
+          else if (dir.includes('서')) angle = 180
+
+          const rad = angle * Math.PI / 180
+          const arrowLen = 50
+          const ax = cx, ay = cy
+          const ex = Math.round(ax + Math.cos(rad) * arrowLen)
+          const ey = Math.round(ay + Math.sin(rad) * arrowLen)
+          const highX = Math.round(ax - Math.cos(rad) * (arrowLen + 20))
+          const highY = Math.round(ay - Math.sin(rad) * (arrowLen + 20))
+          const lowX = Math.round(ax + Math.cos(rad) * (arrowLen + 20))
+          const lowY = Math.round(ay + Math.sin(rad) * (arrowLen + 20))
+
+          slopeSvg = `
+  <!-- 경사 방향 표시 (SLOPE DIRECTION) -->
+  <defs><marker id="sa" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="#ef4444"/></marker></defs>
+  <line x1="${ax}" y1="${ay}" x2="${ex}" y2="${ey}" stroke="#ef4444" stroke-width="3" marker-end="url(#sa)" opacity="0.8"/>
+  <text x="${highX}" y="${highY}" text-anchor="middle" fill="#22c55e" font-size="11" font-weight="bold" font-family="sans-serif">▲ HIGH</text>
+  <text x="${lowX}" y="${lowY}" text-anchor="middle" fill="#ef4444" font-size="11" font-weight="bold" font-family="sans-serif">▼ LOW</text>
+  <text x="${ax}" y="${ay - 10}" text-anchor="middle" fill="#f59e0b" font-size="10" font-family="sans-serif">${ti.elevationDiff}m drop · ${ti.avgSlope || ''}%</text>
+  <text x="${ax}" y="${ay + 20}" text-anchor="middle" fill="#f59e0b" font-size="9" font-family="sans-serif">SLOPE: ${dir}</text>`
+        }
+
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
   <rect width="${svgW}" height="${svgH}" fill="#1a1a2e"/>
   <text x="${svgW/2}" y="25" text-anchor="middle" fill="#8b95a5" font-size="13" font-family="sans-serif">실제 지적도 기반 대지 형상 (${address || ''})</text>
@@ -94,6 +129,8 @@ export async function POST(req: NextRequest) {
   
   <!-- 면적 -->
   <text x="${svgW/2}" y="${svgH-10}" text-anchor="middle" fill="#6b7280" font-size="11" font-family="sans-serif">필지면적: ${siteArea ? siteArea.toLocaleString() + '㎡' : '—'}</text>
+  
+  ${slopeSvg}
 </svg>`
 
         const svgBase64 = Buffer.from(svg).toString('base64')

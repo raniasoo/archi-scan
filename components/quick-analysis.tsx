@@ -112,6 +112,11 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
               northShadowAngle: 45,
               overlappingRegs: result.overlappingNames,
             },
+            terrainInfo: terrain ? {
+              slopeDirection: terrain.slopeDirection,
+              elevationDiff: terrain.elevationDiff,
+              avgSlope: terrain.avgSlope,
+            } : undefined,
           }),
         })
         const data = await res.json()
