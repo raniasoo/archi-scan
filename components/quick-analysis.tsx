@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, ChevronDown, FileText, Sparkles, ImageIcon, Mountain } from "lucide-react"
-import { analyzeTerrrain, type TerrainAnalysis } from "@/lib/terrain-analysis"
+import { type TerrainAnalysis } from "@/lib/terrain-analysis"
 import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
 import { buildSiteContextPrompt } from "@/lib/site-context-builder"
 
@@ -161,15 +161,53 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         }
       }
 
-      // 1.6단계: 표고 데이터 → 경사도 분석
+      // 1.6단계: 표고 데이터 → 경사도 분석 (대지 화면과 동일 API)
       let terrainResult: TerrainAnalysis | null = null
       if (entX && entY) {
         try {
           setProgress('⛰️ 지형·경사도 분석 중...')
-          const eRes = await fetch(`/api/elevation-grid?lat=${entY}&lng=${entX}&grid=10&range=0.0006`)
+          const eRes = await fetch(`/api/elevation?lng=${entX}&lat=${entY}`)
           const eData = await eRes.json()
-          if (eData.elevations?.length) {
-            terrainResult = analyzeTerrrain(eData.elevations, 10, siteArea, 66)
+          if (eData.success && eData.slope) {
+            // /api/elevation 응답 → TerrainAnalysis 형식으로 변환
+            const s = eData.slope
+            const gradeMap: Record<string, TerrainAnalysis['slopeGrade']> = { '평탄': 'flat', '완만': 'gentle', '보통 경사': 'moderate', '급경사': 'steep', '매우 급경사': 'very-steep' }
+            const slopeGrade = gradeMap[eData.grade] || (s.average < 2 ? 'flat' : s.average < 5 ? 'gentle' : s.average < 10 ? 'moderate' : s.average < 15 ? 'steep' : 'very-steep')
+
+            // 토공량/비용 (경사도 기반 추정)
+            const avgE = (s.minElevation + s.maxElevation) / 2
+            const cutFill = s.elevRange * siteArea * 0.3 // 간이 추정
+            const earthworkVolume = Math.round(cutFill)
+            const earthworkCost = Math.round(cutFill * 27500) // 평균 단가
+
+            const foundationType =
+              slopeGrade === 'flat' ? '일반 매트 기초' :
+              slopeGrade === 'gentle' ? '일반 매트 기초 (레벨 조정)' :
+              slopeGrade === 'moderate' ? '계단식 기초 또는 파일 기초' :
+              slopeGrade === 'steep' ? '파일 기초 + 옹벽' :
+              '심층 파일 기초 + 대규모 옹벽'
+
+            const dirStr = s.slopeDirection || '남'
+            const dirDesc: Record<string, string> = {
+              '남': '남향 경사 (북고남저)', '남서': '남서향 경사', '서': '서향 경사 (동고서저)',
+              '북서': '북서향 경사', '북': '북향 경사 (남고북저)', '북동': '북동향 경사',
+              '동': '동향 경사 (서고동저)', '남동': '남동향 경사',
+            }
+
+            terrainResult = {
+              minElevation: s.minElevation,
+              maxElevation: s.maxElevation,
+              elevationDiff: s.elevRange,
+              avgSlope: s.average,
+              maxSlope: s.max,
+              slopeDirection: dirDesc[dirStr] || dirStr + '향 경사',
+              slopeGrade,
+              earthworkVolume,
+              earthworkCost,
+              foundationType,
+              description: `${eData.grade}(고저차 ${s.elevRange}m, 평균 경사 ${s.average}%), ${dirDesc[dirStr] || dirStr}`,
+              renderHint: s.elevRange < 2 ? 'Flat terrain' : `Sloped site (${s.elevRange}m change, ${s.average}% grade), ${dirStr}-facing slope`,
+            }
             setTerrain(terrainResult)
           }
         } catch (e) {

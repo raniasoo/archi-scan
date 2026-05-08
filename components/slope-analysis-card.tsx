@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { Mountain, ArrowDown, AlertTriangle, ChevronDown, ChevronUp, Lightbulb } from "lucide-react"
-import { analyzeTerrrain } from "@/lib/terrain-analysis"
 
 interface SlopeAnalysisCardProps {
   lng: number
@@ -77,28 +76,11 @@ export function SlopeAnalysisCard({ lng, lat, className = "", externalData }: Sl
     if (!lng || !lat) return
     setLoading(true)
     setError(false)
-    // terrain-analysis.ts와 동일한 소스 사용 (elevation-grid)
-    fetch(`/api/elevation-grid?lat=${lat}&lng=${lng}&grid=10&range=0.0006`)
+    fetch(`/api/elevation?lng=${lng}&lat=${lat}`)
       .then(r => r.json())
       .then(d => {
-        if (d.elevations?.length) {
-          
-          const t = analyzeTerrrain(d.elevations, 10, 660, 66)
-          const gradeColors: Record<string, string> = { flat: '#22c55e', gentle: '#3b82f6', moderate: '#f59e0b', steep: '#ef4444', 'very-steep': '#dc2626' }
-          const gradeNames: Record<string, string> = { flat: '평탄', gentle: '완만', moderate: '보통 경사', steep: '급경사', 'very-steep': '매우 급경사' }
-          const dirMatch = t.slopeDirection.match(/^(남|북|동|서|남서|남동|북서|북동)/)
-          const dir = dirMatch?.[0] || '남'
-          setData({
-            slope: {
-              average: t.avgSlope, max: t.maxSlope, maxDirection: dir, slopeDirection: dir,
-              elevRange: t.elevationDiff, minElevation: t.minElevation, maxElevation: t.maxElevation,
-            },
-            grade: gradeNames[t.slopeGrade] || t.slopeGrade,
-            gradeColor: gradeColors[t.slopeGrade] || '#f59e0b',
-            designImpact: [t.foundationType, t.description],
-            center: { elevation: (t.minElevation + t.maxElevation) / 2 },
-          })
-        } else setError(true)
+        if (d.success) setData(d)
+        else setError(true)
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false))
