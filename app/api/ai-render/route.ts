@@ -354,10 +354,11 @@ function buildArchitecturePrompt(params: {
     buildingForm = `A MULTI-BUILDING RESIDENTIAL COMPLEX (빌라 단지) — NOT a single building.
 ${buildingCount} separate ${f}-story villa buildings spread across a ${siteArea}㎡ site. Total ${u} units.
 Each building: ~${eachW}m × ${eachD}m footprint, ${f} stories, ~${unitsPerBldg} units per building.
-Buildings are spaced apart with landscaped gardens, walkways, and shared parking between them.
-The complex looks like a small VILLAGE of individual villa buildings, NOT one large structure.
-Each building has its own entrance, stairwell, and character.
-CRITICAL: Show ${buildingCount} SEPARATE buildings clearly visible in the image, not one monolithic block.`
+IMPORTANT: If the site is on a slope (see SITE-SPECIFIC CONTEXT below), buildings MUST be placed at DIFFERENT ELEVATION LEVELS following the natural terrain — like a terraced hillside village. Buildings higher up on the slope sit on higher ground, buildings lower down sit on lower ground. Show retaining walls, stairs, and sloped access roads between buildings.
+If the site is flat, buildings are spaced apart with landscaped gardens and walkways.
+The complex looks like a small HILLSIDE VILLAGE of individual villa buildings, NOT one large structure.
+Each building has its own entrance, stairwell, and character — they are NOT identical.
+CRITICAL: Show ${buildingCount} SEPARATE buildings at DIFFERENT ground levels, clearly visible in the image.`
   } else if (f <= 10) {
     if (u > 40 && siteArea && siteArea > 3000) {
       isComplex = true

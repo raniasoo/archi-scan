@@ -189,19 +189,31 @@ function describeTerrainForRender(terrain: TerrainAnalysis | null | undefined, f
     parts.push('The building should be designed to work WITH the natural slope — use split-level design or step the building down the hill')
     parts.push('Show the natural ground slope in the rendering, with the building partially embedded into the hillside')
     if (terrain.slopeDirection.includes('남')) parts.push('The slope faces south — excellent for daylight, with the building stepping down toward the viewer')
-  } else {
+  } else if (diff < 20) {
     parts.push(`Steep hillside site (${diff}m total elevation change, ${slope}% average grade)`)
     parts.push('The building MUST cascade down the slope following the terrain contours')
     parts.push(`From the uphill side the building appears shorter, from the downhill side it appears taller — this is a multi-level hillside building`)
     parts.push('Show prominent retaining walls, terraced landscaping, and stepped building mass')
     parts.push('The natural hillside with trees and vegetation should be visible around the building')
+  } else {
+    // ★ 극급경사: 20m 이상 고저차 (평창동 46m 같은 경우)
+    parts.push(`EXTREMELY STEEP mountainside site — ${diff}m total elevation change (equivalent to a ${Math.round(diff / 3)}+ story building height difference!) with ${slope}% average grade`)
+    parts.push('THIS IS A DRAMATIC HILLSIDE. The ground level changes DRAMATICALLY from one end of the site to the other.')
+    parts.push(`Buildings MUST be placed at VERY DIFFERENT elevation levels, like terraced rice paddies on a mountain — the highest building and the lowest building have a ${diff}m height difference between their ground levels`)
+    parts.push('Each building sits on its own TERRACED PLATFORM with tall stone/concrete RETAINING WALLS between levels')
+    parts.push('Show STEEP ACCESS ROADS, stairs connecting different levels, and significant grade changes between each building')
+    parts.push('The hillside should be clearly visible — lush green mountain terrain with mature trees surrounding the buildings')
+    parts.push('From eye level, some buildings are ABOVE you on the hillside and some are BELOW — this creates a dramatic cascading village effect')
+    parts.push('Show exposed foundations, pilotis, or cantilevers where buildings meet the steep slope')
   }
 
   // 경사 방향별 건물 형태 힌트
-  if (terrain.slopeDirection.includes('남향')) {
-    parts.push('South-facing slope: excellent for natural light, building should cascade downward toward the south with each level having views')
+  if (terrain.slopeDirection.includes('남서') || terrain.slopeDirection.includes('남향')) {
+    parts.push(`${terrain.slopeDirection} slope: the terrain goes DOWNHILL toward the south/southwest. Buildings step DOWN in that direction. Upper buildings are further NORTH on higher ground, lower buildings are further SOUTH on lower ground. Excellent for natural light on all levels.`)
   } else if (terrain.slopeDirection.includes('북향')) {
     parts.push('North-facing slope: building should maximize south-facing windows on each stepped level')
+  } else if (terrain.slopeDirection) {
+    parts.push(`Slope direction: ${terrain.slopeDirection}. Buildings step down following this direction.`)
   }
 
   return parts.join('. ')
