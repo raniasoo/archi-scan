@@ -365,10 +365,6 @@ function generateLayouts(
       : "중앙 정원을 통한 커뮤니티 형성과 자연채광 극대화"
   )
   courtyard.id = 2
-  // ★ 대규모 대지 + 다세대 → 다동 클러스터로 자동 전환 (AI 렌더링과 일치)
-  if (siteArea > 1500 && (courtyard.units || 0) > 20 && courtyard.floors <= 5) {
-    courtyard.type = 'cluster'
-  }
   layouts.push(courtyard)
   
   // ㄱ자형 - 균형잡힌 배치
@@ -414,6 +410,17 @@ function generateLayouts(
     layouts.push(cluster)
   }
   
+  // ============================================================
+  // ★ 대규모 대지 + 다세대 + 저층 → 다동 클러스터 자동 전환
+  // AI 렌더링 프롬프트와 동일 조건 (도면 일치)
+  // ============================================================
+  layouts.forEach(layout => {
+    if (layout.type !== 'cluster' && layout.type !== 'tower' &&
+        siteArea > 1500 && (layout.units || 0) > 20 && layout.floors <= 5) {
+      layout.type = 'cluster'
+    }
+  })
+
   // ============================================================
   // 법규 준수안 우선 정렬 + 전략 부합도 정렬
   // ============================================================
