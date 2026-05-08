@@ -45,6 +45,7 @@ export interface InputStepProps {
   handleSupplementDataChange: (data: SupplementData) => void
   handleMolitDataFetched: (data: any) => void
   handleProjectLoad: (snapshot: ProjectSnapshot) => void
+  autoTriggerLookup?: boolean
 }
 
 export function InputStep(props: InputStepProps) {
@@ -123,10 +124,11 @@ export function InputStep(props: InputStepProps) {
                     onSiteAreaChange={setSiteArea}
                     onGenerate={handleSiteInputComplete}
                     isGenerating={false}
-                    buttonText="설계 전략 선택으로"
+                    buttonText="법규 검토로"
                     onSupplementDataChange={handleSupplementDataChange}
                     onMolitDataFetched={handleMolitDataFetched}
                     externalSupplement={(molitSupplementData as any).zoneCode ? { ...molitSupplementData as any, _key: supplementKey } : null}
+                    autoTriggerLookup={props.autoTriggerLookup}
                   />
                 </CardContent>
               </Card>

@@ -62,6 +62,7 @@ interface SiteInputFormProps {
     heightLimit?: number
     hasDistrictPlan?: boolean
   } | null
+  autoTriggerLookup?: boolean
 }
 
 export function SiteInputForm({
@@ -75,6 +76,7 @@ export function SiteInputForm({
   onMolitDataFetched,
   onSupplementDataChange,
   externalSupplement,
+  autoTriggerLookup,
 }: SiteInputFormProps) {
   const [lookupState, setLookupState] = useState<AutoLookupStatus>('idle')
   const [lookupError, setLookupError] = useState<string | null>(null)
@@ -718,6 +720,20 @@ export function SiteInputForm({
       setIsRetrying(false)
     }
   }
+  
+  // QuickAnalysis에서 넘어올 때 자동으로 국토부 조회 트리거
+  const autoTriggeredRef = useRef(false)
+  useEffect(() => {
+    if (autoTriggerLookup && address && !autoTriggeredRef.current && lookupState === 'idle') {
+      autoTriggeredRef.current = true
+      // 약간의 딜레이 후 자동 조회 (UI 렌더링 완료 후)
+      const timer = setTimeout(() => {
+        console.log('[v0] Auto-triggering MOLIT lookup for:', address)
+        handleMolitLookup()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [autoTriggerLookup, address, lookupState])
   
   /**
    * Quick retry with preset values

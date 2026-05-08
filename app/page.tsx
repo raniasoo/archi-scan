@@ -462,6 +462,7 @@ export default function ArchiScanPage() {
   const [mounted, setMounted] = useState(false) // v2
   const [showLanding, setShowLanding] = useState(true)
   const [showQuickMode, setShowQuickMode] = useState(false)
+  const [autoTriggerLookup, setAutoTriggerLookup] = useState(false)
   const [inAppBrowser, setInAppBrowser] = useState<string | null>(null)
   
   const { 
@@ -1598,7 +1599,8 @@ export default function ArchiScanPage() {
           }
         }
         setShowQuickMode(false)
-        setCurrentStep('regulation' as AppStep)
+        setAutoTriggerLookup(true)
+        setCurrentStep('input' as AppStep)
       }} />
     )
   }
@@ -1980,6 +1982,7 @@ export default function ArchiScanPage() {
             handleSupplementDataChange={handleSupplementDataChange}
             handleMolitDataFetched={handleMolitDataFetched}
             handleProjectLoad={handleProjectLoad}
+            autoTriggerLookup={autoTriggerLookup}
           />
         )}
 
