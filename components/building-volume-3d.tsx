@@ -30,10 +30,12 @@ function getLayoutBlocks(type: string): Block[] {
       { x:  0.27,  z: 0.10, w: 0.22, d: 0.48, label: '동동', color: 0x154070 },
     ]
     case 'cluster': return [
-      { x:-0.26, z:-0.22, w: 0.36, d: 0.34, label: 'A동', color: 0x1a4a8a },
-      { x: 0.26, z:-0.22, w: 0.36, d: 0.34, label: 'B동', color: 0x1a4a8a },
-      { x:-0.26, z: 0.22, w: 0.36, d: 0.34, label: 'C동', color: 0x1a4a8a },
-      { x: 0.26, z: 0.22, w: 0.36, d: 0.34, label: 'D동', color: 0x1a4a8a },
+      { x:-0.30, z:-0.28, w: 0.24, d: 0.22, label: 'A동', color: 0x1a4a8a },
+      { x: 0.02, z:-0.28, w: 0.24, d: 0.22, label: 'B동', color: 0x1a5090 },
+      { x: 0.34, z:-0.25, w: 0.24, d: 0.22, label: 'C동', color: 0x1a4a8a },
+      { x:-0.22, z: 0.10, w: 0.24, d: 0.22, label: 'D동', color: 0x1a5090 },
+      { x: 0.12, z: 0.08, w: 0.24, d: 0.22, label: 'E동', color: 0x1a4a8a },
+      { x: 0.40, z: 0.12, w: 0.24, d: 0.22, label: 'F동', color: 0x1a5090 },
     ]
     default: return [{ x: 0, z: 0, w: 0.55, d: 0.55, color: 0x1a4a8a }]
   }
@@ -42,7 +44,7 @@ function getLayoutBlocks(type: string): Block[] {
 function getBlockFloors(idx: number, total: number, type: string): number {
   if (type === 'lshape')    return idx === 0 ? total : Math.max(3, Math.floor(total * 0.65))
   if (type === 'courtyard') return idx === 0 ? total : Math.max(4, Math.floor(total * 0.75))
-  if (type === 'cluster')   return Math.max(3, Math.floor(total * ([1, 0.85, 0.9, 0.8][idx] ?? 0.85)))
+  if (type === 'cluster')   return Math.max(2, Math.floor(total * ([1, 0.85, 0.9, 1, 0.85, 0.9][idx] ?? 0.85)))
   return total
 }
 
