@@ -8,13 +8,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, material, multiAngle, regulation } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, material, multiAngle, regulation } = await req.json()
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
     }
 
-    // 참조 이미지 수집 (위성사진 + 지적도)
+    // 참조 이미지 수집 (위성사진 + 지적도 + 거리뷰)
     const refImages: { base64: string; mimeType: string; label: string }[] = []
     
     async function fetchImage(url: string, label: string) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
           if (buf.byteLength > 1024) {
             const b64 = Buffer.from(buf).toString('base64')
             console.log(`[GEMINI] ${label} loaded: ${Math.round(buf.byteLength / 1024)}KB ✅`)
-            refImages.push({ base64: b64, mimeType: 'image/png', label })
+            refImages.push({ base64: b64, mimeType: 'image/jpeg', label })
           } else {
             console.warn(`[GEMINI] ${label} too small (${buf.byteLength}B), skipping`)
           }
@@ -36,10 +36,14 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // 병렬로 이미지 수집
+    // 병렬로 이미지 수집 (위성사진 + 지적도 + 거리뷰 4방향)
+    const directions = ['north', 'east', 'south', 'west']
     await Promise.all([
       satelliteUrl ? fetchImage(satelliteUrl, 'satellite') : Promise.resolve(),
       cadastralMapUrl ? fetchImage(cadastralMapUrl, 'cadastral') : Promise.resolve(),
+      ...(Array.isArray(streetViewUrls) ? streetViewUrls.slice(0, 4).map((url: string, i: number) =>
+        fetchImage(url, `street-view-${directions[i]}`)
+      ) : []),
     ])
     
     console.log(`[GEMINI] Reference images: ${refImages.length} loaded (${refImages.map(r => r.label).join(', ')})`)
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
           for (const img of refImages) {
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
-          parts.push({ text: `The ${refImages.length} image(s) above show: ${refImages.map(r => r.label === 'satellite' ? 'SATELLITE/AERIAL VIEW of the actual site and neighborhood' : r.label === 'cadastral' ? 'CADASTRAL MAP showing the exact lot boundary shape and surrounding roads' : r.label).join(', ')}. The rendering MUST match the actual site shape, surrounding buildings, roads, and terrain visible in these reference photos.` })
+          parts.push({ text: `The ${refImages.length} image(s) above show: ${refImages.map(r => r.label === 'satellite' ? 'SATELLITE/AERIAL VIEW of the actual site and neighborhood' : r.label === 'cadastral' ? 'CADASTRAL MAP showing the exact lot boundary shape and surrounding roads' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — eye-level photo of the actual neighborhood` : r.label).join(', ')}. The rendering MUST match the actual site shape, surrounding buildings, roads, and terrain visible in these reference photos.` })
         }
 
         try {
@@ -115,7 +119,7 @@ export async function POST(req: NextRequest) {
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
           parts.push({ text: `REFERENCE IMAGES (${refImages.length}):
-${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape. The new building footprint must fit within this boundary shape.' : r.label}`).join('\n')}
+${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape. The new building footprint must fit within this boundary shape.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label}`).join('\n')}
 The rendering MUST reflect what is shown in these reference images. Do NOT ignore them.` })
         }
         

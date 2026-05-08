@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const VWORLD_KEY = process.env.VWORLD_API_KEY
+const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_KEY
 
 function getSatelliteUrl(lat: number, lng: number, zoom: number = 18): string {
   // ESRI World Imagery (무료, API 키 불필요)
@@ -12,6 +13,14 @@ function getCadastralMapUrl(lat: number, lng: number, zoom: number = 18): string
   // ESRI World Street Map (무료, API 키 불필요) + 지적도 대체
   const delta = 0.0015
   return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/export?bbox=${lng - delta},${lat - delta},${lng + delta},${lat + delta}&bboxSR=4326&imageSR=4326&size=600,400&format=png&f=image`
+}
+
+// 거리뷰 URL 생성 (Google Street View Static API)
+function getStreetViewUrls(lat: number, lng: number): string[] {
+  if (!GOOGLE_MAPS_KEY) return []
+  return [0, 90, 180, 270].map(heading =>
+    `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${lat},${lng}&heading=${heading}&pitch=0&fov=90&key=${GOOGLE_MAPS_KEY}`
+  )
 }
 
 async function fetchParcelWFS(lat: number, lng: number): Promise<any> {
@@ -206,6 +215,7 @@ export async function POST(req: NextRequest) {
       roads: nearbyCtx.roads,
       satelliteUrl: getSatelliteUrl(lat, lng, 18),
       cadastralMapUrl: getCadastralMapUrl(lat, lng, 18),
+      streetViewUrls: getStreetViewUrls(lat, lng),
       directions: {
         north: dirSummary.north,
         south: dirSummary.south,

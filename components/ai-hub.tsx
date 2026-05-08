@@ -15,6 +15,7 @@ interface ConceptInput {
   surroundingContext?: string
   satelliteUrl?: string
   cadastralMapUrl?: string
+  streetViewUrls?: string[]
   regulation?: { heightLimit?: number; farRatio?: number; zoneName?: string; northShadow?: boolean; northShadowAngle?: number; overlappingRegs?: string[] }
 }
 
@@ -139,6 +140,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
           cameraAngle: angle, sceneMode: scene,
           satelliteUrl: input.satelliteUrl,
         cadastralMapUrl: input.cadastralMapUrl,
+        streetViewUrls: input.streetViewUrls,
           material: materialId ? { type: materialId } : undefined,
         regulation: input.regulation,
         }) })
@@ -175,6 +177,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
         surroundingContext:input.surroundingContext, sceneMode: scene,
         satelliteUrl: input.satelliteUrl,
         cadastralMapUrl: input.cadastralMapUrl,
+        streetViewUrls: input.streetViewUrls,
         material: materialId ? { type: materialId } : undefined,
         regulation: input.regulation,
         multiAngle: true,

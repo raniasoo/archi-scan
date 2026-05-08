@@ -100,6 +100,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
             })(),
             satelliteUrl: vworldState?.satelliteUrl,
             cadastralMapUrl: vworldState?.cadastralMapUrl,
+            streetViewUrls: vworldState?.streetViewUrls,
             regulation: {
               heightLimit: result.heightLimit,
               farRatio: result.farRatio,
@@ -323,6 +324,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           sunAnalysis: sunResult,
           satelliteUrl: vworldData?.satelliteUrl,
           cadastralMapUrl: vworldData?.cadastralMapUrl,
+          streetViewUrls: vworldData?.streetViewUrls,
         },
       })
 
