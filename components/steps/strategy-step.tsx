@@ -188,18 +188,6 @@ export function StrategyStep(props: StrategyStepProps) {
           </div>
         )}
       </div>
-
-      {/* 법규 검토로 건너뛰기 */}
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <button
-          onClick={handleStrategyComplete}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          법규 검토로 바로 이동 →
-        </button>
-        <div className="h-px flex-1 bg-border" />
-      </div>
     </div>
   )
 }
