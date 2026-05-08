@@ -3,11 +3,15 @@ import { NextRequest, NextResponse } from 'next/server'
 const VWORLD_KEY = process.env.VWORLD_API_KEY
 
 function getSatelliteUrl(lat: number, lng: number, zoom: number = 18): string {
-  return `https://api.vworld.kr/req/image?service=image&request=getmap&key=${VWORLD_KEY}&basemap=PHOTO&center=${lng},${lat}&zoom=${zoom}&size=600,400&format=png`
+  // ESRI World Imagery (무료, API 키 불필요)
+  const delta = 0.002
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lng - delta},${lat - delta},${lng + delta},${lat + delta}&bboxSR=4326&imageSR=4326&size=600,400&format=png&f=image`
 }
 
 function getCadastralMapUrl(lat: number, lng: number, zoom: number = 18): string {
-  return `https://api.vworld.kr/req/image?service=image&request=getmap&key=${VWORLD_KEY}&basemap=GRAPHIC&center=${lng},${lat}&zoom=${zoom}&size=600,400&format=png`
+  // ESRI World Street Map (무료, API 키 불필요) + 지적도 대체
+  const delta = 0.0015
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/export?bbox=${lng - delta},${lat - delta},${lng + delta},${lat + delta}&bboxSR=4326&imageSR=4326&size=600,400&format=png&f=image`
 }
 
 async function fetchParcelWFS(lat: number, lng: number): Promise<any> {
