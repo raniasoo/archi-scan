@@ -376,12 +376,31 @@ function buildArchitecturePrompt(params: {
   let isComplex = false  // 다동 단지 여부
   let buildingCount = 1
   
-  if (f <= 2 && u <= 4) {
-    buildingForm = `A low-rise detached house, ${f} stories, compact and elegant. Footprint ~${bW}m × ${bD}m. Residential entrance with garden.`
-  } else if (f <= 5 && u <= 20) {
-    buildingForm = `A low-rise multi-family villa, ${f} stories, ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: entrance hall + parking. Upper: residential.`
-  } else if (f <= 5 && u > 20 && siteArea && siteArea > 1500) {
-    // ★ 저층 + 많은 세대 + 넓은 대지 = 다동(多棟) 빌라 단지
+  // ★ buildingType 우선 — 도면과 일치하는 건물 형태 강제
+  if (buildingType === 'courtyard') {
+    // 중정형: 반드시 1동 연속 건물 (ㄷ자/ㅁ자)
+    buildingForm = `A SINGLE CONTINUOUS U-SHAPED (ㄷ자형) BUILDING wrapping around a central courtyard garden.
+${f} stories, ${u} units total. Building footprint: ~${bW}m × ${bD}m.
+CRITICAL: This is ONE SINGLE CONNECTED BUILDING — NOT separate buildings or a village.
+The building forms a "ㄷ" or "U" shape with 3 connected wings surrounding a landscaped courtyard.
+Ground floor: lobby entrance + retail shops (상가) + management office + mechanical room + community space.
+Upper floors: residential units arranged along corridors facing the courtyard.
+The central courtyard (~${Math.round(footprint * 0.3)}㎡) has trees, landscaping, and seating areas.
+Building width: ~${bW}m. Building depth: ~${bD}m. Total height: ~${(f * 3.3 + 1.2).toFixed(1)}m.`
+  } else if (buildingType === 'lshape') {
+    // L자형: 반드시 1동
+    buildingForm = `A SINGLE L-SHAPED BUILDING, ${f} stories, ${u} units.
+Footprint: ~${bW}m × ${bD}m. The building bends at a right angle, creating a private garden in the inner corner.
+Ground floor: lobby + parking entrance. Upper floors: residential.
+CRITICAL: This is ONE building with an L-shaped footprint, NOT multiple buildings.`
+  } else if (buildingType === 'linear') {
+    // 일자형: 반드시 1동
+    buildingForm = `A SINGLE LINEAR (일자형) BUILDING, ${f} stories, ${u} units.
+An elongated horizontal slab, ~${bW}m wide × ${bD}m deep.
+Ground floor: lobby + parking. Upper floors: residential units in a row.
+CRITICAL: One continuous rectangular building, NOT multiple separate structures.`
+  } else if (buildingType === 'cluster' || (f <= 5 && u > 20 && siteArea && siteArea > 1500)) {
+    // 클러스터형 또는 저층+다세대+넓은대지: 다동 단지
     isComplex = true
     const unitsPerBldg = Math.ceil(u / Math.max(Math.round(u / (f * 4)), 2))
     buildingCount = Math.ceil(u / unitsPerBldg)
@@ -409,11 +428,11 @@ CRITICAL: Show ${buildingCount} SEPARATE buildings at DIFFERENT ground levels, c
   }
 
   const typeHints: Record<string, string> = {
-    'tower': 'Single tower, vertical emphasis',
-    'courtyard': 'U-shaped, central garden visible',
-    'lshape': 'L-shaped building',
-    'linear': 'Elongated horizontal slab',
-    'cluster': 'Multiple small buildings clustered',
+    'tower': 'Single tower building, vertical emphasis, slender form',
+    'courtyard': 'SINGLE U-shaped building enclosing a central courtyard — ONE connected structure, NOT separate buildings',
+    'lshape': 'SINGLE L-shaped building — ONE connected structure bending at a right angle',
+    'linear': 'SINGLE elongated horizontal slab — ONE long continuous building',
+    'cluster': 'Multiple small buildings clustered together — separate structures with spaces between',
   }
   const typeHint = buildingType ? (typeHints[buildingType] || '') : ''
 
@@ -547,7 +566,8 @@ ${isComplex
 - Show spaces BETWEEN buildings: gardens, walkways, small courtyards, parking areas.
 - The complex should feel like walking through a small residential neighborhood.`
   : `- The building MUST have EXACTLY ${f} floors. Count them: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. This is non-negotiable.
-- ${f <= 2 ? 'This is a LOW-RISE building, maximum 2 stories tall. Do NOT make it taller.' : f <= 5 ? `This is a LOW to MID-RISE building with exactly ${f} visible floor levels.` : `This is a ${f}-story building. Each floor must be clearly visible and countable.`}`}
+- ${f <= 2 ? 'This is a LOW-RISE building, maximum 2 stories tall. Do NOT make it taller.' : f <= 5 ? `This is a LOW to MID-RISE building with exactly ${f} visible floor levels.` : `This is a ${f}-story building. Each floor must be clearly visible and countable.`}
+- ${buildingType === 'courtyard' || buildingType === 'lshape' || buildingType === 'linear' ? 'This is a SINGLE CONNECTED BUILDING. Do NOT show multiple separate buildings or a village of houses.' : ''}`}
 - Photorealistic 3D architectural rendering
 - CAMERA: ${cameraDesc}
 - SCENE: ${sceneText}
