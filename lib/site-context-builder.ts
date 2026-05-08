@@ -291,6 +291,27 @@ ${sunViewDesc}`)
     sections.push(dirParts.join('\n'))
   }
 
+  // ━━━ 주변환경 렌더링 강제 (가장 중요) ━━━
+  const contextInstruction = `
+CRITICAL RENDERING CONTEXT (MUST FOLLOW):
+The building does NOT exist in isolation. It is surrounded by an existing Korean neighborhood.
+You MUST show neighboring buildings in the rendering background and sides:
+${neighborhood.includes('villa') || neighborhood.includes('빌라') || neighborhood.includes('low-rise') || neighborhood.includes('hillside')
+  ? `- Show 2-3 story Korean villas/houses with DISTINCTIVE RED or BROWN PITCHED ROOFS on both sides and behind the new building
+- Show narrow Korean residential streets with parked cars
+- Show concrete block walls, small gardens, and typical Korean residential landscaping
+- The new building should look like it FITS INTO this existing neighborhood, not like it was dropped from space`
+  : neighborhood.includes('apartment') || neighborhood.includes('high-rise')
+  ? `- Show neighboring apartment buildings in the background
+- Show urban streetscape with sidewalks and street trees`
+  : `- Show existing neighboring buildings appropriate to the area
+- The building should blend with its surroundings`}
+- Show the actual TERRAIN SLOPE if the site is sloped — the ground should NOT be flat
+- Include mature trees and natural vegetation around the site
+- The sky and lighting should feel like a REAL photograph taken on-site, not a studio rendering`
+
+  sections.push(contextInstruction)
+
   const fullPrompt = sections.join('\n\n')
 
   return {
