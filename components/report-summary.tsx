@@ -2405,7 +2405,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* AI 건축 렌더링 — 표지 바로 다음 */}
-        {aiRenderImage && (
+        {aiRenderImage ? (
           <div className="report-card avoid-break print-section overflow-hidden">
             <img 
               src={aiRenderImage} 
@@ -2418,7 +2418,14 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                 <Sparkles className="h-3 w-3" style={{ color: '#7c3aed' }} />
                 <span className="text-[10px] font-medium">AI 건축 렌더링</span>
               </div>
-              <span className="text-[9px] text-muted-foreground">Powered by Nano Banana (Gemini)</span>
+              <span className="text-[9px] text-muted-foreground">Powered by Gemini</span>
+            </div>
+          </div>
+        ) : (
+          <div className="report-card avoid-break overflow-hidden no-print">
+            <div className="flex items-center justify-center gap-2 py-8 bg-secondary/10 border border-dashed border-border rounded-lg">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-xs text-muted-foreground">AI 건축 렌더링 생성 중...</span>
             </div>
           </div>
         )}

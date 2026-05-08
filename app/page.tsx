@@ -785,6 +785,32 @@ export default function ArchiScanPage() {
     console.log('[v0] FeasibilityResult updated:', result, '분양가:', (effectiveSalesPrice || 8000000) / 10000, '만/㎡')
   }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, marketPrice.suggestedSalePrice, regionalPricing, regulation.zoneType])
 
+  // 보고서 진입 시 AI 렌더링 자동 생성
+  useEffect(() => {
+    if (currentStep !== 'report' || aiRenderImage || !selectedLayoutData || !address) return
+    let cancelled = false
+    const generate = async () => {
+      try {
+        const r = await fetch('/api/ai-render', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `${selectedLayoutData.name} ${selectedLayoutData.floors}층 ${selectedLayoutData.units}세대`,
+            style: 'modern-luxury', cameraAngle: 'eye-level', sceneMode: 'afternoon',
+            address, layoutName: selectedLayoutData.name,
+            floors: selectedLayoutData.floors, units: selectedLayoutData.units,
+            siteArea: parseFloat(siteArea) || 660,
+            buildingType: selectedLayoutData.type, coverage: selectedLayoutData.coverage,
+            strategy, regulation: { heightLimit: regulation?.heightLimit || 12, zoneName: regulation?.zoneName },
+          }),
+        })
+        const d = await r.json()
+        if (!cancelled && d.success && d.image) setAiRenderImage(d.image)
+      } catch {}
+    }
+    generate()
+    return () => { cancelled = true }
+  }, [currentStep, aiRenderImage, selectedLayoutData, address])
+
   const handleSiteInputComplete = () => {
     setCurrentStep("regulation")
   }
