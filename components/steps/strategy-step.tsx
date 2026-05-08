@@ -167,7 +167,16 @@ export function StrategyStep(props: StrategyStepProps) {
                 ].map(s => (
                   <button
                     key={s.id}
-                    onClick={() => setStrategy(s.id)}
+                    onClick={() => {
+                      setStrategy(s.id)
+                      const matchGoal = GOALS.find(g => g.strategy === s.id)
+                      if (matchGoal) {
+                        setSelectedGoal(matchGoal.id)
+                        setDesignApproach(matchGoal.approach)
+                      } else {
+                        setSelectedGoal('')
+                      }
+                    }}
                     className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
                       strategy === s.id
                         ? 'bg-primary text-primary-foreground'
