@@ -306,29 +306,53 @@ ${sunViewDesc}`)
   }
 
   // ━━━ 주변환경 렌더링 강제 (가장 중요) ━━━
-  const isUpscaleHillside = neighborhood.includes('UPSCALE') || neighborhood.includes('luxury') || neighborhood.includes('평창') || neighborhood.includes('성북')
-  const isLowRiseVilla = neighborhood.includes('villa') || neighborhood.includes('빌라') || neighborhood.includes('low-rise') || neighborhood.includes('hillside')
-  const isHighRise = neighborhood.includes('apartment') || neighborhood.includes('high-rise')
+  const addr = input.address || ''
+  const isUpscaleHillside = neighborhood.includes('UPSCALE') || neighborhood.includes('luxury') || addr.includes('평창') || addr.includes('부암') || addr.includes('성북동')
+  const isLowRiseVilla = !isUpscaleHillside && (neighborhood.includes('villa') || neighborhood.includes('빌라') || neighborhood.includes('low-rise') || neighborhood.includes('hillside'))
+  const isHighRise = !isUpscaleHillside && !isLowRiseVilla && (neighborhood.includes('apartment') || neighborhood.includes('high-rise'))
 
   const contextInstruction = `
-CRITICAL RENDERING CONTEXT (MUST FOLLOW):
+CRITICAL RENDERING CONTEXT (MUST FOLLOW — this determines what the SURROUNDING ENVIRONMENT looks like):
 The building does NOT exist in isolation. It is surrounded by an existing Korean neighborhood.
 You MUST show neighboring buildings in the rendering background and sides:
 ${isUpscaleHillside
-  ? `- This is an UPSCALE HILLSIDE neighborhood: show 2-3 story LUXURY villas/houses with clean stucco or stone finishes, private gardens with tall hedges
-- DENSE GREEN MOUNTAINS and mature trees MUST be visible in the background — this is at the foot of a mountain
-- Show narrow winding UPHILL roads with stone retaining walls
-- NO cheap-looking buildings, NO red corrugated roofs — these are LUXURY homes with flat or gently pitched roofs in neutral colors
-- The new building should look PREMIUM and HARMONIOUS with this quiet, exclusive neighborhood
-- Show the natural hillside terrain — the ground slopes significantly`
+  ? `THIS IS 평창동/부암동 — an EXCLUSIVE LUXURY RESIDENTIAL HILLSIDE neighborhood in Seoul.
+SURROUNDING BUILDINGS (show these EXACTLY as described):
+- 2-3 story LUXURY PRIVATE HOUSES and VILLAS on both sides of the road
+- Walls: WHITE or BEIGE STUCCO, some with NATURAL STONE cladding (NOT bare concrete, NOT cheap tile)
+- Roofs: FLAT ROOFS or low-pitch DARK GRAY roofs (absolutely NO red/brown corrugated metal roofs!)
+- Fences/Walls: STONE RETAINING WALLS, dark iron gates, tall HEDGE FENCES with mature greenery
+- Gardens: well-manicured PRIVATE GARDENS with tall trees (pine, maple, cherry) behind walls
+- Cars: premium sedans and SUVs parked in driveways (Mercedes, BMW, Genesis)
+
+ROADS AND TERRAIN:
+- NARROW 2-lane road going STEEPLY UPHILL — the road curves and climbs
+- No sidewalks in some areas — road edges meet stone retaining walls
+- Street lights with simple modern design
+
+NATURE (MOST IMPORTANT):
+- DENSE GREEN MOUNTAINS directly behind/above the buildings — Bukaksan (북악산) is RIGHT THERE
+- Mountain slopes covered with LUSH deciduous and pine forest
+- The green mountain DOMINATES the upper half of the image background
+- Mature trees (20m+) growing between and behind houses
+
+ABSOLUTELY DO NOT SHOW:
+- Apartment buildings or towers — there are NONE in this area
+- Commercial signs, neon, or shop fronts — this is purely residential
+- Red/brown corrugated metal roofs — those are in cheaper neighborhoods
+- Flat empty land — every surface is either built or covered in vegetation
+- Generic modern cityscape — this is a MOUNTAIN VILLAGE feel`
   : isLowRiseVilla
-  ? `- Show 2-3 story Korean villas/houses with DISTINCTIVE RED or BROWN PITCHED ROOFS on both sides and behind the new building
-- Show narrow Korean residential streets with parked cars
-- Show concrete block walls, small gardens, and typical Korean residential landscaping
-- The new building should look like it FITS INTO this existing neighborhood, not like it was dropped from space`
+  ? `- Show 2-3 story Korean villas/houses (빌라) with DISTINCTIVE RED or BROWN PITCHED ROOFS on both sides
+- Walls: concrete block walls painted white/cream, or exposed brick
+- Show narrow Korean residential streets (4-6m wide) with parked cars on both sides
+- Small gardens, potted plants near entrances, laundry drying
+- Mixed-age buildings — some newer, some older with weathered facades
+- The new building should look like it FITS INTO this existing neighborhood`
   : isHighRise
-  ? `- Show neighboring apartment buildings in the background
-- Show urban streetscape with sidewalks and street trees`
+  ? `- Show neighboring apartment buildings (아파트) in the background — 15-25 story concrete towers
+- Urban streetscape with wide sidewalks, street trees, crosswalks
+- Commercial ground floors with signs in Korean`
   : `- Show existing neighboring buildings appropriate to the area
 - The building should blend with its surroundings`}
 - Show the actual TERRAIN SLOPE if the site is sloped — the ground should NOT be flat
