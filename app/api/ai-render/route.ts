@@ -22,9 +22,14 @@ export async function POST(req: NextRequest) {
         const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
         if (res.ok) {
           const buf = await res.arrayBuffer()
-          const b64 = Buffer.from(buf).toString('base64')
-          console.log(`[GEMINI] ${label} loaded: ${Math.round(buf.byteLength / 1024)}KB`)
-          refImages.push({ base64: b64, mimeType: 'image/png', label })
+          // 최소 1KB 이상인 실제 이미지만 사용
+          if (buf.byteLength > 1024) {
+            const b64 = Buffer.from(buf).toString('base64')
+            console.log(`[GEMINI] ${label} loaded: ${Math.round(buf.byteLength / 1024)}KB ✅`)
+            refImages.push({ base64: b64, mimeType: 'image/png', label })
+          } else {
+            console.warn(`[GEMINI] ${label} too small (${buf.byteLength}B), skipping`)
+          }
         }
       } catch (e) {
         console.warn(`[GEMINI] ${label} fetch failed:`, e)
