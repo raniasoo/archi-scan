@@ -1598,7 +1598,7 @@ export default function ArchiScanPage() {
           }
         }
         setShowQuickMode(false)
-        setCurrentStep('strategy' as AppStep)
+        setCurrentStep('regulation' as AppStep)
       }} />
     )
   }
