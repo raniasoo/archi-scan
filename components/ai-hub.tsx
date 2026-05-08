@@ -139,7 +139,8 @@ function getOptimalSettings(input: ConceptInput): { style: string; angle: string
 }
 
 export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void }) {
-  const optimal = getOptimalSettings(input)
+  let optimal = { style: 'modern-luxury', angle: 'eye-level', scene: 'afternoon', material: null as string | null, reason: '' }
+  try { optimal = getOptimalSettings(input) } catch (e) { console.warn('[AIHub] getOptimalSettings error:', e) }
   const [isOpen, setIsOpen] = useState(false)
   const [tab, setTab] = useState<'render'|'consult'|'proposal'|'prompt'>('render')
   const [style, setStyle] = useState(optimal.style)
