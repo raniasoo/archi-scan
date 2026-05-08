@@ -338,7 +338,8 @@ export function LayoutsStep(props: LayoutsStepProps) {
             address,
             zoneType: regulation?.zoneType,
             zoneName: (() => {
-              const label = (molitSupplementData as any)?.zoneLabel
+              const rawLabel = (molitSupplementData as any)?.zoneLabel
+              const label = typeof rawLabel === 'string' ? rawLabel : ''
               if (label && !label.includes('residential') && !label.includes('commercial')) return label
               const map: Record<string, string> = {
                 'residential-exclusive-1': '제1종전용주거지역', 'residential-exclusive-2': '제2종전용주거지역',

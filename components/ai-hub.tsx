@@ -88,9 +88,9 @@ const MATERIALS = [
 
 // ━━━ 대지 특성 기반 AI 자동 최적화 ━━━
 function getOptimalSettings(input: ConceptInput): { style: string; angle: string; scene: string; material: string | null; reason: string } {
-  const addr = input.address || ''
-  const zone = input.zoneType || ''
-  const strat = input.strategy || ''
+  const addr = String(input.address || '')
+  const zone = String(input.zoneType || '')
+  const strat = String(input.strategy || '')
   const floors = input.floors || 3
   const regs = (input.regulation?.overlappingRegs || []).map((r: any) => typeof r === 'string' ? r : (r?.name || String(r || '')))
   const hasNatureReg = regs.some((r: string) => r.includes('경관') || r.includes('자연') || r.includes('녹지'))
