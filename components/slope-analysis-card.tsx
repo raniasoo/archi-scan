@@ -2,11 +2,22 @@
 
 import { useEffect, useState } from "react"
 import { Mountain, ArrowDown, AlertTriangle, ChevronDown, ChevronUp, Lightbulb } from "lucide-react"
+import { analyzeTerrrain } from "@/lib/terrain-analysis"
 
 interface SlopeAnalysisCardProps {
   lng: number
   lat: number
   className?: string
+  externalData?: {
+    avgSlope: number
+    maxSlope: number
+    slopeDirection: string
+    elevationDiff: number
+    minElevation: number
+    maxElevation: number
+    slopeGrade: string
+    foundationType: string
+  } | null
 }
 
 interface SlopeData {
@@ -30,21 +41,64 @@ const DIRECTION_ARROWS: Record<string, string> = {
   '북동': '↗', '북서': '↖', '남동': '↘', '남서': '↙',
 }
 
-export function SlopeAnalysisCard({ lng, lat, className = "" }: SlopeAnalysisCardProps) {
+export function SlopeAnalysisCard({ lng, lat, className = "", externalData }: SlopeAnalysisCardProps) {
   const [data, setData] = useState<SlopeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
+    // 외부 데이터가 있으면 API 호출 생략
+    if (externalData) {
+      const gradeColors: Record<string, string> = { flat: '#22c55e', gentle: '#3b82f6', moderate: '#f59e0b', steep: '#ef4444', 'very-steep': '#dc2626' }
+      const gradeNames: Record<string, string> = { flat: '평탄', gentle: '완만', moderate: '보통 경사', steep: '급경사', 'very-steep': '매우 급경사' }
+      // 8방위에서 방향만 추출
+      const dirMatch = externalData.slopeDirection.match(/^(남|북|동|서|남서|남동|북서|북동)/)
+      const dir = dirMatch?.[0] || '남'
+      setData({
+        slope: {
+          average: externalData.avgSlope,
+          max: externalData.maxSlope,
+          maxDirection: dir,
+          slopeDirection: dir,
+          elevRange: externalData.elevationDiff,
+          minElevation: externalData.minElevation,
+          maxElevation: externalData.maxElevation,
+        },
+        grade: gradeNames[externalData.slopeGrade] || externalData.slopeGrade,
+        gradeColor: gradeColors[externalData.slopeGrade] || '#f59e0b',
+        designImpact: [externalData.foundationType],
+        center: { elevation: (externalData.minElevation + externalData.maxElevation) / 2 },
+      })
+      setLoading(false)
+      return
+    }
+
     if (!lng || !lat) return
     setLoading(true)
     setError(false)
-    fetch(`/api/elevation?lng=${lng}&lat=${lat}`)
+    // terrain-analysis.ts와 동일한 소스 사용 (elevation-grid)
+    fetch(`/api/elevation-grid?lat=${lat}&lng=${lng}&grid=10&range=0.0006`)
       .then(r => r.json())
       .then(d => {
-        if (d.success) setData(d)
-        else setError(true)
+        if (d.elevations?.length) {
+          
+          const t = analyzeTerrrain(d.elevations, 10, 660, 66)
+          const gradeColors: Record<string, string> = { flat: '#22c55e', gentle: '#3b82f6', moderate: '#f59e0b', steep: '#ef4444', 'very-steep': '#dc2626' }
+          const gradeNames: Record<string, string> = { flat: '평탄', gentle: '완만', moderate: '보통 경사', steep: '급경사', 'very-steep': '매우 급경사' }
+          const dirMatch = t.slopeDirection.match(/^(남|북|동|서|남서|남동|북서|북동)/)
+          const dir = dirMatch?.[0] || '남'
+          setData({
+            slope: {
+              average: t.avgSlope, max: t.maxSlope, maxDirection: dir, slopeDirection: dir,
+              elevRange: t.elevationDiff, minElevation: t.minElevation, maxElevation: t.maxElevation,
+            },
+            grade: gradeNames[t.slopeGrade] || t.slopeGrade,
+            gradeColor: gradeColors[t.slopeGrade] || '#f59e0b',
+            designImpact: [t.foundationType, t.description],
+            center: { elevation: (t.minElevation + t.maxElevation) / 2 },
+          })
+        } else setError(true)
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false))

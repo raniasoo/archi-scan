@@ -51,16 +51,21 @@ export function analyzeTerrrain(
   const avgSlope = Math.round(slopes.reduce((s, v) => s + v, 0) / slopes.length * 10) / 10
   const maxSlope = Math.round(Math.max(...slopes) * 10) / 10
 
-  // 경사 방향 (전체적인 기울기 방향)
+  // 경사 방향 (8방위 — 대지 화면과 통일)
   const totalNS = slopeNS / slopes.length
   const totalEW = slopeEW / slopes.length
   let slopeDirection = '평지'
   if (Math.abs(totalNS) > 0.02 || Math.abs(totalEW) > 0.02) {
-    if (Math.abs(totalNS) > Math.abs(totalEW)) {
-      slopeDirection = totalNS > 0 ? '남향 경사 (북고남저)' : '북향 경사 (남고북저)'
-    } else {
-      slopeDirection = totalEW > 0 ? '동향 경사 (서고동저)' : '서향 경사 (동고서저)'
+    const angle = Math.atan2(totalEW, totalNS) * 180 / Math.PI
+    const dirs8 = ['남', '남서', '서', '북서', '북', '북동', '동', '남동']
+    const idx = Math.round(((angle + 360) % 360) / 45) % 8
+    const dir = dirs8[idx]
+    const desc: Record<string, string> = {
+      '남': '남향 경사 (북고남저)', '남서': '남서향 경사', '서': '서향 경사 (동고서저)',
+      '북서': '북서향 경사', '북': '북향 경사 (남고북저)', '북동': '북동향 경사',
+      '동': '동향 경사 (서고동저)', '남동': '남동향 경사',
     }
+    slopeDirection = desc[dir] || dir + '향 경사'
   }
 
   // 경사 등급

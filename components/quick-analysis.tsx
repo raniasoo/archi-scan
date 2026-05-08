@@ -347,7 +347,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                     <span className="text-[10px] font-medium">주변환경</span>
                   </div>
                   <span className="text-[10px] text-muted-foreground">
-                    건물 {siteContext.buildingCount}동 · 평균 {siteContext.avgFloors}층 · 최고 {siteContext.maxFloors}층
+                    건물 {siteContext.buildingCount}동{siteContext.avgFloors > 0 ? ` · 평균 ${siteContext.avgFloors}층 · 최고 ${siteContext.maxFloors}층` : ''}
                   </span>
                 </div>
               )}
