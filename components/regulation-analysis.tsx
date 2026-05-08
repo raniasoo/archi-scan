@@ -84,29 +84,29 @@ export function RegulationAnalysisPanel({ siteArea, regulation, valueSources }: 
           <span className="flex items-center gap-1">
             <span className="text-muted-foreground">용도지역:</span>
             <span className="font-medium text-foreground">
-              {regulation.zoneType === "custom" 
-                ? regulation.zoneTypeCustom || "직접 입력"
-                : ZONE_TYPE_LABELS[regulation.zoneType]}
+              {regulation?.zoneType === "custom" 
+                ? regulation?.zoneTypeCustom || "직접 입력"
+                : ZONE_TYPE_LABELS[regulation?.zoneType]}
             </span>
             {valueSources?.zoneType && <SourceLabel source={valueSources.zoneType} />}
           </span>
           <span className="text-muted-foreground/50">|</span>
           <span className="flex items-center gap-1">
             <span className="text-muted-foreground">접도:</span>
-            <span className="font-medium text-foreground">{regulation.roadWidth}m 이상</span>
+            <span className="font-medium text-foreground">{regulation?.roadWidth}m 이상</span>
             {valueSources?.roadCondition && <SourceLabel source={valueSources.roadCondition} />}
           </span>
           <span className="text-muted-foreground/50">|</span>
           <span className="flex items-center gap-1">
             <span className="text-muted-foreground">높이:</span>
-            <span className="font-medium text-foreground">{regulation.maxHeight}m</span>
+            <span className="font-medium text-foreground">{regulation?.maxHeight}m</span>
             {valueSources?.heightLimit && <SourceLabel source={valueSources.heightLimit} />}
           </span>
           <span className="text-muted-foreground/50">|</span>
           <span className="flex items-center gap-1">
             <span className="text-muted-foreground">지구단위:</span>
             <span className="font-medium text-foreground">
-              {regulation.additionalNotes?.includes('지구단위') ? '있음' : '없음'}
+              {regulation?.additionalNotes?.includes('지구단위') ? '있음' : '없음'}
             </span>
             {valueSources?.districtPlan && <SourceLabel source={valueSources.districtPlan} />}
           </span>
@@ -126,9 +126,9 @@ export function RegulationAnalysisPanel({ siteArea, regulation, valueSources }: 
             <div className="rounded-lg bg-secondary/50 p-2.5">
               <p className="text-[10px] text-muted-foreground mb-0.5">용도지역</p>
               <p className="font-semibold text-foreground text-xs leading-tight">
-                {regulation.zoneType === "custom" 
-                  ? regulation.zoneTypeCustom || "직접 입력"
-                  : ZONE_TYPE_LABELS[regulation.zoneType]}
+                {regulation?.zoneType === "custom" 
+                  ? regulation?.zoneTypeCustom || "직접 입력"
+                  : ZONE_TYPE_LABELS[regulation?.zoneType]}
               </p>
             </div>
             <div className="rounded-lg bg-secondary/50 p-2.5">
@@ -140,14 +140,14 @@ export function RegulationAnalysisPanel({ siteArea, regulation, valueSources }: 
             <div className="rounded-lg bg-secondary/50 p-2.5">
               <p className="text-[10px] text-muted-foreground mb-0.5">높이 / 층수</p>
               <p className="font-semibold text-foreground text-xs">
-                {regulation.maxHeight}m / {regulation.maxFloors}층
+                {regulation?.maxHeight}m / {regulation?.maxFloors}층
               </p>
             </div>
             <div className="rounded-lg bg-secondary/50 p-2.5">
               <p className="text-[10px] text-muted-foreground mb-0.5">사선 제한</p>
               <p className="font-semibold text-foreground text-xs">
-                {SETBACK_TYPE_LABELS[regulation.setbackType]}
-                {regulation.setbackType !== "none" && ` (${regulation.setbackAngle}°)`}
+                {SETBACK_TYPE_LABELS[regulation?.setbackType]}
+                {regulation?.setbackType !== "none" && ` (${regulation?.setbackAngle}°)`}
               </p>
             </div>
           </div>
@@ -216,7 +216,7 @@ export function RegulationAnalysisPanel({ siteArea, regulation, valueSources }: 
               <div>
                 <p className="text-xs text-muted-foreground">필요 주차</p>
                 <p className="text-lg font-bold text-foreground">{analysis.requiredParking}대</p>
-                <p className="text-xs text-muted-foreground">세대당 {regulation.parkingRatio}대</p>
+                <p className="text-xs text-muted-foreground">세대당 {regulation?.parkingRatio}대</p>
               </div>
             </div>
           </CardContent>
@@ -247,7 +247,7 @@ export function RegulationAnalysisPanel({ siteArea, regulation, valueSources }: 
             <Progress value={utilizationRate} className="h-2" />
           </div>
           <div className="text-xs text-muted-foreground bg-secondary/30 rounded p-2">
-            전면 {regulation.setbackFront}m + 측면 {regulation.setbackSide}m×2 + 후면 {regulation.setbackRear}m 이격 적용
+            전면 {regulation?.setbackFront}m + 측면 {regulation?.setbackSide}m×2 + 후면 {regulation?.setbackRear}m 이격 적용
           </div>
         </CardContent>
       </Card>

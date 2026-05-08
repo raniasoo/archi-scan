@@ -90,7 +90,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
             용도지역
           </Label>
           <Select
-            value={regulation.zoneType}
+            value={regulation?.zoneType || "residential-2"}
             onValueChange={(v) => handleZoneTypeChange(v as ZoneType)}
           >
             <SelectTrigger className="bg-secondary/50">
@@ -104,7 +104,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
               ))}
             </SelectContent>
           </Select>
-          {regulation.zoneType === "custom" && (
+          {regulation?.zoneType === "custom" && (
             <Input
               placeholder="용도지역 직접 입력"
               value={regulation.zoneTypeCustom || ""}
@@ -125,7 +125,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
             </Label>
             <Input
               type="number"
-              value={regulation.maxCoverageRatio}
+              value={regulation?.maxCoverageRatio ?? 60}
               onChange={(e) => handleChange("maxCoverageRatio", Number(e.target.value))}
               className="bg-secondary/50"
               min={0}
@@ -140,7 +140,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
             </Label>
             <Input
               type="number"
-              value={regulation.maxFloorAreaRatio}
+              value={regulation?.maxFloorAreaRatio ?? 200}
               onChange={(e) => handleChange("maxFloorAreaRatio", Number(e.target.value))}
               className="bg-secondary/50"
               min={0}
@@ -159,7 +159,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
             </Label>
             <Input
               type="number"
-              value={regulation.maxHeight}
+              value={regulation?.maxHeight ?? 30}
               onChange={(e) => handleChange("maxHeight", Number(e.target.value))}
               className="bg-secondary/50"
               min={0}
@@ -172,7 +172,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
             </Label>
             <Input
               type="number"
-              value={regulation.maxFloors}
+              value={regulation?.maxFloors ?? 12}
               onChange={(e) => handleChange("maxFloors", Number(e.target.value))}
               className="bg-secondary/50"
               min={1}
@@ -189,7 +189,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
             </Label>
             <Input
               type="number"
-              value={regulation.roadWidth}
+              value={regulation?.roadWidth ?? 8}
               onChange={(e) => handleChange("roadWidth", Number(e.target.value))}
               className="bg-secondary/50"
               min={0}
@@ -201,7 +201,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
               도로 조건
             </Label>
             <Select
-              value={regulation.roadCondition}
+              value={regulation?.roadCondition}
               onValueChange={(v) => handleChange("roadCondition", v as RoadCondition)}
             >
               <SelectTrigger className="bg-secondary/50">
@@ -226,7 +226,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
           </Label>
           <Input
             type="number"
-            value={regulation.parkingRatio}
+            value={regulation?.parkingRatio ?? 1}
             onChange={(e) => handleChange("parkingRatio", Number(e.target.value))}
             className="bg-secondary/50"
             min={0}
@@ -255,7 +255,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium">사선 제한 유형</Label>
                 <Select
-                  value={regulation.setbackType}
+                  value={regulation?.setbackType}
                   onValueChange={(v) => handleChange("setbackType", v as SetbackType)}
                 >
                   <SelectTrigger className="bg-background">
@@ -270,12 +270,12 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
                   </SelectContent>
                 </Select>
               </div>
-              {regulation.setbackType !== "none" && (
+              {regulation?.setbackType !== "none" && (
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium">사선 각도 (도)</Label>
                   <Input
                     type="number"
-                    value={regulation.setbackAngle}
+                    value={regulation?.setbackAngle}
                     onChange={(e) => handleChange("setbackAngle", Number(e.target.value))}
                     className="bg-background"
                     min={0}
@@ -291,7 +291,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
                 <Label className="text-sm font-medium">전면 이격 (m)</Label>
                 <Input
                   type="number"
-                  value={regulation.setbackFront}
+                  value={regulation?.setbackFront}
                   onChange={(e) => handleChange("setbackFront", Number(e.target.value))}
                   className="bg-background"
                   min={0}
@@ -302,7 +302,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
                 <Label className="text-sm font-medium">측면 이격 (m)</Label>
                 <Input
                   type="number"
-                  value={regulation.setbackSide}
+                  value={regulation?.setbackSide}
                   onChange={(e) => handleChange("setbackSide", Number(e.target.value))}
                   className="bg-background"
                   min={0}
@@ -313,7 +313,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
                 <Label className="text-sm font-medium">후면 이격 (m)</Label>
                 <Input
                   type="number"
-                  value={regulation.setbackRear}
+                  value={regulation?.setbackRear}
                   onChange={(e) => handleChange("setbackRear", Number(e.target.value))}
                   className="bg-background"
                   min={0}
@@ -334,7 +334,7 @@ export function RegulationInput({ regulation, onChange, defaultCollapsed = true 
           </Label>
           <Textarea
             placeholder="추가적인 규제 사항이 있으면 입력하세요 (예: 지구단위계획 지침, 문화재보호구역 등)"
-            value={regulation.additionalNotes}
+            value={regulation?.additionalNotes}
             onChange={(e) => handleChange("additionalNotes", e.target.value)}
             className="bg-secondary/50 min-h-[80px]"
           />

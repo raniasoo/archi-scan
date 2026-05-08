@@ -338,7 +338,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
                       (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
                         ? marketPrice.suggestedSalePrice
                         : regionalPricing 
-                          ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || ''))
+                          ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || ''))
                           : undefined
                     }
                     constructionCostPerM2={regionalPricing?.constructionCostPerM2 || undefined}
@@ -399,7 +399,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
               <AIHub
                 input={{
                   address,
-                  zoneType: regulation.zoneType,
+                  zoneType: regulation?.zoneType,
                   zoneName: (() => {
                     const label = (molitSupplementData as any).zoneLabel
                     if (label && !label.includes('residential') && !label.includes('commercial')) return label
@@ -411,7 +411,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
                       'commercial-central': '중심상업지역', 'industrial': '준공업지역',
                       'green-natural': '자연녹지지역',
                     }
-                    return map[regulation.zoneType] || label || regulation.zoneType
+                    return map[regulation?.zoneType] || label || regulation?.zoneType
                   })(),
                   siteArea: safeNumber(siteArea, 660),
                   layoutName: selectedLayoutData.name,

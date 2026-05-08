@@ -279,7 +279,7 @@ export function calculateLegalSummary(
   const siteArea = siteInput.siteArea || 660 // fallback
   
   // 용도지역별 기본값 적용
-  const zoneDefaults = ZONE_DEFAULTS[regulation.zoneType] || ZONE_DEFAULTS['residential-2']
+  const zoneDefaults = ZONE_DEFAULTS[regulation?.zoneType] || ZONE_DEFAULTS['residential-2']
   
   const bcrLimit = regulation.maxCoverageRatio || zoneDefaults.maxCoverageRatio || 60
   const farLimit = regulation.maxFloorAreaRatio || zoneDefaults.maxFloorAreaRatio || 200
@@ -315,8 +315,8 @@ export function calculateLegalSummary(
     : `복합적용 (${regulation.setbackAngle}°)`
   
   return {
-    zoningLabel: ZONE_TYPE_LABELS[regulation.zoneType] || '제2종 일반주거지역',
-    zoneType: regulation.zoneType,
+    zoningLabel: ZONE_TYPE_LABELS[regulation?.zoneType] || '제2종 일반주거지역',
+    zoneType: regulation?.zoneType,
     bcrLimit,
     farLimit,
     heightLimitM,

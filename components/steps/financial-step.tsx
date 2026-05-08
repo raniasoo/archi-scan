@@ -176,7 +176,7 @@ export function FinancialStep(props: FinancialStepProps) {
               landPricePerM2={landPriceData.pricePerM2 || 5000000}
               salesPricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
                 ? marketPrice.suggestedSalePrice 
-                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : undefined}
+                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : undefined}
               constructionCostPerM2={regionalPricing?.constructionCostPerM2 || undefined}
               baseROI={feasibilityResult?.roi ?? 0}
               baseTotalCost={feasibilityResult?.totalCost ?? 0}
@@ -198,7 +198,7 @@ export function FinancialStep(props: FinancialStepProps) {
                   totalUnits={selectedLayoutData.units}
                   salePricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
                     ? marketPrice.suggestedSalePrice 
-                    : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000}
+                    : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000}
                   avgUnitArea={selectedLayoutData.gfa ? Math.round(selectedLayoutData.gfa / Math.max(selectedLayoutData.units, 1)) : 84}
                 />
                 <ScenarioComparison

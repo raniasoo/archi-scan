@@ -64,7 +64,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
 
   // 건물 용도 판정 (기본 평면과 동일 로직)
   const buildingUse: 'house' | 'villa' | 'apartment' | 'commercial' = (() => {
-    const zt = molit.zoneCode || regulation.zoneType || ''
+    const zt = molit.zoneCode || regulation?.zoneType || ''
     const u = selectedLayoutData.units || 0
     const f = selectedLayoutData.floors || 1
     if (zt.includes('exclusive-1')) return u <= 2 ? 'house' : 'villa'
@@ -175,7 +175,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
                   floor={selectedFloor}
                   totalFloors={selectedLayoutData.floors}
                   strategy={strategy}
-                  zoneType={molit.zoneCode || regulation.zoneType}
+                  zoneType={molit.zoneCode || regulation?.zoneType}
                   units={selectedLayoutData.units}
                   gfa={selectedLayoutData.gfa || gfa}
                 />
@@ -199,14 +199,14 @@ export function FloorplanStep(props: FloorplanStepProps) {
               type={selectedLayoutData.type}
               layoutName={selectedLayoutData.name}
               address={address}
-              zoneType={molit.zoneCode || regulation.zoneType}
+              zoneType={molit.zoneCode || regulation?.zoneType}
               heightLimit={molit.heightLimit || regulation.maxHeight}
               buildingUse={buildingUse}
               selectedPatterns={selectedPatterns}
               setbacks={{
                 front: molit.hasDistrictPlan ? 2 : 3,
-                side: (molit.zoneCode || regulation.zoneType)?.includes('residential') ? 1.5 : 1,
-                rear: (molit.zoneCode || regulation.zoneType)?.includes('residential') ? 2 : 1.5,
+                side: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 1.5 : 1,
+                rear: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 2 : 1.5,
               }}
             />
           )}
@@ -222,8 +222,8 @@ export function FloorplanStep(props: FloorplanStepProps) {
               type={selectedLayoutData.type}
               setbacks={{
                 front: molit.hasDistrictPlan ? 2 : 1,
-                side: (molit.zoneCode || regulation.zoneType)?.includes('residential') ? 1 : 0.5,
-                rear: (molit.zoneCode || regulation.zoneType)?.includes('residential') ? 1.5 : 1,
+                side: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 1 : 0.5,
+                rear: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 1.5 : 1,
               }}
               landscapingRatio={siteAreaNum >= 200 ? 15 : 0}
               roadWidth={molit.roadWidth || regulation.roadWidth || 8}
@@ -235,12 +235,12 @@ export function FloorplanStep(props: FloorplanStepProps) {
 
           {/* 아이소메트릭 */}
           {drawingTab === "iso" && (
-            <IsometricView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation.zoneType} />
+            <IsometricView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
           )}
 
           {/* 투시도 */}
           {drawingTab === "perspective" && (
-            <PerspectiveView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation.zoneType} />
+            <PerspectiveView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
           )}
 
           {/* 단면도 */}
