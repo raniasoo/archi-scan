@@ -92,7 +92,7 @@ function getOptimalSettings(input: ConceptInput): { style: string; angle: string
   const zone = input.zoneType || ''
   const strat = input.strategy || ''
   const floors = input.floors || 3
-  const regs = input.regulation?.overlappingRegs || []
+  const regs = (input.regulation?.overlappingRegs || []).map((r: any) => typeof r === 'string' ? r : (r?.name || String(r || '')))
   const hasNatureReg = regs.some((r: string) => r.includes('경관') || r.includes('자연') || r.includes('녹지'))
   const hasHistoricReg = regs.some((r: string) => r.includes('문화') || r.includes('한옥') || r.includes('역사'))
 
