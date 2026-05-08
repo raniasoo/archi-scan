@@ -35,11 +35,11 @@ interface SiteContextInput {
 }
 
 // ━━━ 1. 필지 형상 분석 ━━━
-function analyzeParcelShape(polygon: [number, number][] | undefined, siteArea: number): { shape: string; aspectRatio: number; longAxis: string; roadSide: string; widthM: number; depthM: number } {
+function analyzeParcelShape(polygon: [number, number][] | undefined, siteArea: number): { shape: string; shapeDesc: string; aspectRatio: number; longAxis: string; roadSide: string; widthM: number; depthM: number } {
   if (!polygon || polygon.length < 3) {
     const w = Math.sqrt(siteArea * 1.25)
     const d = siteArea / w
-    return { shape: 'rectangular', aspectRatio: w / d, longAxis: 'east-west', roadSide: 'south', widthM: Math.round(w), depthM: Math.round(d) }
+    return { shape: 'rectangular', shapeDesc: 'Rectangular lot', aspectRatio: w / d, longAxis: 'east-west', roadSide: 'south', widthM: Math.round(w), depthM: Math.round(d) }
   }
 
   // 경위도 → 미터
@@ -58,22 +58,47 @@ function analyzeParcelShape(polygon: [number, number][] | undefined, siteArea: n
   const w = Math.max(...xs) - Math.min(...xs)
   const d = Math.max(...ys) - Math.min(...ys)
   const ratio = w > 0 && d > 0 ? Math.max(w, d) / Math.min(w, d) : 1
+  const vertexCount = polygon.length
 
-  // 형상 판정
+  // 형상 판정 (정점 수 + 비율 + 면적비로 판단)
+  const bboxArea = w * d
+  const fillRatio = siteArea / bboxArea // 바운딩 박스 대비 실제 면적 비율
+
   let shape = 'rectangular'
-  if (polygon.length === 3) shape = 'triangular'
-  else if (polygon.length === 4 || polygon.length === 5) {
-    if (ratio > 2.5) shape = 'narrow-rectangular'
-    else if (ratio < 1.3) shape = 'square'
-    else shape = 'rectangular'
+  let shapeDesc = 'Rectangular lot'
+
+  if (vertexCount === 3) {
+    shape = 'triangular'
+    shapeDesc = 'Triangular lot with one pointed end'
+  } else if (vertexCount <= 5) {
+    if (ratio > 2.5) { shape = 'narrow-rectangular'; shapeDesc = 'Long narrow rectangular lot' }
+    else if (ratio < 1.3) { shape = 'square'; shapeDesc = 'Nearly square lot' }
+    else { shape = 'rectangular'; shapeDesc = 'Rectangular lot' }
+  } else if (vertexCount >= 10) {
+    // 많은 정점 = 곡선형/비정형
+    if (fillRatio > 0.75 && ratio > 1.8) {
+      shape = 'elongated-oval'
+      shapeDesc = 'Elongated oval-shaped lot with curved boundaries, organic form'
+    } else if (fillRatio > 0.75) {
+      shape = 'oval'
+      shapeDesc = 'Oval-shaped lot with soft curved edges'
+    } else if (ratio > 2) {
+      shape = 'irregular-elongated'
+      shapeDesc = 'Irregular elongated lot with uneven boundaries'
+    } else {
+      shape = 'irregular'
+      shapeDesc = 'Irregularly shaped lot with curved and angular edges'
+    }
   } else {
-    shape = ratio > 2 ? 'irregular-elongated' : 'irregular'
+    // 6~9 정점
+    if (ratio > 2) { shape = 'irregular-elongated'; shapeDesc = 'Irregularly shaped elongated lot' }
+    else { shape = 'irregular'; shapeDesc = 'Irregularly shaped lot' }
   }
 
   // 긴 축 방향
   const longAxis = w > d ? 'east-west' : 'north-south'
 
-  // 접도 방향 추정: 폴리곤에서 가장 남쪽 변이 도로
+  // 접도 방향 추정
   let roadSide = 'south'
   const minY = Math.min(...ys)
   const southPoints = mCoords.filter(c => c[1] < minY + d * 0.2)
@@ -85,7 +110,7 @@ function analyzeParcelShape(polygon: [number, number][] | undefined, siteArea: n
     else roadSide = 'east'
   }
 
-  return { shape, aspectRatio: Math.round(ratio * 10) / 10, longAxis, roadSide, widthM: Math.round(w), depthM: Math.round(d) }
+  return { shape, shapeDesc, aspectRatio: Math.round(ratio * 10) / 10, longAxis, roadSide, widthM: Math.round(w), depthM: Math.round(d) }
 }
 
 // ━━━ 2. 동네 특성 추정 ━━━
@@ -110,17 +135,32 @@ function analyzeNeighborhood(input: SiteContextInput): string {
   }
 
   // 표고 기반
-  if (elev > 150) hints.push('Hillside location with potential mountain views')
-  else if (elev > 80) hints.push('Elevated area above the city')
+  if (elev > 150) hints.push('Hillside location with mountain views, surrounded by green hills and trees')
+  else if (elev > 80) hints.push('Elevated area on a hillside, with sloping terrain and natural vegetation')
   else if (elev < 30) hints.push('Low-lying flat urban area')
 
   // 주변 건물 특성
   if (ctx) {
-    if (ctx.avgFloors && ctx.avgFloors <= 3) hints.push('Low-rise residential area')
-    else if (ctx.avgFloors && ctx.avgFloors >= 8) hints.push('High-rise urban area')
+    if (ctx.avgFloors && ctx.avgFloors <= 3) {
+      hints.push('Dense low-rise residential area with 2-3 story Korean villas (빌라) featuring red/brown pitched roofs, narrow streets, and compact parking')
+    } else if (ctx.avgFloors && ctx.avgFloors <= 5) {
+      hints.push('Mid-rise residential area with 4-5 story apartments and walkup buildings')
+    } else if (ctx.avgFloors && ctx.avgFloors >= 8) {
+      hints.push('High-rise urban area with apartment towers')
+    }
+    
+    if (!ctx.avgFloors || ctx.avgFloors === 0) {
+      // 층수 데이터가 없을 때 — 위치 기반 추정
+      if (elev > 60 || addr.includes('평창') || addr.includes('성북') || addr.includes('정릉')) {
+        hints.push('Hillside residential neighborhood with small Korean villas and houses, narrow winding roads, terraced lots')
+      } else {
+        hints.push('Residential neighborhood with typical Korean low-rise buildings')
+      }
+    }
 
-    if (ctx.buildingCount && ctx.buildingCount > 20) hints.push('Dense urban fabric')
-    else if (ctx.buildingCount && ctx.buildingCount < 5) hints.push('Spacious, open surroundings')
+    if (ctx.buildingCount && ctx.buildingCount > 15) hints.push('Dense urban fabric with buildings close together')
+    else if (ctx.buildingCount && ctx.buildingCount > 5) hints.push('Moderate density residential area')
+    else if (ctx.buildingCount && ctx.buildingCount < 3) hints.push('Spacious, open surroundings with few neighbors')
   }
 
   // 주변 건물 용도
@@ -141,18 +181,18 @@ function describeTerrainForRender(terrain: TerrainAnalysis | null | undefined, f
 
   if (diff < 2) {
     parts.push(`Gently sloping site (${diff}m elevation change, ${slope}% grade)`)
-    parts.push('Minor grading needed, building sits on level pad')
-  } else if (diff < 5) {
-    parts.push(`Moderately sloped site (${diff}m elevation change, ${slope}% grade)`)
-    parts.push(`The building should step with the terrain - ${terrain.slopeDirection.includes('남') ? 'north side taller, south side shorter' : 'visible grade change on the facade'}`)
-    if (floors >= 3) parts.push('Lower floors on the downhill side may be partially exposed, creating a split-level effect')
-    parts.push('Retaining wall or landscape terrace visible on the uphill edge')
+    parts.push('Minor grading needed, building sits on a level pad')
+  } else if (diff < 8) {
+    parts.push(`Sloping hillside site (${diff}m elevation change across the lot, ${slope}% average grade)`)
+    parts.push('The building should be designed to work WITH the natural slope — use split-level design or step the building down the hill')
+    parts.push('Show the natural ground slope in the rendering, with the building partially embedded into the hillside')
+    if (terrain.slopeDirection.includes('남')) parts.push('The slope faces south — excellent for daylight, with the building stepping down toward the viewer')
   } else {
-    parts.push(`Steep hillside site (${diff}m elevation change, ${slope}% grade)`)
-    parts.push('Building MUST step dramatically with the terrain')
-    parts.push(`From the uphill side the building appears ${Math.max(floors - 2, 1)}-story, from downhill it appears ${floors + 1}-story`)
-    parts.push('Prominent retaining walls with stone or concrete finish')
-    parts.push('Stepped landscaping terraces visible')
+    parts.push(`Steep hillside site (${diff}m total elevation change, ${slope}% average grade)`)
+    parts.push('The building MUST cascade down the slope following the terrain contours')
+    parts.push(`From the uphill side the building appears shorter, from the downhill side it appears taller — this is a multi-level hillside building`)
+    parts.push('Show prominent retaining walls, terraced landscaping, and stepped building mass')
+    parts.push('The natural hillside with trees and vegetation should be visible around the building')
   }
 
   // 경사 방향별 건물 형태 힌트
@@ -208,15 +248,7 @@ export function buildSiteContextPrompt(input: SiteContextInput): SiteContextForR
   const sunViewDesc = describeSunViewForRender(input.sunAnalysis)
 
   // 대지 형상 설명
-  const shapeNames: Record<string, string> = {
-    'square': 'Nearly square lot',
-    'rectangular': 'Rectangular lot',
-    'narrow-rectangular': 'Long narrow lot',
-    'triangular': 'Triangular lot',
-    'irregular': 'Irregular-shaped lot',
-    'irregular-elongated': 'Irregular elongated lot',
-  }
-  const siteShape = `${shapeNames[parcel.shape] || 'Rectangular lot'} (approximately ${parcel.widthM}m × ${parcel.depthM}m, ratio ${parcel.aspectRatio}:1). Long axis runs ${parcel.longAxis}.`
+  const siteShape = `${parcel.shapeDesc} (approximately ${parcel.widthM}m × ${parcel.depthM}m, ratio ${parcel.aspectRatio}:1). Long axis runs ${parcel.longAxis}. The building footprint MUST follow this ${parcel.shape.includes('oval') || parcel.shape.includes('irregular') ? 'organic, curved' : 'angular'} site boundary — do NOT draw a standard rectangular building on a clearly non-rectangular site.`
 
   const roadDirection = `Road faces the ${parcel.roadSide} side. Main building entrance and facade should face ${parcel.roadSide}.`
 
