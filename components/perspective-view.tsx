@@ -131,10 +131,13 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, typ
       buildingBlocks = [{ x: bx, depth: bDepth, w: bw, d: bd * 0.5, floors }]
       break
     case 'cluster':
-      const cFloors = Math.max(3, floors - 3)
+      const cFloors = Math.max(2, floors - 1)
       buildingBlocks = [
-        { x: bx, depth: bDepth, w: bw * 0.45, d: bd * 0.8, floors },
-        { x: bx + bw * 0.55, depth: bDepth + 10, w: bw * 0.45, d: bd * 0.8, floors: cFloors },
+        { x: bx, depth: bDepth, w: bw * 0.28, d: bd * 0.7, floors },
+        { x: bx + bw * 0.32, depth: bDepth + 8, w: bw * 0.28, d: bd * 0.7, floors: cFloors },
+        { x: bx + bw * 0.64, depth: bDepth + 3, w: bw * 0.28, d: bd * 0.7, floors },
+        { x: bx + bw * 0.12, depth: bDepth - bd * 0.6, w: bw * 0.28, d: bd * 0.65, floors: cFloors },
+        { x: bx + bw * 0.48, depth: bDepth - bd * 0.55, w: bw * 0.28, d: bd * 0.65, floors },
       ]
       break
     default:

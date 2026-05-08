@@ -129,11 +129,27 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, type,
       case "linear":
         return [{ x: -bW / 2, y: -bD * 0.2, w: bW, d: bD * 0.4, h: buildH, label: "판상동" }]
       case "cluster": {
-        const gap = bW * 0.08, blockW = (bW - gap) / 2
-        return [
-          { x: -bW / 2, y: -bD / 2, w: blockW, d: bD * 0.9, h: buildH, label: "A동" },
-          { x: -bW / 2 + blockW + gap, y: -bD * 0.35, w: blockW, d: bD * 0.9, h: buildH * 0.9, label: "B동" },
-        ]
+        // AI 렌더링과 일치: 4~6동 분산 배치
+        const cols = 3, rows = 2
+        const gapX = bW * 0.06, gapY = bD * 0.06
+        const blockW = (bW - gapX * (cols - 1)) / cols
+        const blockD = (bD - gapY * (rows - 1)) / rows
+        const blocks: { x: number; y: number; w: number; d: number; h: number; label: string }[] = []
+        const labels = ["A동", "B동", "C동", "D동", "E동", "F동"]
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const offsetX = (r % 2 === 1) ? blockW * 0.15 : 0
+            blocks.push({
+              x: -bW / 2 + c * (blockW + gapX) + offsetX,
+              y: -bD / 2 + r * (blockD + gapY),
+              w: blockW * 0.9,
+              d: blockD * 0.85,
+              h: buildH * (0.85 + Math.random() * 0.15),
+              label: labels[r * cols + c] || `${r * cols + c + 1}동`,
+            })
+          }
+        }
+        return blocks
       }
       default:
         return [{ x: -bW / 2, y: -bD / 2, w: bW, d: bD, h: buildH, label: type }]

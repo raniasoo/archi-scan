@@ -126,15 +126,24 @@ export function SitePlan({
           label: "판상형"
         }
       case "cluster": {
-        const gap = bW * 0.06
-        const blockW = (bW - gap) / 2
-        return {
-          shapes: [
-            { x: bX, y: bY, w: blockW, h: bH * 0.9 },
-            { x: bX + blockW + gap, y: bY + bH * 0.1, w: blockW, h: bH * 0.9 },
-          ],
-          label: "클러스터"
+        // AI 렌더링과 일치: 4~6동 분산 배치
+        const cols = 3, rows = 2
+        const gapX = bW * 0.06, gapY = bH * 0.06
+        const blockW = (bW - gapX * (cols - 1)) / cols
+        const blockH = (bH - gapY * (rows - 1)) / rows
+        const shapes: { x: number; y: number; w: number; h: number }[] = []
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const offsetX = (r % 2 === 1) ? blockW * 0.15 : 0 // 엇갈림 배치
+            shapes.push({
+              x: bX + c * (blockW + gapX) + offsetX,
+              y: bY + r * (blockH + gapY),
+              w: blockW * 0.92,
+              h: blockH * 0.88,
+            })
+          }
         }
+        return { shapes, label: "클러스터" }
       }
       default:
         return { shapes: [{ x: bX, y: bY, w: bW, h: bH }], label: type }

@@ -45,7 +45,12 @@ export function SectionView({
 
   // 건물 폭
   const bldRatio = Math.sqrt(buildingCoverage / 100) * 0.85
-  const bldW = siteSvgW * bldRatio
+  let bldW = siteSvgW * bldRatio
+  // 클러스터: 개별 동 크기 (AI 렌더링 일치)
+  if (type === 'cluster') {
+    const buildingCount = Math.max(3, Math.round(Math.sqrt(units / 4)))
+    bldW = bldW / Math.sqrt(buildingCount) * 1.1
+  }
   const bldX = siteX + (siteSvgW - bldW) / 2
 
   // 높이 → SVG
