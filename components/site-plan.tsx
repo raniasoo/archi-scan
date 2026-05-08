@@ -29,6 +29,8 @@ export function SitePlan({
   const hasRealShape = sitePolygon && sitePolygon.coords.length > 2
   let polyPoints = '' // SVG polygon points
   let siteW: number, siteH: number, siteX: number, siteY: number, svgScale: number
+  let siteRealW = Math.sqrt(siteArea * 1.25)
+  let siteRealH = siteArea / siteRealW
 
   if (hasRealShape) {
     // 경위도 → 미터 변환 (centroid 기준)
@@ -46,6 +48,8 @@ export function SitePlan({
     const minY = Math.min(...ys), maxY = Math.max(...ys)
     const realW = maxX - minX || 1
     const realH = maxY - minY || 1
+    siteRealW = realW
+    siteRealH = realH
 
     // SVG 스케일링
     svgScale = Math.min((W - PAD * 2) / realW, (H - PAD * 2 - 40) / realH)
@@ -61,9 +65,7 @@ export function SitePlan({
       return `${px},${py}`
     }).join(' ')
   } else {
-    // 기존 사각형 방식
-    const siteRealW = Math.sqrt(siteArea * 1.25)
-    const siteRealH = siteArea / siteRealW
+    // 기존 사각형 방식 (siteRealW/siteRealH는 위에서 초기화됨)
     svgScale = Math.min((W - PAD * 2) / siteRealW, (H - PAD * 2 - 40) / siteRealH)
     siteW = siteRealW * svgScale
     siteH = siteRealH * svgScale
