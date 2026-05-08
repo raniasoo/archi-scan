@@ -28,6 +28,16 @@ export interface StrategyStepProps {
   handleGenerate: () => void
 }
 
+// ━━━ 전략별 추천 슬라이더 값 ━━━
+const STRATEGY_PRESETS: Record<string, { profitVsQuality: number; privacyVsCommunity: number; efficiencyVsSpace: number; recommendedPatterns: string[] }> = {
+  'profitability': { profitVsQuality: 20, privacyVsCommunity: 50, efficiencyVsSpace: 20, recommendedPatterns: ['shop-street', 'main-entrance', 'ground-floor', 'building-edge'] },
+  'livability': { profitVsQuality: 80, privacyVsCommunity: 65, efficiencyVsSpace: 70, recommendedPatterns: ['courtyard', 'accessible-green', 'balcony', 'rooftop'] },
+  'view-priority': { profitVsQuality: 70, privacyVsCommunity: 40, efficiencyVsSpace: 60, recommendedPatterns: ['south-light', 'balcony', 'rooftop', 'two-light', 'cascade-roof'] },
+  'privacy-priority': { profitVsQuality: 50, privacyVsCommunity: 15, efficiencyVsSpace: 50, recommendedPatterns: ['quiet-entry', 'intimacy-grad', 'garden-wall', 'gallery-surround'] },
+  'area-maximize': { profitVsQuality: 25, privacyVsCommunity: 50, efficiencyVsSpace: 15, recommendedPatterns: ['ceiling-height', 'ground-floor', 'south-light', 'shop-street'] },
+  'parking-efficient': { profitVsQuality: 35, privacyVsCommunity: 50, efficiencyVsSpace: 30, recommendedPatterns: ['small-parking', 'walk-safe', 'main-entrance', 'building-edge'] },
+}
+
 const GOALS = [
   {
     id: "profit" as const,
@@ -58,6 +68,26 @@ const GOALS = [
     approach: "combined" as const,
     color: "border-purple-500/40 bg-purple-500/5",
     activeColor: "border-purple-500 bg-purple-500/15 ring-2 ring-purple-500/30",
+  },
+  {
+    id: "privacy" as const,
+    emoji: "🔒",
+    title: "프라이버시",
+    desc: "독립적이고 조용한 공간을 만듭니다",
+    strategy: "privacy-priority" as DesignStrategy,
+    approach: "combined" as const,
+    color: "border-indigo-500/40 bg-indigo-500/5",
+    activeColor: "border-indigo-500 bg-indigo-500/15 ring-2 ring-indigo-500/30",
+  },
+  {
+    id: "area" as const,
+    emoji: "📐",
+    title: "면적 극대화",
+    desc: "전용면적을 최대로 확보합니다",
+    strategy: "area-maximize" as DesignStrategy,
+    approach: "quantitative" as const,
+    color: "border-amber-500/40 bg-amber-500/5",
+    activeColor: "border-amber-500 bg-amber-500/15 ring-2 ring-amber-500/30",
   },
   {
     id: "practical" as const,
@@ -91,6 +121,16 @@ export function StrategyStep(props: StrategyStepProps) {
     setSelectedGoal(goalId)
     setStrategy(goal.strategy)
     setDesignApproach(goal.approach)
+    // 슬라이더 + 패턴 자동 추천
+    const preset = STRATEGY_PRESETS[goal.strategy]
+    if (preset) {
+      setUserValues({
+        profitVsQuality: preset.profitVsQuality,
+        privacyVsCommunity: preset.privacyVsCommunity,
+        efficiencyVsSpace: preset.efficiencyVsSpace,
+        selectedPatterns: preset.recommendedPatterns,
+      })
+    }
   }
 
   const handleStart = () => {
@@ -113,18 +153,18 @@ export function StrategyStep(props: StrategyStepProps) {
       {/* 하나의 질문, 4개 선택지 */}
       <div>
         <h3 className="text-base font-semibold mb-3">어떤 건물을 만들고 싶으세요?</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2.5">
           {GOALS.map(goal => (
             <button
               key={goal.id}
               onClick={() => handleGoalSelect(goal.id)}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
+              className={`p-3 rounded-xl border-2 text-left transition-all ${
                 selectedGoal === goal.id ? goal.activeColor : goal.color
               }`}
             >
-              <span className="text-2xl block mb-2">{goal.emoji}</span>
-              <span className="text-sm font-bold block mb-0.5">{goal.title}</span>
-              <span className="text-xs text-muted-foreground leading-snug block">{goal.desc}</span>
+              <span className="text-xl block mb-1">{goal.emoji}</span>
+              <span className="text-xs font-bold block mb-0.5">{goal.title}</span>
+              <span className="text-[10px] text-muted-foreground leading-snug block">{goal.desc}</span>
             </button>
           ))}
         </div>
@@ -153,42 +193,6 @@ export function StrategyStep(props: StrategyStepProps) {
 
         {showAdvanced && (
           <div className="mt-4 space-y-4">
-            {/* 세부 전략 선택 */}
-            <div className="border border-border/60 rounded-xl p-4 bg-card/50">
-              <p className="text-xs font-semibold mb-2">세부 전략</p>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { id: "profitability" as DesignStrategy, label: "수익성" },
-                  { id: "livability" as DesignStrategy, label: "실거주" },
-                  { id: "view-priority" as DesignStrategy, label: "조망" },
-                  { id: "privacy-priority" as DesignStrategy, label: "프라이버시" },
-                  { id: "area-maximize" as DesignStrategy, label: "면적최대" },
-                  { id: "parking-efficient" as DesignStrategy, label: "주차효율" },
-                ].map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      setStrategy(s.id)
-                      const matchGoal = GOALS.find(g => g.strategy === s.id)
-                      if (matchGoal) {
-                        setSelectedGoal(matchGoal.id)
-                        setDesignApproach(matchGoal.approach)
-                      } else {
-                        setSelectedGoal('')
-                      }
-                    }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
-                      strategy === s.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* 가치 우선순위 슬라이더 */}
             <ValuePrioritySelector
               values={userValues}
