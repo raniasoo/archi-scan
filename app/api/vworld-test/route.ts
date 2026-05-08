@@ -7,14 +7,18 @@ export async function GET(req: NextRequest) {
   
   const lat = 37.60785, lng = 126.96790
   
+  const GOOGLE_KEY = process.env.GOOGLE_MAPS_KEY
+  
   const urls: Record<string, string> = {
-    vworld_photo: `https://api.vworld.kr/req/image?service=image&request=getmap&key=${VWORLD_KEY}&basemap=PHOTO&center=${lng},${lat}&zoom=18&size=600,400&format=png`,
-    vworld_graphic: `https://api.vworld.kr/req/image?service=image&request=getmap&key=${VWORLD_KEY}&basemap=GRAPHIC&center=${lng},${lat}&zoom=18&size=600,400&format=png`,
-    vworld_base: `https://api.vworld.kr/req/image?service=image&request=getmap&key=${VWORLD_KEY}&basemap=BASE&center=${lng},${lat}&zoom=18&size=600,400&format=png`,
     esri_satellite: `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lng-0.002},${lat-0.002},${lng+0.002},${lat+0.002}&bboxSR=4326&imageSR=4326&size=600,400&format=png&f=image`,
+    ...(GOOGLE_KEY ? {
+      streetview_meta: `https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&key=${GOOGLE_KEY}`,
+      streetview_north: `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${lat},${lng}&heading=0&pitch=0&fov=90&key=${GOOGLE_KEY}`,
+      streetview_south: `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${lat},${lng}&heading=180&pitch=0&fov=90&key=${GOOGLE_KEY}`,
+    } : {}),
   }
   
-  const results: any = { keyPrefix: VWORLD_KEY.substring(0, 8) + '...', tested: new Date().toISOString() }
+  const results: any = { keyPrefix: VWORLD_KEY?.substring(0, 8) + '...', googleKey: GOOGLE_KEY ? GOOGLE_KEY.substring(0, 10) + '...' : 'NOT SET', tested: new Date().toISOString() }
   
   for (const [name, url] of Object.entries(urls)) {
     try {
