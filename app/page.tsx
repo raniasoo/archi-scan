@@ -572,7 +572,15 @@ export default function ArchiScanPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [siteVisuals, setSiteVisuals] = useState<SiteVisualsConfig>(EMPTY_SITE_VISUALS)
-  const [aiRenderImage, setAiRenderImage] = useState<string | null>(null)
+  const [aiRenderImage, setAiRenderImageRaw] = useState<string | null>(null)
+  // aiRenderImage를 sessionStorage에 저장하여 탭 전환 시 유지
+  const setAiRenderImage = (img: string | null) => {
+    setAiRenderImageRaw(img)
+    try {
+      if (img) sessionStorage.setItem('archi-scan-render', img)
+      else sessionStorage.removeItem('archi-scan-render')
+    } catch {}
+  }
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
   const [optimizationResult, setOptimizationResult] = useState<OptimizationReport | null>(null)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -665,6 +673,11 @@ export default function ArchiScanPage() {
           if (s.selectedLayout != null) setSelectedLayout(s.selectedLayout)
         }
       }
+    } catch {}
+    // AI 렌더링 이미지 복원 (sessionStorage)
+    try {
+      const savedRender = sessionStorage.getItem('archi-scan-render')
+      if (savedRender) setAiRenderImageRaw(savedRender)
     } catch {}
   }, [])
 
@@ -1588,11 +1601,13 @@ export default function ArchiScanPage() {
 
   if (showQuickMode) {
     return (
-      <QuickAnalysis strategy={strategy} userValues={userValues} onDetailedAnalysis={(addr, area, rawData) => {
+      <QuickAnalysis strategy={strategy} userValues={userValues} onDetailedAnalysis={(addr, area, rawData, quickRenderImage) => {
         // Quick 분석 데이터를 Full 분석에 주입
         setAddress(addr)
         setSiteArea(String(area))
         setAnalysisRawData(rawData)
+        // Quick에서 생성한 AI 렌더링 이미지 전달
+        if (quickRenderImage) setAiRenderImage(quickRenderImage)
         if (rawData) {
           const zc = rawData.zoneType || ''
           if (zc) {

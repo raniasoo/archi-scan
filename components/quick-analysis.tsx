@@ -7,7 +7,7 @@ import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
 import { buildSiteContextPrompt } from "@/lib/site-context-builder"
 
 interface QuickAnalysisProps {
-  onDetailedAnalysis: (address: string, siteArea: number, data: any) => void
+  onDetailedAnalysis: (address: string, siteArea: number, data: any, renderImage?: string | null) => void
   strategy?: string
   userValues?: { profitVsQuality: number; privacyVsCommunity: number; efficiencyVsSpace: number; selectedPatterns: string[] }
 }
@@ -612,7 +612,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                     _quickFAR: result.floorAreaRatio,
                     _quickHeight: result.heightLimit,
                     _quickOverlapping: result.overlappingCount,
-                  })}
+                  }, renderImage)}
                   className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary to-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2"
                 >
                   <Sparkles className="h-4 w-4" />
