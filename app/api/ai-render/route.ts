@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
         // ★ 경사 방향 화살표 SVG 사전 계산
         let slopeSvg = ''
         if (ti && ti.slopeDirection && ti.elevationDiff && ti.elevationDiff >= 2) {
-          const dir = ti.slopeDirection || ''
+          const dir = String(ti.slopeDirection || '')
           let angle = 90 // default: south
           if (dir.includes('남서')) angle = 135
           else if (dir.includes('남동')) angle = 45
@@ -555,7 +555,7 @@ ${regulation.setbackFront ? `- Front setback: ${regulation.setbackFront}m from r
 ${regulation.setbackSide ? `- Side setback: ${regulation.setbackSide}m from neighbors — visible gap between buildings` : ''}
 ${regulation.setbackRear ? `- Rear setback: ${regulation.setbackRear}m from back boundary` : ''}
 ${regulation.northShadow ? `- North shadow restriction (${regulation.northShadowAngle || 45}°) — upper floors MUST step back on the NORTH side, creating a cascading/terraced form toward the north. This is a distinctive feature of Korean residential buildings.` : ''}
-${regulation.overlappingRegs?.length ? `- Special zones: ${regulation.overlappingRegs.join(', ')}${regulation.overlappingRegs.some(r => r.includes('경관') || r.includes('자연')) ? ' — building should use NATURAL materials (stone, wood, earth tones) and have a modest, harmonious appearance that blends with the natural landscape' : ''}${regulation.overlappingRegs.some(r => r.includes('고도')) ? ' — strict height control area, building must appear LOW and unobtrusive' : ''}` : ''}` : ''}
+${regulation.overlappingRegs?.length ? `- Special zones: ${regulation.overlappingRegs.map(String).join(', ')}${regulation.overlappingRegs.some((r: any) => String(r).includes('경관') || String(r).includes('자연')) ? ' — building should use NATURAL materials (stone, wood, earth tones) and have a modest, harmonious appearance that blends with the natural landscape' : ''}${regulation.overlappingRegs.some((r: any) => String(r).includes('고도')) ? ' — strict height control area, building must appear LOW and unobtrusive' : ''}` : ''}` : ''}
 
 DESIGN DIRECTION:
 ${strategyStyle || 'Modern residential design'}
@@ -572,7 +572,7 @@ ${surroundingContext ? `\nSITE-SPECIFIC CONTEXT (IMPORTANT — render must refle
 BUILDING IDENTITY (must remain IDENTICAL across all camera angles):
 - Exact form: ${buildingForm}
 - Building type: ${typeHint || 'residential'}
-- Facade color: ${material?.includes('stone') ? 'warm stone beige/cream' : material?.includes('glass') ? 'reflective glass with dark metal frames' : material?.includes('wood') ? 'natural wood tone with white accents' : 'white/light gray concrete with accent panels'}
+- Facade color: ${material?.type?.includes('stone') ? 'warm stone beige/cream' : material?.type?.includes('glass') ? 'reflective glass with dark metal frames' : material?.type?.includes('wood') ? 'natural wood tone with white accents' : 'white/light gray concrete with accent panels'}
 - Roof: ${f <= 3 ? 'flat roof with rooftop garden or parapet' : f <= 5 ? 'flat roof with mechanical penthouse' : 'flat roof tower cap'}
 - Window pattern: ${f <= 3 ? 'large residential windows, balcony doors' : 'regular grid of windows with balcony railings'}
 - Ground floor: ${f <= 2 ? 'garden entrance with low wall' : 'pilotis or lobby entrance with canopy'}
