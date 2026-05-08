@@ -572,15 +572,7 @@ export default function ArchiScanPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [siteVisuals, setSiteVisuals] = useState<SiteVisualsConfig>(EMPTY_SITE_VISUALS)
-  const [aiRenderImage, setAiRenderImageRaw] = useState<string | null>(null)
-  // aiRenderImage를 sessionStorage에 동기화 (탭 전환 시 유지)
-  useEffect(() => {
-    try {
-      if (aiRenderImage) sessionStorage.setItem('archi-scan-render', aiRenderImage)
-    } catch {}
-  }, [aiRenderImage])
-  // setAiRenderImage는 setAiRenderImageRaw를 직접 사용
-  const setAiRenderImage = setAiRenderImageRaw
+  const [aiRenderImage, setAiRenderImage] = useState<string | null>(null)
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
   const [optimizationResult, setOptimizationResult] = useState<OptimizationReport | null>(null)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -677,9 +669,16 @@ export default function ArchiScanPage() {
     // AI 렌더링 이미지 복원 (sessionStorage)
     try {
       const savedRender = sessionStorage.getItem('archi-scan-render')
-      if (savedRender) setAiRenderImageRaw(savedRender)
+      if (savedRender) setAiRenderImage(savedRender)
     } catch {}
   }, [])
+
+  // AI 렌더링 이미지 sessionStorage 동기화
+  useEffect(() => {
+    try {
+      if (aiRenderImage) sessionStorage.setItem('archi-scan-render', aiRenderImage)
+    } catch {}
+  }, [aiRenderImage])
 
   // 핵심 상태 변경 시 자동 저장
   useEffect(() => {
