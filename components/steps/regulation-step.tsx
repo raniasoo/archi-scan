@@ -1,11 +1,10 @@
 "use client"
 
-import { type Dispatch, type SetStateAction } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
-import { Sparkles, ChevronRight } from "lucide-react"
+import { Sparkles, ChevronRight, ChevronDown } from "lucide-react"
 import type { ZoningRegulation } from "@/lib/regulation-types"
-import { ZONE_LAYOUT_CONFIGS, getUseLabel } from "@/lib/zone-layout-config"
 import { formatLandPricePerM2, formatLandCost } from "@/lib/land-price"
 
 const LoadingBox = () => <div className="flex items-center justify-center p-8 text-muted-foreground"><span className="animate-spin mr-2">⏳</span>로딩 중...</div>
@@ -31,6 +30,8 @@ export interface RegulationStepProps {
   onNextStep?: () => void
 }
 
+type TabId = 'checklist' | 'regulations' | 'site' | 'edit'
+
 export function RegulationStep(props: RegulationStepProps) {
   const {
     address, siteArea, siteAreaNum, regulation, setRegulation,
@@ -38,212 +39,227 @@ export function RegulationStep(props: RegulationStepProps) {
     molitSupplementData, siteBdMgtSn, handleGenerate, onNextStep,
   } = props
 
+  const [activeTab, setActiveTab] = useState<TabId>('checklist')
+  const [showAllRegs, setShowAllRegs] = useState(false)
+
+  const regs = (molitSupplementData as any)?.overlappingRegulations as { name: string; category: string; severity: string; coverageOverride?: number; heightLimit?: number; floorLimit?: number; description?: string }[] | undefined
+  const criticalRegs = regs?.filter(r => r.severity === 'critical' || r.severity === 'high') || []
+  const otherRegs = regs?.filter(r => r.severity !== 'critical' && r.severity !== 'high') || []
+
+  const rw = (molitSupplementData as any).roadWidth || regulation?.roadWidth || 8
+  const zc = (molitSupplementData as any).zoneCode || regulation?.zoneType
+  const ht = (molitSupplementData as any).heightLimit || regulation?.maxHeight || 30
+  const dp = (molitSupplementData as any).hasDistrictPlan ?? regulation?.additionalNotes?.includes('지구단위') ?? false
+  const maxCoverage = regulation?.maxCoverageRatio ?? 60
+  const maxFAR = regulation?.maxFloorAreaRatio ?? 200
+  const maxFloors = regulation?.maxFloors ?? 12
+  const maxHeight = regulation?.maxHeight ?? 30
+
+  const hasRoadIssue = rw < 6
+  const hasCriticalReg = criticalRegs.length > 0
+  const overallGrade = hasCriticalReg ? 'caution' : hasRoadIssue ? 'conditional' : 'good'
+  const gradeConfig = {
+    good: { emoji: '🟢', text: '사업 추진 가능', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+    conditional: { emoji: '🟡', text: '조건부 추진 검토', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+    caution: { emoji: '🔴', text: '규제 확인 필요', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
+  }[overallGrade]
+
+  const okCount = [true, true, true, !hasRoadIssue].filter(Boolean).length
+  const warnCount = 4 - okCount
+
+  const tabs: { id: TabId; label: string; icon: string }[] = [
+    { id: 'checklist', label: '체크리스트', icon: '✅' },
+    { id: 'regulations', label: '규제분석', icon: '🔍' },
+    { id: 'site', label: '대지정보', icon: '🗺️' },
+    { id: 'edit', label: '입력수정', icon: '✏️' },
+  ]
+
   return (
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl md:text-2xl font-bold text-foreground">법규 검토</h2>
-                <p className="text-sm text-muted-foreground">
-                  {address} - {Number(siteArea).toLocaleString()}㎡
-                </p>
-              </div>
-              <Button onClick={onNextStep || handleGenerate} className="gap-2 w-full md:w-auto">
-                <ChevronRight className="h-4 w-4" />
-                설계방향 선택으로
-              </Button>
+    <div className="flex flex-col gap-4">
+      {/* ━━━ 1층: 종합 판단 대시보드 ━━━ */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h2 className="text-xl font-bold">법규 검토</h2>
+            <p className="text-xs text-muted-foreground">{address} · {Number(siteArea).toLocaleString()}㎡</p>
+          </div>
+        </div>
+
+        <div className={`rounded-xl border p-4 ${gradeConfig.bg}`}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[10px] text-muted-foreground">종합 판단</p>
+              <p className={`text-lg font-black ${gradeConfig.color}`}>{gradeConfig.emoji} {gradeConfig.text}</p>
             </div>
+            <Button onClick={onNextStep || handleGenerate} size="sm" className="gap-1 text-xs">
+              설계방향 <ChevronRight className="h-3 w-3" />
+            </Button>
+          </div>
 
-            {/* 공시지가 카드 */}
-            {(landPriceData.pricePerM2 > 0 || landPriceData.loading) && (
-              <div className={`rounded-xl border p-4 ${landPriceData.isDemo ? 'border-amber-500/20 bg-amber-500/5' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${landPriceData.isDemo ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>₩</div>
-                    <h3 className="text-sm font-semibold">공시지가 기반 토지비</h3>
-                    {landPriceData.loading && <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />}
-                    {!landPriceData.loading && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${landPriceData.isDemo ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                        {landPriceData.isDemo ? '지역평균' : (landPriceData.stdrYear ? `${landPriceData.stdrYear}년 실측` : 'Vworld 실측')}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {!landPriceData.loading && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg bg-secondary/30 p-3">
-                      <p className="text-[10px] text-muted-foreground mb-1">공시지가 단가</p>
-                      <p className="text-lg font-bold text-foreground">{formatLandPricePerM2(landPriceData.pricePerM2)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{landPriceData.pricePerM2.toLocaleString()}원/㎡</p>
-                    </div>
-                    <div className="rounded-lg bg-secondary/30 p-3">
-                      <p className="text-[10px] text-muted-foreground mb-1">예상 토지매입비</p>
-                      <p className="text-lg font-bold text-foreground">{formatLandCost(landPriceData.totalCost || landPriceData.pricePerM2 * siteAreaNum)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{siteAreaNum.toLocaleString()}㎡ × {formatLandPricePerM2(landPriceData.pricePerM2)}</p>
-                    </div>
-                  </div>
-                )}
-
-                {landPriceData.message && (
-                  <p className="text-[10px] text-muted-foreground mt-2">{landPriceData.message}</p>
-                )}
-                {landPriceData.source === 'district-average' && (
-                  <p className="text-[10px] text-amber-400/70 mt-1">
-                    💡 법정동 추정값 — 실제 공시지가와 다를 수 있습니다
-                  </p>
-                )}
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {[
+              { label: '건폐율', value: `${maxCoverage}%` },
+              { label: '용적률', value: `${maxFAR}%` },
+              { label: '높이', value: `${maxHeight}m` },
+              { label: '층수', value: `${maxFloors}층` },
+            ].map(item => (
+              <div key={item.label} className="text-center rounded-lg bg-background/50 py-2">
+                <p className="text-[9px] text-muted-foreground">{item.label}</p>
+                <p className="text-sm font-bold">{item.value}</p>
               </div>
-            )}
+            ))}
+          </div>
 
-            {/* 지적도 섹션 */}
-            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-5 w-5 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-blue-400">지</span>
-                </div>
-                <h3 className="text-sm font-semibold">실제 지적도 기반 대지 형상</h3>
-                <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
-                  Vworld 국토지리정보원
-                </span>
+          <div className="flex items-center gap-3 text-[11px]">
+            <span className="text-emerald-400">✅ {okCount}개 적합</span>
+            {warnCount > 0 && <span className="text-amber-400">⚠️ {warnCount}개 확인필요</span>}
+            {criticalRegs.length > 0 && <span className="text-red-400">⚡ {criticalRegs[0]?.name}</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* ━━━ 2층: 탭 네비게이션 ━━━ */}
+      <div className="flex gap-1 bg-secondary/30 rounded-xl p-1">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 py-2 px-1 rounded-lg text-[11px] font-medium transition-all ${
+              activeTab === tab.id
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <span className="block text-center">{tab.icon}</span>
+            <span className="block text-center">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ━━━ 탭 콘텐츠 ━━━ */}
+      {activeTab === 'checklist' && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-bold text-primary bg-primary/20 h-5 w-5 rounded-full flex items-center justify-center">법</span>
+            <h3 className="text-sm font-semibold">건축법 기반 법규검토</h3>
+            <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">국계법·건축법·주차장법</span>
+          </div>
+          <LegalReviewPanel zoneCode={zc} siteArea={siteAreaNum} roadWidth={rw} heightLimit={ht} hasDistrictPlan={dp} />
+        </div>
+      )}
+
+      {activeTab === 'regulations' && (
+        <div className="space-y-4">
+          {regs && regs.length > 0 && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[10px]">🔍</span>
+                <h3 className="text-sm font-semibold">중첩 규제 분석</h3>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">{regs.length}개 적용</span>
               </div>
-              <CadastralMap
-                address={address}
-                siteArea={siteAreaNum}
-                entX={(molitSupplementData as any).entX}
-                entY={(molitSupplementData as any).entY}
-                bdMgtSn={siteBdMgtSn || (molitSupplementData as any).bdMgtSn}
-                setbackFront={regulation.setbackFront}
-                setbackSide={regulation.setbackSide}
-                setbackRear={regulation.setbackRear}
-                coverageRatio={(molitSupplementData as any).zoneCode ? (
-                  (molitSupplementData as any).zoneCode.includes('commercial') ? 80 :
-                  (molitSupplementData as any).zoneCode.includes('semi-residential') ? 70 :
-                  (molitSupplementData as any).zoneCode.includes('residential') ? 60 : 60
-                ) : regulation.maxCoverageRatio}
-                onParcelLoaded={(area) => {
-                  if (area > 0 && Math.abs(area - siteAreaNum) > 10) {
-                    setSiteArea(String(Math.round(area)))
-                  }
-                }}
-                onParcelPolygonLoaded={(coords, centroid) => {
-                  setSitePolygon({ coords, centroid })
-                }}
-              />
-            </div>
-
-            {/* 중첩 규제 분석 */}
-            {(() => {
-              const regs = (molitSupplementData as any)?.overlappingRegulations as { name: string; category: string; severity: string; coverageOverride?: number; heightLimit?: number; floorLimit?: number; description?: string }[] | undefined
-              if (!regs || regs.length === 0) return null
-              const critical = regs.filter(r => r.severity === 'critical')
-              const high = regs.filter(r => r.severity === 'high')
-              const others = regs.filter(r => r.severity !== 'critical' && r.severity !== 'high')
-              const severityColor = { critical: 'bg-red-500/20 text-red-400 border-red-500/30', high: 'bg-amber-500/20 text-amber-400 border-amber-500/30', medium: 'bg-blue-500/20 text-blue-400 border-blue-500/30', info: 'bg-slate-500/20 text-slate-400 border-slate-500/30' }
-              const severityLabel = { critical: '⚠️ 심각', high: '⚡ 높음', medium: 'ℹ️ 보통', info: '📋 참고' }
-              return (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-5 w-5 rounded-full bg-amber-500/20 flex items-center justify-center text-[10px]">🔍</div>
-                    <h3 className="text-sm font-semibold">중첩 규제 분석</h3>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">{regs.length}개 규제 적용</span>
-                  </div>
-                  {critical.length > 0 && (
-                    <div className="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-                      <p className="text-[10px] font-bold text-red-400 mb-1">⚠️ 핵심 규제 — 사업성에 직접 영향</p>
-                      {critical.map((r, i) => (
-                        <div key={i} className="flex items-start gap-2 py-1">
-                          <span className="text-xs font-semibold text-red-300 shrink-0">{r.name}</span>
-                          {r.description && <span className="text-[10px] text-red-400/80">{r.description}</span>}
+              {criticalRegs.length > 0 && (
+                <div className="mb-3 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 space-y-1">
+                  <p className="text-[10px] font-bold text-red-400">⚠️ 핵심 규제 — 사업성 직접 영향</p>
+                  {criticalRegs.map((r, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="text-xs font-semibold text-red-300 shrink-0">{r.name}</span>
+                      {r.description && <span className="text-[10px] text-red-400/80">{r.description}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {otherRegs.length > 0 && (
+                <div>
+                  <button onClick={() => setShowAllRegs(!showAllRegs)} className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
+                    <ChevronDown className={`h-3 w-3 transition-transform ${showAllRegs ? 'rotate-180' : ''}`} />
+                    참고 규제 {otherRegs.length}건 {showAllRegs ? '접기' : '보기'}
+                  </button>
+                  {showAllRegs && (
+                    <div className="mt-2 space-y-1">
+                      {otherRegs.map((r, i) => (
+                        <div key={i} className="flex items-center gap-2 py-0.5">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded border bg-slate-500/20 text-slate-400 border-slate-500/30">📋 참고</span>
+                          <span className="text-xs">{r.name}</span>
+                          <span className="text-[10px] text-muted-foreground">({r.category})</span>
                         </div>
                       ))}
                     </div>
                   )}
-                  <div className="space-y-1">
-                    {[...high, ...others].map((r, i) => (
-                      <div key={i} className="flex items-center gap-2 py-0.5">
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded border ${severityColor[r.severity as keyof typeof severityColor] || severityColor.info}`}>
-                          {severityLabel[r.severity as keyof typeof severityLabel] || '📋 참고'}
-                        </span>
-                        <span className="text-xs text-foreground">{r.name}</span>
-                        <span className="text-[10px] text-muted-foreground">({r.category})</span>
-                      </div>
-                    ))}
-                  </div>
-                  {(critical.some(r => r.coverageOverride) || high.some(r => r.coverageOverride)) && (
-                    <div className="mt-3 pt-2 border-t border-amber-500/20">
-                      <p className="text-[10px] text-amber-400 font-medium">
-                        💡 중첩 규제에 의해 건폐율이 {Math.min(...regs.filter(r => r.coverageOverride).map(r => r.coverageOverride!))}% 이하로 제한될 수 있습니다.
-                        {regs.some(r => r.heightLimit) && ` 높이 제한: ${Math.min(...regs.filter(r => r.heightLimit).map(r => r.heightLimit!))}m`}
-                      </p>
-                    </div>
-                  )}
                 </div>
-              )
-            })()}
+              )}
+            </div>
+          )}
+          <RegulationAnalysisPanel
+            siteArea={siteAreaNum}
+            regulation={{ ...regulation, zoneType: zc as typeof regulation.zoneType, roadWidth: rw, maxHeight: ht, additionalNotes: dp ? '지구단위계획 적용' : regulation?.additionalNotes || '' }}
+          />
+        </div>
+      )}
 
-            <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
-              {/* Regulation Input */}
-              <div className="order-2 lg:order-1 space-y-4">
-                <RegulationInput regulation={regulation} onChange={setRegulation} />
-                {/* 건축 가능 용도 안내 */}
-                {regulation.zoneType && regulation.zoneType !== 'custom' && (
-                  <ZoneAllowedUsesCard 
-                    zoneType={regulation.zoneType} 
-                    zoneName={regulation.zoneType}
-                  />
+      {activeTab === 'site' && (
+        <div className="space-y-4">
+          {(landPriceData.pricePerM2 > 0 || landPriceData.loading) && (
+            <div className={`rounded-xl border p-4 ${landPriceData.isDemo ? 'border-amber-500/20 bg-amber-500/5' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center ${landPriceData.isDemo ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>₩</span>
+                <h3 className="text-sm font-semibold">공시지가 기반 토지비</h3>
+                {landPriceData.loading && <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />}
+                {!landPriceData.loading && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${landPriceData.isDemo ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                    {landPriceData.isDemo ? '지역평균' : (landPriceData.stdrYear ? `${landPriceData.stdrYear}년 실측` : '실측')}
+                  </span>
                 )}
               </div>
-
-              {/* Regulation Analysis + Legal Review */}
-              <div className="order-1 lg:order-2 space-y-4">
-                {/* 기존 분석 패널 */}
-                {(() => {
-                  const rw = (molitSupplementData as any).roadWidth || regulation.roadWidth || 8
-                  const zc = (molitSupplementData as any).zoneCode || regulation.zoneType
-                  const ht = (molitSupplementData as any).heightLimit || regulation.maxHeight
-                  const dp = (molitSupplementData as any).hasDistrictPlan ?? regulation.additionalNotes.includes('지구단위')
-                  return (
-                    <RegulationAnalysisPanel 
-                      siteArea={siteAreaNum} 
-                      regulation={{
-                        ...regulation,
-                        zoneType: zc as typeof regulation.zoneType,
-                        roadWidth: rw,
-                        maxHeight: ht,
-                        additionalNotes: dp ? '지구단위계획 적용' : regulation.additionalNotes,
-                      }} 
-                    />
-                  )
-                })()}
-
-                {/* 신규: 한국 건축법 기반 법규검토 자동계산 */}
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center">
-                      <span className="text-[10px] font-bold text-primary">법</span>
-                    </div>
-                    <h3 className="text-sm font-semibold">건축법 기반 법규검토 자동계산</h3>
-                    <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
-                      국계법·건축법·주차장법 기준
-                    </span>
+              {!landPriceData.loading && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-secondary/30 p-3">
+                    <p className="text-[10px] text-muted-foreground mb-1">공시지가 단가</p>
+                    <p className="text-lg font-bold">{formatLandPricePerM2(landPriceData.pricePerM2)}</p>
+                    <p className="text-[10px] text-muted-foreground">{landPriceData.pricePerM2.toLocaleString()}원/㎡</p>
                   </div>
-                  <LegalReviewPanel
-                    zoneCode={(molitSupplementData as any).zoneCode || regulation.zoneType}
-                    siteArea={siteAreaNum}
-                    roadWidth={(molitSupplementData as any).roadWidth || regulation.roadWidth || 8}
-                    heightLimit={(molitSupplementData as any).heightLimit || regulation.maxHeight}
-                    hasDistrictPlan={(molitSupplementData as any).hasDistrictPlan ?? regulation.additionalNotes?.includes('지구단위') ?? false}
-                  />
+                  <div className="rounded-lg bg-secondary/30 p-3">
+                    <p className="text-[10px] text-muted-foreground mb-1">예상 토지매입비</p>
+                    <p className="text-lg font-bold">{formatLandCost(landPriceData.totalCost || landPriceData.pricePerM2 * siteAreaNum)}</p>
+                    <p className="text-[10px] text-muted-foreground">{siteAreaNum.toLocaleString()}㎡ × {formatLandPricePerM2(landPriceData.pricePerM2)}</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
+          )}
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[10px] font-bold text-blue-400 bg-blue-500/20 h-5 w-5 rounded-full flex items-center justify-center">지</span>
+              <h3 className="text-sm font-semibold">실제 지적도 기반 대지 형상</h3>
+              <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">Vworld</span>
+            </div>
+            <CadastralMap
+              address={address} siteArea={siteAreaNum}
+              entX={(molitSupplementData as any).entX} entY={(molitSupplementData as any).entY}
+              bdMgtSn={siteBdMgtSn || (molitSupplementData as any).bdMgtSn}
+              setbackFront={regulation?.setbackFront ?? 3} setbackSide={regulation?.setbackSide ?? 1.5} setbackRear={regulation?.setbackRear ?? 2}
+              coverageRatio={maxCoverage}
+              onParcelLoaded={(area) => { if (area > 0 && Math.abs(area - siteAreaNum) > 10) setSiteArea(String(Math.round(area))) }}
+              onParcelPolygonLoaded={(coords, centroid) => setSitePolygon({ coords, centroid })}
+            />
+          </div>
+        </div>
+      )}
 
-            <div className="flex justify-center pt-4">
-              <Button onClick={handleGenerate} size="lg" className="gap-2 w-full md:w-auto">
-                <Sparkles className="h-5 w-5" />
-                AI 배치안 생성
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>  )
+      {activeTab === 'edit' && (
+        <div className="space-y-4">
+          <RegulationInput regulation={regulation} onChange={setRegulation} defaultCollapsed={false} />
+          {regulation?.zoneType && regulation.zoneType !== 'custom' && (
+            <ZoneAllowedUsesCard zoneType={regulation.zoneType} zoneName={regulation.zoneType} />
+          )}
+        </div>
+      )}
+
+      {/* ━━━ 하단 CTA ━━━ */}
+      <Button onClick={onNextStep || handleGenerate} size="lg" className="w-full gap-2 py-6 text-base font-bold">
+        <Sparkles className="h-5 w-5" />
+        설계방향 선택으로
+        <ChevronRight className="h-5 w-5" />
+      </Button>
+    </div>
+  )
 }
