@@ -398,65 +398,79 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     }
     @media print {
       body { padding: 0; }
-      @page { size: A4; margin: 15mm; }
+      @page { size: A4; margin: 12mm 15mm; }
       /* 그리드 카드 레이아웃 print 강제 적용 */
       .grid-2 { display: grid !important; }
-      .ai-score-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }
+      .ai-score-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }
       .ai-score-card { display: block !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important; padding: 10px 8px !important; text-align: center !important; break-inside: avoid !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; width: 100% !important; min-width: 0 !important; }
       .stat-box { display: block !important; background: #f8fafc !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      /* 제목 + 바로 다음 요소 함께 묶기 (가장 신뢰할 수 있는 방법) */
-      .section-title { page-break-after: avoid; break-after: avoid; }
-      .section-title + * { page-break-before: avoid; break-before: avoid; }
-      /* 작은 카드/박스만 내부 분할 방지, 큰 테이블은 허용 */
+      /* 섹션 제목 + 바로 다음 요소 함께 묶기 */
+      .section-title { page-break-after: avoid !important; break-after: avoid !important; }
+      .section-title + * { page-break-before: avoid !important; break-before: avoid !important; }
+      /* 섹션 단위 분할 — 주요 섹션 앞에서 끊기 */
+      .section { page-break-inside: auto; }
+      .page-break-before { page-break-before: always !important; break-before: page !important; }
+      /* 카드/박스 내부 분할 방지 */
       .ai-score-card { page-break-inside: avoid; break-inside: avoid; }
       .risk-box { page-break-inside: avoid; break-inside: avoid; }
-      /* stat-box는 작은 것만 */
       .stat-box.small { page-break-inside: avoid; break-inside: avoid; }
+      .highlight { page-break-inside: avoid; break-inside: avoid; }
       /* 플로팅 UI 숨김 */
       .no-print { display: none !important; }
       /* 표지 print */
-      .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-after: always; }
       /* 고아 줄 방지 */
       p { orphans: 3; widows: 3; }
-      /* 테이블이 페이지 중간에서 끊기지 않도록 */
+      /* 테이블 행 분할 방지 */
       tr { page-break-inside: avoid; break-inside: avoid; }
+      /* 섹션 여백 축소 (인쇄 시) */
+      .section { margin-bottom: 16px; }
+      /* 커버 뒤 빈 페이지 방지 */
+      .cover + .section { page-break-before: auto; }
     }
     @media screen and (max-width: 600px) {
-      body { padding: 10px; font-size: 10pt; }
+      body { padding: 8px; font-size: 9.5pt; }
       /* 표지 - 잘림 완전 방지 */
-      .cover { padding: 20px 10px; min-height: auto; overflow: visible; }
-      .cover h1 { font-size: 14pt; word-break: keep-all; overflow-wrap: break-word; line-height: 1.4; max-width: 100%; white-space: normal; }
-      .cover .address { font-size: 11pt; word-break: break-all; max-width: 100%; }
-      .cover .meta { flex-direction: column; gap: 8px; }
+      .cover { padding: 16px 10px; min-height: auto; overflow: visible; }
+      .cover h1 { font-size: 13pt; word-break: keep-all; overflow-wrap: break-word; line-height: 1.3; max-width: 100%; white-space: normal; }
+      .cover .address { font-size: 10pt; word-break: break-all; max-width: 100%; line-height: 1.4; }
+      .cover .meta { flex-direction: column; gap: 6px; }
+      .cover .meta-item { padding: 6px 8px; }
+      .cover .subtitle { font-size: 8pt; }
+      .cover .project-type { font-size: 9pt; }
+      .cover .doc-number { font-size: 7pt; }
       /* 그리드 - 모바일 2열 */
-      .grid-2 { grid-template-columns: 1fr 1fr; gap: 6px; }
-      .risk-grid { grid-template-columns: 1fr; gap: 8px; }
+      .grid-2 { grid-template-columns: 1fr 1fr; gap: 5px; }
+      .risk-grid { grid-template-columns: 1fr; gap: 6px; }
       /* AI 점수 카드 - 모바일 2x2 */
-      .ai-score-grid { grid-template-columns: 1fr 1fr !important; gap: 6px; }
-      .ai-score-card { padding: 8px 6px; min-height: 0; }
-      /* 5번 섹션 카드 모바일 축소 — 4열→2열, 패딩/폰트 압축 */
-      .stat-box { padding: 6px 5px; min-height: 0; }
-      .stat-value { font-size: 11pt; }
-      .stat-label { font-size: 7.5pt; }
-      .stat-note { font-size: 7.5pt; }
-      table { font-size: 8pt; display: block; overflow-x: auto; white-space: nowrap; }
-      th, td { padding: 4px 5px; min-width: 50px; }
-      /* 섹션 간격 압축 — 후반부 여백 최소화 */
-      .section { margin-bottom: 10px; padding-bottom: 8px; }
-      .section:last-child { margin-bottom: 4px; padding-bottom: 2px; }
-      .section-title { font-size: 11pt; margin-bottom: 8px; padding-bottom: 6px; }
+      .ai-score-grid { grid-template-columns: 1fr 1fr !important; gap: 5px; }
+      .ai-score-card { padding: 6px 5px; min-height: 0; }
+      /* 5번 섹션 카드 모바일 축소 */
+      .stat-box { padding: 5px 4px; min-height: 0; }
+      .stat-value { font-size: 10pt; }
+      .stat-label { font-size: 7pt; }
+      .stat-note { font-size: 7pt; }
+      table { font-size: 7.5pt; display: block; overflow-x: auto; white-space: nowrap; }
+      th, td { padding: 3px 4px; min-width: 45px; }
+      /* 섹션 간격 최소화 */
+      .section { margin-bottom: 8px; padding-bottom: 6px; }
+      .section:last-child { margin-bottom: 2px; padding-bottom: 0; }
+      .section-title { font-size: 10pt; margin-bottom: 6px; padding-bottom: 5px; }
+      .section-number { width: 18px; height: 18px; font-size: 9pt; }
       /* 여백 압축 */
-      .highlight { padding: 7px 8px; margin: 6px 0; }
-      .conclusion { padding: 10px; margin: 8px 0; }
+      .highlight { padding: 6px 7px; margin: 4px 0; }
+      .conclusion { padding: 8px; margin: 6px 0; }
       .feature-tags { gap: 3px; }
-      .feature-tag { padding: 2px 5px; font-size: 7.5pt; }
-      /* 표지 제목/주소 잘림 완전 방지 */
+      .feature-tag { padding: 2px 5px; font-size: 7pt; }
+      /* 제목/주소 잘림 완전 방지 */
       .section-title span { word-break: keep-all; }
       .cover h1, .cover .address { overflow: visible !important; text-overflow: unset !important; white-space: normal !important; }
       /* 리스크/결론 박스 여백 축소 */
-      .risk-box { padding: 8px; }
-      .risk-title { font-size: 9pt; margin-bottom: 5px; }
-      .risk-list li { font-size: 8pt; margin-bottom: 2px; }
+      .risk-box { padding: 6px; }
+      .risk-title { font-size: 8pt; margin-bottom: 4px; }
+      .risk-list li { font-size: 7.5pt; margin-bottom: 2px; }
+      /* 도면 이미지 모바일 축소 */
+      .drawing-grid img { max-height: 120px; }
     }
     .cover { text-align: center; padding: 60px 20px; margin-bottom: 40px; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; border-radius: 8px; }
     .cover h1 { font-size: 24pt; font-weight: 700; margin-bottom: 8px; }
@@ -468,9 +482,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     .cover .meta-label { font-size: 9pt; color: #94a3b8; margin-bottom: 4px; }
     .cover .meta-value { font-size: 11pt; font-weight: 500; }
     .doc-number { font-size: 9pt; color: #64748b; margin-bottom: 16px; }
-    .section { margin-bottom: 24px; }
+    .section { margin-bottom: 18px; }
     .section-header { page-break-after: avoid; break-after: avoid; }
-    .section-title { font-size: 13pt; font-weight: 700; color: #1e293b; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; page-break-after: avoid; break-after: avoid; }
+    .section-title { font-size: 12pt; font-weight: 700; color: #1e293b; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; page-break-after: avoid; break-after: avoid; }
     .section-number { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #f1f5f9; border-radius: 4px; font-size: 11pt; color: #475569; }
     table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10pt; }
     th, td { padding: 10px 14px; border: 1px solid #e2e8f0; text-align: left; }
@@ -481,8 +495,8 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     .highlight-title { font-weight: 600; color: #0369a1; margin-bottom: 8px; }
     .warning { background: #fffbeb; border: 1px solid #fde68a; padding: 12px 16px; border-radius: 6px; font-size: 10pt; color: #92400e; margin: 12px 0; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
-    .ai-score-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
-    .ai-score-card { background: #f8fafc; padding: 12px 8px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center; }
+    .ai-score-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+    .ai-score-card { background: #f8fafc; padding: 12px 8px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center; break-inside: avoid; }
     .stat-box { background: #f8fafc; padding: 10px 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
     .stat-label { font-size: 8pt; color: #64748b; margin-bottom: 3px; }
     .stat-value { font-size: 14pt; font-weight: 700; color: #1e293b; }
@@ -775,9 +789,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     <p style="font-size: 7pt; color: #94a3b8; margin-top: 6px; text-align: center;">※ 도면은 사전검토 단계의 개략적 배치이며, 실시설계 시 변경될 수 있습니다.</p>
   </div>
 
-  <div class="section" style="page-break-before: auto;">
+  <div class="section page-break-before" style="page-break-before: always;">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '8' : '7'}</span> 사업성 검토</div>
-    <table style="page-break-before: avoid; break-before: avoid;">
+    <table style="break-before: avoid;">
       <caption style="font-weight: 500; text-align: left; padding: 0 0 8px 0; color: #374151;">사업비 추정</caption>
       <thead>
         <tr><th>항목</th><th class="text-right">금액</th><th>비고</th></tr>
@@ -814,9 +828,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     </div>
   </div>
 
-  <div class="section">
+  <div class="section page-break-before" style="page-break-before: always;">
     <div class="section-title"><span class="section-number">${layouts.length > 1 ? '9' : '8'}</span> AI 분석</div>
-    <div class="ai-score-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">
+    <div class="ai-score-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;">
       <div class="ai-score-card" style="background:#f8fafc;padding:12px 8px;border-radius:6px;border:1px solid #e2e8f0;text-align:center;">
         <div class="stat-label">법규 적합성</div>
         <div class="stat-value">${layout.scores?.regulationCompliance ?? (layout.coverage <= 60 ? 90 : 70)}<span style="font-size: 10pt; font-weight: 400;">점</span></div>

@@ -554,6 +554,21 @@ function checkCompliance(
     }
   }
 
+  // 4-1. 높이 제한 검토
+  {
+    const maxH = input.heightLimit
+    const maxF = envelope.maxFloors
+    const recommendedF = envelope.recommendedFloors
+    if (maxH && maxH < 100) {
+      checks.push({
+        item: '높이 제한',
+        status: 'ok',
+        detail: `법정 높이 제한 ${maxH}m → 최대 ${maxF}층 (권장 ${recommendedF}층)`,
+        recommendation: maxF <= 3 ? '저층 설계 필수 — 층고 3.3m 기준' : undefined,
+      })
+    }
+  }
+
   // 5. 조경 면적
   if (landscaping.required) {
     checks.push({
