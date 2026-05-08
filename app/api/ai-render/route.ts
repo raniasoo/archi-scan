@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
     
     console.log(`[GEMINI] Reference images: ${refImages.length} loaded (${refImages.map(r => r.label).join(', ')})`)
 
-    // #9: 멀티앵글 — 3장 일괄 생성
+    // #9: 멀티앵글 — 3장 일괄 생성 (첫 이미지를 참조로 일관성 확보)
     if (multiAngle) {
       const angles = [
         { angle: 'eye-level', scene: sceneMode || 'afternoon' },
@@ -187,13 +187,26 @@ export async function POST(req: NextRequest) {
         { angle: 'entrance', scene: sceneMode || 'afternoon' },
       ]
       const images: { angle: string; image: string | null; error?: string }[] = []
+      let firstImageBase64: string | null = null  // 첫 번째 생성 이미지 저장
+      let firstImageMime: string = 'image/png'
       
-      for (const a of angles) {
+      for (let ai = 0; ai < angles.length; ai++) {
+        const a = angles[ai]
         const aPrompt = buildArchitecturePrompt({
           prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, regulation
         })
         
-        const parts: any[] = [{ text: aPrompt }]
+        const parts: any[] = []
+        
+        // ★ 2,3번째 렌더링: 첫 번째 이미지를 참조로 전달
+        if (ai > 0 && firstImageBase64) {
+          parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
+          parts.push({ text: `CRITICAL: The image above shows the EXACT building you already designed from eye-level view. Now render THE SAME IDENTICAL BUILDING from a ${a.angle === 'birds-eye' ? 'bird\'s-eye aerial 45° angle (drone view from 50m height)' : 'close-up entrance view (focus on main door, canopy, ground floor)'}. The building shape, materials, colors, window patterns, roof form, and surrounding environment MUST be EXACTLY THE SAME as the reference image above. Do NOT redesign the building — just change the camera angle.\n\n${aPrompt}` })
+        } else {
+          parts.push({ text: aPrompt })
+        }
+        
+        // 기존 참조 이미지 (위성, 지적도, 거리뷰)
         if (refImages.length > 0) {
           for (const img of refImages) {
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
@@ -210,7 +223,16 @@ export async function POST(req: NextRequest) {
           if (r.ok) {
             const d = await r.json()
             const imgPart = d?.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.mimeType?.startsWith('image/'))
-            images.push({ angle: a.angle, image: imgPart ? `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}` : null })
+            if (imgPart) {
+              images.push({ angle: a.angle, image: `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}` })
+              // ★ 첫 번째 이미지 저장 → 후속 렌더링 참조용
+              if (ai === 0) {
+                firstImageBase64 = imgPart.inlineData.data
+                firstImageMime = imgPart.inlineData.mimeType
+              }
+            } else {
+              images.push({ angle: a.angle, image: null })
+            }
           } else {
             images.push({ angle: a.angle, image: null, error: `${r.status}` })
           }
@@ -539,6 +561,14 @@ CONTEXT:
 - Project: ${layoutName || '주거 건물'}
 - Style: ${styleDesc}
 ${surroundingContext ? `\nSITE-SPECIFIC CONTEXT (IMPORTANT — render must reflect this):\n${surroundingContext}\n\nThe rendering MUST show the building responding to its actual site conditions described above.` : ''}
+
+BUILDING IDENTITY (must remain IDENTICAL across all camera angles):
+- Exact form: ${buildingForm}
+- Building type: ${typeHint || 'residential'}
+- Facade color: ${material?.includes('stone') ? 'warm stone beige/cream' : material?.includes('glass') ? 'reflective glass with dark metal frames' : material?.includes('wood') ? 'natural wood tone with white accents' : 'white/light gray concrete with accent panels'}
+- Roof: ${f <= 3 ? 'flat roof with rooftop garden or parapet' : f <= 5 ? 'flat roof with mechanical penthouse' : 'flat roof tower cap'}
+- Window pattern: ${f <= 3 ? 'large residential windows, balcony doors' : 'regular grid of windows with balcony railings'}
+- Ground floor: ${f <= 2 ? 'garden entrance with low wall' : 'pilotis or lobby entrance with canopy'}
 
 CRITICAL REQUIREMENTS:
 ${isComplex 
