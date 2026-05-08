@@ -626,10 +626,38 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                 >
                   다른 주소 분석
                 </button>
+
+                {/* 간이 보고서 즉시 다운로드 */}
+                <button
+                  onClick={() => {
+                    const roi = result.bestLayout.roi
+                    const imgTag = renderImage ? `<img src="${renderImage}" style="width:100%;border-radius:8px;margin:12px 0;" alt="AI 렌더링"/>` : ''
+                    const overlaps = result.overlappingNames?.slice(0, 5).map((n: string) => `<li>${n}</li>`).join('') || '<li>해당 없음</li>'
+                    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Archi-Scan 간이 보고서</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1a1a1a;padding:40px;max-width:800px;margin:0 auto;font-size:13px;line-height:1.6}h1{font-size:20px;margin-bottom:4px}h2{font-size:15px;margin:20px 0 8px;padding-bottom:4px;border-bottom:2px solid #10b981;color:#065f46}.header{border-bottom:3px solid #10b981;padding-bottom:16px;margin-bottom:20px}.subtitle{color:#6b7280;font-size:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;text-align:center}.card .value{font-size:22px;font-weight:800;color:#065f46}.card .label{font-size:10px;color:#6b7280;margin-bottom:2px}.verdict{background:${result.verdictColor === 'emerald' ? '#ecfdf5' : result.verdictColor === 'amber' ? '#fffbeb' : '#fef2f2'};border-radius:8px;padding:12px;margin:12px 0;font-weight:600;font-size:14px}table{width:100%;border-collapse:collapse;margin:8px 0}th,td{border:1px solid #e5e7eb;padding:6px 10px;text-align:left;font-size:12px}th{background:#f9fafb;font-weight:600}.footer{margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}ul{padding-left:20px;margin:4px 0}li{margin:2px 0;font-size:12px}@media print{body{padding:20px}@page{size:A4;margin:15mm}}</style></head><body>
+<div class="header"><h1>🏗️ Archi-Scan 개발사업 간이 보고서</h1><p class="subtitle">${result.address} · ${result.siteArea.toLocaleString()}㎡ · ${new Date().toLocaleDateString('ko-KR')}</p></div>
+${imgTag}
+<div class="verdict">${result.verdictEmoji} ${result.verdict}</div>
+<h2>📊 대지 개요</h2>
+<div class="grid"><div class="card"><div class="label">대지면적</div><div class="value">${result.siteArea.toLocaleString()}㎡</div></div><div class="card"><div class="label">용도지역</div><div class="value" style="font-size:16px">${result.zoneName}</div></div><div class="card"><div class="label">건폐율</div><div class="value">${result.buildingCoverage}%</div></div><div class="card"><div class="label">용적률</div><div class="value">${result.floorAreaRatio}%</div></div></div>
+<h2>🏢 AI 추천 배치안: ${result.bestLayout.name}</h2>
+<table><tr><th>항목</th><th>수치</th></tr><tr><td>층수</td><td>${result.bestLayout.floors}층</td></tr><tr><td>세대수</td><td>${result.bestLayout.units}세대</td></tr><tr><td>건폐율</td><td>${result.bestLayout.coverage}%</td></tr><tr><td>총사업비</td><td>${(result.bestLayout.totalCost / 1e8).toFixed(1)}억원</td></tr><tr><td>예상수익</td><td>${(result.bestLayout.expectedProfit / 1e8).toFixed(1)}억원</td></tr><tr><td>ROI</td><td style="color:${roi >= 0 ? '#059669' : '#dc2626'};font-weight:700">${roi.toFixed(1)}%</td></tr></table>
+<h2>⚖️ 법규 검토 요약</h2>
+<table><tr><th>항목</th><th>기준</th></tr><tr><td>높이 제한</td><td>${result.heightLimit}m</td></tr><tr><td>건폐율 한도</td><td>${result.buildingCoverage}%</td></tr><tr><td>용적률 한도</td><td>${result.floorAreaRatio}%</td></tr><tr><td>중첩 규제</td><td>${result.overlappingCount}건</td></tr></table>
+${result.overlappingCount > 0 ? `<h2>🔍 중첩 규제 목록</h2><ul>${overlaps}</ul>` : ''}
+<div class="footer"><p>이 보고서는 AI가 자동 생성한 간이 보고서입니다. 실제 사업 추진 시 전문가 검토가 필요합니다.</p><p>Archi-Scan | archiscan.kr | ${new Date().toLocaleString('ko-KR')}</p></div>
+</body></html>`
+                    const w = window.open('', '_blank')
+                    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500) }
+                  }}
+                  className="w-full py-3 rounded-xl border-2 border-primary/30 bg-primary/5 text-primary font-bold text-sm flex items-center justify-center gap-2"
+                >
+                  📄 간이 보고서 즉시 다운로드
+                </button>
               </div>
 
               <p className="text-[9px] text-muted-foreground text-center">
-                상세 분석에서 AI 렌더링, 설계 상담, 사업 제안서, PDF 보고서를 이용할 수 있습니다
+                간이 보고서는 즉시, 상세 보고서는 상세 분석 후 다운로드 가능합니다
               </p>
             </div>
           </>
