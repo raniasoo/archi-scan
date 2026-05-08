@@ -87,13 +87,67 @@ const MATERIALS = [
   { id: 'composite', label: '복합 재질', emoji: '🎨' },
 ]
 
+// ━━━ 대지 특성 기반 AI 자동 최적화 ━━━
+function getOptimalSettings(input: ConceptInput): { style: string; angle: string; scene: string; material: string | null; reason: string } {
+  const addr = input.address || ''
+  const zone = input.zoneType || ''
+  const strat = input.strategy || ''
+  const floors = input.floors || 3
+  const regs = input.regulation?.overlappingRegs || []
+  const hasNatureReg = regs.some((r: string) => r.includes('경관') || r.includes('자연') || r.includes('녹지'))
+  const hasHistoricReg = regs.some((r: string) => r.includes('문화') || r.includes('한옥') || r.includes('역사'))
+
+  // ━━━ 스타일 자동 선택 ━━━
+  let style = 'modern-luxury'
+  let reason = ''
+
+  if (hasHistoricReg || addr.includes('북촌') || addr.includes('서촌') || addr.includes('인사동')) {
+    style = 'korean-modern'; reason = '역사·문화 지역 → 한국 모던'
+  } else if (hasNatureReg || addr.includes('평창') || addr.includes('부암') || addr.includes('성북')) {
+    style = 'premium-resi'; reason = '자연경관·고급 주택가 → 프리미엄 주거'
+  } else if (zone.includes('commercial') || addr.includes('강남') || addr.includes('서초') || addr.includes('여의도')) {
+    style = 'modern-luxury'; reason = '상업·도심 지역 → 모던 럭셔리'
+  } else if (strat === 'livability') {
+    style = 'eco-green'; reason = '실거주 전략 → 친환경 녹색'
+  } else if (strat === 'privacy-priority') {
+    style = 'premium-resi'; reason = '프라이버시 전략 → 프리미엄 주거'
+  } else if (strat === 'profitability' && zone.includes('residential')) {
+    style = 'minimalist'; reason = '수익성 + 주거 → 미니멀리즘'
+  } else if (floors <= 3) {
+    style = 'premium-resi'; reason = '저층 주거 → 프리미엄 주거'
+  }
+
+  // ━━━ 카메라 자동 선택 ━━━
+  let angle = 'eye-level'
+  if (floors >= 10) angle = 'birds-eye'
+  else if (input.buildingType === 'cluster') angle = 'birds-eye'
+
+  // ━━━ 장면 자동 선택 ━━━
+  let scene = 'afternoon'
+  if (strat === 'view-priority' || strat === 'privacy-priority') scene = 'golden'
+  else if (zone.includes('commercial')) scene = 'afternoon'
+  else if (strat === 'livability') scene = 'spring'
+
+  // ━━━ 재질 자동 선택 ━━━
+  let material: string | null = null // null = 자동
+  if (hasNatureReg) material = 'wood-louver'
+  else if (addr.includes('평창') || addr.includes('성북') || addr.includes('한남')) material = 'stone'
+  else if (zone.includes('commercial')) material = 'glass-curtain'
+  else if (strat === 'livability') material = 'brick'
+  else if (strat === 'profitability') material = 'composite'
+
+  return { style, angle, scene, material, reason }
+}
+
 export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void }) {
+  const optimal = getOptimalSettings(input)
   const [isOpen, setIsOpen] = useState(false)
   const [tab, setTab] = useState<'render'|'consult'|'proposal'|'prompt'>('render')
-  const [style, setStyle] = useState('modern-luxury')
-  const [angle, setAngle] = useState('eye-level')
-  const [scene, setScene] = useState('afternoon')
-  const [materialId, setMaterialId] = useState<string | null>(null)
+  const [style, setStyle] = useState(optimal.style)
+  const [angle, setAngle] = useState(optimal.angle)
+  const [scene, setScene] = useState(optimal.scene)
+  const [materialId, setMaterialId] = useState<string | null>(optimal.material)
+  const [showStyleOptions, setShowStyleOptions] = useState(false)
   const [multiImages, setMultiImages] = useState<{angle:string; image:string|null}[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
@@ -227,27 +281,50 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
 
       {isOpen && (
         <div className="px-4 pb-4 space-y-3">
-          {/* 스타일 선택 */}
-          <div className="grid grid-cols-3 gap-1.5">
-            {STYLES.filter(s => s.engine === 'gemini').map(s => (
-              <button key={s.id} onClick={() => setStyle(s.id)}
-                className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-violet-500/20 border-2 border-violet-400 font-semibold' : 'bg-card/30 border border-border/50 hover:border-violet-300'}`}>
-                <span className="text-base block">{s.emoji}</span>{s.label}
-              </button>
-            ))}
-          </div>
-          {/* 한국 건축 LoRA */}
-          <div className="space-y-1">
-            <p className="text-[9px] text-amber-400/70 font-medium">🇰🇷 한국 건축 스타일 (Flux+LoRA)</p>
-            <div className="grid grid-cols-3 gap-1.5">
-              {STYLES.filter(s => s.engine === 'flux').map(s => (
-                <button key={s.id} onClick={() => setStyle(s.id)}
-                  className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-card/30 border border-amber-900/30 hover:border-amber-400'}`}>
-                  <span className="text-base block">{s.emoji}</span>{s.label}
-                </button>
-              ))}
+          {/* AI 자동 추천 설정 요약 */}
+          <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] font-bold text-primary">AI 자동 추천 설정</span>
+              {optimal.reason && <span className="text-[9px] text-muted-foreground ml-auto">{optimal.reason}</span>}
+            </div>
+            <div className="flex gap-2 text-[10px]">
+              <span className="px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">{STYLES.find(s => s.id === style)?.emoji} {STYLES.find(s => s.id === style)?.label}</span>
+              <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">{ANGLES.find(a => a.id === angle)?.emoji} {ANGLES.find(a => a.id === angle)?.label}</span>
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">{SCENES.find(s => s.id === scene)?.emoji} {SCENES.find(s => s.id === scene)?.label}</span>
+              {materialId && <span className="px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-300">{MATERIALS.find(m => m.id === materialId)?.emoji} {MATERIALS.find(m => m.id === materialId)?.label}</span>}
             </div>
           </div>
+
+          {/* 스타일 변경 (접기/펼치기) */}
+          <button onClick={() => setShowStyleOptions(!showStyleOptions)} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronDown className={`h-3 w-3 transition-transform ${showStyleOptions ? 'rotate-180' : ''}`} />
+            스타일 직접 변경
+          </button>
+
+          {showStyleOptions && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-1.5">
+                {STYLES.filter(s => s.engine === 'gemini').map(s => (
+                  <button key={s.id} onClick={() => setStyle(s.id)}
+                    className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-violet-500/20 border-2 border-violet-400 font-semibold' : 'bg-card/30 border border-border/50 hover:border-violet-300'}`}>
+                    <span className="text-base block">{s.emoji}</span>{s.label}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-1">
+                <p className="text-[9px] text-amber-400/70 font-medium">🇰🇷 한국 건축 스타일 (Flux+LoRA)</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {STYLES.filter(s => s.engine === 'flux').map(s => (
+                    <button key={s.id} onClick={() => setStyle(s.id)}
+                      className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-card/30 border border-amber-900/30 hover:border-amber-400'}`}>
+                      <span className="text-base block">{s.emoji}</span>{s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 탭 */}
           <div className="grid grid-cols-4 gap-1">
@@ -263,25 +340,28 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
 
           {/* 렌더링 */}
           {tab === 'render' && <div className="space-y-2">
-            <p className="text-[10px] text-muted-foreground">스타일: <span className="text-emerald-400 font-medium">{styleName}</span></p>
-            {/* #4: 카메라 앵글 */}
-            <div className="flex gap-1">
-              {ANGLES.map(a => (
-                <button key={a.id} onClick={() => setAngle(a.id)}
-                  className={`flex-1 py-1.5 rounded-lg text-[10px] text-center transition-all ${angle === a.id ? 'bg-blue-500/20 border border-blue-400 font-semibold text-blue-300' : 'bg-card/20 border border-border/30 text-muted-foreground'}`}>
-                  {a.emoji} {a.label}
-                </button>
-              ))}
-            </div>
-            {/* #6: 계절/시간대 */}
-            <div className="flex gap-1 flex-wrap">
-              {SCENES.map(s => (
-                <button key={s.id} onClick={() => setScene(s.id)}
-                  className={`px-2 py-1 rounded-full text-[10px] transition-all ${scene === s.id ? 'bg-amber-500/20 border border-amber-400 font-semibold text-amber-300' : 'bg-card/20 border border-border/30 text-muted-foreground'}`}>
-                  {s.emoji} {s.label}
-                </button>
-              ))}
-            </div>
+            {/* 카메라/장면/재질 — 스타일 변경 열렸을 때만 */}
+            {showStyleOptions && (
+              <div className="space-y-2 border-t border-border/30 pt-2">
+                <p className="text-[10px] text-muted-foreground font-medium">카메라 · 장면 · 재질</p>
+                {/* #4: 카메라 앵글 */}
+                <div className="flex gap-1">
+                  {ANGLES.map(a => (
+                    <button key={a.id} onClick={() => setAngle(a.id)}
+                      className={`flex-1 py-1.5 rounded-lg text-[10px] text-center transition-all ${angle === a.id ? 'bg-blue-500/20 border border-blue-400 font-semibold text-blue-300' : 'bg-card/20 border border-border/30 text-muted-foreground'}`}>
+                      {a.emoji} {a.label}
+                    </button>
+                  ))}
+                </div>
+                {/* #6: 계절/시간대 */}
+                <div className="flex gap-1 flex-wrap">
+                  {SCENES.map(s => (
+                    <button key={s.id} onClick={() => setScene(s.id)}
+                      className={`px-2 py-1 rounded-full text-[10px] transition-all ${scene === s.id ? 'bg-amber-500/20 border border-amber-400 font-semibold text-amber-300' : 'bg-card/20 border border-border/30 text-muted-foreground'}`}>
+                      {s.emoji} {s.label}
+                    </button>
+                  ))}
+                </div>
             {/* #8: 재질/색상 선택 */}
             <div className="flex gap-1 flex-wrap">
               <button onClick={() => setMaterialId(null)}
@@ -295,7 +375,9 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
                 </button>
               ))}
             </div>
-            {/* 렌더링 버튼 (단일 + 멀티) */}
+              </div>
+            )}
+            {/* 렌더링 버튼 (항상 보임) */}
             <div className="flex gap-2">
               <button onClick={() => doRender(0)} disabled={loading} className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
                 {loading && !multiImages ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2` : '생성 중'}</> : '🎨 렌더링'}
