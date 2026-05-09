@@ -181,14 +181,15 @@ export async function POST(req: NextRequest) {
 
     // #9: 멀티앵글 — 3장 일괄 생성 (첫 이미지를 참조로 일관성 확보)
     if (multiAngle) {
-      // ★ 조감도를 먼저 생성 (위성사진 참조에 적합) → 눈높이/입구는 거리뷰만 참조
+      // ★ 눈높이를 먼저 생성 (거리뷰만 참조 → 확실한 정면 시점)
+      // → 조감도/입구가 이를 참조 → 건물 일관성 유지 + 시점만 변경
       const angles = [
-        { angle: 'birds-eye', scene: sceneMode || 'afternoon' },
         { angle: 'eye-level', scene: sceneMode || 'afternoon' },
+        { angle: 'birds-eye', scene: sceneMode || 'afternoon' },
         { angle: 'entrance', scene: sceneMode || 'afternoon' },
       ]
       const images: { angle: string; image: string | null; error?: string }[] = []
-      let firstImageBase64: string | null = null  // 첫 번째 생성 이미지 저장
+      let firstImageBase64: string | null = null
       let firstImageMime: string = 'image/png'
       
       for (let ai = 0; ai < angles.length; ai++) {
@@ -199,24 +200,24 @@ export async function POST(req: NextRequest) {
         
         const parts: any[] = []
         
-        // ★ 2,3번째 렌더링: 앵글별로 참조 전략이 다름
-        if (ai > 0 && firstImageBase64) {
-          if (a.angle === 'eye-level') {
-            // 눈높이: 조감도 참조 이미지를 전달하지 않음 (aerial 시점 유도 방지)
-            // 대신 프롬프트만으로 건물 정체성 유지 + 거리뷰 참조로 시점 유도
-            parts.push({ text: `YOU MUST RENDER THIS AS A STREET-LEVEL PHOTOGRAPH. Camera at 1.6m height, standing on the road. The building facade fills the frame. You can see the SKY and CLOUDS above the roofline. The horizon line is at the MIDDLE of the image. This is eye-level — NOT aerial, NOT drone, NOT elevated. Like a real estate photo taken by a person standing on the sidewalk.\n\n${aPrompt}` })
-          } else {
-            // 입구: 조감도 참조 이미지 전달 (건물 일관성 유지)
-            parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
-            parts.push({ text: `CRITICAL: The image above shows the building from aerial view. Now render a CLOSE-UP of the main entrance at 1.5m height, 3 meters from the door. Show entrance canopy, door details, ground-floor materials. Camera at GROUND LEVEL.\n\n${aPrompt}` })
-          }
-        } else {
+        // ★ 앵글별 참조 전략
+        if (ai === 0) {
+          // 1번 눈높이: 독립 생성 (거리뷰만 참조, 위성사진 제외)
           parts.push({ text: aPrompt })
+        } else if (firstImageBase64) {
+          // 2,3번: 눈높이 이미지를 참조로 전달
+          parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
+          if (a.angle === 'birds-eye') {
+            parts.push({ text: `The image above shows the EXACT building you designed from street level. Now render THE SAME IDENTICAL BUILDING from a DRONE VIEW at 50m height, looking DOWN at 45° angle. You MUST see the ROOFTOPS, landscaping, parking from ABOVE. The building shape, materials, colors, windows MUST be exactly the same. Only the camera position changes — from ground to sky.\n\n${aPrompt}` })
+          } else {
+            parts.push({ text: `The image above shows the building from street level. Now render a CLOSE-UP of the main entrance at 1.5m height, 3 meters from the door. Same building, same materials. Show entrance canopy, door details, ground-floor facade.\n\n${aPrompt}` })
+          }
         }
         
-        // 기존 참조 이미지 — 앵글별 필터링
-        // birds-eye(1번): 위성+지적도+거리뷰 모두 사용
-        // eye-level/entrance(2,3번): 거리뷰만 (위성사진은 aerial 시점 유도하므로 제외)
+        // 참조 이미지 — 앵글별 필터링
+        // eye-level(1번): 거리뷰만 (위성사진은 aerial 시점 유도하므로 제외)
+        // birds-eye(2번): 위성+지적도+거리뷰 모두 사용 (aerial에 적합)
+        // entrance(3번): 거리뷰만
         const angleRefImages = a.angle === 'birds-eye' 
           ? refImages 
           : refImages.filter(r => r.label.startsWith('street-view'))
