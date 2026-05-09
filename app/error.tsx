@@ -25,17 +25,28 @@ export default function Error({
       const lastReload = sessionStorage.getItem(reloadKey)
       const now = Date.now()
 
-      if (!lastReload || now - Number(lastReload) > 10000) {
+      if (!lastReload || now - Number(lastReload) > 5000) {
         sessionStorage.setItem(reloadKey, String(now))
-        window.location.reload()
+        // 서비스워커 캐시 삭제 후 하드 리로드
+        if ('caches' in window) {
+          caches.keys().then(names => {
+            names.forEach(name => caches.delete(name))
+          }).finally(() => {
+            window.location.href = window.location.origin + '?t=' + now
+          })
+        } else {
+          window.location.href = window.location.origin + '?t=' + now
+        }
         return
       }
     }
   }, [error])
 
   const isChunkError =
+    error?.name === "ChunkLoadError" ||
     error?.message?.includes("ChunkLoadError") ||
-    error?.message?.includes("Loading chunk")
+    error?.message?.includes("Loading chunk") ||
+    error?.message?.includes("Failed to fetch dynamically")
 
   return (
     <div style={{
