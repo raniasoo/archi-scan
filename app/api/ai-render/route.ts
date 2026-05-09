@@ -205,42 +205,56 @@ export async function POST(req: NextRequest) {
           // 1번 눈높이: 독립 생성 (거리뷰만 참조, 위성사진 제외)
           parts.push({ text: aPrompt })
         } else if (firstImageBase64) {
-          // 2,3번: 눈높이 이미지를 참조로 전달
+          // ★ 2,3번: 참조 이미지 순서 변경 — 눈높이 이미지를 마지막에 배치
+          // 이유: Gemini는 마지막에 본 이미지에 가장 강하게 영향받음
+          // Before: [눈높이] → [위성/지적도/거리뷰] → 생성 (눈높이가 희석됨)
+          // After: [프롬프트] → [위성만] → [눈높이 + "이 건물 복사"] → 생성
+
+          // Step 1: 프롬프트 먼저
+          parts.push({ text: aPrompt })
+
+          // Step 2: 사이트 참조 이미지 (조감도: 위성만, 입구: 없음)
+          if (a.angle === 'birds-eye') {
+            // 조감도는 위성사진만 (거리뷰/지적도는 건물 외형을 흐림)
+            const satOnly = refImages.filter(r => r.label === 'satellite')
+            for (const img of satOnly) {
+              parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
+            }
+            if (satOnly.length > 0) {
+              parts.push({ text: `The satellite image above shows the ACTUAL SITE from above. Use it ONLY for understanding the terrain, roads, and surrounding context — NOT for building design.` })
+            }
+          }
+
+          // Step 3: 눈높이 이미지를 마지막에 — 가장 강한 컨텍스트
           parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
           if (a.angle === 'birds-eye') {
-            parts.push({ text: `REFERENCE IMAGE ABOVE: This is the building you designed, photographed from STREET LEVEL (1.6m height).
+            parts.push({ text: `⚠️ CRITICAL — BUILDING IDENTITY LOCK:
+The image DIRECTLY ABOVE is the EXACT building you MUST reproduce. This is non-negotiable.
 
-YOUR TASK: Render THE SAME IDENTICAL BUILDING but now photographed from a DRONE at 50m altitude, looking DOWN at 45°.
+COPY THESE EXACTLY from the image above:
+- The exact number, shape, and arrangement of buildings
+- Wall materials (stone/concrete/wood panels visible in the image)
+- Window sizes, shapes, and patterns
+- Roof style (flat/pitched as shown)
+- Color scheme (exact same colors)
+- Facade composition (the specific mix of materials)
 
-WHAT CHANGES: Only the camera position — from ground to sky.
-WHAT STAYS IDENTICAL: Building shape, number of floors (${floors}), facade materials, colors, window pattern, entrance design.
-
-COMPOSITION CHECK:
-✅ The ROOF of the building is clearly visible (you're looking DOWN at it)
-✅ The ground/parking/landscaping is visible as a plane BELOW
-✅ Neighboring buildings are seen from ABOVE (their roofs visible)
-✅ Trees appear as round canopy shapes seen from above
-❌ NOT a street-level view
-❌ NOT looking horizontally at the facade
-
-${aPrompt}` })
+ONLY CHANGE: Camera position — move to a drone at 50m altitude, 45° angle looking down.
+The buildings must be RECOGNIZABLE as the same ones from the street-level image.
+If the result looks like a DIFFERENT complex, you have failed.` })
           } else {
-            parts.push({ text: `REFERENCE IMAGE ABOVE: This is the building you designed, photographed from STREET LEVEL showing the full facade.
+            parts.push({ text: `⚠️ CRITICAL — BUILDING IDENTITY LOCK:
+The image DIRECTLY ABOVE is the EXACT building you MUST reproduce. This is non-negotiable.
 
-YOUR TASK: Render THE SAME IDENTICAL BUILDING but now as a CLOSE-UP of the main entrance. Camera at 1.5m height, only 3 meters from the front door.
+COPY THESE EXACTLY from the image above:
+- Wall materials and colors
+- Window style and patterns
+- Entrance design elements
+- Facade composition
 
-WHAT CHANGES: Camera distance — from far (full building) to very close (entrance detail only).
-WHAT STAYS IDENTICAL: Building materials, colors, architectural style, entrance design.
-
-COMPOSITION CHECK:
-✅ The entrance door fills 70-80% of the frame
-✅ Only ground floor and maybe 2nd floor visible
-✅ Door hardware, intercom, lighting fixtures are visible details
-✅ Ground paving texture is clearly visible
-❌ NOT the full building — upper floors are cropped out
-❌ NOT pulled back — this is an intimate close-up shot
-
-${aPrompt}` })
+ONLY CHANGE: Camera distance — move to 3 meters from the main entrance door, 1.5m height.
+Show a CLOSE-UP of the entrance area of THIS EXACT building.
+The entrance must use the SAME materials and style visible in the street-level image.` })
           }
         } else {
           // 1번 이미지 실패 시 — 독립 생성 (참조 없이)
@@ -248,34 +262,22 @@ ${aPrompt}` })
           parts.push({ text: aPrompt })
         }
         
-        // 참조 이미지 — 앵글별 필터링
-        // eye-level(1번): 거리뷰만 (위성사진은 aerial 시점 유도하므로 제외)
-        // birds-eye(2번): 위성+지적도+거리뷰 모두 사용 (aerial에 적합)
-        // entrance(3번): 거리뷰만
-        const angleRefImages = a.angle === 'birds-eye' 
-          ? refImages 
-          : refImages.filter(r => r.label.startsWith('street-view'))
-        if (angleRefImages.length > 0) {
-          for (const img of angleRefImages) {
-            parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
-          }
-          const refDescriptions = angleRefImages.map(r => {
-            if (r.label === 'satellite') return 'SATELLITE/AERIAL VIEW — shows the actual site FROM ABOVE. Use this to understand the neighborhood layout, roads, and surrounding buildings as seen from a drone.'
-            if (r.label === 'cadastral') return 'CADASTRAL MAP — lot boundary shape and surrounding roads.'
-            if (r.label === 'cadastral-polygon') return 'CADASTRAL LOT BOUNDARY — exact lot shape from survey data. Blue=lot, dashed orange=setback, green=buildable area.'
-            if (r.label.startsWith('street-view')) {
-              const dir = r.label.replace('street-view-', '')
-              if (a.angle === 'birds-eye') {
-                return `STREET VIEW (${dir}) — shows the neighborhood CHARACTER (building styles, materials, vegetation). Use this for context only — your camera is in the SKY, not on the ground.`
-              } else if (a.angle === 'entrance') {
-                return `STREET VIEW (${dir}) — shows the actual neighborhood at ground level. Match the street texture, sidewalk style, and vegetation near the entrance.`
-              }
-              return `STREET VIEW (${dir}) — eye-level photo of the actual neighborhood. MATCH THIS CAMERA HEIGHT (1.6m) for the rendering.`
+        // 참조 이미지 — 1번(눈높이)만 추가 참조 전송
+        // 2,3번은 위에서 이미 처리했으므로 스킵 (중복 방지)
+        if (ai === 0) {
+          const streetViews = refImages.filter(r => r.label.startsWith('street-view'))
+          if (streetViews.length > 0) {
+            for (const img of streetViews) {
+              parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
             }
-            return r.label
-          }).join(', ')
-          parts.push({ text: `The image(s) above show: ${refDescriptions}. The rendering MUST match the actual site conditions.` })
+            const descs = streetViews.map(r => {
+              const dir = r.label.replace('street-view-', '')
+              return `STREET VIEW (${dir}) — eye-level photo of the actual neighborhood. MATCH THIS CAMERA HEIGHT (1.6m) for the rendering.`
+            }).join(', ')
+            parts.push({ text: `The image(s) above show: ${descs}. The rendering MUST match the actual site conditions.` })
+          }
         }
+        // 2,3번: 참조 이미지는 위 else if (firstImageBase64) 블록에서 이미 처리됨
 
         try {
           const r = await fetch(
