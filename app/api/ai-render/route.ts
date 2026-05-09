@@ -201,7 +201,11 @@ export async function POST(req: NextRequest) {
         // ★ 2,3번째 렌더링: 첫 번째 이미지를 참조로 전달
         if (ai > 0 && firstImageBase64) {
           parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
-          parts.push({ text: `CRITICAL: The image above shows the EXACT building you already designed from eye-level view. Now render THE SAME IDENTICAL BUILDING from a ${a.angle === 'birds-eye' ? 'bird\'s-eye aerial 45° angle (drone view from 50m height)' : 'close-up entrance view (focus on main door, canopy, ground floor)'}. The building shape, materials, colors, window patterns, roof form, and surrounding environment MUST be EXACTLY THE SAME as the reference image above. Do NOT redesign the building — just change the camera angle.\n\n${aPrompt}` })
+          parts.push({ text: `CRITICAL: The image above shows the EXACT building you already designed. Now render THE SAME IDENTICAL BUILDING but with a COMPLETELY DIFFERENT camera position:\n\n${a.angle === 'birds-eye' 
+  ? 'CAMERA POSITION: Drone/helicopter view from 50m height, looking DOWN at 45° angle. You MUST see the ROOFTOPS, parking lots, landscaping layout, and the full site from ABOVE. The camera is IN THE SKY looking DOWN — NOT from street level. This must look like a drone photograph taken from directly above the site.' 
+  : 'CAMERA POSITION: Stand directly in front of the main entrance door at 1.5m height. You are 3 meters from the door. Show the entrance canopy, door handle details, doorbell, house number, potted plants, welcome mat, and ground-floor facade materials in CLOSE-UP detail. The camera is at GROUND LEVEL looking STRAIGHT at the entrance — NOT from above.'}
+
+The building shape, materials, colors, window patterns MUST match the reference image above. But the CAMERA ANGLE must be COMPLETELY DIFFERENT.\n\n${aPrompt}` })
         } else {
           parts.push({ text: aPrompt })
         }
@@ -494,7 +498,7 @@ CRITICAL: Show ${buildingCount} SEPARATE buildings at DIFFERENT ground levels, c
 
   // ━━━ 카메라 앵글 ━━━
   const angleDesc: Record<string, string> = {
-    'eye-level': 'Eye-level perspective from the street (1.6m height), showing the main facade as seen by a person standing on the road. Slight 3/4 angle to show depth. Show neighboring buildings in background. This is a GROUND-LEVEL architectural photograph, NOT an aerial or satellite view. The camera is on the street looking at the building.',
+    'eye-level': 'Eye-level perspective from the street (camera at 1.6m height, standing on the road in front of the building). Show the main facade as seen by a PEDESTRIAN walking past. Slight 3/4 angle to show depth. The camera is ON THE GROUND at street level — NOT an aerial or drone view. NOT looking down. The viewer is looking HORIZONTALLY or slightly UP at the building. Show the sky above the building roofline.',
     'birds-eye': 'Aerial bird\'s-eye view from 45-degree angle above, showing the building roof, landscaping layout, parking, and surrounding context. Like a drone photo from 50m height.',
     'entrance': 'Close-up of the main entrance at eye level. Focus on entrance canopy, door details, landscaping, and ground-floor facade materials. Welcoming perspective.',
   }
