@@ -651,10 +651,19 @@ BUILDING IDENTITY (must remain IDENTICAL across all camera angles):
 
 CRITICAL REQUIREMENTS:
 ${isComplex 
-  ? `- This is a MULTI-BUILDING COMPLEX with ${buildingCount} separate ${f}-story buildings. Show MULTIPLE distinct buildings, NOT one large structure.
+  ? (cameraAngle === 'eye-level' || !cameraAngle 
+    ? `- This is a multi-building residential complex, but you are photographing it from STREET LEVEL (1.6m).
+- From this low angle, you can clearly see only 1-2 buildings in the FOREGROUND. They fill most of the frame.
+- Other buildings in the complex are partially visible BEHIND or BESIDE the foreground building, but they are NOT the focus.
+- You are standing on the street or sidewalk, looking HORIZONTALLY at the nearest building's facade.
+- The foreground building has EXACTLY ${f} floors. You can count each floor from bottom to top.
+- Show the building entrance, windows, balconies, and materials at close range.
+- The SKY is visible above the building roofline. You CANNOT see the roof surface.
+- This is a STREET PHOTOGRAPH taken by a person walking, NOT an architectural model photo or aerial survey.`
+    : `- This is a MULTI-BUILDING COMPLEX with ${buildingCount} separate ${f}-story buildings. Show MULTIPLE distinct buildings, NOT one large structure.
 - Each building MUST have EXACTLY ${f} floors. They should look like a cohesive village/community.
 - Show spaces BETWEEN buildings: gardens, walkways, small courtyards, parking areas.
-- The complex should feel like walking through a small residential neighborhood.`
+- The complex should feel like walking through a small residential neighborhood.`)
   : `- The building MUST have EXACTLY ${f} floors. Count them: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. This is non-negotiable.
 - ${f <= 2 ? 'This is a LOW-RISE building, maximum 2 stories tall. Do NOT make it taller.' : f <= 5 ? `This is a LOW to MID-RISE building with exactly ${f} visible floor levels.` : `This is a ${f}-story building. Each floor must be clearly visible and countable.`}`}
 - Photorealistic 3D architectural rendering
@@ -664,7 +673,8 @@ ${isComplex
 
 AVOID (do NOT include):
 - Extra floors beyond ${f} stories
-${isComplex ? '- One single monolithic building (MUST show multiple separate buildings)\n- Identical-looking buildings (each should have slight variation)' : ''}
+${isComplex && (cameraAngle === 'eye-level' || !cameraAngle) ? '- Aerial or elevated viewpoint (you are ON THE GROUND)\n- Visible roof surfaces from above (the roof is a silhouette against the sky)\n- Showing all buildings equally (focus on 1-2 in foreground)\n- Architectural model perspective (this is a real street photograph)' : ''}
+${isComplex && cameraAngle === 'birds-eye' ? '- One single monolithic building (MUST show multiple separate buildings)\n- Identical-looking buildings (each should have slight variation)' : ''}
 - Distorted or unrealistic proportions
 - Text, watermarks, or labels on the image
 - Floating elements or physically impossible structures
