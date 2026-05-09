@@ -321,6 +321,21 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   const handleDownloadReport = async () => {
     console.log("[v0] HTML 보고서 생성 시작")
     
+    // AI 렌더링 이미지 확보 — props가 null이면 DOM/sessionStorage에서 복구
+    let renderImg = aiRenderImage
+    if (!renderImg) {
+      // 1차: sessionStorage에서 복구
+      try { renderImg = sessionStorage.getItem('archi-scan-render') } catch {}
+    }
+    if (!renderImg) {
+      // 2차: DOM의 img 태그에서 직접 추출
+      try {
+        const imgEl = document.querySelector('img[alt="AI 건축 렌더링"]') as HTMLImageElement
+        if (imgEl?.src?.startsWith('data:')) renderImg = imgEl.src
+      } catch {}
+    }
+    console.log("[v0] aiRenderImage 상태:", renderImg ? `있음 (${renderImg.substring(0, 50)}...)` : '없음(null)')
+    
     // 도면 SVG → PNG 변환 (인라인 — tree-shaking 방지)
     const convertSvgToPng = async (svgStr: string): Promise<string> => {
       const W = 720, H = 600
@@ -553,9 +568,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     </div>
   </div>
 
-  ${aiRenderImage ? `
+  ${renderImg ? `
   <div style="margin-bottom: 20px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; page-break-inside: avoid;">
-    <img src="${aiRenderImage}" alt="AI 건축 렌더링" style="width: 100%; max-height: 360px; object-fit: cover; display: block;" />
+    <img src="${renderImg}" alt="AI 건축 렌더링" style="width: 100%; max-height: 360px; object-fit: cover; display: block;" />
     <div style="padding: 8px 12px; background: #f8fafc; display: flex; align-items: center; justify-content: space-between;">
       <span style="font-size: 9pt; font-weight: 600; color: #475569;">✨ AI 건축 렌더링</span>
       <span style="font-size: 8pt; color: #94a3b8;">Powered by Gemini</span>
@@ -1328,6 +1343,30 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       
       pdf.setTextColor(30, 30, 30)
       y = 110 // Start content after cover
+
+      // === AI 건축 렌더링 이미지 (있으면 삽입) ===
+      {
+        let pdfRenderImg = aiRenderImage
+        if (!pdfRenderImg) try { pdfRenderImg = sessionStorage.getItem('archi-scan-render') } catch {}
+        if (pdfRenderImg) {
+          try {
+            const imgFormat = pdfRenderImg.includes('image/png') ? 'PNG' : 'JPEG'
+            const imgWidth = contentWidth
+            const imgHeight = imgWidth * 0.56 // 16:9 비율
+            if (y + imgHeight + 10 > pageHeight - margin) { pdf.addPage(); y = margin }
+            pdf.addImage(pdfRenderImg, imgFormat, margin, y, imgWidth, imgHeight)
+            y += imgHeight + 2
+            // 캡션
+            setKoreanFont("normal")
+            pdf.setFontSize(6.5)
+            pdf.setTextColor(120, 130, 150)
+            pdf.text("✨ AI 건축 렌더링  |  Powered by Gemini", margin, y)
+            y += 8
+          } catch (e) {
+            console.warn("[v0] PDF AI 렌더링 이미지 삽입 실패:", e)
+          }
+        }
+      }
 
       // === SECTION 1: 검토 개요 ===
       drawSectionTitle(1, "검토 개요")
