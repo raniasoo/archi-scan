@@ -391,8 +391,8 @@ export function LayoutsStep(props: LayoutsStepProps) {
 
       {/* ━━━ 하단 CTA ━━━ */}
       {selectedLayout && (
-        <Button onClick={() => setCurrentStep("floorplan")} size="lg" className="w-full gap-2 py-6 text-base font-bold">
-          평면도 검토로 이동
+        <Button onClick={() => setCurrentStep("ai-render")} size="lg" className="w-full gap-2 py-6 text-base font-bold">
+          AI 렌더링으로 이동
           <ChevronRight className="h-5 w-5" />
         </Button>
       )}

@@ -32,7 +32,7 @@ import { type ProjectSnapshot } from "@/components/project-manager"
 import {
   Building2, LayoutGrid, Layers, Banknote, FileText,
   Loader2, CreditCard, Scale, Brain, LayoutDashboard,
-  Settings2, Share2,
+  Settings2, Share2, Sparkles,
 } from "lucide-react"
 import { UserBadge } from "@/components/user-badge"
 import { UpgradeModal } from "@/components/upgrade-modal"
@@ -104,6 +104,7 @@ const StrategyStep = dynamic(() => import("@/components/steps/strategy-step").th
 const RegulationStep = dynamic(() => import("@/components/steps/regulation-step").then(m => ({ default: m.RegulationStep })), { loading: LoadingBox })
 const FinancialStep = dynamic(() => import("@/components/steps/financial-step").then(m => ({ default: m.FinancialStep })), { loading: LoadingBox })
 const ReportStep = dynamic(() => import("@/components/steps/report-step").then(m => ({ default: m.ReportStep })), { loading: LoadingBox })
+const AIHub = dynamic(() => import("@/components/ai-hub").then(m => ({ default: m.AIHub })), { loading: LoadingBox })
 
 // ── 동적 임포트: 내보내기 함수 (사용 시에만 로드) ──
 const loadExportFunctions = () => import("@/lib/report-export")
@@ -467,7 +468,7 @@ function generateLayouts(
   return layouts
 }
 
-type AppStep = "input" | "strategy" | "regulation" | "layouts" | "floorplan" | "financial" | "report"
+type AppStep = "input" | "strategy" | "regulation" | "layouts" | "floorplan" | "ai-render" | "financial" | "report"
 
 export default function ArchiScanPage() {
   const [mounted, setMounted] = useState(false) // v2
@@ -1590,6 +1591,7 @@ export default function ArchiScanPage() {
     regulation: "\uBC95\uADDC \uAC80\uD1A0",
     layouts: "\uBC30\uCE58\uC548",
     floorplan: "\uD3C9\uBA74\uB3C4",
+    "ai-render": "AI · 렌더링",
     financial: "\uC0AC\uC5C5\uC131",
     report: "\uBCF4\uACE0\uC11C",
   }
@@ -1599,7 +1601,7 @@ export default function ArchiScanPage() {
     { id: "regulation", label: STEP_LABELS.regulation, icon: Scale },
     { id: "strategy", label: STEP_LABELS.strategy, icon: Brain },
     { id: "layouts", label: STEP_LABELS.layouts, icon: LayoutGrid },
-    { id: "floorplan", label: STEP_LABELS.floorplan, icon: Layers },
+    { id: "ai-render", label: STEP_LABELS["ai-render"], icon: Sparkles },
     { id: "financial", label: STEP_LABELS.financial, icon: Banknote },
     { id: "report", label: STEP_LABELS.report, icon: FileText },
   ]
@@ -1609,7 +1611,7 @@ export default function ArchiScanPage() {
     const hasAddress = String(siteArea).trim() !== ""
     if (stepId === "regulation" || stepId === "strategy") return hasAddress
     if (stepId === "layouts") return layouts.length > 0 || hasAddress
-    if (stepId === "floorplan" || stepId === "financial" || stepId === "report") {
+    if (stepId === "ai-render" || stepId === "floorplan" || stepId === "financial" || stepId === "report") {
       return selectedLayout !== null
     }
     return false
@@ -1620,7 +1622,7 @@ export default function ArchiScanPage() {
     if (!isStepClickable(stepId)) return 'locked'
     if (stepId === 'layouts' && layouts.length > 0) return 'ready'
     if (stepId === 'regulation' && regulation) return 'ready'
-    if ((stepId === 'floorplan' || stepId === 'financial' || stepId === 'report') && selectedLayout !== null) return 'ready'
+    if ((stepId === 'ai-render' || stepId === 'floorplan' || stepId === 'financial' || stepId === 'report') && selectedLayout !== null) return 'ready'
     if (stepId === 'input' && String(siteArea).trim() !== '') return 'ready'
     if (stepId === 'strategy' && strategy) return 'ready'
     return 'active'
@@ -2211,6 +2213,62 @@ export default function ArchiScanPage() {
           />
         )}
 
+        {currentStep === "ai-render" && selectedLayoutData && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-bold">AI 건축 렌더링</h2>
+            </div>
+            <p className="text-xs text-muted-foreground -mt-2">선택한 배치안을 기반으로 건축물 외관을 AI가 렌더링합니다.</p>
+            <AIHub
+              input={{
+                address,
+                zoneType: regulation?.zoneType,
+                zoneName: (() => {
+                  try {
+                    const rawLabel = (molitSupplementData as Record<string, unknown>)?.zoneLabel
+                    const label = typeof rawLabel === 'string' ? rawLabel : ''
+                    if (label && !label.includes('residential') && !label.includes('commercial')) return label
+                    const map: Record<string, string> = {
+                      'residential-exclusive-1': '제1종전용주거지역', 'residential-exclusive-2': '제2종전용주거지역',
+                      'residential-1': '제1종일반주거지역', 'residential-2': '제2종일반주거지역',
+                      'residential-3': '제3종일반주거지역', 'semi-residential': '준주거지역',
+                      'commercial-neighborhood': '근린상업지역', 'commercial-general': '일반상업지역',
+                      'commercial-central': '중심상업지역', 'industrial': '준공업지역',
+                      'green-natural': '자연녹지지역',
+                    }
+                    return map[regulation?.zoneType] || label || regulation?.zoneType
+                  } catch { return '' }
+                })(),
+                siteArea: siteAreaNum,
+                layoutName: selectedLayoutData.name,
+                floors: selectedLayoutData.floors,
+                units: selectedLayoutData.units || 0,
+                buildingCoverageRatio: selectedLayoutData.coverage,
+                floorAreaRatio: Math.round((selectedLayoutData.gfa / siteAreaNum) * 100),
+                roi: feasibilityResult?.roi || 0,
+                totalProjectCost: feasibilityResult?.totalCost || 0,
+                strategy,
+                buildingType: selectedLayoutData.type,
+                values: userValues ? {
+                  profitVsQuality: userValues.profitVsQuality,
+                  privacyVsCommunity: userValues.privacyVsCommunity,
+                  efficiencyVsSpace: userValues.efficiencyVsSpace,
+                } : undefined,
+                patterns: userValues?.selectedPatterns,
+                sitePolygon,
+                regulation: {
+                  heightLimit: regulation?.maxHeight,
+                  zoneName: regulation?.zoneType,
+                  northShadow: true,
+                  northShadowAngle: 45,
+                },
+              }}
+              onRenderComplete={setAiRenderImage}
+            />
+          </div>
+        )}
+
         {currentStep === "floorplan" && selectedLayoutData && (
           <FloorplanStep
             selectedLayoutData={selectedLayoutData}
@@ -2378,7 +2436,7 @@ export default function ArchiScanPage() {
             const isActive = currentStep === step.id
             const isClickable = isStepClickable(step.id)
             const status = getTabStatus(step.id)
-            const shortLabels: Record<string, string> = { '대지 입력': '대지', '설계 전략': '설계', '법규 검토': '법규', '배치안': '배치', '평면도': '평면', '사업성': '사업', '보고서': '보고' }
+            const shortLabels: Record<string, string> = { '대지 입력': '대지', '설계 전략': '설계', '법규 검토': '법규', '배치안': '배치', 'AI · 렌더링': 'AI', '평면도': '평면', '사업성': '사업', '보고서': '보고' }
             const shortLabel = shortLabels[step.label] || step.label
             return (
               <button key={step.id}
