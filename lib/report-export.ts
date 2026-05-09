@@ -3594,17 +3594,6 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
 
 
 
-  ${data.aiRenderImage ? `
-  <div style="margin: 0 30px; padding: 20px 0;">
-    <div style="border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0;">
-      <img src="${data.aiRenderImage}" alt="AI 건축 렌더링" style="width: 100%; max-height: 400px; object-fit: cover; display: block;" />
-      <div style="padding: 8px 14px; background: #f8fafc; display: flex; align-items: center; justify-content: space-between;">
-        <span style="font-size: 10px; font-weight: 600; color: #475569;">✨ AI 건축 렌더링</span>
-        <span style="font-size: 9px; color: #94a3b8;">Powered by Gemini</span>
-      </div>
-    </div>
-  </div>
-  ` : ''}
   <!-- Executive Summary -->
   <div class="page" style="page-break-before: always; padding: 40px 30px;">
       <div style="text-align: center; margin-bottom: 24px;">
