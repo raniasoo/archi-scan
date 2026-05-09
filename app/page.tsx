@@ -97,6 +97,7 @@ const ProjectManager = dynamic(() => import("@/components/project-manager").then
 const VersionHistoryManager = dynamic(() => import("@/components/version-history-manager").then(m => ({ default: m.VersionHistoryManager })))
 const ApprovalWorkflowManager = dynamic(() => import("@/components/approval-workflow-manager").then(m => ({ default: m.ApprovalWorkflowManager })))
 const DevPanels = dynamic(() => import("@/components/dev-panels").then(m => ({ default: m.DevPanels })))
+const OnboardingTour = dynamic(() => import("@/components/onboarding-tour").then(m => ({ default: m.OnboardingTour })), { ssr: false })
 const FloorplanStep = dynamic(() => import("@/components/steps/floorplan-step").then(m => ({ default: m.FloorplanStep })), { loading: LoadingBox })
 const LayoutsStep = dynamic(() => import("@/components/steps/layouts-step").then(m => ({ default: m.LayoutsStep })), { loading: LoadingBox })
 const InputStep = dynamic(() => import("@/components/steps/input-step").then(m => ({ default: m.InputStep })), { loading: LoadingBox })
@@ -2463,6 +2464,9 @@ export default function ArchiScanPage() {
           })}
         </div>
       </div>
+
+      {/* 온보딩 투어 (첫 방문자) */}
+      <OnboardingTour />
 
       {/* Modals */}
       <UpgradeModal 
