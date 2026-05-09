@@ -264,11 +264,54 @@ export function LayoutsStep(props: LayoutsStepProps) {
         </div>
       )}
 
-      {/* ━━━ 3. 선택된 배치안 상세 토글 ━━━ */}
+      {/* ━━━ 3. 핵심 점수 대시보드 (항상 보임) ━━━ */}
+      {selectedLayout && selectedLayoutData && (() => {
+        const patternResult = evaluatePatternQuality({
+          type: selectedLayoutData.type || "tower",
+          name: selectedLayoutData.name,
+          coverage: selectedLayoutData.coverage,
+          floors: selectedLayoutData.floors,
+          units: selectedLayoutData.units || 0,
+          parking: selectedLayoutData.parking || 0,
+          gfa: selectedLayoutData.gfa,
+          siteArea: safeNumber(siteArea, 660),
+          strategy,
+        }, userValues)
+        const strategyFit = selectedLayoutData.scores?.strategyFit ?? 0
+        const roi = feasibilityResult?.roi ?? 0
+        const roiColor = roi >= 15 ? 'text-emerald-400' : roi >= 5 ? 'text-blue-400' : roi >= 0 ? 'text-amber-400' : 'text-red-400'
+
+        return (
+          <div className="grid grid-cols-3 gap-2">
+            {/* 설계 품질 */}
+            <div className="rounded-xl border border-border bg-card p-3 text-center">
+              <p className="text-[10px] text-muted-foreground mb-1">설계 품질</p>
+              <p className="text-xl font-bold text-primary">{patternResult.overallQuality}</p>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-semibold">{patternResult.grade}등급</span>
+            </div>
+            {/* 전략 부합도 */}
+            <div className="rounded-xl border border-border bg-card p-3 text-center">
+              <p className="text-[10px] text-muted-foreground mb-1">전략 부합</p>
+              <p className="text-xl font-bold">{strategyFit}<span className="text-xs text-muted-foreground">%</span></p>
+              <div className="mt-1 h-1 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(strategyFit, 100)}%` }} />
+              </div>
+            </div>
+            {/* ROI */}
+            <div className="rounded-xl border border-border bg-card p-3 text-center">
+              <p className="text-[10px] text-muted-foreground mb-1">ROI</p>
+              <p className={`text-xl font-bold ${roiColor}`}>{roi > 0 ? '+' : ''}{roi.toFixed(1)}<span className="text-xs">%</span></p>
+              <p className="text-[9px] text-muted-foreground">{roi >= 15 ? '추천' : roi >= 0 ? '보통' : '검토 필요'}</p>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ━━━ 4. 상세 분석 토글 ━━━ */}
       {selectedLayout && selectedLayoutData && (
         <Button variant="outline" onClick={() => setShowDetails(!showDetails)} className="w-full gap-1">
           <ChevronDown className={`h-4 w-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
-          상세 정보 {showDetails ? '접기' : '보기'}
+          AI 상세 분석 {showDetails ? '접기' : '보기'}
         </Button>
       )}
 
@@ -289,7 +332,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
         />
       )}
 
-      {/* ━━━ 4. 상세 정보 (접기/펼치기) ━━━ */}
+      {/* ━━━ 5. 상세 정보 (접기/펼치기) ━━━ */}
       {showDetails && selectedLayoutData && (
         <div className="space-y-4">
           {/* AI 분석 결과 */}
@@ -301,7 +344,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
             isRecommended={selectedLayoutData.recommendation?.isRecommended}
           />
 
-          {/* 패턴 품질 */}
+          {/* 패턴 품질 상세 */}
           <PatternQualityCard
             result={evaluatePatternQuality({
               type: selectedLayoutData.type || "tower",
@@ -315,30 +358,6 @@ export function LayoutsStep(props: LayoutsStepProps) {
               strategy,
             }, userValues)}
           />
-
-          {/* 수익성 시뮬레이션 */}
-          <Button
-            variant="outline"
-            className="w-full gap-2"
-            onClick={async () => {
-              const { optimizeLayout } = await loadLayoutOptimizer()
-              const result = optimizeLayout({
-                siteArea: siteAreaNum,
-                maxCoverage: regulation?.maxCoverageRatio ?? 60,
-                maxFAR: regulation?.maxFloorAreaRatio ?? 200,
-                maxFloors: regulation?.maxFloors || 20,
-                maxHeight: regulation?.maxHeight || 60,
-                parkingRatio: regulation?.parkingRatio || 1.0,
-                landCostPerM2: landPriceData.pricePerM2 || 5000000,
-                constructionCostPerM2: regionalPricing?.constructionCostPerM2 || 2500000,
-                salesPricePerM2: marketPrice.suggestedSalePrice || regionalPricing?.salesPricePerM2 || 5000000,
-              })
-              setOptimizationResult(result)
-              toast.success(`${result.searchSpace}개 조합 탐색 완료`)
-            }}
-          >
-            <Sparkles className="h-4 w-4" /> 수익성 시뮬레이션
-          </Button>
         </div>
       )}
 
