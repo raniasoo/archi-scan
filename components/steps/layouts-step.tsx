@@ -281,27 +281,42 @@ export function LayoutsStep(props: LayoutsStepProps) {
         const roi = feasibilityResult?.roi ?? 0
         const roiColor = roi >= 15 ? 'text-emerald-400' : roi >= 5 ? 'text-blue-400' : roi >= 0 ? 'text-amber-400' : 'text-red-400'
 
+        // 법규 활용도: 건폐율·용적률을 법규 한도 대비 얼마나 쓰고 있는지
+        const maxCov = regulation?.maxCoverageRatio || 60
+        const maxFar = regulation?.maxFloorAreaRatio || 200
+        const actualFar = safeNumber(siteArea, 660) > 0 ? Math.round((selectedLayoutData.gfa / safeNumber(siteArea, 660)) * 100) : 0
+        const covUtil = Math.min((selectedLayoutData.coverage / maxCov) * 100, 100)
+        const farUtil = Math.min((actualFar / maxFar) * 100, 100)
+        const utilization = Math.round((covUtil + farUtil) / 2)
+        const utilColor = utilization >= 80 ? 'text-emerald-400' : utilization >= 60 ? 'text-blue-400' : 'text-amber-400'
+
         return (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-1.5">
             {/* 설계 품질 */}
-            <div className="rounded-xl border border-border bg-card p-3 text-center">
-              <p className="text-[10px] text-muted-foreground mb-1">설계 품질</p>
-              <p className="text-xl font-bold text-primary">{patternResult.overallQuality}</p>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-semibold">{patternResult.grade}등급</span>
+            <div className="rounded-xl border border-border bg-card p-2.5 text-center">
+              <p className="text-[9px] text-muted-foreground mb-0.5">설계</p>
+              <p className="text-lg font-bold text-primary">{patternResult.overallQuality}</p>
+              <span className="text-[9px] px-1 py-0.5 rounded-full bg-primary/15 text-primary font-semibold">{patternResult.grade}</span>
             </div>
             {/* 전략 부합도 */}
-            <div className="rounded-xl border border-border bg-card p-3 text-center">
-              <p className="text-[10px] text-muted-foreground mb-1">전략 부합</p>
-              <p className="text-xl font-bold">{strategyFit}<span className="text-xs text-muted-foreground">%</span></p>
-              <div className="mt-1 h-1 rounded-full bg-secondary overflow-hidden">
+            <div className="rounded-xl border border-border bg-card p-2.5 text-center">
+              <p className="text-[9px] text-muted-foreground mb-0.5">전략</p>
+              <p className="text-lg font-bold">{strategyFit}<span className="text-[9px] text-muted-foreground">%</span></p>
+              <div className="mt-0.5 h-1 rounded-full bg-secondary overflow-hidden">
                 <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(strategyFit, 100)}%` }} />
               </div>
             </div>
             {/* ROI */}
-            <div className="rounded-xl border border-border bg-card p-3 text-center">
-              <p className="text-[10px] text-muted-foreground mb-1">ROI</p>
-              <p className={`text-xl font-bold ${roiColor}`}>{roi > 0 ? '+' : ''}{roi.toFixed(1)}<span className="text-xs">%</span></p>
-              <p className="text-[9px] text-muted-foreground">{roi >= 15 ? '추천' : roi >= 0 ? '보통' : '검토 필요'}</p>
+            <div className="rounded-xl border border-border bg-card p-2.5 text-center">
+              <p className="text-[9px] text-muted-foreground mb-0.5">ROI</p>
+              <p className={`text-lg font-bold ${roiColor}`}>{roi > 0 ? '+' : ''}{roi.toFixed(1)}<span className="text-[9px]">%</span></p>
+              <p className="text-[8px] text-muted-foreground">{roi >= 15 ? '추천' : roi >= 0 ? '보통' : '검토'}</p>
+            </div>
+            {/* 법규 활용도 */}
+            <div className="rounded-xl border border-border bg-card p-2.5 text-center">
+              <p className="text-[9px] text-muted-foreground mb-0.5">활용</p>
+              <p className={`text-lg font-bold ${utilColor}`}>{utilization}<span className="text-[9px]">%</span></p>
+              <p className="text-[8px] text-muted-foreground">법규한도</p>
             </div>
           </div>
         )
