@@ -181,9 +181,10 @@ export async function POST(req: NextRequest) {
 
     // #9: 멀티앵글 — 3장 일괄 생성 (첫 이미지를 참조로 일관성 확보)
     if (multiAngle) {
+      // ★ 조감도를 먼저 생성 (위성사진 참조에 적합) → 눈높이/입구는 거리뷰만 참조
       const angles = [
-        { angle: 'eye-level', scene: sceneMode || 'afternoon' },
         { angle: 'birds-eye', scene: sceneMode || 'afternoon' },
+        { angle: 'eye-level', scene: sceneMode || 'afternoon' },
         { angle: 'entrance', scene: sceneMode || 'afternoon' },
       ]
       const images: { angle: string; image: string | null; error?: string }[] = []
@@ -198,24 +199,31 @@ export async function POST(req: NextRequest) {
         
         const parts: any[] = []
         
-        // ★ 2,3번째 렌더링: 첫 번째 이미지를 참조로 전달
+        // ★ 2,3번째 렌더링: 첫 번째(조감도) 이미지를 참조로 전달
         if (ai > 0 && firstImageBase64) {
           parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
-          parts.push({ text: `CRITICAL: The image above shows the EXACT building you already designed. Now render THE SAME IDENTICAL BUILDING but with a COMPLETELY DIFFERENT camera position:\n\n${a.angle === 'birds-eye' 
-  ? 'CAMERA POSITION: Drone/helicopter view from 50m height, looking DOWN at 45° angle. You MUST see the ROOFTOPS, parking lots, landscaping layout, and the full site from ABOVE. The camera is IN THE SKY looking DOWN — NOT from street level. This must look like a drone photograph taken from directly above the site.' 
-  : 'CAMERA POSITION: Stand directly in front of the main entrance door at 1.5m height. You are 3 meters from the door. Show the entrance canopy, door handle details, doorbell, house number, potted plants, welcome mat, and ground-floor facade materials in CLOSE-UP detail. The camera is at GROUND LEVEL looking STRAIGHT at the entrance — NOT from above.'}
+          parts.push({ text: `CRITICAL: The image above shows the EXACT building complex you already designed from a bird's-eye aerial view. Now render THE SAME IDENTICAL BUILDING but with a COMPLETELY DIFFERENT camera position:
 
-The building shape, materials, colors, window patterns MUST match the reference image above. But the CAMERA ANGLE must be COMPLETELY DIFFERENT.\n\n${aPrompt}` })
+${a.angle === 'eye-level' 
+  ? 'CAMERA POSITION: You are a PEDESTRIAN standing ON THE STREET at 1.6m height. The camera is at GROUND LEVEL looking HORIZONTALLY at the building facade. You should see the building TOWERING ABOVE you with the sky visible above the roofline. Show the front gate, fence, trees at eye level. This is a STREET-LEVEL photograph — the camera is NOT in the air, NOT on a drone, NOT looking down. The horizon line should be at the MIDDLE of the image.' 
+  : 'CAMERA POSITION: Stand directly in front of the main entrance door at 1.5m height, 3 meters from the door. CLOSE-UP of entrance canopy, door details, ground-floor facade materials, potted plants. Camera at GROUND LEVEL looking STRAIGHT — NOT from above.'}
+
+The building shape, materials, colors MUST match the aerial reference above. But the CAMERA ANGLE must be COMPLETELY DIFFERENT.\n\n${aPrompt}` })
         } else {
           parts.push({ text: aPrompt })
         }
         
-        // 기존 참조 이미지 (위성, 지적도, 거리뷰)
-        if (refImages.length > 0) {
-          for (const img of refImages) {
+        // 기존 참조 이미지 — 앵글별 필터링
+        // birds-eye(1번): 위성+지적도+거리뷰 모두 사용
+        // eye-level/entrance(2,3번): 거리뷰만 (위성사진은 aerial 시점 유도하므로 제외)
+        const angleRefImages = a.angle === 'birds-eye' 
+          ? refImages 
+          : refImages.filter(r => r.label.startsWith('street-view'))
+        if (angleRefImages.length > 0) {
+          for (const img of angleRefImages) {
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
-          parts.push({ text: `The ${refImages.length} image(s) above show: ${refImages.map(r => r.label === 'satellite' ? 'SATELLITE/AERIAL VIEW of the actual site and neighborhood' : r.label === 'cadastral' ? 'CADASTRAL MAP showing the exact lot boundary shape and surrounding roads' : r.label === 'cadastral-polygon' ? 'CADASTRAL LOT BOUNDARY — exact shape of the building site drawn from real survey data. Blue line=lot boundary, dashed orange=setback line, green=buildable area. The new building MUST fit within this shape.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — eye-level photo of the actual neighborhood` : r.label).join(', ')}. The rendering MUST match the actual site shape, surrounding buildings, roads, and terrain visible in these reference photos.` })
+          parts.push({ text: `The ${angleRefImages.length} image(s) above show: ${angleRefImages.map(r => r.label === 'satellite' ? 'SATELLITE/AERIAL VIEW of the actual site and neighborhood' : r.label === 'cadastral' ? 'CADASTRAL MAP showing the exact lot boundary shape and surrounding roads' : r.label === 'cadastral-polygon' ? 'CADASTRAL LOT BOUNDARY — exact shape of the building site drawn from real survey data. Blue line=lot boundary, dashed orange=setback line, green=buildable area. The new building MUST fit within this shape.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — eye-level photo of the actual neighborhood. MATCH THIS CAMERA HEIGHT for the rendering.` : r.label).join(', ')}. The rendering MUST match the actual site conditions.` })
         }
 
         try {
