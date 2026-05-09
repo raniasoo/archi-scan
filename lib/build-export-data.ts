@@ -22,6 +22,7 @@ interface BuildExportDataParams {
   molitSupplementData: Record<string, unknown>
   strategy?: string
   userValues?: UserValues
+  aiRenderImage?: string | null
 }
 
 export function buildExportData(params: BuildExportDataParams): ExportData {
@@ -53,6 +54,7 @@ export function buildExportData(params: BuildExportDataParams): ExportData {
   return {
     address,
     siteArea: siteAreaNum,
+    aiRenderImage: params.aiRenderImage || (typeof window !== 'undefined' ? (() => { try { return sessionStorage.getItem('archi-scan-render') } catch { return null } })() : null),
     branding: branding || undefined,
     layout: {
       name: selectedLayoutData.name,

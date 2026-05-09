@@ -363,6 +363,7 @@ export interface ExportData {
     philosophy: string;
     topPatterns: { id: number; nameKr: string; score: number }[];
   };
+  aiRenderImage?: string | null;
 }
 
 // ExportData를 ReportDataV250으로 변환
@@ -1658,6 +1659,19 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       <p style="font-size: 10px; color: #94a3b8; margin-top: 4px;">${report.cover.contact}</p>
     </div>
 
+
+
+  ${data.aiRenderImage ? `
+  <div style="margin: 0 30px; padding: 20px 0;">
+    <div style="border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0;">
+      <img src="${data.aiRenderImage}" alt="AI 건축 렌더링" style="width: 100%; max-height: 400px; object-fit: cover; display: block;" />
+      <div style="padding: 8px 14px; background: #f8fafc; display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 10px; font-weight: 600; color: #475569;">✨ AI 건축 렌더링</span>
+        <span style="font-size: 9px; color: #94a3b8;">Powered by Gemini</span>
+      </div>
+    </div>
+  </div>
+  ` : ''}
   <!-- Executive Summary -->
   <div class="page" style="page-break-before: always; padding: 40px 30px;">
       <div style="text-align: center; margin-bottom: 24px;">
@@ -2146,6 +2160,12 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     const report = convertToV250(data);
     let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality);
     
+    // AI 렌더링 이미지 삽입 (표지 뒤, Executive Summary 앞)
+    if (data.aiRenderImage) {
+      const aiBlock = '<div style="margin:0 30px;padding:20px 0"><div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0"><img src="' + data.aiRenderImage + '" alt="AI 건축 렌더링" style="width:100%;max-height:400px;object-fit:cover;display:block"/><div style="padding:8px 14px;background:#f8fafc;display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;font-weight:600;color:#475569">✨ AI 건축 렌더링</span><span style="font-size:9px;color:#94a3b8">Powered by Gemini</span></div></div></div>';
+      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
+    }
+    
     // 도면 SVG 삽입
     try {
       const drawingInput = {
@@ -2507,6 +2527,12 @@ export function openPrintPreview(data: ExportData): { success: boolean; error?: 
   try {
     const report = convertToV250(data);
     let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality);
+    
+    // AI 렌더링 이미지 삽입 (표지 뒤, Executive Summary 앞)
+    if (data.aiRenderImage) {
+      const aiBlock = '<div style="margin:0 30px;padding:20px 0"><div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0"><img src="' + data.aiRenderImage + '" alt="AI 건축 렌더링" style="width:100%;max-height:400px;object-fit:cover;display:block"/><div style="padding:8px 14px;background:#f8fafc;display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;font-weight:600;color:#475569">✨ AI 건축 렌더링</span><span style="font-size:9px;color:#94a3b8">Powered by Gemini</span></div></div></div>';
+      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
+    }
     
     // 도면 SVG 삽입 (HTML 다운로드와 동일)
     try {
@@ -3566,6 +3592,19 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
       <p style="font-size: 10px; color: #94a3b8; margin-top: 4px;">${report.cover.contact}</p>
     </div>
 
+
+
+  ${data.aiRenderImage ? `
+  <div style="margin: 0 30px; padding: 20px 0;">
+    <div style="border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0;">
+      <img src="${data.aiRenderImage}" alt="AI 건축 렌더링" style="width: 100%; max-height: 400px; object-fit: cover; display: block;" />
+      <div style="padding: 8px 14px; background: #f8fafc; display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 10px; font-weight: 600; color: #475569;">✨ AI 건축 렌더링</span>
+        <span style="font-size: 9px; color: #94a3b8;">Powered by Gemini</span>
+      </div>
+    </div>
+  </div>
+  ` : ''}
   <!-- Executive Summary -->
   <div class="page" style="page-break-before: always; padding: 40px 30px;">
       <div style="text-align: center; margin-bottom: 24px;">
