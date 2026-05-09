@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, type Dispatch, type SetStateAction } from "react"
+import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -98,6 +98,14 @@ export function LayoutsStep(props: LayoutsStepProps) {
   const [showDetails, setShowDetails] = useState(false)
   const [showComparison, setShowComparison] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // 배치안이 있지만 선택되지 않았을 때 자동 선택
+  useEffect(() => {
+    if (selectedLayout === null && layouts.length > 0) {
+      const recommended = layouts.find(l => l.recommendation?.isRecommended)
+      handleSelectLayout(recommended?.id ?? layouts[0].id)
+    }
+  }, [layouts.length, selectedLayout]) // eslint-disable-line react-hooks/exhaustive-deps
   const recommendedLayout = layouts.find(l => l.recommendation?.isRecommended) || layouts[0]
 
   // 분양가 계산
