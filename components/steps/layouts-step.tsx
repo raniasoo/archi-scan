@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import type { LayoutOption } from "@/app/page"
 import type { ZoningRegulation } from "@/lib/regulation-types"
 import type { DesignStrategy } from "@/lib/design-strategy"
+import { LayoutSketch } from "@/components/layout-sketch"
 import type { FeasibilityResult, LegalSummary } from "@/lib/project-analysis-state"
 import { calculateFeasibility, safeNumber } from "@/lib/project-analysis-state"
 import { getZoneMultiplier, type RegionalPricing } from "@/lib/regional-pricing"
@@ -148,9 +149,12 @@ export function LayoutsStep(props: LayoutsStepProps) {
               종합 {displayScore(recommendedLayout?.scores?.overall)}
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {getLayoutStory(recommendedLayout, strategy)}
-          </p>
+          <div className="flex gap-3">
+            <LayoutSketch type={recommendedLayout.type || 'tower'} size={64} className="shrink-0 opacity-70" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {getLayoutStory(recommendedLayout, strategy)}
+            </p>
+          </div>
         </div>
       )}
 
@@ -192,6 +196,11 @@ export function LayoutsStep(props: LayoutsStepProps) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm font-bold">{layout.name}</span>
                   {isRecommended && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-semibold">AI 추천</span>}
+                </div>
+
+                {/* SVG 배치 스케치 */}
+                <div className="flex justify-center mb-2 opacity-80">
+                  <LayoutSketch type={layout.type || 'tower'} size={72} />
                 </div>
 
                 {/* 스토리 한 줄 */}
