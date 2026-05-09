@@ -276,11 +276,12 @@ export function FinancialStep(props: FinancialStepProps) {
               >
                 <Sparkles className="h-4 w-4" /> 최적 조합 탐색 실행
               </Button>
-              {simResult && (
+              {simResult && simResult.best && (
                 <div className="mt-3 p-3 rounded-lg bg-secondary/30 text-xs space-y-1">
                   <p className="font-semibold text-primary">{simResult.searchSpace?.toLocaleString()}개 조합 탐색 완료</p>
-                  <p>최적 층수: <strong>{simResult.bestFloors}층</strong> · 건폐율: <strong>{simResult.bestCoverage}%</strong></p>
-                  <p>최적 ROI: <strong className={simResult.bestROI >= 0 ? 'text-emerald-400' : 'text-red-400'}>{simResult.bestROI?.toFixed(1)}%</strong></p>
+                  <p>최적 층수: <strong>{simResult.best.floors}층</strong> · 건폐율: <strong>{simResult.best.coverage}%</strong></p>
+                  <p>최적 ROI: <strong className={simResult.best.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}>{simResult.best.roi?.toFixed(1)}%</strong> · 세대수: <strong>{simResult.best.units}세대</strong></p>
+                  {simResult.improvement && <p className="text-muted-foreground">{simResult.improvement}</p>}
                 </div>
               )}
             </div>
