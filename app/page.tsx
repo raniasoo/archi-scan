@@ -2267,6 +2267,24 @@ export default function ArchiScanPage() {
               }}
               onRenderComplete={setAiRenderImage}
             />
+
+            {/* 하단 CTA — 평면도 → 사업성 */}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setCurrentStep("floorplan" as AppStep)}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/50 transition-colors text-sm font-semibold"
+              >
+                <Layers className="h-4 w-4" />
+                평면도 보기
+              </button>
+              <button
+                onClick={() => setCurrentStep("financial")}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-semibold"
+              >
+                <Banknote className="h-4 w-4" />
+                사업성 분석
+              </button>
+            </div>
           </div>
         )}
 
