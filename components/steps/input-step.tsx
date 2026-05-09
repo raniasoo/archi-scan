@@ -3,7 +3,6 @@
 import { type Dispatch, type SetStateAction } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Building2, Clock } from "lucide-react"
 import type { SupplementData } from "@/components/manual-supplement-form"
 import type { ProjectSnapshot } from "@/components/project-manager"
@@ -112,12 +111,7 @@ export function InputStep(props: InputStepProps) {
                 <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">{ARCHISCAN_COPY.entry.pageTitle}</h2>
                 <p className="text-sm md:text-base text-muted-foreground">{ARCHISCAN_COPY.entry.pageDescription}</p>
               </div>
-              <Card className="w-full">
-                <CardHeader>
-                  <CardTitle className="text-xl">대상지 정보</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SiteInputForm
+              <SiteInputForm
                     address={address}
                     siteArea={siteArea}
                     onAddressChange={setAddress}
@@ -130,8 +124,6 @@ export function InputStep(props: InputStepProps) {
                     externalSupplement={(molitSupplementData as any).zoneCode ? { ...molitSupplementData as any, _key: supplementKey } : null}
                     autoTriggerLookup={props.autoTriggerLookup}
                   />
-                </CardContent>
-              </Card>
               
               {/* 대상지 위치 지도 */}
               {siteCoords && (

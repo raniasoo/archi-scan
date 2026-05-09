@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Sparkles, ChevronRight, ChevronDown } from "lucide-react"
 import type { ZoningRegulation } from "@/lib/regulation-types"
+import { calculateRegulations, type ZoneCode } from "@/lib/regulation-calculator"
 import { formatLandPricePerM2, formatLandCost } from "@/lib/land-price"
 
 const LoadingBox = () => <div className="flex items-center justify-center p-8 text-muted-foreground"><span className="animate-spin mr-2">⏳</span>로딩 중...</div>
@@ -64,8 +65,22 @@ export function RegulationStep(props: RegulationStepProps) {
     caution: { emoji: '🔴', text: '규제 확인 필요', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
   }[overallGrade]
 
-  const okCount = [true, true, true, !hasRoadIssue].filter(Boolean).length
-  const warnCount = 4 - okCount
+  // 실제 법규 검토 결과로 카운트 산출
+  const complianceResult = (() => {
+    try {
+      const zoneMap: Record<string, ZoneCode> = {
+        'residential-exclusive-1': 'residential-exclusive-1', 'residential-exclusive-2': 'residential-exclusive-2',
+        'residential-1': 'residential-1', 'residential-2': 'residential-2', 'residential-3': 'residential-3',
+        'semi-residential': 'semi-residential', 'commercial-neighborhood': 'commercial-neighborhood',
+        'commercial-general': 'commercial-general', 'commercial-central': 'commercial-central',
+      }
+      const mapped = zoneMap[zc] || 'residential-2'
+      return calculateRegulations({ zoneCode: mapped as ZoneCode, siteArea: siteAreaNum, roadWidth: rw, heightLimit: ht, hasDistrictPlan: dp })
+    } catch { return null }
+  })()
+  const okCount = complianceResult?.compliance.filter(c => c.status === 'ok').length ?? 4
+  const warnCount = complianceResult?.compliance.filter(c => c.status === 'warning').length ?? 0
+  const violCount = complianceResult?.compliance.filter(c => c.status === 'violation').length ?? 0
 
   const tabs: { id: TabId; label: string; icon: string }[] = [
     { id: 'checklist', label: '체크리스트', icon: '✅' },
@@ -113,6 +128,7 @@ export function RegulationStep(props: RegulationStepProps) {
           <div className="flex items-center gap-3 text-[11px]">
             <span className="text-emerald-400">✅ {okCount}개 적합</span>
             {warnCount > 0 && <span className="text-amber-400">⚠️ {warnCount}개 확인필요</span>}
+            {violCount > 0 && <span className="text-red-400">❌ {violCount}개 위반</span>}
             {criticalRegs.length > 0 && <span className="text-red-400">⚡ {criticalRegs[0]?.name}</span>}
           </div>
         </div>
