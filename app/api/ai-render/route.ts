@@ -199,16 +199,17 @@ export async function POST(req: NextRequest) {
         
         const parts: any[] = []
         
-        // ★ 2,3번째 렌더링: 첫 번째(조감도) 이미지를 참조로 전달
+        // ★ 2,3번째 렌더링: 앵글별로 참조 전략이 다름
         if (ai > 0 && firstImageBase64) {
-          parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
-          parts.push({ text: `CRITICAL: The image above shows the EXACT building complex you already designed from a bird's-eye aerial view. Now render THE SAME IDENTICAL BUILDING but with a COMPLETELY DIFFERENT camera position:
-
-${a.angle === 'eye-level' 
-  ? 'CAMERA POSITION: You are a PEDESTRIAN standing ON THE STREET at 1.6m height. The camera is at GROUND LEVEL looking HORIZONTALLY at the building facade. You should see the building TOWERING ABOVE you with the sky visible above the roofline. Show the front gate, fence, trees at eye level. This is a STREET-LEVEL photograph — the camera is NOT in the air, NOT on a drone, NOT looking down. The horizon line should be at the MIDDLE of the image.' 
-  : 'CAMERA POSITION: Stand directly in front of the main entrance door at 1.5m height, 3 meters from the door. CLOSE-UP of entrance canopy, door details, ground-floor facade materials, potted plants. Camera at GROUND LEVEL looking STRAIGHT — NOT from above.'}
-
-The building shape, materials, colors MUST match the aerial reference above. But the CAMERA ANGLE must be COMPLETELY DIFFERENT.\n\n${aPrompt}` })
+          if (a.angle === 'eye-level') {
+            // 눈높이: 조감도 참조 이미지를 전달하지 않음 (aerial 시점 유도 방지)
+            // 대신 프롬프트만으로 건물 정체성 유지 + 거리뷰 참조로 시점 유도
+            parts.push({ text: `YOU MUST RENDER THIS AS A STREET-LEVEL PHOTOGRAPH. Camera at 1.6m height, standing on the road. The building facade fills the frame. You can see the SKY and CLOUDS above the roofline. The horizon line is at the MIDDLE of the image. This is eye-level — NOT aerial, NOT drone, NOT elevated. Like a real estate photo taken by a person standing on the sidewalk.\n\n${aPrompt}` })
+          } else {
+            // 입구: 조감도 참조 이미지 전달 (건물 일관성 유지)
+            parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
+            parts.push({ text: `CRITICAL: The image above shows the building from aerial view. Now render a CLOSE-UP of the main entrance at 1.5m height, 3 meters from the door. Show entrance canopy, door details, ground-floor materials. Camera at GROUND LEVEL.\n\n${aPrompt}` })
+          }
         } else {
           parts.push({ text: aPrompt })
         }
