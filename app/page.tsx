@@ -2385,6 +2385,7 @@ export default function ArchiScanPage() {
         {currentStep === "financial" && selectedLayoutData && (
           <FinancialStep
             selectedLayoutData={selectedLayoutData}
+            allLayouts={layouts}
             address={address} siteAreaNum={siteAreaNum} gfa={gfa}
             regulation={regulation} feasibilityResult={feasibilityResult}
             landPriceData={landPriceData} marketPrice={marketPrice}

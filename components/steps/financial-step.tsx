@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, type Dispatch, type SetStateAction } from "react"
+import { type Dispatch, type SetStateAction } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { ContributionSimulator } from "@/components/contribution-simulator"
 import { ScenarioComparison } from "@/components/scenario-comparison"
 import { ProjectRoadmap } from "@/components/project-roadmap"
-import { ChevronRight, ChevronLeft, TrendingUp, Calculator, FileText, Sparkles } from "lucide-react"
+import { ChevronRight, ChevronLeft, TrendingUp, Calculator, FileText } from "lucide-react"
 import type { LayoutOption } from "@/app/page"
 import type { ZoningRegulation } from "@/lib/regulation-types"
 import type { FeasibilityResult } from "@/lib/project-analysis-state"
@@ -20,6 +20,7 @@ const ScenarioSlider = dynamic(() => import("@/components/scenario-slider").then
 
 export interface FinancialStepProps {
   selectedLayoutData: LayoutOption
+  allLayouts: LayoutOption[]
   address: string
   siteAreaNum: number
   gfa: number
@@ -33,12 +34,10 @@ export interface FinancialStepProps {
 
 export function FinancialStep(props: FinancialStepProps) {
   const {
-    selectedLayoutData, address, siteAreaNum, gfa, regulation,
+    selectedLayoutData, allLayouts, address, siteAreaNum, gfa, regulation,
     feasibilityResult, landPriceData, marketPrice, regionalPricing,
     setCurrentStep,
   } = props
-
-  const [simResult, setSimResult] = useState<any>(null)
 
   return (
           <div className="flex flex-col gap-6">
@@ -244,47 +243,59 @@ export function FinancialStep(props: FinancialStepProps) {
               )
             })()}
 
-            {/* ━━━ 수익성 시뮬레이션 ━━━ */}
-            <div className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-bold">수익성 시뮬레이션</h3>
-              </div>
-              <p className="text-[11px] text-muted-foreground mb-3">법규 한도 내에서 최적 조합을 탐색합니다.</p>
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={async () => {
-                  try {
-                    const { optimizeLayout } = await import("@/lib/layout-optimizer").then(m => m)
-                    const result = optimizeLayout({
-                      siteArea: siteAreaNum,
-                      maxCoverage: regulation?.maxCoverageRatio ?? 60,
-                      maxFAR: regulation?.maxFloorAreaRatio ?? 200,
-                      maxFloors: regulation?.maxFloors || 20,
-                      maxHeight: regulation?.maxHeight || 60,
-                      parkingRatio: regulation?.parkingRatio || 1.0,
-                      landCostPerM2: landPriceData.pricePerM2 || 5000000,
-                      constructionCostPerM2: regionalPricing?.constructionCostPerM2 || 2500000,
-                      salesPricePerM2: marketPrice.suggestedSalePrice || regionalPricing?.salesPricePerM2 || 5000000,
-                    })
-                    setSimResult(result)
-                  } catch (e) {
-                    console.error('[v0] 시뮬레이션 실패:', e)
-                  }
-                }}
-              >
-                <Sparkles className="h-4 w-4" /> 최적 조합 탐색 실행
-              </Button>
-              {simResult && simResult.best && (
-                <div className="mt-3 p-3 rounded-lg bg-secondary/30 text-xs space-y-1">
-                  <p className="font-semibold text-primary">{simResult.searchSpace?.toLocaleString()}개 조합 탐색 완료</p>
-                  <p>최적 층수: <strong>{simResult.best.floors}층</strong> · 건폐율: <strong>{simResult.best.coverage}%</strong></p>
-                  <p>최적 ROI: <strong className={simResult.best.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}>{simResult.best.roi?.toFixed(1)}%</strong> · 세대수: <strong>{simResult.best.units}세대</strong></p>
-                  {simResult.improvement && <p className="text-muted-foreground">{simResult.improvement}</p>}
+            {/* ━━━ 수익 최적화안 대비 비교 ━━━ */}
+            {(() => {
+              const optLayout = allLayouts.find(l => l.name === '수익 최적화안')
+              if (!optLayout || selectedLayoutData.name === '수익 최적화안') return null
+
+              const currentRoi = feasibilityResult?.roi ?? 0
+              const optFar = siteAreaNum > 0 ? Math.round((optLayout.gfa / siteAreaNum) * 100) : 0
+              const currentFar = siteAreaNum > 0 ? Math.round((selectedLayoutData.gfa / siteAreaNum) * 100) : 0
+              const roiDiff = (optLayout.scores?.profitability ?? 50) * 0.6 - 30 - currentRoi // 추정
+
+              // optLayout의 features에서 ROI 추출
+              const roiMatch = optLayout.features?.[0]?.match(/ROI\s*([-\d.]+)%/)
+              const optRoi = roiMatch ? parseFloat(roiMatch[1]) : 0
+
+              return (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-base">💡</span>
+                    <h3 className="text-sm font-bold">수익 최적화안 대비</h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    {/* 현재 */}
+                    <div className="rounded-lg bg-card border border-border p-3 text-center">
+                      <p className="text-[9px] text-muted-foreground mb-1">현재 선택</p>
+                      <p className="text-xs font-bold mb-1">{selectedLayoutData.name}</p>
+                      <p className="text-[10px]">{selectedLayoutData.floors}층 · {selectedLayoutData.units}세대</p>
+                      <p className="text-[10px]">건폐 {selectedLayoutData.coverage}% · 용적 {currentFar}%</p>
+                      <p className={`text-sm font-bold mt-1 ${currentRoi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        ROI {currentRoi.toFixed(1)}%
+                      </p>
+                    </div>
+                    {/* 최적 */}
+                    <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-center">
+                      <p className="text-[9px] text-amber-400 mb-1">💰 수익 최적</p>
+                      <p className="text-xs font-bold mb-1">{optLayout.floors}층 · {optLayout.units}세대</p>
+                      <p className="text-[10px]">건폐 {optLayout.coverage}% · 용적 {optFar}%</p>
+                      <p className="text-[10px] text-muted-foreground">{optLayout.description}</p>
+                      <p className={`text-sm font-bold mt-1 ${optRoi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        ROI {optRoi.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+
+                  {optRoi > currentRoi && (
+                    <p className="text-[11px] text-amber-300/80 leading-relaxed">
+                      층수와 건폐율을 높이면 ROI가 <strong>{(optRoi - currentRoi).toFixed(1)}%p</strong> 개선될 수 있습니다.
+                      배치 탭에서 수익 최적화안을 선택하여 비교해 보세요.
+                    </p>
+                  )}
                 </div>
-              )}
-            </div>
+              )
+            })()}
 
             <div className="flex flex-col items-center gap-2 pt-4">
               <Button onClick={() => setCurrentStep("report")} size="lg" className="gap-2 w-full md:w-auto">
