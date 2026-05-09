@@ -256,17 +256,12 @@ export function LayoutsStep(props: LayoutsStepProps) {
         </div>
       )}
 
-      {/* ━━━ 3. 선택된 배치안 액션 ━━━ */}
+      {/* ━━━ 3. 선택된 배치안 상세 토글 ━━━ */}
       {selectedLayout && selectedLayoutData && (
-        <div className="flex gap-2">
-          <Button onClick={() => setCurrentStep("floorplan")} className="flex-1 gap-2">
-            평면도 보기 <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" onClick={() => setShowDetails(!showDetails)} className="gap-1">
-            <ChevronDown className={`h-4 w-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
-            상세
-          </Button>
-        </div>
+        <Button variant="outline" onClick={() => setShowDetails(!showDetails)} className="w-full gap-1">
+          <ChevronDown className={`h-4 w-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
+          상세 정보 {showDetails ? '접기' : '보기'}
+        </Button>
       )}
 
       {/* ━━━ 비교표 (접기/펼치기) ━━━ */}
