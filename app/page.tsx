@@ -417,6 +417,7 @@ function generateLayouts(
   // AI 렌더링 프롬프트와 동일 조건 (도면 일치)
   // ============================================================
   layouts.forEach(layout => {
+    (layout as any)._originalType = layout.type // 원래 타입 보존
     if (layout.type !== 'cluster' && layout.type !== 'tower' &&
         siteArea > 1500 && (layout.units || 0) > 20 && layout.floors <= 5) {
       layout.type = 'cluster'
@@ -1261,14 +1262,16 @@ export default function ArchiScanPage() {
           }
         })
         
-        // 중복 이름 구분 — 같은 이름이면 세대수/층수로 차별화
+        // 중복 이름 구분 — 같은 이름이면 건축 타입으로 차별화
+        const typeLabel: Record<string, string> = {
+          tower: '타워', courtyard: '중정', lshape: 'ㄱ자', linear: '판상', cluster: '클러스터'
+        }
         const nameCount: Record<string, number> = {}
         generatedLayouts.forEach(l => { nameCount[l.name] = (nameCount[l.name] || 0) + 1 })
-        const nameIdx: Record<string, number> = {}
         generatedLayouts.forEach(l => {
           if (nameCount[l.name] > 1) {
-            nameIdx[l.name] = (nameIdx[l.name] || 0) + 1
-            l.name = `${l.name} ${l.floors}층·${l.units}세대`
+            const origType = (l as any)._originalType || l.type
+            l.name = `${l.name} · ${typeLabel[origType] || origType}`
           }
         })
       }
