@@ -772,6 +772,70 @@ export default function ArchiScanPage() {
     console.log('[v0] FeasibilityResult updated:', result, '분양가:', (effectiveSalesPrice || 8000000) / 10000, '만/㎡')
   }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, marketPrice.suggestedSalePrice, regionalPricing, regulation.zoneType])
 
+  // ━━━ AI 렌더링 이미지 sessionStorage 영속화 ━━━
+  // 마운트 시 복원
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const saved = sessionStorage.getItem('archi-scan-render')
+      if (saved && !aiRenderImage) setAiRenderImage(saved)
+    } catch {}
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 변경 시 저장
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      if (aiRenderImage) sessionStorage.setItem('archi-scan-render', aiRenderImage)
+    } catch {}
+  }, [aiRenderImage])
+
+  // ━━━ 보고서 탭 진입 시 AI 렌더링 자동 생성 ━━━
+  useEffect(() => {
+    if (currentStep !== 'report') return
+    if (aiRenderImage) return // 이미 있으면 스킵
+    if (!selectedLayout || layouts.length === 0) return
+
+    const layout = layouts.find(l => l.id === selectedLayout)
+    if (!layout) return
+
+    let cancelled = false
+    const autoGenerate = async () => {
+      try {
+        const r = await fetch('/api/ai-render', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `${layout.name} ${layout.floors}층 ${layout.units}세대`,
+            style: 'modern-luxury',
+            address,
+            layoutName: layout.name,
+            floors: layout.floors,
+            units: layout.units,
+            siteArea: safeNumber(siteArea, 660),
+            buildingType: layout.type || 'tower',
+            coverage: layout.coverage,
+            cameraAngle: 'eye-level',
+            sceneMode: 'afternoon',
+            regulation: {
+              heightLimit: regulation.maxHeight,
+              zoneName: regulation.zoneType,
+              northShadow: true,
+              northShadowAngle: 45,
+            },
+          }),
+        })
+        if (!r.ok || cancelled) return
+        const d = await r.json()
+        if (d.success && d.image && !cancelled) {
+          setAiRenderImage(d.image)
+        }
+      } catch {}
+    }
+    autoGenerate()
+    return () => { cancelled = true }
+  }, [currentStep, aiRenderImage, selectedLayout, layouts]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSiteInputComplete = () => {
     setCurrentStep("regulation")
   }
@@ -1588,11 +1652,13 @@ export default function ArchiScanPage() {
 
   if (showQuickMode) {
     return (
-      <QuickAnalysis strategy={strategy} userValues={userValues} onDetailedAnalysis={(addr, area, rawData) => {
+      <QuickAnalysis strategy={strategy} userValues={userValues} onDetailedAnalysis={(addr, area, rawData, quickRenderImage) => {
         // Quick 분석 데이터를 Full 분석에 주입
         setAddress(addr)
         setSiteArea(String(area))
         setAnalysisRawData(rawData)
+        // Quick에서 생성된 AI 렌더링 이미지 전달
+        if (quickRenderImage) setAiRenderImage(quickRenderImage)
         if (rawData) {
           const zc = rawData.zoneType || ''
           if (zc) {
