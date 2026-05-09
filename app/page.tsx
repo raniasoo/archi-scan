@@ -1324,6 +1324,74 @@ export default function ArchiScanPage() {
       // Set layouts to state
       setLayouts(generatedLayouts)
       
+      // ━━━ 수익 최적화 배치안 자동 생성 ━━━
+      try {
+        const { optimizeLayout } = await loadLayoutOptimizer()
+        const optResult = optimizeLayout({
+          siteArea: area,
+          maxCoverage: regulation.maxCoverageRatio || 60,
+          maxFAR: regulation.maxFloorAreaRatio || 200,
+          maxFloors: regulation.maxFloors || 20,
+          maxHeight: regulation.maxHeight || 60,
+          parkingRatio: regulation.parkingRatio || 1.0,
+          landCostPerM2: landPriceData.pricePerM2 || 5000000,
+          constructionCostPerM2: regionalPricing?.constructionCostPerM2 || 2500000,
+          salesPricePerM2: marketPrice.suggestedSalePrice || regionalPricing?.salesPricePerM2 || 5000000,
+        })
+        if (optResult?.best) {
+          const b = optResult.best
+          // 기존 배치안과 중복 여부 확인 (건폐율·층수 동일하면 스킵)
+          const isDuplicate = generatedLayouts.some(l => l.coverage === b.coverage && l.floors === b.floors)
+          if (!isDuplicate && b.roi > (generatedLayouts[0]?.scores?.profitability ?? 0) * 0.5 - 50) {
+            const optType = b.floors >= 5 ? 'tower' : b.coverage >= 50 ? 'linear' : 'courtyard'
+            const maxId = Math.max(...generatedLayouts.map(l => l.id), 0)
+            const profitLayout: LayoutOption = {
+              id: maxId + 1,
+              name: '수익 최적화안',
+              type: optType as LayoutOption['type'],
+              description: `법규 한도 내 최대 수익 조합 (${optResult.searchSpace}개 탐색)`,
+              coverage: b.coverage,
+              units: b.units,
+              floors: b.floors,
+              parking: b.parking,
+              gfa: b.gfa,
+              openSpace: Math.round(area * (1 - b.coverage / 100)),
+              features: [
+                `ROI ${b.roi.toFixed(1)}% (${optResult.searchSpace}개 조합 중 최적)`,
+                `건폐율 ${b.coverage}% · 용적률 ${Math.round(b.gfa / area * 100)}%`,
+                `총사업비 ${(b.totalCost / 100000000).toFixed(1)}억 · 수익 ${(b.profit / 100000000).toFixed(1)}억`,
+              ],
+              scores: {
+                regulationCompliance: 90,
+                profitability: Math.min(Math.max(Math.round(b.roi + 50), 0), 100),
+                marketability: 65,
+                feasibility: 80,
+                overall: Math.min(Math.max(Math.round(b.roi * 0.6 + 60), 30), 95),
+                strategyFit: 60,
+              },
+              recommendation: {
+                isRecommended: false,
+                reasons: ['법규 한도 내 수익 최대화 조합', `${optResult.searchSpace}개 조합 전수 탐색 결과`],
+                warnings: ['설계 품질보다 수익성을 우선한 배치입니다', '실제 설계 시 조정이 필요할 수 있습니다'],
+                strategyMatch: 60,
+              },
+              reasoning: {
+                summary: `법규 한도(건폐 ${regulation.maxCoverageRatio}%, 용적 ${regulation.maxFloorAreaRatio}%) 내에서 ${optResult.searchSpace}개 조합을 탐색하여 ROI ${b.roi.toFixed(1)}%의 최적 조합을 도출했습니다.`,
+                regulationConsiderations: [`건폐율 ${b.coverage}% (한도 ${regulation.maxCoverageRatio}%)`, `용적률 ${Math.round(b.gfa / area * 100)}% (한도 ${regulation.maxFloorAreaRatio}%)`],
+                profitabilityAdvantages: [`ROI ${b.roi.toFixed(1)}%`, `총수익 ${(b.totalRevenue / 100000000).toFixed(1)}억원`],
+                designFeatures: [`${b.floors}층 · ${b.units}세대`, `세대당 ${b.unitSize.toFixed(0)}㎡`],
+                risksAndChallenges: ['수익 최적화 목적으로 설계 품질이 낮을 수 있음'],
+              },
+              isLegallyCompliant: true,
+            }
+            setLayouts(prev => [...prev, profitLayout])
+            console.log('[v0] 수익 최적화 배치안 추가:', b.floors, '층', b.coverage, '%', 'ROI', b.roi.toFixed(1), '%')
+          }
+        }
+      } catch (e) {
+        console.warn('[v0] 수익 최적화 배치안 생성 실패:', e)
+      }
+      
       // Save layouts to database (non-blocking)
       if (project) {
         try {
