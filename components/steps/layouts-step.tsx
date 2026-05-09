@@ -278,8 +278,18 @@ export function LayoutsStep(props: LayoutsStepProps) {
           siteArea: safeNumber(siteArea, 660),
           strategy,
         }, userValues)
-        const strategyFit = selectedLayoutData.scores?.strategyFit ?? 0
-        const roi = feasibilityResult?.roi ?? 0
+        const strategyFit = selectedLayoutData.recommendation?.strategyMatch ?? selectedLayoutData.scores?.strategyFit ?? 0
+        const inlineF = calculateFeasibility({
+          siteArea: siteAreaNum || 1,
+          grossFloorArea: selectedLayoutData.gfa || 1,
+          unitCount: selectedLayoutData.units || 1,
+          floorCount: selectedLayoutData.floors || 1,
+          parkingCount: selectedLayoutData.parking || 0,
+          landPricePerM2: landPriceData.pricePerM2 || 5000000,
+          salesPricePerM2: salesPrice,
+          constructionCostPerM2: constructionCost,
+        })
+        const roi = inlineF?.roi ?? 0
         const roiColor = roi >= 15 ? 'text-emerald-400' : roi >= 5 ? 'text-blue-400' : roi >= 0 ? 'text-amber-400' : 'text-red-400'
 
         // 법규 활용도: 건폐율·용적률을 법규 한도 대비 얼마나 쓰고 있는지

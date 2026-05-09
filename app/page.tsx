@@ -1260,6 +1260,17 @@ export default function ArchiScanPage() {
             }
           }
         })
+        
+        // 중복 이름 구분 — 같은 이름이면 세대수/층수로 차별화
+        const nameCount: Record<string, number> = {}
+        generatedLayouts.forEach(l => { nameCount[l.name] = (nameCount[l.name] || 0) + 1 })
+        const nameIdx: Record<string, number> = {}
+        generatedLayouts.forEach(l => {
+          if (nameCount[l.name] > 1) {
+            nameIdx[l.name] = (nameIdx[l.name] || 0) + 1
+            l.name = `${l.name} ${l.floors}층·${l.units}세대`
+          }
+        })
       }
       
       // ============================================================
