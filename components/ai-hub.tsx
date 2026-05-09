@@ -379,7 +379,9 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
               <p className="text-[10px] text-violet-400 font-medium text-center">📐 멀티앵글 ({multiImages.filter(i => i.image).length}/3장 성공)</p>
               {multiImages.map((mi, idx) => mi.image && (
                 <div key={idx} className="space-y-1">
-                  <p className="text-[9px] text-muted-foreground">{mi.angle === 'eye-level' ? '👁️ 눈높이' : mi.angle === 'birds-eye' ? '🦅 조감도' : '🚪 입구'}</p>
+                  <p className="text-[9px] text-muted-foreground font-medium">
+                    {mi.angle === 'eye-level' ? '👁️ 정면 · 보행자 시점 (1.6m)' : mi.angle === 'birds-eye' ? '🦅 조감도 · 드론 시점 (50m)' : '🚪 입구 · 클로즈업 (3m)'}
+                  </p>
                   <img src={mi.image} alt={mi.angle} className="w-full rounded-lg border border-border" />
                 </div>
               ))}

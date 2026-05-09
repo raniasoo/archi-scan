@@ -208,10 +208,44 @@ export async function POST(req: NextRequest) {
           // 2,3번: 눈높이 이미지를 참조로 전달
           parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
           if (a.angle === 'birds-eye') {
-            parts.push({ text: `The image above shows the EXACT building you designed from street level. Now render THE SAME IDENTICAL BUILDING from a DRONE VIEW at 50m height, looking DOWN at 45° angle. You MUST see the ROOFTOPS, landscaping, parking from ABOVE. The building shape, materials, colors, windows MUST be exactly the same. Only the camera position changes — from ground to sky.\n\n${aPrompt}` })
+            parts.push({ text: `REFERENCE IMAGE ABOVE: This is the building you designed, photographed from STREET LEVEL (1.6m height).
+
+YOUR TASK: Render THE SAME IDENTICAL BUILDING but now photographed from a DRONE at 50m altitude, looking DOWN at 45°.
+
+WHAT CHANGES: Only the camera position — from ground to sky.
+WHAT STAYS IDENTICAL: Building shape, number of floors (${floors}), facade materials, colors, window pattern, entrance design.
+
+COMPOSITION CHECK:
+✅ The ROOF of the building is clearly visible (you're looking DOWN at it)
+✅ The ground/parking/landscaping is visible as a plane BELOW
+✅ Neighboring buildings are seen from ABOVE (their roofs visible)
+✅ Trees appear as round canopy shapes seen from above
+❌ NOT a street-level view
+❌ NOT looking horizontally at the facade
+
+${aPrompt}` })
           } else {
-            parts.push({ text: `The image above shows the building from street level. Now render a CLOSE-UP of the main entrance at 1.5m height, 3 meters from the door. Same building, same materials. Show entrance canopy, door details, ground-floor facade.\n\n${aPrompt}` })
+            parts.push({ text: `REFERENCE IMAGE ABOVE: This is the building you designed, photographed from STREET LEVEL showing the full facade.
+
+YOUR TASK: Render THE SAME IDENTICAL BUILDING but now as a CLOSE-UP of the main entrance. Camera at 1.5m height, only 3 meters from the front door.
+
+WHAT CHANGES: Camera distance — from far (full building) to very close (entrance detail only).
+WHAT STAYS IDENTICAL: Building materials, colors, architectural style, entrance design.
+
+COMPOSITION CHECK:
+✅ The entrance door fills 70-80% of the frame
+✅ Only ground floor and maybe 2nd floor visible
+✅ Door hardware, intercom, lighting fixtures are visible details
+✅ Ground paving texture is clearly visible
+❌ NOT the full building — upper floors are cropped out
+❌ NOT pulled back — this is an intimate close-up shot
+
+${aPrompt}` })
           }
+        } else {
+          // 1번 이미지 실패 시 — 독립 생성 (참조 없이)
+          console.warn(`[GEMINI] Multi-angle: first image failed, generating ${a.angle} independently`)
+          parts.push({ text: aPrompt })
         }
         
         // 참조 이미지 — 앵글별 필터링
@@ -225,7 +259,22 @@ export async function POST(req: NextRequest) {
           for (const img of angleRefImages) {
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
-          parts.push({ text: `The ${angleRefImages.length} image(s) above show: ${angleRefImages.map(r => r.label === 'satellite' ? 'SATELLITE/AERIAL VIEW of the actual site and neighborhood' : r.label === 'cadastral' ? 'CADASTRAL MAP showing the exact lot boundary shape and surrounding roads' : r.label === 'cadastral-polygon' ? 'CADASTRAL LOT BOUNDARY — exact shape of the building site drawn from real survey data. Blue line=lot boundary, dashed orange=setback line, green=buildable area. The new building MUST fit within this shape.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — eye-level photo of the actual neighborhood. MATCH THIS CAMERA HEIGHT for the rendering.` : r.label).join(', ')}. The rendering MUST match the actual site conditions.` })
+          const refDescriptions = angleRefImages.map(r => {
+            if (r.label === 'satellite') return 'SATELLITE/AERIAL VIEW — shows the actual site FROM ABOVE. Use this to understand the neighborhood layout, roads, and surrounding buildings as seen from a drone.'
+            if (r.label === 'cadastral') return 'CADASTRAL MAP — lot boundary shape and surrounding roads.'
+            if (r.label === 'cadastral-polygon') return 'CADASTRAL LOT BOUNDARY — exact lot shape from survey data. Blue=lot, dashed orange=setback, green=buildable area.'
+            if (r.label.startsWith('street-view')) {
+              const dir = r.label.replace('street-view-', '')
+              if (a.angle === 'birds-eye') {
+                return `STREET VIEW (${dir}) — shows the neighborhood CHARACTER (building styles, materials, vegetation). Use this for context only — your camera is in the SKY, not on the ground.`
+              } else if (a.angle === 'entrance') {
+                return `STREET VIEW (${dir}) — shows the actual neighborhood at ground level. Match the street texture, sidewalk style, and vegetation near the entrance.`
+              }
+              return `STREET VIEW (${dir}) — eye-level photo of the actual neighborhood. MATCH THIS CAMERA HEIGHT (1.6m) for the rendering.`
+            }
+            return r.label
+          }).join(', ')
+          parts.push({ text: `The image(s) above show: ${refDescriptions}. The rendering MUST match the actual site conditions.` })
         }
 
         try {
@@ -253,8 +302,8 @@ export async function POST(req: NextRequest) {
         } catch (e) {
           images.push({ angle: a.angle, image: null, error: 'timeout' })
         }
-        // rate limit 대응
-        await new Promise(r => setTimeout(r, 1000))
+        // rate limit 대응 (프롬프트 길어졌으므로 1.5초)
+        await new Promise(r => setTimeout(r, 1500))
       }
       
       return NextResponse.json({ success: true, multiAngle: true, images, model: 'gemini-2.5-flash-image' })
@@ -508,9 +557,25 @@ CRITICAL: Show ${buildingCount} SEPARATE buildings at DIFFERENT ground levels, c
 
   // ━━━ 카메라 앵글 ━━━
   const angleDesc: Record<string, string> = {
-    'eye-level': 'Eye-level perspective from the street (camera at 1.6m height, standing on the road in front of the building). Show the main facade as seen by a PEDESTRIAN walking past. Slight 3/4 angle to show depth. The camera is ON THE GROUND at street level — NOT an aerial or drone view. NOT looking down. The viewer is looking HORIZONTALLY or slightly UP at the building. Show the sky above the building roofline.',
-    'birds-eye': 'Aerial bird\'s-eye view from 45-degree angle above, showing the building roof, landscaping layout, parking, and surrounding context. Like a drone photo from 50m height.',
-    'entrance': 'Close-up of the main entrance at eye level. Focus on entrance canopy, door details, landscaping, and ground-floor facade materials. Welcoming perspective.',
+    'eye-level': `CAMERA POSITION: Standing on the sidewalk, camera at exactly 1.6m height (adult eye level). 
+COMPOSITION: 3/4 angle view showing the FULL building from ground to roof. The building fills 60-70% of the frame vertically. 
+HORIZON LINE: At 1/3 from bottom — the lower third shows the street/sidewalk/landscaping, the upper two-thirds show the building facade and sky above the roofline.
+PERSPECTIVE: Strong one-point perspective with vanishing point at building center. Vertical lines of the building are perfectly straight (no tilt).
+MANDATORY: The camera is ON THE GROUND. You can see the base of the building meeting the ground. Sky is visible ABOVE the roof. This is how a person walking on the street sees the building.
+FORBIDDEN: Do NOT render from above, from a drone, from a hill, or from any elevated position. Do NOT look down at the building.`,
+    'birds-eye': `CAMERA POSITION: Drone hovering at 50m altitude, looking DOWN at the building at a 45° angle from the southeast.
+COMPOSITION: The ROOF of the building is the dominant element — you can see rooftop features (mechanical equipment, garden, solar panels). The building occupies 40-50% of the frame.
+WHAT MUST BE VISIBLE: Rooftops, the building footprint shape, parking lot layout, landscaping from above, driveways, neighboring buildings' roofs, shadows cast on the ground.
+HORIZON LINE: At 2/3 from bottom or higher — mostly looking DOWN at the ground plane.
+PERSPECTIVE: Axonometric-like with mild perspective. The ground plane is clearly visible as a surface you look DOWN upon.
+MANDATORY: The camera is IN THE SKY looking DOWN. You see the TOP of the building, not its front facade. Trees are seen from above (canopy shapes). Cars in parking are seen from above.
+FORBIDDEN: Do NOT render from street level. Do NOT show the building as if standing in front of it. The ground must be visible as a plane BELOW the camera.`,
+    'entrance': `CAMERA POSITION: Standing 3 meters from the main entrance door, camera at 1.5m height, facing the entrance straight-on.
+COMPOSITION: The entrance door/lobby fills 70-80% of the frame. Only 1-2 floors are visible. Ground-floor details are the focus.
+WHAT MUST BE VISIBLE: Entrance canopy/awning structure, door material and hardware, house number/address plate, intercom panel, entrance lighting fixtures, ground paving material transition (from sidewalk to entrance), planting boxes or greenery near the door, mailbox area.
+SCALE REFERENCE: A person (or their shadow) near the entrance to show door height (~2.4m).
+MANDATORY: This is a CLOSE-UP architectural detail shot. The entrance area fills most of the frame. Upper floors are cropped or barely visible.
+FORBIDDEN: Do NOT show the full building. Do NOT pull the camera back to show the entire facade. This is NOT a building portrait — it is an entrance detail shot.`,
   }
   const cameraDesc = angleDesc[cameraAngle || 'eye-level'] || angleDesc['eye-level']
 
@@ -611,6 +676,13 @@ ${isComplex ? '- One single monolithic building (MUST show multiple separate bui
 - Text, watermarks, or labels on the image
 - Floating elements or physically impossible structures
 - Cars or people that look artificial
+
+${cameraAngle === 'birds-eye' ? `FINAL COMPOSITION CHECK — BIRDS-EYE:
+Before generating, verify: Am I looking DOWN from the sky? Can I see the ROOF? Is the ground plane visible BELOW? If the answer to any is NO, re-compose from a higher altitude.` 
+: cameraAngle === 'entrance' ? `FINAL COMPOSITION CHECK — ENTRANCE CLOSE-UP:
+Before generating, verify: Does the entrance door fill most of the frame? Are only 1-2 floors visible? Can I see door hardware details? If the full building is visible, ZOOM IN closer.`
+: `FINAL COMPOSITION CHECK — EYE-LEVEL:
+Before generating, verify: Is the camera at 1.6m (ground level)? Is sky visible ABOVE the roofline? Can I see the base of the building meeting the ground? If looking down at the building, LOWER the camera to street level.`}
 
 ${prompt}
 
