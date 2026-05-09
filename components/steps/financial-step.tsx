@@ -1,12 +1,12 @@
 "use client"
 
-import { type Dispatch, type SetStateAction } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { ContributionSimulator } from "@/components/contribution-simulator"
 import { ScenarioComparison } from "@/components/scenario-comparison"
 import { ProjectRoadmap } from "@/components/project-roadmap"
-import { ChevronRight, ChevronLeft, TrendingUp, Calculator, FileText } from "lucide-react"
+import { ChevronRight, ChevronLeft, TrendingUp, Calculator, FileText, Sparkles } from "lucide-react"
 import type { LayoutOption } from "@/app/page"
 import type { ZoningRegulation } from "@/lib/regulation-types"
 import type { FeasibilityResult } from "@/lib/project-analysis-state"
@@ -37,6 +37,8 @@ export function FinancialStep(props: FinancialStepProps) {
     feasibilityResult, landPriceData, marketPrice, regionalPricing,
     setCurrentStep,
   } = props
+
+  const [simResult, setSimResult] = useState<any>(null)
 
   return (
           <div className="flex flex-col gap-6">
@@ -241,6 +243,47 @@ export function FinancialStep(props: FinancialStepProps) {
                 />
               )
             })()}
+
+            {/* ━━━ 수익성 시뮬레이션 ━━━ */}
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-bold">수익성 시뮬레이션</h3>
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3">법규 한도 내에서 최적 조합을 탐색합니다.</p>
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={async () => {
+                  try {
+                    const { optimizeLayout } = await import("@/lib/layout-optimizer").then(m => m)
+                    const result = optimizeLayout({
+                      siteArea: siteAreaNum,
+                      maxCoverage: regulation?.maxCoverageRatio ?? 60,
+                      maxFAR: regulation?.maxFloorAreaRatio ?? 200,
+                      maxFloors: regulation?.maxFloors || 20,
+                      maxHeight: regulation?.maxHeight || 60,
+                      parkingRatio: regulation?.parkingRatio || 1.0,
+                      landCostPerM2: landPriceData.pricePerM2 || 5000000,
+                      constructionCostPerM2: regionalPricing?.constructionCostPerM2 || 2500000,
+                      salesPricePerM2: marketPrice.suggestedSalePrice || regionalPricing?.salesPricePerM2 || 5000000,
+                    })
+                    setSimResult(result)
+                  } catch (e) {
+                    console.error('[v0] 시뮬레이션 실패:', e)
+                  }
+                }}
+              >
+                <Sparkles className="h-4 w-4" /> 최적 조합 탐색 실행
+              </Button>
+              {simResult && (
+                <div className="mt-3 p-3 rounded-lg bg-secondary/30 text-xs space-y-1">
+                  <p className="font-semibold text-primary">{simResult.searchSpace?.toLocaleString()}개 조합 탐색 완료</p>
+                  <p>최적 층수: <strong>{simResult.bestFloors}층</strong> · 건폐율: <strong>{simResult.bestCoverage}%</strong></p>
+                  <p>최적 ROI: <strong className={simResult.bestROI >= 0 ? 'text-emerald-400' : 'text-red-400'}>{simResult.bestROI?.toFixed(1)}%</strong></p>
+                </div>
+              )}
+            </div>
 
             <div className="flex flex-col items-center gap-2 pt-4">
               <Button onClick={() => setCurrentStep("report")} size="lg" className="gap-2 w-full md:w-auto">
