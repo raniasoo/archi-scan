@@ -750,15 +750,15 @@ export default function ArchiScanPage() {
     
     const siteAreaNum = safeNumber(siteArea, 660)
     
-    // 분양가 우선순위: 실거래가 > 지역별 테이블 > 기본값
+    // 분양가 우선순위: 실거래가 > 지역별 테이블 > 기본값 (카드와 동일)
     const effectiveSalesPrice = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
       ? marketPrice.suggestedSalePrice
       : regionalPricing 
         ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || ''))
-        : undefined
+        : 5000000
     
-    // 공사비: 지역별 테이블 > 기본값
-    const effectiveConstCost = regionalPricing?.constructionCostPerM2 || undefined
+    // 공사비: 지역별 테이블 > 기본값 (카드와 동일)
+    const effectiveConstCost = regionalPricing?.constructionCostPerM2 || 2500000
     
     const result = calculateFeasibility({
       siteArea: siteAreaNum,
