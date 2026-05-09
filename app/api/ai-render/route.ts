@@ -262,21 +262,10 @@ The entrance must use the SAME materials and style visible in the street-level i
           parts.push({ text: aPrompt })
         }
         
-        // 참조 이미지 — 1번(눈높이)만 추가 참조 전송
-        // 2,3번은 위에서 이미 처리했으므로 스킵 (중복 방지)
-        if (ai === 0) {
-          const streetViews = refImages.filter(r => r.label.startsWith('street-view'))
-          if (streetViews.length > 0) {
-            for (const img of streetViews) {
-              parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
-            }
-            const descs = streetViews.map(r => {
-              const dir = r.label.replace('street-view-', '')
-              return `STREET VIEW (${dir}) — eye-level photo of the actual neighborhood. MATCH THIS CAMERA HEIGHT (1.6m) for the rendering.`
-            }).join(', ')
-            parts.push({ text: `The image(s) above show: ${descs}. The rendering MUST match the actual site conditions.` })
-          }
-        }
+        // 참조 이미지 — 1번(눈높이)은 거리뷰 참조 제거
+        // 이유: 경사지(평창동 등)의 Google 거리뷰가 높은 위치에서 촬영되어
+        //       Gemini가 그 elevated 시점을 복제 → 정면이 조감도처럼 나옴
+        // 해결: 프롬프트의 카메라 지시만으로 1.6m 시점 강제
         // 2,3번: 참조 이미지는 위 else if (firstImageBase64) 블록에서 이미 처리됨
 
         try {
@@ -559,12 +548,14 @@ CRITICAL: Show ${buildingCount} SEPARATE buildings at DIFFERENT ground levels, c
 
   // ━━━ 카메라 앵글 ━━━
   const angleDesc: Record<string, string> = {
-    'eye-level': `CAMERA POSITION: Standing on the sidewalk, camera at exactly 1.6m height (adult eye level). 
-COMPOSITION: 3/4 angle view showing the FULL building from ground to roof. The building fills 60-70% of the frame vertically. 
-HORIZON LINE: At 1/3 from bottom — the lower third shows the street/sidewalk/landscaping, the upper two-thirds show the building facade and sky above the roofline.
-PERSPECTIVE: Strong one-point perspective with vanishing point at building center. Vertical lines of the building are perfectly straight (no tilt).
-MANDATORY: The camera is ON THE GROUND. You can see the base of the building meeting the ground. Sky is visible ABOVE the roof. This is how a person walking on the street sees the building.
-FORBIDDEN: Do NOT render from above, from a drone, from a hill, or from any elevated position. Do NOT look down at the building.`,
+    'eye-level': `CAMERA POSITION: Standing on the sidewalk DIRECTLY IN FRONT of the building entrance, camera at exactly 1.6m height (adult eye level). The camera is at THE SAME ELEVATION as the building's ground floor — NOT on a hill above it.
+COMPOSITION: 3/4 angle view showing the FULL building from ground to roof. The building fills 60-70% of the frame vertically. The building facade is the dominant element.
+HORIZON LINE: At 1/3 from bottom — the lower third shows the street/sidewalk/landscaping, the upper two-thirds show the building facade and SKY.
+PERSPECTIVE: Strong one-point perspective with vanishing point at building center. Vertical lines of the building are perfectly straight (no tilt). You are looking HORIZONTALLY or slightly UP at the building.
+WHAT YOU CAN SEE: The front facade, windows, entrance door, balconies from the front. Sky above the roofline. The ground/pavement at the base of the building.
+WHAT YOU CANNOT SEE: The ROOF surface (you are below it). Rooftop gardens from above. The top of trees. The backs of neighboring buildings. The building from above.
+MANDATORY: The camera is ON THE GROUND at the same level as the building entrance. You can see the base of the building meeting the ground. Sky is visible ABOVE the roof. The roofline is a SILHOUETTE against the sky — you cannot see what's on top of the roof.
+FORBIDDEN: Do NOT render from above, from a drone, from a hill, or from any elevated position. Do NOT look down at the building. If you can see the ROOFTOP SURFACE (garden, equipment, flat roof), the camera is TOO HIGH — lower it to ground level.`,
     'birds-eye': `CAMERA POSITION: Drone hovering at 50m altitude, looking DOWN at the building at a 45° angle from the southeast.
 COMPOSITION: The ROOF of the building is the dominant element — you can see rooftop features (mechanical equipment, garden, solar panels). The building occupies 40-50% of the frame.
 WHAT MUST BE VISIBLE: Rooftops, the building footprint shape, parking lot layout, landscaping from above, driveways, neighboring buildings' roofs, shadows cast on the ground.
@@ -684,7 +675,7 @@ Before generating, verify: Am I looking DOWN from the sky? Can I see the ROOF? I
 : cameraAngle === 'entrance' ? `FINAL COMPOSITION CHECK — ENTRANCE CLOSE-UP:
 Before generating, verify: Does the entrance door fill most of the frame? Are only 1-2 floors visible? Can I see door hardware details? If the full building is visible, ZOOM IN closer.`
 : `FINAL COMPOSITION CHECK — EYE-LEVEL:
-Before generating, verify: Is the camera at 1.6m (ground level)? Is sky visible ABOVE the roofline? Can I see the base of the building meeting the ground? If looking down at the building, LOWER the camera to street level.`}
+Before generating, verify: Is the camera at 1.6m (ground level)? Is sky visible ABOVE the roofline? Can I see the base of the building meeting the ground? Can I see the ROOF SURFACE from above? If YES to the last question, the camera is TOO HIGH — move it DOWN to street level. The roof should be a silhouette against the sky, NOT a visible surface.`}
 
 ${prompt}
 
