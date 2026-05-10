@@ -519,6 +519,120 @@ export function BuildingVolume3D({
         scene.add(stripe)
       }
 
+      /* ── Phase 3: 주차장, 벤치, 분수, 관목, 볼라드 ── */
+
+      // 관목 헬퍼 (낮은 타원 형태)
+      const addShrub = (sx: number, sz: number, scale = 1) => {
+        const shrub = new THREE.Mesh(
+          new THREE.SphereGeometry(0.5 * scale, 6, 4),
+          new THREE.MeshStandardMaterial({ color: 0x2a6a30 + Math.floor(Math.random() * 0x101010), roughness: 0.8 }))
+        shrub.scale.set(1, 0.6, 1)
+        shrub.position.set(sx, 0.3 * scale, sz)
+        shrub.castShadow = true; scene.add(shrub)
+      }
+
+      // 벤치 헬퍼
+      const addBench = (bx: number, bz: number, rotY = 0) => {
+        const benchGrp = new THREE.Group()
+        // 좌판
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.06, 0.45),
+          new THREE.MeshStandardMaterial({ color: 0x6a4a30, roughness: 0.7 }))
+        seat.position.y = 0.45; benchGrp.add(seat)
+        // 등받이
+        const back = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 0.04),
+          new THREE.MeshStandardMaterial({ color: 0x6a4a30, roughness: 0.7 }))
+        back.position.set(0, 0.7, -0.2); benchGrp.add(back)
+        // 다리 (4개)
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.6, roughness: 0.3 })
+        for (const lx of [-0.6, 0.6]) {
+          for (const lz of [-0.15, 0.15]) {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.45, 4), legMat)
+            leg.position.set(lx, 0.225, lz); benchGrp.add(leg)
+          }
+        }
+        benchGrp.position.set(bx, 0, bz)
+        benchGrp.rotation.y = rotY
+        scene.add(benchGrp)
+      }
+
+      // 지하주차 출입구 (대지 전면)
+      const parkRamp = new THREE.Mesh(new THREE.BoxGeometry(5, 0.15, 4),
+        new THREE.MeshStandardMaterial({ color: 0x353d45, roughness: 0.7 }))
+      parkRamp.position.set(-S * 0.25, 0.08, S / 2 - 0.5); scene.add(parkRamp)
+      // 경사로 (어두운 색)
+      const ramp = new THREE.Mesh(new THREE.BoxGeometry(4, 0.05, 3),
+        new THREE.MeshStandardMaterial({ color: 0x252d35, roughness: 0.8 }))
+      ramp.position.set(-S * 0.25, 0.05, S / 2 - 2); scene.add(ramp)
+      // 출입구 캐노피
+      const pCanopy = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.1, 1),
+        new THREE.MeshStandardMaterial({ color: 0x606870, metalness: 0.4, roughness: 0.3 }))
+      pCanopy.position.set(-S * 0.25, 2.8, S / 2 + 0.5); scene.add(pCanopy)
+      // "주차" 표시 (작은 사각형)
+      const pSign = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5),
+        new THREE.MeshBasicMaterial({ color: 0x2266ff }))
+      pSign.position.set(-S * 0.25, 2.2, S / 2 + 0.01); scene.add(pSign)
+
+      // 경계 관목 (대지 앞쪽 + 측면)
+      for (let i = -4; i <= 4; i++) {
+        if (Math.abs(i * S * 0.1 - (-S * 0.25)) > 4) { // 주차 출입구 피하기
+          addShrub(i * S * 0.1, S / 2 - 1.5, 0.8)
+        }
+      }
+      for (let i = -3; i <= 3; i++) {
+        addShrub(-S / 2 + 0.8, i * S * 0.12, 0.6)
+        addShrub(S / 2 - 0.8, i * S * 0.12, 0.6)
+      }
+
+      // 벤치 배치
+      if (layoutType === 'courtyard' || layoutType === 'cluster') {
+        const cs = S * (layoutType === 'courtyard' ? 0.28 : 0.20)
+        addBench(cs * 0.35, cs * 0.15, Math.PI / 2)
+        addBench(-cs * 0.35, -cs * 0.15, -Math.PI / 2)
+      }
+      // 도로변 벤치
+      addBench(S * 0.2, S / 2 + 1.5, 0)
+
+      // 분수/수경시설 (중정 타입만)
+      if (layoutType === 'courtyard') {
+        // 원형 수반
+        const basin = new THREE.Mesh(new THREE.CylinderGeometry(2, 2.2, 0.4, 16),
+          new THREE.MeshStandardMaterial({ color: 0x6a7a8a, roughness: 0.3, metalness: 0.4 }))
+        basin.position.set(0, 0.32, 0); scene.add(basin)
+        // 물 표면
+        const water = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.05, 16),
+          new THREE.MeshStandardMaterial({ color: 0x2288bb, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.7 }))
+        water.position.set(0, 0.5, 0); scene.add(water)
+        // 중앙 노즐
+        const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.6, 6),
+          new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.7, roughness: 0.2 }))
+        nozzle.position.set(0, 0.8, 0); scene.add(nozzle)
+      }
+
+      // 볼라드 (차량 진입 방지)
+      const bollardMat = new THREE.MeshStandardMaterial({ color: 0x505050, metalness: 0.5, roughness: 0.3 })
+      for (let i = -3; i <= 3; i++) {
+        if (Math.abs(i * S * 0.12 - (-S * 0.25)) > 3) { // 주차 출입구 피하기
+          const bollard = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.7, 6), bollardMat)
+          bollard.position.set(i * S * 0.12, 0.35, S / 2 - 0.2); scene.add(bollard)
+          // 반사띠
+          const band = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 6),
+            new THREE.MeshStandardMaterial({ color: 0xffcc00, emissive: 0x886600, emissiveIntensity: 0.3 }))
+          band.position.set(i * S * 0.12, 0.55, S / 2 - 0.2); scene.add(band)
+        }
+      }
+
+      // 건물 엔트런스 계단 (첫 번째 건물)
+      if (blocks.length > 0) {
+        const blk0 = blocks[0]
+        const bX0 = S * blk0.x, bZ0 = S * blk0.z, bD0 = S * blk0.d
+        const stepMat = new THREE.MeshStandardMaterial({ color: 0x707880, roughness: 0.6, metalness: 0.1 })
+        for (let s = 0; s < 3; s++) {
+          const step = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.15, 0.35), stepMat)
+          step.position.set(bX0, 0.075 + s * 0.15, bZ0 + bD0 / 2 + 1.5 + s * 0.35)
+          step.receiveShadow = true; scene.add(step)
+        }
+      }
+
       setBlockInfo(info); setLoaded(true)
 
       /* ── Resize ── */
