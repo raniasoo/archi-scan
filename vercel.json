@@ -34,6 +34,9 @@
     },
     "app/api/map-tile/route.ts": {
       "maxDuration": 10
+    },
+    "app/api/ai-render/route.ts": {
+      "maxDuration": 60
     }
   }
 }

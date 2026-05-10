@@ -138,16 +138,16 @@ export async function POST(req: NextRequest) {
         refImages.push({ base64: svgBase64, mimeType: 'image/svg+xml', label: 'cadastral-polygon' })
         
         // ━━━ 대지 형상 텍스트 분석 (프롬프트용) ━━━
-        const mW = Math.round(maxLng - minLng)
-        const mH = Math.round(maxLat - minLat)
-        const aspectRatio = mW > 0 && mH > 0 ? (mW / mH).toFixed(1) : '1.0'
+        const widthM = Math.round(w) // 미터 단위 폭
+        const heightM = Math.round(h) // 미터 단위 깊이
+        const aspectRatio = widthM > 0 && heightM > 0 ? (widthM / heightM).toFixed(1) : '1.0'
         const vertexCount = sitePolygon.length
         let shapeDesc = 'irregular polygon'
         if (vertexCount === 4) shapeDesc = parseFloat(aspectRatio) > 1.3 ? 'elongated rectangle' : parseFloat(aspectRatio) < 0.7 ? 'narrow deep rectangle' : 'roughly square'
         else if (vertexCount === 3) shapeDesc = 'triangle'
         else if (vertexCount === 5) shapeDesc = 'pentagon'
         else if (vertexCount >= 6) shapeDesc = `irregular ${vertexCount}-sided polygon`
-        polygonShapeDesc = `Site shape: ${shapeDesc}, approximately ${mW}m wide × ${mH}m deep (aspect ratio ${aspectRatio}). ${vertexCount} vertices. Buildings MUST be arranged to fit within this ${shapeDesc} boundary — do NOT place buildings outside the lot line.`
+        polygonShapeDesc = `Site shape: ${shapeDesc}, approximately ${widthM}m wide × ${heightM}m deep (aspect ratio ${aspectRatio}). ${vertexCount} vertices. Buildings MUST be arranged to fit within this ${shapeDesc} boundary — do NOT place buildings outside the lot line.`
         
         console.log(`[GEMINI] cadastral-polygon SVG generated: ${Math.round(svg.length / 1024)}KB ✅`)
       } catch (e) {
