@@ -278,8 +278,12 @@ export function BuildingVolume3D({
       sc.near = 0.5; sc.far = S * 8
       sun.shadow.bias = -0.001; sun.shadow.normalBias = 0.02
       scene.add(sun)
-      scene.add(Object.assign(new THREE.DirectionalLight(0x88aacc, 0.7), { position: new THREE.Vector3(-S, S * 0.5, -S * 0.5) }))
-      scene.add(Object.assign(new THREE.DirectionalLight(0x4466aa, 0.35), { position: new THREE.Vector3(-S * 0.5, S * 0.3, S * 2) }))
+      const fill = new THREE.DirectionalLight(0x88aacc, 0.7)
+      fill.position.set(-S, S * 0.5, -S * 0.5)
+      scene.add(fill)
+      const back = new THREE.DirectionalLight(0x4466aa, 0.35)
+      back.position.set(-S * 0.5, S * 0.3, S * 2)
+      scene.add(back)
 
       /* ── Ground (잔디) ── */
       const grassC = document.createElement('canvas')
@@ -358,9 +362,10 @@ export function BuildingVolume3D({
         scene.add(mesh)
 
         // 에지
-        scene.add(Object.assign(new THREE.LineSegments(new THREE.EdgesGeometry(geo),
-          new THREE.LineBasicMaterial({ color: 0x8aa8c8, transparent: true, opacity: 0.25 })),
-          { position: new THREE.Vector3(bX, 0, bZ) }))
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo),
+          new THREE.LineBasicMaterial({ color: 0x8aa8c8, transparent: true, opacity: 0.25 }))
+        edges.position.set(bX, 0, bZ)
+        scene.add(edges)
 
         // 최상층 라인
         const top = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a, b]) => new THREE.Vector3(bX + a * bW / 2, tH, bZ + b * bD / 2))
