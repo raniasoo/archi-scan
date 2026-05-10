@@ -236,8 +236,13 @@ export function FinancialStep(props: FinancialStepProps) {
                 )
               }
               
+              // ScenarioComparison과 동일한 로직으로 시나리오 결정
               const roi = feasibilityResult.roi ?? 0
-              const scenario: 'reconstruction' | 'remodeling' = roi > 15 ? 'reconstruction' : 'remodeling'
+              const isLowROI = roi < 10
+              // 재건축은 ROI가 높고 기존 건물이 오래된 경우만 (기본: 리모델링 추천)
+              const scenario: 'reconstruction' | 'remodeling' = 
+                (roi > 15 && existingBuildingInfo?.groundFloors && existingBuildingInfo.groundFloors <= 4)
+                  ? 'reconstruction' : 'remodeling'
               return (
                 <ProjectRoadmap
                   scenarioType={scenario}

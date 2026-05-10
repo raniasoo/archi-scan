@@ -280,6 +280,7 @@ export function BuildingVolume3D({
       scene.add(Object.assign(new THREE.DirectionalLight(0x4466aa, 0.35), { position: new THREE.Vector3(-S * 0.5, S * 0.3, S * 2) }))
 
       /* ── Ground (잔디) ── */
+      try { // 전체 씬 빌드를 try/catch로 보호
       const grassC = document.createElement('canvas')
       grassC.width = grassC.height = 256
       const gg = grassC.getContext('2d')!
@@ -687,7 +688,8 @@ export function BuildingVolume3D({
       }
 
       } catch (e) { console.warn('[3D] 조경/디테일 렌더링 실패 (기본 건물은 표시됨):', e) }
-
+      } catch (sceneErr) { console.error('[3D] 씬 빌드 실패:', sceneErr) }
+      // 에러 여부와 무관하게 로딩 해제
       setBlockInfo(info); setLoaded(true)
       
       // 포스트프로세싱 활성화

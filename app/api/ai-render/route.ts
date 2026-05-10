@@ -507,22 +507,31 @@ function buildArchitecturePrompt(params: {
   } else if (f <= 5 && u <= 20) {
     buildingForm = `A low-rise multi-family villa, ${f} stories, ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: entrance hall + parking. Upper: residential.`
   } else if (f <= 5 && u > 20 && siteArea && siteArea > 1500) {
-    // ★ 저층 + 많은 세대 + 넓은 대지 = 다동(多棟) 빌라 단지
+    // ★ 저층 + 많은 세대 + 넓은 대지 = 다동(多棟) 단지
     isComplex = true
     const unitsPerBldg = Math.ceil(u / Math.max(Math.round(u / (f * 4)), 2))
     buildingCount = Math.ceil(u / unitsPerBldg)
     const eachFootprint = Math.round(footprint / buildingCount)
     const eachW = Math.round(Math.sqrt(eachFootprint * 1.4))
     const eachD = Math.round(eachFootprint / eachW)
-    buildingForm = `A MULTI-BUILDING RESIDENTIAL COMPLEX (빌라 단지) — NOT a single building.
-${buildingCount} separate ${f}-story villa buildings spread across a ${siteArea}㎡ site. Total ${u} units.
-Each building: ~${eachW}m × ${eachD}m footprint, ${f} stories, ~${unitsPerBldg} units per building.
-IMPORTANT: If the site is on a slope (see SITE-SPECIFIC CONTEXT below), buildings MUST be placed at DIFFERENT ELEVATION LEVELS following the natural terrain — like a terraced hillside village. Buildings higher up on the slope sit on higher ground, buildings lower down sit on lower ground. Show retaining walls, stairs, and sloped access roads between buildings.
+    
+    // 원래 건축 타입에 따른 개별 건물 형태 설명
+    const typeDesc: Record<string, string> = {
+      linear: `Each building is a LINEAR SLAB shape (판상형) — long and narrow, ~${eachW}m × ${eachD}m, with units arranged in a row along a central corridor. South-facing balconies.`,
+      courtyard: `Buildings are arranged around a CENTRAL COURTYARD (중정형) — U-shaped or L-shaped buildings enclosing a shared green garden in the center.`,
+      lshape: `Each building is L-SHAPED (ㄱ자형) — two wings meeting at a right angle, creating a semi-enclosed outdoor space.`,
+      tower: `Each building is a COMPACT TOWER (타워형) — square footprint ~${eachW}m × ${eachD}m, with units arranged around a central core.`,
+      cluster: `Buildings are VARIED individual volumes (클러스터) — each building has a unique form and character, arranged organically on the site.`,
+    }
+    const shapeDesc = typeDesc[buildingType || 'cluster'] || typeDesc.cluster
+    
+    buildingForm = `A MULTI-BUILDING RESIDENTIAL COMPLEX — NOT a single building.
+${buildingCount} separate ${f}-story buildings spread across a ${siteArea}㎡ site. Total ${u} units.
+${shapeDesc}
+IMPORTANT: If the site is on a slope, buildings MUST be placed at DIFFERENT ELEVATION LEVELS following the natural terrain.
 If the site is flat, buildings are spaced apart with landscaped gardens and walkways.
-CRITICAL SITE SHAPE: If a cadastral reference image is provided, arrange buildings to fit WITHIN the actual irregular lot boundary. The building cluster should follow the lot shape — NOT be arranged in a generic rectangular grid. Place buildings closer together where the lot is narrow, and spread them where the lot is wide.
-The complex looks like a small HILLSIDE VILLAGE of individual villa buildings, NOT one large structure.
-Each building has its own entrance, stairwell, and character — they are NOT identical.
-CRITICAL: Show ${buildingCount} SEPARATE buildings at DIFFERENT ground levels, clearly visible in the image.`
+CRITICAL SITE SHAPE: If a cadastral reference image is provided, arrange buildings to fit WITHIN the actual irregular lot boundary.
+CRITICAL: Show ${buildingCount} SEPARATE buildings clearly visible in the image.`
   } else if (f <= 10) {
     if (u > 40 && siteArea && siteArea > 3000) {
       isComplex = true
