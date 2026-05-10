@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Sparkles, Copy, Check, Loader2, X, Download, ChevronDown, ChevronUp } from "lucide-react"
+import { toast } from "sonner"
 
 interface ConceptInput {
   address: string; zoneType: string; zoneName: string; siteArea: number
@@ -374,7 +375,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
             {/* #7: 위성사진 참조 표시 */}
             {(input.satelliteUrl || input.cadastralMapUrl) && <p className="text-[9px] text-emerald-400/60 text-center">🛰️ 위성사진 + 지적도가 AI 참조 이미지로 전달됩니다</p>}
             {/* 단일 렌더링 결과 */}
-            {renderImg && !multiImages && <div className="space-y-2"><img src={renderImg} alt="렌더링" className="w-full rounded-lg border border-border" /><a href={renderImg} download={`render-${Date.now()}.png`} className="flex items-center justify-center gap-1 text-xs text-emerald-400"><Download className="h-3 w-3" />다운로드</a></div>}
+            {renderImg && !multiImages && <div className="space-y-2"><img src={renderImg} alt="렌더링" className="w-full rounded-lg border border-border" /><a href={renderImg} download={`render-${Date.now()}.png`} onClick={() => toast.success('렌더링 이미지 다운로드 시작')} className="flex items-center justify-center gap-1 text-xs text-emerald-400"><Download className="h-3 w-3" />다운로드</a></div>}
             {/* #9: 멀티앵글 결과 */}
             {multiImages && <div className="space-y-2">
               <p className="text-[10px] text-violet-400 font-medium text-center">📐 멀티앵글 ({multiImages.filter(i => i.image).length}/3장 성공)</p>
@@ -388,7 +389,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
               ))}
               <div className="flex gap-1">
                 {multiImages.filter(i => i.image).map((mi, idx) => (
-                  <a key={idx} href={mi.image!} download={`render-${mi.angle}-${Date.now()}.png`} className="flex-1 text-center text-[10px] text-violet-400 py-1 rounded bg-violet-500/10 border border-violet-500/20">
+                  <a key={idx} href={mi.image!} download={`render-${mi.angle}-${Date.now()}.png`} onClick={() => toast.success('렌더링 이미지 다운로드 시작')} className="flex-1 text-center text-[10px] text-violet-400 py-1 rounded bg-violet-500/10 border border-violet-500/20">
                     <Download className="h-3 w-3 inline" /> {mi.angle === 'eye-level' ? '정면' : mi.angle === 'birds-eye' ? '조감' : '입구'}
                   </a>
                 ))}
