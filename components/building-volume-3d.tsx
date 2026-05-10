@@ -48,14 +48,20 @@ function getBlockFloors(idx: number, total: number, type: string): number {
   return total
 }
 
-/** 프로시저럴 창문 텍스처 */
+/** 프로시저럴 창문 텍스처 Phase 2 — 프레임, 커튼, AC실외기, 발코니 난간 */
 function makeWindowTex(floorCount: number, winCols: number): HTMLCanvasElement {
   const W = 512, H = 512, c = document.createElement('canvas')
   c.width = W; c.height = H
   const g = c.getContext('2d')!
-  // 외벽 (밝은 콘크리트)
+  // 외벽 (미세 텍스처 콘크리트)
   g.fillStyle = '#bfc5cc'
   g.fillRect(0, 0, W, H)
+  // 콘크리트 노이즈
+  for (let i = 0; i < 2000; i++) {
+    const nx = Math.random() * W, ny = Math.random() * H
+    g.fillStyle = `rgba(${150 + Math.random() * 40},${155 + Math.random() * 40},${160 + Math.random() * 40},0.15)`
+    g.fillRect(nx, ny, 1, 1)
+  }
   const fH = H / floorCount, wW = W / winCols
   for (let f = 0; f < floorCount; f++) {
     const y = f * fH
@@ -63,32 +69,88 @@ function makeWindowTex(floorCount: number, winCols: number): HTMLCanvasElement {
     for (let w = 0; w < winCols; w++) {
       const x = w * wW
       if (isLobby) {
+        // 1층 로비 — 대형 유리 + 프레임
+        g.fillStyle = '#1a1a1a'
+        g.fillRect(x + wW * 0.04, y + fH * 0.08, wW * 0.92, fH * 0.82)
         g.fillStyle = '#142a42'
-        g.fillRect(x + wW * 0.06, y + fH * 0.12, wW * 0.88, fH * 0.75)
-        g.fillStyle = 'rgba(100,170,220,0.25)'
-        g.fillRect(x + wW * 0.08, y + fH * 0.15, wW * 0.38, fH * 0.65)
+        g.fillRect(x + wW * 0.06, y + fH * 0.1, wW * 0.88, fH * 0.78)
+        // 유리 반사 그라데이션
+        const lGr = g.createLinearGradient(x, y, x + wW, y + fH)
+        lGr.addColorStop(0, 'rgba(100,180,230,0.35)')
+        lGr.addColorStop(0.4, 'rgba(140,200,240,0.15)')
+        lGr.addColorStop(1, 'rgba(80,150,210,0.3)')
+        g.fillStyle = lGr
+        g.fillRect(x + wW * 0.08, y + fH * 0.12, wW * 0.84, fH * 0.74)
+        // 로비 조명 (따뜻한 빛)
+        g.fillStyle = 'rgba(255,220,160,0.12)'
+        g.fillRect(x + wW * 0.2, y + fH * 0.3, wW * 0.6, fH * 0.4)
+        // 중앙 분할바
+        g.fillStyle = '#2a2a2a'
+        g.fillRect(x + wW * 0.49, y + fH * 0.1, wW * 0.02, fH * 0.78)
       } else {
-        const wx = x + wW * 0.16, wy = y + fH * 0.18, ww = wW * 0.68, wh = fH * 0.58
-        g.fillStyle = '#0e1e30'
+        // 상층 주거 — 창문 + 프레임 + 발코니 + AC
+        const wx = x + wW * 0.14, wy = y + fH * 0.16
+        const ww = wW * 0.72, wh = fH * 0.52
+        
+        // 창 프레임 (알루미늄)
+        g.fillStyle = '#3a3a3a'
+        g.fillRect(wx - 2, wy - 2, ww + 4, wh + 4)
+        
+        // 유리
+        g.fillStyle = '#0c1a2a'
         g.fillRect(wx, wy, ww, wh)
+        
+        // 유리 반사 그라데이션
         const gr = g.createLinearGradient(wx, wy, wx + ww, wy + wh)
         gr.addColorStop(0, 'rgba(70,130,195,0.45)')
-        gr.addColorStop(0.5, 'rgba(110,170,220,0.25)')
+        gr.addColorStop(0.3, 'rgba(120,180,230,0.2)')
+        gr.addColorStop(0.7, 'rgba(90,160,215,0.3)')
         gr.addColorStop(1, 'rgba(55,115,175,0.35)')
         g.fillStyle = gr
         g.fillRect(wx + 1, wy + 1, ww - 2, wh - 2)
-        // 발코니
-        g.fillStyle = '#98a0aa'
-        g.fillRect(x + wW * 0.04, y + fH * 0.8, wW * 0.92, fH * 0.04)
+        
+        // 창 분할바 (십자)
+        g.fillStyle = '#4a4a4a'
+        g.fillRect(wx + ww * 0.48, wy, ww * 0.04, wh)
+        g.fillRect(wx, wy + wh * 0.48, ww, wh * 0.04)
+        
+        // 랜덤 커튼 (일부 세대)
+        if (Math.random() > 0.55) {
+          const curtainColor = Math.random() > 0.5 ? 'rgba(230,225,215,0.35)' : 'rgba(200,210,220,0.3)'
+          g.fillStyle = curtainColor
+          const side = Math.random() > 0.5
+          g.fillRect(wx + (side ? 0 : ww * 0.55), wy + 2, ww * 0.4, wh - 4)
+        }
+        
         // 랜덤 실내조명
-        if (Math.random() > 0.45) {
-          g.fillStyle = `rgba(255,225,170,${0.06 + Math.random() * 0.1})`
+        if (Math.random() > 0.4) {
+          g.fillStyle = `rgba(255,225,170,${0.05 + Math.random() * 0.1})`
           g.fillRect(wx + 2, wy + 2, ww - 4, wh - 4)
+        }
+        
+        // 발코니 난간 (가로 살)
+        const balY = y + fH * 0.72
+        g.fillStyle = '#7a8088'
+        g.fillRect(x + wW * 0.03, balY, wW * 0.94, fH * 0.02) // 상단
+        g.fillRect(x + wW * 0.03, balY + fH * 0.08, wW * 0.94, fH * 0.015) // 중간
+        g.fillRect(x + wW * 0.03, balY + fH * 0.15, wW * 0.94, fH * 0.03) // 하단 (두꺼움)
+        // 수직 지지대
+        for (let v = 0; v < 4; v++) {
+          g.fillRect(x + wW * (0.05 + v * 0.28), balY, wW * 0.015, fH * 0.18)
+        }
+        
+        // AC 실외기 (일부 세대, 발코니 아래)
+        if (Math.random() > 0.65) {
+          g.fillStyle = '#e0e0e0'
+          g.fillRect(x + wW * 0.7, y + fH * 0.88, wW * 0.2, fH * 0.08)
+          g.fillStyle = '#a0a0a0'
+          g.fillRect(x + wW * 0.72, y + fH * 0.89, wW * 0.04, fH * 0.06) // 팬 그릴
         }
       }
     }
-    g.fillStyle = '#a5adb6'
-    g.fillRect(0, y + fH - 1, W, 1.5)
+    // 층간 라인 (슬라브)
+    g.fillStyle = '#9aa2ac'
+    g.fillRect(0, y + fH - 2, W, 2.5)
   }
   return c
 }
@@ -286,7 +348,66 @@ export function BuildingVolume3D({
         scene.add(canopy)
       })
 
-      /* ── 조경 (나무) ── */
+      /* ── 조경 Phase 2 (다양한 나무, 산책로, 화단, 가로등) ── */
+      // 나무 생성 헬퍼
+      const addTree = (tx: number, tz: number, type: 'deciduous' | 'conifer' | 'ornamental') => {
+        if (type === 'conifer') {
+          // 침엽수 (원뿔)
+          const h = 5 + Math.random() * 4
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.15, h * 0.2, 5),
+            new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.9 }))
+          trunk.position.set(tx, h * 0.1, tz); trunk.castShadow = true; scene.add(trunk)
+          // 3단 원뿔
+          for (let i = 0; i < 3; i++) {
+            const coneH = h * (0.35 - i * 0.05)
+            const coneR = h * (0.18 - i * 0.03)
+            const cone = new THREE.Mesh(new THREE.ConeGeometry(coneR, coneH, 6),
+              new THREE.MeshStandardMaterial({ color: 0x1a5a2a + i * 0x050505, roughness: 0.8 }))
+            cone.position.set(tx, h * (0.25 + i * 0.22), tz); cone.castShadow = true
+            scene.add(cone)
+          }
+        } else if (type === 'ornamental') {
+          // 관상수 (작은 둥근 나무)
+          const h = 2 + Math.random() * 1.5
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, h * 0.45, 5),
+            new THREE.MeshStandardMaterial({ color: 0x5a3a28, roughness: 0.9 }))
+          trunk.position.set(tx, h * 0.225, tz); trunk.castShadow = true; scene.add(trunk)
+          const crown = new THREE.Mesh(new THREE.SphereGeometry(h * 0.22, 8, 6),
+            new THREE.MeshStandardMaterial({ color: 0x3a8a4a, roughness: 0.7 }))
+          crown.position.set(tx, h * 0.55, tz); crown.castShadow = true; scene.add(crown)
+        } else {
+          // 활엽수 (큰 둥근 나무)
+          const h = 4 + Math.random() * 3.5
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.22, h * 0.32, 6),
+            new THREE.MeshStandardMaterial({ color: 0x5a3a28, roughness: 0.9 }))
+          trunk.position.set(tx, h * 0.16, tz); trunk.castShadow = true; scene.add(trunk)
+          // 불규칙 수관 (2개 겹침)
+          const colors = [0x2a7a3a, 0x2d8a3d, 0x258535]
+          for (let i = 0; i < 2; i++) {
+            const r = h * (0.28 - i * 0.05)
+            const crown = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6),
+              new THREE.MeshStandardMaterial({ color: colors[i], roughness: 0.75 }))
+            crown.position.set(tx + (i - 0.5) * r * 0.3, h * (0.52 + i * 0.08), tz + (i - 0.5) * r * 0.2)
+            crown.castShadow = true; scene.add(crown)
+          }
+        }
+      }
+      
+      // 가로등 헬퍼
+      const addLamppost = (lx: number, lz: number) => {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 4, 6),
+          new THREE.MeshStandardMaterial({ color: 0x404040, metalness: 0.6, roughness: 0.3 }))
+        pole.position.set(lx, 2, lz); scene.add(pole)
+        // 등불
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6),
+          new THREE.MeshStandardMaterial({ color: 0xffeebb, emissive: 0xffcc66, emissiveIntensity: 0.8, roughness: 0.2 }))
+        lamp.position.set(lx, 4.2, lz); scene.add(lamp)
+        // 포인트 라이트 (약한 조명)
+        const pl = new THREE.PointLight(0xffdd88, 0.3, 15)
+        pl.position.set(lx, 4, lz); scene.add(pl)
+      }
+
+      // ── 중정/클러스터 조경 ──
       if (layoutType === 'courtyard' || layoutType === 'cluster') {
         const cs = S * (layoutType === 'courtyard' ? 0.28 : 0.20)
         const court = new THREE.Mesh(new THREE.PlaneGeometry(cs, cs),
@@ -297,31 +418,106 @@ export function BuildingVolume3D({
           [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a, b]) => new THREE.Vector3(a * cs / 2, 0.25, b * cs / 2))),
           new THREE.LineBasicMaterial({ color: 0x22c55e })))
 
-        // 나무
+        // 중정 산책로 (십자)
+        const pathMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.7, metalness: 0.05 })
+        const pathH = new THREE.Mesh(new THREE.PlaneGeometry(cs * 0.85, 1.2), pathMat)
+        pathH.rotation.x = -Math.PI / 2; pathH.position.set(0, 0.14, 0); pathH.receiveShadow = true
+        scene.add(pathH)
+        const pathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, cs * 0.85), pathMat)
+        pathV.rotation.x = -Math.PI / 2; pathV.position.set(0, 0.14, 0); pathV.receiveShadow = true
+        scene.add(pathV)
+
+        // 화단 (산책로 교차점)
+        const flowerBed = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.3, 12),
+          new THREE.MeshStandardMaterial({ color: 0x8a5533, roughness: 0.8 }))
+        flowerBed.position.set(0, 0.27, 0); scene.add(flowerBed)
+        // 꽃 (작은 구체들)
+        for (let i = 0; i < 12; i++) {
+          const angle = (i / 12) * Math.PI * 2
+          const fr = 0.8 + Math.random() * 0.4
+          const flower = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 4),
+            new THREE.MeshStandardMaterial({ color: [0xdd4466, 0xee8844, 0xffcc33, 0xaa55cc, 0xff6688][i % 5], roughness: 0.6 }))
+          flower.position.set(Math.cos(angle) * fr, 0.5, Math.sin(angle) * fr)
+          scene.add(flower)
+        }
+
+        // 중정 나무 (다양한 종류)
         const tPos = layoutType === 'cluster'
-          ? [[0,0],[-cs*0.3,-cs*0.3],[cs*0.3,cs*0.2],[-cs*0.15,cs*0.3]]
-          : [[0,0],[-cs*0.25,-cs*0.25],[cs*0.25,cs*0.25]]
-        tPos.forEach(([tx, tz]) => {
-          const h = 3.5 + Math.random() * 3
-          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, h * 0.32, 6),
-            new THREE.MeshStandardMaterial({ color: 0x5a3a28, roughness: 0.9 }))
-          trunk.position.set(tx, h * 0.16, tz); trunk.castShadow = true; scene.add(trunk)
-          const crown = new THREE.Mesh(new THREE.SphereGeometry(h * 0.28, 8, 6),
-            new THREE.MeshStandardMaterial({ color: 0x2a7a3a, roughness: 0.75 }))
-          crown.position.set(tx, h * 0.5, tz); crown.castShadow = true; scene.add(crown)
-        })
+          ? [[cs*0.25, -cs*0.25, 'deciduous'], [-cs*0.3, cs*0.2, 'conifer'], [cs*0.15, cs*0.3, 'ornamental'], [-cs*0.25, -cs*0.15, 'deciduous']]
+          : [[-cs*0.25, -cs*0.25, 'deciduous'], [cs*0.25, cs*0.25, 'conifer'], [cs*0.2, -cs*0.2, 'ornamental']]
+        tPos.forEach(([tx, tz, type]) => addTree(tx as number, tz as number, type as any))
+        
+        // 가로등 (중정)
+        addLamppost(cs * 0.35, 0)
+        addLamppost(-cs * 0.35, 0)
       }
 
-      /* ── 도로 ── */
+      // ── 경계 식재 (모든 레이아웃) ──
+      const halfS = S / 2
+      // 도로변 가로수
+      for (let i = -3; i <= 3; i++) {
+        addTree(i * S * 0.15, halfS + 10, 'deciduous')
+      }
+      // 대지 측면 관상수
+      for (let i = -2; i <= 2; i++) {
+        if (Math.abs(i) > 0) {
+          addTree(-halfS - 3, i * S * 0.18, 'ornamental')
+          addTree(halfS + 3, i * S * 0.18, 'ornamental')
+        }
+      }
+      // 대지 뒤쪽 침엽수
+      for (let i = -2; i <= 2; i++) {
+        addTree(i * S * 0.18, -halfS - 4, 'conifer')
+      }
+      
+      // 가로등 (도로변)
+      addLamppost(-S * 0.35, halfS + 6)
+      addLamppost(0, halfS + 6)
+      addLamppost(S * 0.35, halfS + 6)
+
+      /* ── 도로 Phase 2 (인도, 횡단보도, 연석) ── */
       const roadW = S * 1.2, roadD = 6
+      // 차도
       const road = new THREE.Mesh(new THREE.PlaneGeometry(roadW, roadD),
-        new THREE.MeshStandardMaterial({ color: 0x2a3038, roughness: 0.9 }))
-      road.rotation.x = -Math.PI / 2; road.position.set(0, 0.04, S / 2 + roadD / 2 + 2); road.receiveShadow = true
+        new THREE.MeshStandardMaterial({ color: 0x2a3038, roughness: 0.85 }))
+      road.rotation.x = -Math.PI / 2; road.position.set(0, 0.04, S / 2 + roadD / 2 + 4); road.receiveShadow = true
       scene.add(road)
+      // 중앙선 (노란색)
       const cl = new THREE.Mesh(new THREE.PlaneGeometry(roadW * 0.85, 0.12),
         new THREE.MeshBasicMaterial({ color: 0xcccc00 }))
-      cl.rotation.x = -Math.PI / 2; cl.position.set(0, 0.07, S / 2 + roadD / 2 + 2)
+      cl.rotation.x = -Math.PI / 2; cl.position.set(0, 0.07, S / 2 + roadD / 2 + 4)
       scene.add(cl)
+      // 차선 (흰색 점선)
+      for (let i = -5; i <= 5; i++) {
+        const dash = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 0.08),
+          new THREE.MeshBasicMaterial({ color: 0xdddddd }))
+        dash.rotation.x = -Math.PI / 2
+        dash.position.set(i * S * 0.1, 0.07, S / 2 + roadD / 2 + 4 + roadD * 0.22)
+        scene.add(dash)
+      }
+      // 인도 (양쪽)
+      const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x8a8078, roughness: 0.75, metalness: 0.05 })
+      const swNear = new THREE.Mesh(new THREE.PlaneGeometry(roadW, 2), sidewalkMat)
+      swNear.rotation.x = -Math.PI / 2; swNear.position.set(0, 0.06, S / 2 + 2)
+      swNear.receiveShadow = true; scene.add(swNear)
+      const swFar = new THREE.Mesh(new THREE.PlaneGeometry(roadW, 2), sidewalkMat)
+      swFar.rotation.x = -Math.PI / 2; swFar.position.set(0, 0.06, S / 2 + roadD + 5)
+      swFar.receiveShadow = true; scene.add(swFar)
+      // 연석 (커브)
+      const curbMat = new THREE.MeshStandardMaterial({ color: 0x6a6a6a, roughness: 0.6 })
+      const curbNear = new THREE.Mesh(new THREE.BoxGeometry(roadW, 0.15, 0.15), curbMat)
+      curbNear.position.set(0, 0.1, S / 2 + 3); scene.add(curbNear)
+      const curbFar = new THREE.Mesh(new THREE.BoxGeometry(roadW, 0.15, 0.15), curbMat)
+      curbFar.position.set(0, 0.1, S / 2 + roadD + 4.2); scene.add(curbFar)
+      // 횡단보도
+      const cwX = S * 0.15
+      for (let i = 0; i < 6; i++) {
+        const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.45, roadD - 0.5),
+          new THREE.MeshBasicMaterial({ color: 0xeeeeee }))
+        stripe.rotation.x = -Math.PI / 2
+        stripe.position.set(cwX + i * 0.7, 0.07, S / 2 + roadD / 2 + 4)
+        scene.add(stripe)
+      }
 
       setBlockInfo(info); setLoaded(true)
 
