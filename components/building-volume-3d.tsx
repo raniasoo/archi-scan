@@ -195,7 +195,7 @@ export function BuildingVolume3D({
       r.shadowMap.enabled = true
       r.shadowMap.type = THREE.PCFSoftShadowMap
       r.toneMapping = THREE.ACESFilmicToneMapping
-      r.toneMappingExposure = 1.15
+      r.toneMappingExposure = 2.5
       r.outputColorSpace = THREE.SRGBColorSpace
       rendererRef.current = r
       
@@ -254,22 +254,22 @@ export function BuildingVolume3D({
       skyC.width = 2; skyC.height = 512
       const skyG = skyC.getContext('2d')!
       const sg = skyG.createLinearGradient(0, 0, 0, 512)
-      sg.addColorStop(0, '#081422'); sg.addColorStop(0.3, '#0e2138')
-      sg.addColorStop(0.65, '#15304d'); sg.addColorStop(1, '#1c3d5c')
+      sg.addColorStop(0, '#0c1e30'); sg.addColorStop(0.3, '#15304a')
+      sg.addColorStop(0.65, '#1e4060'); sg.addColorStop(1, '#2a5575')
       skyG.fillStyle = sg; skyG.fillRect(0, 0, 2, 512)
       const skyTex = new THREE.CanvasTexture(skyC)
       skyTex.mapping = THREE.EquirectangularReflectionMapping
       scene.background = skyTex
       scene.environment = skyTex
-      scene.fog = new THREE.FogExp2(0x0e2138, 0.0012)
+      scene.fog = new THREE.FogExp2(0x15304a, 0.0006)
 
       /* ── Camera ── */
       const cam = new THREE.PerspectiveCamera(42, W / H, 0.1, 5000)
       cameraRef.current = cam
 
       /* ── Lights (HDR 3점 조명) ── */
-      scene.add(new THREE.HemisphereLight(0x88b4d8, 0x283828, 0.7))
-      const sun = new THREE.DirectionalLight(0xffeedd, 3.2)
+      scene.add(new THREE.HemisphereLight(0xbbd4f0, 0x446644, 2.0))
+      const sun = new THREE.DirectionalLight(0xfff4e6, 5.0)
       sun.position.set(S * 1.5, S * 3, S * 1.5)
       sun.castShadow = true
       sun.shadow.mapSize.set(2048, 2048)
@@ -278,10 +278,10 @@ export function BuildingVolume3D({
       sc.near = 0.5; sc.far = S * 8
       sun.shadow.bias = -0.001; sun.shadow.normalBias = 0.02
       scene.add(sun)
-      const fill = new THREE.DirectionalLight(0x88aacc, 0.7)
+      const fill = new THREE.DirectionalLight(0xaaccee, 2.0)
       fill.position.set(-S, S * 0.5, -S * 0.5)
       scene.add(fill)
-      const back = new THREE.DirectionalLight(0x4466aa, 0.35)
+      const back = new THREE.DirectionalLight(0x6688cc, 1.0)
       back.position.set(-S * 0.5, S * 0.3, S * 2)
       scene.add(back)
 
@@ -297,7 +297,7 @@ export function BuildingVolume3D({
       const gTex = new THREE.CanvasTexture(grassC)
       gTex.wrapS = gTex.wrapT = THREE.RepeatWrapping; gTex.repeat.set(S / 8, S / 8)
       const ground = new THREE.Mesh(new THREE.PlaneGeometry(S * 4, S * 4),
-        new THREE.MeshStandardMaterial({ map: gTex, roughness: 0.95, color: 0x1a3a22 }))
+        new THREE.MeshStandardMaterial({ map: gTex, roughness: 0.95, color: 0x2a5a32 }))
       ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true
       scene.add(ground)
 
@@ -308,7 +308,7 @@ export function BuildingVolume3D({
 
       // 대지면
       const sf = new THREE.Mesh(new THREE.PlaneGeometry(S, S),
-        new THREE.MeshStandardMaterial({ color: 0x3a4550, roughness: 0.8, metalness: 0.05 }))
+        new THREE.MeshStandardMaterial({ color: 0x556570, roughness: 0.7, metalness: 0.05 }))
       sf.rotation.x = -Math.PI / 2; sf.position.y = 0.06; sf.receiveShadow = true
       scene.add(sf)
 
@@ -356,7 +356,7 @@ export function BuildingVolume3D({
 
         const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
           map: wTex, roughness: 0.32, metalness: 0.12,
-          color: 0xd0d5dc, envMapIntensity: 0.5, side: THREE.DoubleSide,
+          color: 0xe8edf2, envMapIntensity: 1.0, side: THREE.DoubleSide,
         }))
         mesh.position.set(bX, 0, bZ); mesh.castShadow = true; mesh.receiveShadow = true
         scene.add(mesh)
