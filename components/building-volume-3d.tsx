@@ -400,7 +400,8 @@ export function BuildingVolume3D({
         scene.add(canopy)
       })
 
-      /* ── 조경 Phase 2 (다양한 나무, 산책로, 화단, 가로등) ── */
+      /* ── 조경/도로/디테일 (Phase 2/3) — 실패해도 기본 건물은 표시 ── */
+      try {
       // 나무 생성 헬퍼
       const addTree = (tx: number, tz: number, type: 'deciduous' | 'conifer' | 'ornamental') => {
         if (type === 'conifer') {
@@ -684,6 +685,8 @@ export function BuildingVolume3D({
           step.receiveShadow = true; scene.add(step)
         }
       }
+
+      } catch (e) { console.warn('[3D] 조경/디테일 렌더링 실패 (기본 건물은 표시됨):', e) }
 
       setBlockInfo(info); setLoaded(true)
       

@@ -129,6 +129,7 @@ export interface LayoutOption {
   recommendation: LayoutRecommendation
   reasoning: AIReasoning
   isLegallyCompliant?: boolean // 법규 준수 여부
+  _originalType?: "tower" | "courtyard" | "lshape" | "linear" | "cluster" // 클러스터 변환 전 원래 타입
 }
 
 // safeNumber is imported from @/lib/project-analysis-state
@@ -417,7 +418,7 @@ function generateLayouts(
   // AI 렌더링 프롬프트와 동일 조건 (도면 일치)
   // ============================================================
   layouts.forEach(layout => {
-    (layout as any)._originalType = layout.type // 원래 타입 보존
+    layout._originalType = layout.type // 원래 타입 보존
     if (layout.type !== 'cluster' && layout.type !== 'tower' &&
         siteArea > 1500 && (layout.units || 0) > 20 && layout.floors <= 5) {
       layout.type = 'cluster'
@@ -1294,7 +1295,7 @@ export default function ArchiScanPage() {
           tower: '타워', courtyard: '중정', lshape: 'ㄱ자', linear: '판상', cluster: '클러스터'
         }
         generatedLayouts.forEach(l => {
-          const origType = (l as any)._originalType || l.type
+          const origType = l._originalType || l.type
           const suffix = typeLabel[origType] || origType
           if (!l.name.includes('·') && !l.name.includes('수익 최적화')) {
             l.name = `${l.name} · ${suffix}`
@@ -1891,7 +1892,7 @@ export default function ArchiScanPage() {
                 onClick={async () => {
                   const { generateFloorPlanDXF, downloadDXF } = await loadDxfGenerator()
                   const dxf = generateFloorPlanDXF({
-                    type: (selectedLayoutData as any)._originalType || selectedLayoutData.type,
+                    type: selectedLayoutData._originalType || selectedLayoutData.type,
                     floor: selectedFloor,
                     totalFloors: selectedLayoutData.floors,
                     strategy,
@@ -1940,7 +1941,7 @@ export default function ArchiScanPage() {
           <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
             <div className="w-full h-full flex items-center justify-center" style={{ maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 180px)', aspectRatio: '3/2' }}>
               <FloorPlan
-                type={(selectedLayoutData as any)._originalType || selectedLayoutData.type}
+                type={selectedLayoutData._originalType || selectedLayoutData.type}
                 floor={selectedFloor}
                 totalFloors={selectedLayoutData.floors}
                 strategy={strategy}
@@ -2387,8 +2388,8 @@ export default function ArchiScanPage() {
                 roi: feasibilityResult?.roi || 0,
                 totalProjectCost: feasibilityResult?.totalCost || 0,
                 strategy,
-                buildingType: (selectedLayoutData as any)._originalType || selectedLayoutData.type,
-                isMultiBuilding: selectedLayoutData.type === 'cluster' && ((selectedLayoutData as any)._originalType || selectedLayoutData.type) !== 'cluster',
+                buildingType: selectedLayoutData._originalType || selectedLayoutData.type,
+                isMultiBuilding: selectedLayoutData.type === 'cluster' && (selectedLayoutData._originalType || selectedLayoutData.type) !== 'cluster',
                 values: userValues ? {
                   profitVsQuality: userValues.profitVsQuality,
                   privacyVsCommunity: userValues.privacyVsCommunity,
