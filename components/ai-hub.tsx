@@ -10,6 +10,7 @@ interface ConceptInput {
   roi: number; totalProjectCost: number; strategy: string
   slope?: { grade: string; average: number; direction: string }
   buildingType?: string
+  isMultiBuilding?: boolean
   values?: { profitVsQuality?: number; privacyVsCommunity?: number; efficiencyVsSpace?: number }
   patterns?: string[]
   surroundingContext?: string
@@ -119,7 +120,7 @@ function getOptimalSettings(input: ConceptInput): { style: string; angle: string
   // ━━━ 카메라 자동 선택 ━━━
   let angle = 'eye-level'
   if (floors >= 10) angle = 'birds-eye'
-  else if (input.buildingType === 'cluster') angle = 'birds-eye'
+  else if (input.isMultiBuilding || input.buildingType === 'cluster') angle = 'birds-eye'
 
   // ━━━ 장면 자동 선택 ━━━
   let scene = 'afternoon'

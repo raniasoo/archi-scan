@@ -178,20 +178,8 @@ export function BuildingVolume3D({
       if (!mounted || !canvasRef.current) return
       try { THREE = await import('three') } catch (e: any) { setError(e.message); return }
       
-      // 포스트프로세싱 모듈 (실패해도 기본 렌더링으로 동작)
+      // 포스트프로세싱은 기본 렌더링 시작 후 비동기 로드
       let EffectComposer: any, RenderPass: any, UnrealBloomPass: any, ShaderPass: any
-      try {
-        const [ecm, rpm, ubm, spm] = await Promise.all([
-          import('three/examples/jsm/postprocessing/EffectComposer.js'),
-          import('three/examples/jsm/postprocessing/RenderPass.js'),
-          import('three/examples/jsm/postprocessing/UnrealBloomPass.js'),
-          import('three/examples/jsm/postprocessing/ShaderPass.js'),
-        ])
-        EffectComposer = ecm.EffectComposer
-        RenderPass = rpm.RenderPass
-        UnrealBloomPass = ubm.UnrealBloomPass
-        ShaderPass = spm.ShaderPass
-      } catch { console.warn('[3D] Post-processing modules not available, using basic renderer') }
       if (!mounted || !canvasRef.current) return
 
       const canvas = canvasRef.current
@@ -730,6 +718,22 @@ export function BuildingVolume3D({
         if (now - lastCU > 100) { lastCU = now; setCompassAngle(-ry * 180 / Math.PI) }
       }
       animate()
+
+      // ━━━ 포스트프로세싱 비동기 후로딩 (기본 렌더링은 이미 시작됨) ━━━
+      setTimeout(async () => {
+        if (!mounted) return
+        try {
+          const [ecm, rpm, ubm, spm] = await Promise.all([
+            import('three/examples/jsm/postprocessing/EffectComposer.js'),
+            import('three/examples/jsm/postprocessing/RenderPass.js'),
+            import('three/examples/jsm/postprocessing/UnrealBloomPass.js'),
+            import('three/examples/jsm/postprocessing/ShaderPass.js'),
+          ])
+          EffectComposer = ecm.EffectComposer; RenderPass = rpm.RenderPass
+          UnrealBloomPass = ubm.UnrealBloomPass; ShaderPass = spm.ShaderPass
+          if (mounted) setupPostProcessing(scene, cam)
+        } catch { /* 포스트프로세싱 없이 기본 렌더링 유지 */ }
+      }, 500)
 
       return () => window.removeEventListener('resize', onResize)
     }

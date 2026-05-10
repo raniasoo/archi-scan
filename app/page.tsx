@@ -1891,7 +1891,7 @@ export default function ArchiScanPage() {
                 onClick={async () => {
                   const { generateFloorPlanDXF, downloadDXF } = await loadDxfGenerator()
                   const dxf = generateFloorPlanDXF({
-                    type: selectedLayoutData.type,
+                    type: (selectedLayoutData as any)._originalType || selectedLayoutData.type,
                     floor: selectedFloor,
                     totalFloors: selectedLayoutData.floors,
                     strategy,
@@ -1940,7 +1940,7 @@ export default function ArchiScanPage() {
           <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
             <div className="w-full h-full flex items-center justify-center" style={{ maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 180px)', aspectRatio: '3/2' }}>
               <FloorPlan
-                type={selectedLayoutData.type}
+                type={(selectedLayoutData as any)._originalType || selectedLayoutData.type}
                 floor={selectedFloor}
                 totalFloors={selectedLayoutData.floors}
                 strategy={strategy}
@@ -2387,7 +2387,8 @@ export default function ArchiScanPage() {
                 roi: feasibilityResult?.roi || 0,
                 totalProjectCost: feasibilityResult?.totalCost || 0,
                 strategy,
-                buildingType: selectedLayoutData.type,
+                buildingType: (selectedLayoutData as any)._originalType || selectedLayoutData.type,
+                isMultiBuilding: selectedLayoutData.type === 'cluster' && ((selectedLayoutData as any)._originalType || selectedLayoutData.type) !== 'cluster',
                 values: userValues ? {
                   profitVsQuality: userValues.profitVsQuality,
                   privacyVsCommunity: userValues.privacyVsCommunity,
