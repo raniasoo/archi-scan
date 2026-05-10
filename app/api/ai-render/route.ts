@@ -329,13 +329,28 @@ The entrance must use the SAME materials and style visible in the street-level i
     let lastError = ''
     
     // 참조 이미지 크기 제한 (Gemini API 요청 크기 제한)
-    const totalRefSize = refImages.reduce((s, r) => s + r.base64.length, 0)
-    if (totalRefSize > 4 * 1024 * 1024) { // 4MB 초과
+    // SVG는 이미 Gemini 전달에서 제외되지만 크기 계산에서도 제외
+    const geminiImages = refImages.filter(r => r.mimeType !== 'image/svg+xml')
+    const totalRefSize = geminiImages.reduce((s, r) => s + r.base64.length, 0)
+    if (totalRefSize > 3 * 1024 * 1024) { // 3MB 초과 (base64 오버헤드 고려)
       // 거리뷰부터 제거
-      const filtered = refImages.filter(r => !r.label.startsWith('street-view'))
-      console.log(`[GEMINI] Ref images too large (${Math.round(totalRefSize / 1024)}KB), removed street views: ${refImages.length} → ${filtered.length}`)
-      refImages.length = 0
-      refImages.push(...filtered)
+      const streetViews = geminiImages.filter(r => r.label.startsWith('street-view'))
+      if (streetViews.length > 2) {
+        // 4방향 → 2방향으로 축소
+        const toRemove = streetViews.slice(2).map(r => r.label)
+        const before = refImages.length
+        for (const label of toRemove) {
+          const idx = refImages.findIndex(r => r.label === label)
+          if (idx >= 0) refImages.splice(idx, 1)
+        }
+        console.log(`[GEMINI] Ref images too large (${Math.round(totalRefSize / 1024)}KB), reduced street views: ${before} → ${refImages.length}`)
+      } else {
+        // 거리뷰 전체 제거
+        const filtered = refImages.filter(r => !r.label.startsWith('street-view'))
+        console.log(`[GEMINI] Ref images too large (${Math.round(totalRefSize / 1024)}KB), removed street views: ${refImages.length} → ${filtered.length}`)
+        refImages.length = 0
+        refImages.push(...filtered)
+      }
     }
     
     for (const model of models) {
@@ -345,8 +360,10 @@ The entrance must use the SAME materials and style visible in the street-level i
         // #7: 위성사진을 멀티모달로 전달
         const parts: any[] = [{ text: architecturePrompt }]
         // 참조 이미지 (위성사진 + 지적도) → Gemini 멀티모달
+        // ⚠️ Gemini는 SVG 미지원 → PNG/JPEG만 전달
         if (refImages.length > 0) {
           for (const img of refImages) {
+            if (img.mimeType === 'image/svg+xml') continue // SVG 제외
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
           parts.push({ text: `REFERENCE IMAGES (${refImages.length}):
@@ -373,7 +390,7 @@ The rendering MUST reflect what is shown in these reference images. Do NOT ignor
         } else {
           const errBody = await response.text().catch(() => 'no body')
           lastError = `${model}: ${response.status} - ${errBody.slice(0, 200)}`
-          console.warn(`[GEMINI] ${model} failed: ${response.status}`, errBody.slice(0, 300))
+          console.error(`[GEMINI-ERR] ${model} status=${response.status} body=${errBody.slice(0, 500)}`)
           // 429 rate limit → 2초 대기 후 다음 모델
           if (response.status === 429) await new Promise(r => setTimeout(r, 2000))
         }
