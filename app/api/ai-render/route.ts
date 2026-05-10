@@ -315,7 +315,7 @@ The entrance must use the SAME materials and style visible in the street-level i
     }
 
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, regulation
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, regulation, polygonShapeDesc
     })
 
     // Gemini API 호출 — 모델 fallback 체인
@@ -440,6 +440,7 @@ function buildArchitecturePrompt(params: {
   cameraAngle?: string
   sceneMode?: string
   material?: { type?: string; color?: string; accent?: string }
+  polygonShapeDesc?: string
   // 법규 검토 데이터
   regulation?: {
     heightLimit?: number       // 높이제한 (m)
@@ -453,7 +454,7 @@ function buildArchitecturePrompt(params: {
     zoneName?: string          // 용도지역 이름
   }
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, regulation } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, regulation, polygonShapeDesc } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
