@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
 
     // 참조 이미지 수집 (위성사진 + 지적도 + 거리뷰)
     const refImages: { base64: string; mimeType: string; label: string }[] = []
+    let polygonShapeDesc = ''
     
     // ━━━ 폴리곤 → SVG 지적도 이미지 생성 ━━━
     if (Array.isArray(sitePolygon) && sitePolygon.length >= 3) {
@@ -135,6 +136,19 @@ export async function POST(req: NextRequest) {
 
         const svgBase64 = Buffer.from(svg).toString('base64')
         refImages.push({ base64: svgBase64, mimeType: 'image/svg+xml', label: 'cadastral-polygon' })
+        
+        // ━━━ 대지 형상 텍스트 분석 (프롬프트용) ━━━
+        const mW = Math.round(maxLng - minLng)
+        const mH = Math.round(maxLat - minLat)
+        const aspectRatio = mW > 0 && mH > 0 ? (mW / mH).toFixed(1) : '1.0'
+        const vertexCount = sitePolygon.length
+        let shapeDesc = 'irregular polygon'
+        if (vertexCount === 4) shapeDesc = parseFloat(aspectRatio) > 1.3 ? 'elongated rectangle' : parseFloat(aspectRatio) < 0.7 ? 'narrow deep rectangle' : 'roughly square'
+        else if (vertexCount === 3) shapeDesc = 'triangle'
+        else if (vertexCount === 5) shapeDesc = 'pentagon'
+        else if (vertexCount >= 6) shapeDesc = `irregular ${vertexCount}-sided polygon`
+        polygonShapeDesc = `Site shape: ${shapeDesc}, approximately ${mW}m wide × ${mH}m deep (aspect ratio ${aspectRatio}). ${vertexCount} vertices. Buildings MUST be arranged to fit within this ${shapeDesc} boundary — do NOT place buildings outside the lot line.`
+        
         console.log(`[GEMINI] cadastral-polygon SVG generated: ${Math.round(svg.length / 1024)}KB ✅`)
       } catch (e) {
         console.warn('[GEMINI] SVG cadastral generation failed:', e)
@@ -476,6 +490,7 @@ ${buildingCount} separate ${f}-story villa buildings spread across a ${siteArea}
 Each building: ~${eachW}m × ${eachD}m footprint, ${f} stories, ~${unitsPerBldg} units per building.
 IMPORTANT: If the site is on a slope (see SITE-SPECIFIC CONTEXT below), buildings MUST be placed at DIFFERENT ELEVATION LEVELS following the natural terrain — like a terraced hillside village. Buildings higher up on the slope sit on higher ground, buildings lower down sit on lower ground. Show retaining walls, stairs, and sloped access roads between buildings.
 If the site is flat, buildings are spaced apart with landscaped gardens and walkways.
+CRITICAL SITE SHAPE: If a cadastral reference image is provided, arrange buildings to fit WITHIN the actual irregular lot boundary. The building cluster should follow the lot shape — NOT be arranged in a generic rectangular grid. Place buildings closer together where the lot is narrow, and spread them where the lot is wide.
 The complex looks like a small HILLSIDE VILLAGE of individual villa buildings, NOT one large structure.
 Each building has its own entrance, stairwell, and character — they are NOT identical.
 CRITICAL: Show ${buildingCount} SEPARATE buildings at DIFFERENT ground levels, clearly visible in the image.`
@@ -639,7 +654,7 @@ CONTEXT:
 - Location: ${address || 'Seoul, South Korea'}
 - Project: ${layoutName || '주거 건물'}
 - Style: ${styleDesc}
-${surroundingContext ? `\nSITE-SPECIFIC CONTEXT (IMPORTANT — render must reflect this):\n${surroundingContext}\n\nThe rendering MUST show the building responding to its actual site conditions described above.` : ''}
+${surroundingContext ? `\nSITE-SPECIFIC CONTEXT (IMPORTANT — render must reflect this):\n${surroundingContext}\n${polygonShapeDesc ? `\nLOT BOUNDARY SHAPE: ${polygonShapeDesc}\nCRITICAL: The building footprints must be arranged to fit WITHIN the actual lot boundary shape shown in the cadastral reference image. Do NOT draw a generic rectangular site — use the ACTUAL irregular shape from the reference.` : ''}\n\nThe rendering MUST show the building responding to its actual site conditions described above.` : (polygonShapeDesc ? `\nSITE BOUNDARY: ${polygonShapeDesc}\nCRITICAL: Arrange buildings to fit within this lot boundary shape.` : '')}
 
 BUILDING IDENTITY (must remain IDENTICAL across all camera angles):
 - Exact form: ${buildingForm}
