@@ -1438,12 +1438,13 @@ export default function ArchiScanPage() {
   // 요약 스트립용 ROI — 카드/Dashboard와 동일한 계산
   const stripRoi = (() => {
     if (!selectedLayoutData) return null
+    const areaNum = Number(siteArea) || 660
     const sp = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
       ? marketPrice.suggestedSalePrice
       : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000
     const cc = regionalPricing?.constructionCostPerM2 || 2500000
     const f = calculateFeasibility({
-      siteArea: siteAreaNum || 1,
+      siteArea: areaNum || 1,
       grossFloorArea: selectedLayoutData.gfa || 1,
       unitCount: selectedLayoutData.units || 1,
       floorCount: selectedLayoutData.floors || 1,
