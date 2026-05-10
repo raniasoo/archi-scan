@@ -41,15 +41,23 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
   // AI 렌더링 상태
   const [renderImage, setRenderImage] = useState<string | null>(null)
   const [renderLoading, setRenderLoading] = useState(false)
+  const [renderRetry, setRenderRetry] = useState(0)
   
   const [siteContext, setSiteContext] = useState<any>(null)
   const [vworldState, setVworldState] = useState<any>(null)
   const [terrain, setTerrain] = useState<TerrainAnalysis | null>(null)
   const [sunAnalysis, setSunAnalysis] = useState<SunAnalysisResult | null>(null)
 
-  // 결과가 나오면 AI 렌더링 자동 시작
+  // 결과가 나오면 AI 렌더링 자동 시작 (vworldState 로딩 후)
   useEffect(() => {
     if (!result) return
+    // vworldState가 아직 로딩 중이면 대기 (최대 5초 후 없어도 진행)
+    const hasVworld = !!vworldState
+    if (!hasVworld && renderRetry < 1) {
+      const timer = setTimeout(() => setRenderRetry(1), 5000)
+      return () => clearTimeout(timer)
+    }
+    
     setRenderImage(null)
     setRenderLoading(true)
 
@@ -125,13 +133,17 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         }
       } catch (e) {
         console.warn('AI render failed:', e)
+        // 자동 재시도 (최대 2회)
+        if (!cancelled && renderRetry < 2) {
+          setTimeout(() => setRenderRetry(prev => prev + 1), 3000)
+        }
       } finally {
         if (!cancelled) setRenderLoading(false)
       }
     }
     fetchRender()
     return () => { cancelled = true }
-  }, [result])
+  }, [result, vworldState, renderRetry]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const analyze = async () => {
     if (!address.trim()) return
