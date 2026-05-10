@@ -1465,24 +1465,8 @@ export default function ArchiScanPage() {
 
   // 요약 스트립용 ROI — useEffect 파라미터와 100% 동일
   const siteAreaNum = safeNumber(siteArea, 660)
-  const stripRoi = (() => {
-    if (!selectedLayoutData) return null
-    const sa = safeNumber(siteArea, 660)
-    const sp = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
-      ? marketPrice.suggestedSalePrice
-      : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000
-    const cc = regionalPricing?.constructionCostPerM2 || 2500000
-    return calculateFeasibility({
-      siteArea: sa,
-      grossFloorArea: selectedLayoutData.gfa,
-      unitCount: selectedLayoutData.units,
-      floorCount: selectedLayoutData.floors,
-      parkingCount: selectedLayoutData.parking,
-      landPricePerM2: landPriceData.pricePerM2 || 5000000,
-      salesPricePerM2: sp,
-      constructionCostPerM2: cc,
-    })?.roi ?? null
-  })()
+  // 스트립 ROI = feasibilityResult.roi (Score Dashboard와 동일 소스, 카드와 일치)
+  const stripRoi = feasibilityResult?.roi ?? null
   
   // Debug: Log selected layout data for troubleshooting
   if (selectedLayoutData && process.env.NODE_ENV === 'development') {

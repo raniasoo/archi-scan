@@ -54,7 +54,7 @@ function makeWindowTex(floorCount: number, winCols: number): HTMLCanvasElement {
   c.width = W; c.height = H
   const g = c.getContext('2d')!
   // 외벽 (미세 텍스처 콘크리트)
-  g.fillStyle = '#e0e5ea'
+  g.fillStyle = '#d0d8e0'
   g.fillRect(0, 0, W, H)
   // 콘크리트 노이즈
   for (let i = 0; i < 2000; i++) {
@@ -194,8 +194,8 @@ export function BuildingVolume3D({
       r.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2))
       r.shadowMap.enabled = true
       r.shadowMap.type = THREE.PCFSoftShadowMap
-      r.toneMapping = THREE.LinearToneMapping
-      r.toneMappingExposure = 3.5
+      r.toneMapping = THREE.ACESFilmicToneMapping
+      r.toneMappingExposure = 2.0
       r.outputColorSpace = THREE.SRGBColorSpace
       rendererRef.current = r
       
@@ -269,7 +269,7 @@ export function BuildingVolume3D({
 
       /* ── Lights (HDR 3점 조명) ── */
       scene.add(new THREE.HemisphereLight(0xddeeff, 0x668866, 3.0))
-      const sun = new THREE.DirectionalLight(0xffffff, 8.0)
+      const sun = new THREE.DirectionalLight(0xfff8f0, 6.0)
       sun.position.set(S * 1.5, S * 3, S * 1.5)
       sun.castShadow = true
       sun.shadow.mapSize.set(2048, 2048)
@@ -356,7 +356,7 @@ export function BuildingVolume3D({
 
         const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
           map: wTex, roughness: 0.25, metalness: 0.15,
-          color: 0xf0f4f8, envMapIntensity: 1.5, side: THREE.DoubleSide,
+          color: 0xe0e5ec, envMapIntensity: 1.0, side: THREE.DoubleSide,
         }))
         mesh.position.set(bX, 0, bZ); mesh.castShadow = true; mesh.receiveShadow = true
         scene.add(mesh)
