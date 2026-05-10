@@ -54,7 +54,7 @@ function makeWindowTex(floorCount: number, winCols: number): HTMLCanvasElement {
   c.width = W; c.height = H
   const g = c.getContext('2d')!
   // 외벽 (미세 텍스처 콘크리트)
-  g.fillStyle = '#bfc5cc'
+  g.fillStyle = '#e0e5ea'
   g.fillRect(0, 0, W, H)
   // 콘크리트 노이즈
   for (let i = 0; i < 2000; i++) {
@@ -194,8 +194,8 @@ export function BuildingVolume3D({
       r.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2))
       r.shadowMap.enabled = true
       r.shadowMap.type = THREE.PCFSoftShadowMap
-      r.toneMapping = THREE.ACESFilmicToneMapping
-      r.toneMappingExposure = 2.5
+      r.toneMapping = THREE.LinearToneMapping
+      r.toneMappingExposure = 3.5
       r.outputColorSpace = THREE.SRGBColorSpace
       rendererRef.current = r
       
@@ -254,8 +254,8 @@ export function BuildingVolume3D({
       skyC.width = 2; skyC.height = 512
       const skyG = skyC.getContext('2d')!
       const sg = skyG.createLinearGradient(0, 0, 0, 512)
-      sg.addColorStop(0, '#0c1e30'); sg.addColorStop(0.3, '#15304a')
-      sg.addColorStop(0.65, '#1e4060'); sg.addColorStop(1, '#2a5575')
+      sg.addColorStop(0, '#142838'); sg.addColorStop(0.3, '#15304a')
+      sg.addColorStop(0.65, '#2a5575'); sg.addColorStop(1, '#2a5575')
       skyG.fillStyle = sg; skyG.fillRect(0, 0, 2, 512)
       const skyTex = new THREE.CanvasTexture(skyC)
       skyTex.mapping = THREE.EquirectangularReflectionMapping
@@ -268,8 +268,8 @@ export function BuildingVolume3D({
       cameraRef.current = cam
 
       /* ── Lights (HDR 3점 조명) ── */
-      scene.add(new THREE.HemisphereLight(0xbbd4f0, 0x446644, 2.0))
-      const sun = new THREE.DirectionalLight(0xfff4e6, 5.0)
+      scene.add(new THREE.HemisphereLight(0xddeeff, 0x668866, 3.0))
+      const sun = new THREE.DirectionalLight(0xffffff, 8.0)
       sun.position.set(S * 1.5, S * 3, S * 1.5)
       sun.castShadow = true
       sun.shadow.mapSize.set(2048, 2048)
@@ -278,10 +278,10 @@ export function BuildingVolume3D({
       sc.near = 0.5; sc.far = S * 8
       sun.shadow.bias = -0.001; sun.shadow.normalBias = 0.02
       scene.add(sun)
-      const fill = new THREE.DirectionalLight(0xaaccee, 2.0)
+      const fill = new THREE.DirectionalLight(0xccddff, 3.0)
       fill.position.set(-S, S * 0.5, -S * 0.5)
       scene.add(fill)
-      const back = new THREE.DirectionalLight(0x6688cc, 1.0)
+      const back = new THREE.DirectionalLight(0x8899dd, 2.0)
       back.position.set(-S * 0.5, S * 0.3, S * 2)
       scene.add(back)
 
@@ -355,8 +355,8 @@ export function BuildingVolume3D({
         wTex.wrapS = wTex.wrapT = THREE.RepeatWrapping
 
         const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-          map: wTex, roughness: 0.32, metalness: 0.12,
-          color: 0xe8edf2, envMapIntensity: 1.0, side: THREE.DoubleSide,
+          map: wTex, roughness: 0.25, metalness: 0.15,
+          color: 0xf0f4f8, envMapIntensity: 1.5, side: THREE.DoubleSide,
         }))
         mesh.position.set(bX, 0, bZ); mesh.castShadow = true; mesh.receiveShadow = true
         scene.add(mesh)
