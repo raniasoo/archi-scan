@@ -194,57 +194,30 @@ export function FinancialStep(props: FinancialStepProps) {
                 </div>
               )
               
-              // 재건축/리모델링 — 분담금 시뮬레이션 + 시나리오 비교
-              const totalCost = feasibilityResult.totalCost || 0
-              const profit = feasibilityResult.profit || 0
-              const estimatedDemolitionCost = totalCost * 0.03 // 철거비 약 3%
-              const estimatedCompensation = totalCost * 0.08 // 이주보상비 약 8%
-              const estimatedContribution = estimatedDemolitionCost + estimatedCompensation
-              const adjustedProfit = profit - estimatedContribution
-              const adjustedRoi = totalCost > 0 ? (adjustedProfit / totalCost) * 100 : 0
-              
+              // 재건축/리모델링 — 기존 컴포넌트 + 추가 정보
               return (<>
-                <div className="p-4 rounded-xl bg-orange-500/5 border border-orange-500/20 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-orange-500 text-sm">🏗 재건축·리모델링 사업</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    기존 건물이 존재합니다.
-                    {existingBuildingInfo?.mainPurpose && ` 용도: ${existingBuildingInfo.mainPurpose}`}
-                    {existingBuildingInfo?.groundFloors && ` (지상 ${existingBuildingInfo.groundFloors}층)`}
-                    {existingBuildingInfo?.householdCount && existingBuildingInfo.householdCount > 0 && ` ${existingBuildingInfo.householdCount}세대`}
-                  </p>
-                  
-                  {/* 분담금 시뮬레이션 */}
-                  <div className="bg-background/50 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold text-foreground">📊 분담금 시뮬레이션 (추정)</p>
-                    <div className="grid grid-cols-2 gap-2 text-[11px]">
-                      <div className="flex justify-between"><span className="text-muted-foreground">철거비 (약 3%)</span><span className="text-orange-400">{(estimatedDemolitionCost / 1e8).toFixed(1)}억</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">이주보상비 (약 8%)</span><span className="text-orange-400">{(estimatedCompensation / 1e8).toFixed(1)}억</span></div>
-                      <div className="flex justify-between font-semibold"><span>추정 분담금 합계</span><span className="text-orange-500">{(estimatedContribution / 1e8).toFixed(1)}억</span></div>
-                      <div className="flex justify-between font-semibold"><span>분담금 반영 ROI</span><span className={adjustedRoi > 0 ? 'text-emerald-500' : 'text-red-500'}>{adjustedRoi.toFixed(1)}%</span></div>
-                    </div>
-                  </div>
-                  
-                  {/* 시나리오 비교 */}
-                  <div className="bg-background/50 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold text-foreground">🔄 사업 시나리오 비교</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2 rounded-lg border border-amber-500/20 bg-amber-500/5">
-                        <p className="text-[10px] font-bold text-amber-400 mb-1">재건축</p>
-                        <p className="text-[10px] text-muted-foreground">기존 건물 전체 철거 후 신축. 사업 기간 5~8년, 높은 수익성 기대.</p>
-                        <p className="text-[10px] mt-1 text-amber-300">• 안전진단 필요</p>
-                        <p className="text-[10px] text-amber-300">• 조합 설립 필수</p>
-                      </div>
-                      <div className="p-2 rounded-lg border border-blue-500/20 bg-blue-500/5">
-                        <p className="text-[10px] font-bold text-blue-400 mb-1">리모델링</p>
-                        <p className="text-[10px] text-muted-foreground">기존 골조 유지, 증축·개축. 사업 기간 3~5년, 빠른 사업 추진.</p>
-                        <p className="text-[10px] mt-1 text-blue-300">• 안전진단 면제</p>
-                        <p className="text-[10px] text-blue-300">• 최대 15% 증축 가능</p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/20 text-xs text-muted-foreground mb-3">
+                  <span className="font-semibold text-orange-500">재건축·리모델링 사업</span> — 기존 건물이 존재합니다.
+                  {existingBuildingInfo?.mainPurpose && ` 용도: ${existingBuildingInfo.mainPurpose}`}
+                  {existingBuildingInfo?.groundFloors && ` (지상 ${existingBuildingInfo.groundFloors}층)`}
+                  {existingBuildingInfo?.householdCount && existingBuildingInfo.householdCount > 0 && ` ${existingBuildingInfo.householdCount}세대`}
                 </div>
+                <ContributionSimulator
+                  totalProjectCost={(feasibilityResult.totalCost || 0) / 100000000}
+                  totalUnits={selectedLayoutData.units}
+                  salePricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
+                    ? marketPrice.suggestedSalePrice 
+                    : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000}
+                  avgUnitArea={selectedLayoutData.gfa ? Math.round(selectedLayoutData.gfa / Math.max(selectedLayoutData.units, 1)) : 84}
+                />
+                <ScenarioComparison
+                  siteArea={siteAreaNum}
+                  totalUnits={selectedLayoutData.units}
+                  floors={selectedLayoutData.floors}
+                  buildingCoverage={selectedLayoutData.coverage ?? 60}
+                  totalProjectCost={feasibilityResult.totalCost || 0}
+                  roi={feasibilityResult.roi ?? 0}
+                />
               </>)
             })()}
 
