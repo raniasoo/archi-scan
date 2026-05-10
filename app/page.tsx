@@ -1462,8 +1462,25 @@ export default function ArchiScanPage() {
 
   const selectedLayoutData = layouts.find((l) => l.id === selectedLayout) || null
 
-  // 요약 스트립용 ROI — feasibilityResult에서 직접 사용 (동일 파라미터)
-  const stripRoi = feasibilityResult?.roi ?? null
+  // 요약 스트립용 ROI — 카드와 동일한 인라인 계산 (useEffect 타이밍 우회)
+  const siteAreaNum = Number(siteArea) || 0
+  const stripRoi = (() => {
+    if (!selectedLayoutData) return null
+    const sp = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
+      ? marketPrice.suggestedSalePrice
+      : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000
+    const cc = regionalPricing?.constructionCostPerM2 || 2500000
+    return calculateFeasibility({
+      siteArea: siteAreaNum || 1,
+      grossFloorArea: selectedLayoutData.gfa || 1,
+      unitCount: selectedLayoutData.units || 1,
+      floorCount: selectedLayoutData.floors || 1,
+      parkingCount: selectedLayoutData.parking || 0,
+      landPricePerM2: landPriceData.pricePerM2 || 5000000,
+      salesPricePerM2: sp,
+      constructionCostPerM2: cc,
+    })?.roi ?? null
+  })()
   
   // Debug: Log selected layout data for troubleshooting
   if (selectedLayoutData && process.env.NODE_ENV === 'development') {
@@ -1477,7 +1494,6 @@ export default function ArchiScanPage() {
       scoreTotal: selectedLayoutData.scores?.overall
     })
   }
-  const siteAreaNum = Number(siteArea) || 0
   const gfa = selectedLayoutData ? selectedLayoutData.gfa : 0
 
   const handleSelectLayout = (id: number) => {

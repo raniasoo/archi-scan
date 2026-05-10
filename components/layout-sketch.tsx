@@ -10,19 +10,19 @@ export function LayoutSketch({ type, size = 80, className = "" }: LayoutSketchPr
   const s = size
   const pad = s * 0.08 // padding
 
-  // 공통 스타일 — 다크모드 최대 밝기
-  const site = { stroke: "currentColor", strokeWidth: 1.5, strokeDasharray: "3,2", fill: "none", opacity: 0.6 }
-  const building = { fill: "hsl(var(--primary))", opacity: 1, rx: 1 }
-  const buildingStroke = { stroke: "hsl(var(--primary))", strokeWidth: 1.5, fill: "none", opacity: 0.9 }
-  const green = { fill: "#22c55e", opacity: 0.45, rx: 2 }
-  const road = { fill: "currentColor", opacity: 0.2 }
-  const label = { fill: "currentColor", opacity: 0.7, fontSize: s * 0.07, textAnchor: "middle" as const, fontWeight: 700 }
+  // 공통 스타일 — 다크모드 최대 가시성
+  const site = { stroke: "#94a3b8", strokeWidth: 1.8, strokeDasharray: "3,2", fill: "none", opacity: 0.8 }
+  const building = { fill: "#10b981", opacity: 1, rx: 1 }
+  const buildingStroke = { stroke: "#34d399", strokeWidth: 1.8, fill: "none", opacity: 1 }
+  const green = { fill: "#22c55e", opacity: 0.5, rx: 2 }
+  const road = { fill: "#64748b", opacity: 0.3 }
+  const label = { fill: "#e2e8f0", opacity: 0.9, fontSize: s * 0.075, textAnchor: "middle" as const, fontWeight: 700 }
 
   return (
     <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className={className}>
       {/* 도로 (하단) */}
       <rect x={0} y={s - s * 0.1} width={s} height={s * 0.1} {...road} />
-      <text x={s / 2} y={s - s * 0.03} {...label} opacity={0.5} fontSize={s * 0.055}>도로</text>
+      <text x={s / 2} y={s - s * 0.03} {...label} opacity={0.8} fontSize={s * 0.06}>도로</text>
 
       {/* 대지 경계 */}
       <rect x={pad} y={pad} width={s - pad * 2} height={s - pad * 2 - s * 0.1} {...site} rx={2} />
@@ -36,7 +36,7 @@ export function LayoutSketch({ type, size = 80, className = "" }: LayoutSketchPr
           <rect x={s * 0.12} y={s * 0.65} width={s * 0.25} height={s * 0.12} {...green} />
           <rect x={s * 0.63} y={s * 0.65} width={s * 0.25} height={s * 0.12} {...green} />
           {/* 주차 진입로 */}
-          <line x1={s * 0.5} y1={s * 0.6} x2={s * 0.5} y2={s * 0.9} stroke="currentColor" strokeWidth={1} opacity={0.4} strokeDasharray="2,2" />
+          <line x1={s * 0.5} y1={s * 0.6} x2={s * 0.5} y2={s * 0.9} stroke="currentColor" strokeWidth={1.2} opacity={0.6} strokeDasharray="2,2" />
           <text x={s * 0.5} y={s * 0.42} {...label}>타워</text>
         </>
       )}
@@ -90,8 +90,8 @@ export function LayoutSketch({ type, size = 80, className = "" }: LayoutSketchPr
           <rect x={s * 0.15} y={s * 0.42} width={s * 0.7} height={s * 0.15} {...green} />
           <text x={s * 0.5} y={s * 0.52} {...label} fontSize={s * 0.055}>전면 정원</text>
           {/* 후면 주차 */}
-          <rect x={s * 0.25} y={s * 0.62} width={s * 0.5} height={s * 0.14} fill="currentColor" opacity={0.05} rx={2} />
-          <text x={s * 0.5} y={s * 0.71} {...label} fontSize={s * 0.05} opacity={0.5}>주차</text>
+          <rect x={s * 0.25} y={s * 0.62} width={s * 0.5} height={s * 0.14} fill="currentColor" opacity={0.1} rx={2} />
+          <text x={s * 0.5} y={s * 0.71} {...label} fontSize={s * 0.05} opacity={0.8}>주차</text>
           <text x={s * 0.5} y={s * 0.28} {...label}>일자형</text>
         </>
       )}
@@ -124,9 +124,9 @@ export function LayoutSketch({ type, size = 80, className = "" }: LayoutSketchPr
 
       {/* 방위 표시 (N) */}
       <g transform={`translate(${s - s * 0.12}, ${s * 0.06})`}>
-        <text fill="currentColor" opacity={0.6} fontSize={s * 0.08} textAnchor="middle" fontWeight={700}>N</text>
-        <line x1={0} y1={s * 0.02} x2={0} y2={s * 0.07} stroke="currentColor" strokeWidth={1} opacity={0.4} />
-        <polygon points={`0,${s * 0.01} ${-s * 0.02},${s * 0.04} ${s * 0.02},${s * 0.04}`} fill="currentColor" opacity={0.4} />
+        <text fill="currentColor" opacity={0.9} fontSize={s * 0.09} textAnchor="middle" fontWeight={700}>N</text>
+        <line x1={0} y1={s * 0.02} x2={0} y2={s * 0.07} stroke="currentColor" strokeWidth={1.5} opacity={0.7} />
+        <polygon points={`0,${s * 0.01} ${-s * 0.02},${s * 0.04} ${s * 0.02},${s * 0.04}`} fill="#94a3b8" opacity={0.8} />
       </g>
     </svg>
   )
