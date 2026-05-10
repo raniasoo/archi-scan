@@ -1463,20 +1463,21 @@ export default function ArchiScanPage() {
 
   const selectedLayoutData = layouts.find((l) => l.id === selectedLayout) || null
 
-  // 요약 스트립용 ROI — 카드와 동일한 인라인 계산 (useEffect 타이밍 우회)
-  const siteAreaNum = Number(siteArea) || 0
+  // 요약 스트립용 ROI — useEffect 파라미터와 100% 동일
+  const siteAreaNum = safeNumber(siteArea, 660)
   const stripRoi = (() => {
     if (!selectedLayoutData) return null
+    const sa = safeNumber(siteArea, 660)
     const sp = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
       ? marketPrice.suggestedSalePrice
       : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000
     const cc = regionalPricing?.constructionCostPerM2 || 2500000
     return calculateFeasibility({
-      siteArea: siteAreaNum || 1,
-      grossFloorArea: selectedLayoutData.gfa || 1,
-      unitCount: selectedLayoutData.units || 1,
-      floorCount: selectedLayoutData.floors || 1,
-      parkingCount: selectedLayoutData.parking || 0,
+      siteArea: sa,
+      grossFloorArea: selectedLayoutData.gfa,
+      unitCount: selectedLayoutData.units,
+      floorCount: selectedLayoutData.floors,
+      parkingCount: selectedLayoutData.parking,
       landPricePerM2: landPriceData.pricePerM2 || 5000000,
       salesPricePerM2: sp,
       constructionCostPerM2: cc,
