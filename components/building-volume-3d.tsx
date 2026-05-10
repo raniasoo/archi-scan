@@ -280,6 +280,8 @@ export function BuildingVolume3D({
       scene.add(Object.assign(new THREE.DirectionalLight(0x4466aa, 0.35), { position: new THREE.Vector3(-S * 0.5, S * 0.3, S * 2) }))
 
       /* ── Ground (잔디) ── */
+      const blocks = getLayoutBlocks(layoutType)
+      const info: { label: string; floors: number }[] = []
       try { // 전체 씬 빌드를 try/catch로 보호
       const grassC = document.createElement('canvas')
       grassC.width = grassC.height = 256
@@ -329,8 +331,6 @@ export function BuildingVolume3D({
       sbLine.computeLineDistances(); scene.add(sbLine)
 
       /* ── 건물 (PBR + 창문 텍스처) ── */
-      const blocks = getLayoutBlocks(layoutType)
-      const info: { label: string; floors: number }[] = []
 
       blocks.forEach((blk, idx) => {
         const bF = getBlockFloors(idx, floors, layoutType)
