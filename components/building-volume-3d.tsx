@@ -176,17 +176,19 @@ export function BuildingVolume3D({
 
     const go = async (W: number, H: number) => {
       if (!mounted || !canvasRef.current) return
-      try { THREE = await import('three') } catch (e: any) { setError(e.message); return }
-      
-      // 포스트프로세싱은 기본 렌더링 시작 후 비동기 로드
-      let EffectComposer: any, RenderPass: any, UnrealBloomPass: any, ShaderPass: any
+      try { THREE = await import('three') } catch (e: any) { setError(e.message); setLoaded(true); return }
       if (!mounted || !canvasRef.current) return
 
+      const blocks = getLayoutBlocks(layoutType)
+      const info: { label: string; floors: number }[] = []
+      
+      try { // ★ 전체 3D 렌더링을 하나의 try로 보호
       const canvas = canvasRef.current
       const S = Math.sqrt(siteArea)
       const camDist = S * 2.5
 
       /* ── Renderer (ACES Tone Mapping) ── */
+      let EffectComposer: any, RenderPass: any, UnrealBloomPass: any, ShaderPass: any
       const r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
       r.setSize(W, H)
       r.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2))
@@ -280,9 +282,6 @@ export function BuildingVolume3D({
       scene.add(Object.assign(new THREE.DirectionalLight(0x4466aa, 0.35), { position: new THREE.Vector3(-S * 0.5, S * 0.3, S * 2) }))
 
       /* ── Ground (잔디) ── */
-      const blocks = getLayoutBlocks(layoutType)
-      const info: { label: string; floors: number }[] = []
-      try { // 전체 씬 빌드를 try/catch로 보호
       const grassC = document.createElement('canvas')
       grassC.width = grassC.height = 256
       const gg = grassC.getContext('2d')!
@@ -687,9 +686,8 @@ export function BuildingVolume3D({
         }
       }
 
-      } catch (e) { console.warn('[3D] 조경/디테일 렌더링 실패 (기본 건물은 표시됨):', e) }
-      } catch (sceneErr) { console.error('[3D] 씬 빌드 실패:', sceneErr) }
-      // 에러 여부와 무관하게 로딩 해제
+      } catch (e) { console.warn('[3D] 조경 렌더링 실패:', e) }
+
       setBlockInfo(info); setLoaded(true)
       
       // 포스트프로세싱 활성화
@@ -724,7 +722,7 @@ export function BuildingVolume3D({
       }
       animate()
 
-      // ━━━ 포스트프로세싱 비동기 후로딩 (기본 렌더링은 이미 시작됨) ━━━
+      // ━━━ 포스트프로세싱 비동기 후로딩 ━━━
       setTimeout(async () => {
         if (!mounted) return
         try {
@@ -737,10 +735,18 @@ export function BuildingVolume3D({
           EffectComposer = ecm.EffectComposer; RenderPass = rpm.RenderPass
           UnrealBloomPass = ubm.UnrealBloomPass; ShaderPass = spm.ShaderPass
           if (mounted) setupPostProcessing(scene, cam)
-        } catch { /* 포스트프로세싱 없이 기본 렌더링 유지 */ }
+        } catch { /* 기본 렌더링 유지 */ }
       }, 500)
 
       return () => window.removeEventListener('resize', onResize)
+      
+      } catch (fatalErr: any) {
+        // ★ WebGL 실패, Three.js 에러 등 모든 치명적 에러 처리
+        console.error('[3D] 렌더링 실패:', fatalErr)
+        setError(fatalErr?.message || '3D 렌더링을 시작할 수 없습니다')
+        setBlockInfo(info)
+        setLoaded(true) // 로딩 스피너 반드시 해제
+      }
     }
 
     const tryInit = () => {
