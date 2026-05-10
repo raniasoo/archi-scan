@@ -177,6 +177,21 @@ export function BuildingVolume3D({
     const go = async (W: number, H: number) => {
       if (!mounted || !canvasRef.current) return
       try { THREE = await import('three') } catch (e: any) { setError(e.message); return }
+      
+      // 포스트프로세싱 모듈 (실패해도 기본 렌더링으로 동작)
+      let EffectComposer: any, RenderPass: any, UnrealBloomPass: any, ShaderPass: any
+      try {
+        const [ecm, rpm, ubm, spm] = await Promise.all([
+          import('three/examples/jsm/postprocessing/EffectComposer.js'),
+          import('three/examples/jsm/postprocessing/RenderPass.js'),
+          import('three/examples/jsm/postprocessing/UnrealBloomPass.js'),
+          import('three/examples/jsm/postprocessing/ShaderPass.js'),
+        ])
+        EffectComposer = ecm.EffectComposer
+        RenderPass = rpm.RenderPass
+        UnrealBloomPass = ubm.UnrealBloomPass
+        ShaderPass = spm.ShaderPass
+      } catch { console.warn('[3D] Post-processing modules not available, using basic renderer') }
       if (!mounted || !canvasRef.current) return
 
       const canvas = canvasRef.current
@@ -193,6 +208,55 @@ export function BuildingVolume3D({
       r.toneMappingExposure = 1.15
       r.outputColorSpace = THREE.SRGBColorSpace
       rendererRef.current = r
+      
+      // ━━━ 포스트프로세싱 체인 (Bloom + Vignette) ━━━
+      let composer: any = null
+      // (scene/cam은 아래에서 생성 후 setupPostProcessing()으로 설정)
+      const setupPostProcessing = (sc: any, ca: any) => {
+        if (!EffectComposer || !RenderPass) return
+        try {
+          composer = new EffectComposer(r)
+          composer.addPass(new RenderPass(sc, ca))
+          
+          // Bloom (유리/가로등 광택)
+          if (UnrealBloomPass) {
+            const bloom = new UnrealBloomPass(
+              new THREE.Vector2(W, H),
+              0.35,  // strength
+              0.6,   // radius
+              0.85   // threshold
+            )
+            composer.addPass(bloom)
+          }
+          
+          // Vignette (가장자리 어둡게)
+          if (ShaderPass) {
+            const vignetteShader = {
+              uniforms: {
+                tDiffuse: { value: null },
+                offset: { value: 1.0 },
+                darkness: { value: 1.3 },
+              },
+              vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+              fragmentShader: `uniform sampler2D tDiffuse; uniform float offset; uniform float darkness; varying vec2 vUv;
+                void main() {
+                  vec4 texel = texture2D(tDiffuse, vUv);
+                  vec2 uv = (vUv - vec2(0.5)) * vec2(offset);
+                  float dist = length(uv);
+                  float vig = smoothstep(0.8, offset * 0.5, dist * (darkness + offset));
+                  texel.rgb = mix(texel.rgb * 0.3, texel.rgb, vig);
+                  gl_FragColor = texel;
+                }`,
+            }
+            composer.addPass(new ShaderPass(vignetteShader))
+          }
+          
+          console.log('[3D] Post-processing enabled: Bloom + Vignette ✅')
+        } catch (e) {
+          console.warn('[3D] Post-processing setup failed:', e)
+          composer = null
+        }
+      }
 
       /* ── Scene (그라데이션 하늘) ── */
       const scene = new THREE.Scene()
@@ -400,7 +464,7 @@ export function BuildingVolume3D({
         pole.position.set(lx, 2, lz); scene.add(pole)
         // 등불
         const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6),
-          new THREE.MeshStandardMaterial({ color: 0xffeebb, emissive: 0xffcc66, emissiveIntensity: 0.8, roughness: 0.2 }))
+          new THREE.MeshStandardMaterial({ color: 0xffeebb, emissive: 0xffdd88, emissiveIntensity: 1.5, roughness: 0.1 }))
         lamp.position.set(lx, 4.2, lz); scene.add(lamp)
         // 포인트 라이트 (약한 조명)
         const pl = new THREE.PointLight(0xffdd88, 0.3, 15)
@@ -634,12 +698,20 @@ export function BuildingVolume3D({
       }
 
       setBlockInfo(info); setLoaded(true)
+      
+      // 포스트프로세싱 활성화
+      setupPostProcessing(scene, cam)
 
       /* ── Resize ── */
       const onResize = () => {
         if (!containerRef.current || !rendererRef.current || !cameraRef.current) return
         const nW = containerRef.current.clientWidth, nH = containerRef.current.clientHeight
-        if (nW > 0 && nH > 0) { rendererRef.current.setSize(nW, nH); cameraRef.current.aspect = nW / nH; cameraRef.current.updateProjectionMatrix() }
+        if (nW > 0 && nH > 0) {
+          rendererRef.current.setSize(nW, nH)
+          cameraRef.current.aspect = nW / nH
+          cameraRef.current.updateProjectionMatrix()
+          if (composer) composer.setSize(nW, nH)
+        }
       }
       window.addEventListener('resize', onResize)
 
@@ -653,7 +725,7 @@ export function BuildingVolume3D({
         const rx = Math.max(0.05, Math.min(1.3, rotation.current.x))
         cam.position.set(d * Math.cos(rx) * Math.sin(ry), d * Math.sin(rx), d * Math.cos(rx) * Math.cos(ry))
         cam.lookAt(0, floors * floorHeight * 0.35, 0)
-        r.render(scene, cam)
+        if (composer) composer.render(); else r.render(scene, cam)
         const now = Date.now()
         if (now - lastCU > 100) { lastCU = now; setCompassAngle(-ry * 180 / Math.PI) }
       }
@@ -718,7 +790,7 @@ export function BuildingVolume3D({
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#060d1a]">
             <div className="text-center">
               <div className="w-10 h-10 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"/>
-              <p className="text-sm text-blue-300">포토리얼리스틱 3D 렌더링 중...</p>
+              <p className="text-sm text-blue-300">Enscape급 3D 렌더링 중...</p>
             </div>
           </div>
         )}
