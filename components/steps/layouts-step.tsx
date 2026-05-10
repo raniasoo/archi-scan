@@ -145,25 +145,30 @@ export function LayoutsStep(props: LayoutsStepProps) {
   return (
     <div className="flex flex-col gap-4">
 
-      {/* ━━━ 1. AI 추천 배너 ━━━ */}
-      {recommendedLayout && (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <span className="text-sm font-bold">AI 추천</span>
-            <span className="text-primary text-sm font-bold">{recommendedLayout.name}</span>
-            <Badge variant="outline" className="ml-auto border-primary/50 text-primary text-xs">
-              종합 {displayScore(recommendedLayout?.scores?.overall)}
-            </Badge>
+      {/* ━━━ 1. 선택된 배치안 요약 배너 ━━━ */}
+      {(selectedLayoutData || recommendedLayout) && (() => {
+        const bannerLayout = selectedLayoutData || recommendedLayout!
+        const isRecommendedLayout = bannerLayout.recommendation?.isRecommended
+        return (
+          <div className={`rounded-xl border p-4 ${isRecommendedLayout ? 'border-primary/20 bg-primary/5' : 'border-border bg-card'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              {isRecommendedLayout && <Sparkles className="h-4 w-4 text-primary" />}
+              {isRecommendedLayout && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-semibold">AI 추천</span>}
+              {bannerLayout.name === '수익 최적화안' && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold">💰 수익 최적</span>}
+              <span className={`text-sm font-bold ${isRecommendedLayout ? 'text-primary' : ''}`}>{bannerLayout.name}</span>
+              <Badge variant="outline" className={`ml-auto text-xs ${isRecommendedLayout ? 'border-primary/50 text-primary' : 'border-border'}`}>
+                종합 {displayScore(bannerLayout?.scores?.overall)}
+              </Badge>
+            </div>
+            <div className="flex gap-3">
+              <LayoutSketch type={bannerLayout.type || 'tower'} size={64} className="shrink-0 opacity-70" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {getLayoutStory(bannerLayout, strategy)}
+              </p>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <LayoutSketch type={recommendedLayout.type || 'tower'} size={64} className="shrink-0 opacity-70" />
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {getLayoutStory(recommendedLayout, strategy)}
-            </p>
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ━━━ 2. 배치안 카드 (가로 스와이프) ━━━ */}
       <div>
