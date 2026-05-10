@@ -1262,16 +1262,15 @@ export default function ArchiScanPage() {
           }
         })
         
-        // 중복 이름 구분 — 같은 이름이면 건축 타입으로 차별화
+        // 모든 배치안에 건축 타입 표시
         const typeLabel: Record<string, string> = {
           tower: '타워', courtyard: '중정', lshape: 'ㄱ자', linear: '판상', cluster: '클러스터'
         }
-        const nameCount: Record<string, number> = {}
-        generatedLayouts.forEach(l => { nameCount[l.name] = (nameCount[l.name] || 0) + 1 })
         generatedLayouts.forEach(l => {
-          if (nameCount[l.name] > 1) {
-            const origType = (l as any)._originalType || l.type
-            l.name = `${l.name} · ${typeLabel[origType] || origType}`
+          const origType = (l as any)._originalType || l.type
+          const suffix = typeLabel[origType] || origType
+          if (!l.name.includes('·') && !l.name.includes('수익 최적화')) {
+            l.name = `${l.name} · ${suffix}`
           }
         })
       }
@@ -1435,6 +1434,26 @@ export default function ArchiScanPage() {
   }
 
   const selectedLayoutData = layouts.find((l) => l.id === selectedLayout) || null
+
+  // 요약 스트립용 ROI — 카드/Dashboard와 동일한 계산
+  const stripRoi = (() => {
+    if (!selectedLayoutData) return null
+    const sp = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
+      ? marketPrice.suggestedSalePrice
+      : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || '')) : 5000000
+    const cc = regionalPricing?.constructionCostPerM2 || 2500000
+    const f = calculateFeasibility({
+      siteArea: siteAreaNum || 1,
+      grossFloorArea: selectedLayoutData.gfa || 1,
+      unitCount: selectedLayoutData.units || 1,
+      floorCount: selectedLayoutData.floors || 1,
+      parkingCount: selectedLayoutData.parking || 0,
+      landPricePerM2: landPriceData.pricePerM2 || 5000000,
+      salesPricePerM2: sp,
+      constructionCostPerM2: cc,
+    })
+    return f?.roi ?? null
+  })()
   
   // Debug: Log selected layout data for troubleshooting
   if (selectedLayoutData && process.env.NODE_ENV === 'development') {
@@ -2109,11 +2128,11 @@ export default function ArchiScanPage() {
                     <span className="text-muted-foreground text-xs">규모</span>
                     <span className="font-semibold">{selectedLayoutData.floors}층 {selectedLayoutData.units}세대</span>
                   </div>
-                  {feasibilityResult && (
+                  {stripRoi !== null && (
                     <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground text-xs">ROI</span>
-                      <span className={`font-bold ${feasibilityResult.roi > 0 ? 'text-emerald-600' : 'text-orange-500'}`}>
-                        {feasibilityResult.roi.toFixed(1)}%
+                      <span className={`font-bold ${stripRoi > 0 ? 'text-emerald-600' : 'text-orange-500'}`}>
+                        {stripRoi.toFixed(1)}%
                       </span>
                     </div>
                   )}
@@ -2177,9 +2196,9 @@ export default function ArchiScanPage() {
                   <>
                     <span className="text-primary/70">|</span>
                     <span className="text-muted-foreground">{selectedLayoutData.floors}층 <span className="text-foreground font-semibold">{selectedLayoutData.units}세대</span></span>
-                    {feasibilityResult && (
-                      <span className={`font-semibold ${feasibilityResult.roi > 0 ? 'text-emerald-600' : 'text-orange-500'}`}>
-                        ROI {feasibilityResult.roi.toFixed(1)}%
+                    {stripRoi !== null && (
+                      <span className={`font-semibold ${stripRoi > 0 ? 'text-emerald-600' : 'text-orange-500'}`}>
+                        ROI {stripRoi.toFixed(1)}%
                       </span>
                     )}
                   </>
