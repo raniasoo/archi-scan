@@ -328,9 +328,19 @@ The entrance must use the SAME materials and style visible in the street-level i
     let data: any = null
     let lastError = ''
     
+    // 참조 이미지 크기 제한 (Gemini API 요청 크기 제한)
+    const totalRefSize = refImages.reduce((s, r) => s + r.base64.length, 0)
+    if (totalRefSize > 4 * 1024 * 1024) { // 4MB 초과
+      // 거리뷰부터 제거
+      const filtered = refImages.filter(r => !r.label.startsWith('street-view'))
+      console.log(`[GEMINI] Ref images too large (${Math.round(totalRefSize / 1024)}KB), removed street views: ${refImages.length} → ${filtered.length}`)
+      refImages.length = 0
+      refImages.push(...filtered)
+    }
+    
     for (const model of models) {
       try {
-        console.log(`[GEMINI] Trying model: ${model}`)
+        console.log(`[GEMINI] Trying model: ${model}, refImages: ${refImages.length}, totalSize: ${Math.round(refImages.reduce((s, r) => s + r.base64.length, 0) / 1024)}KB`)
         
         // #7: 위성사진을 멀티모달로 전달
         const parts: any[] = [{ text: architecturePrompt }]
@@ -361,8 +371,9 @@ The rendering MUST reflect what is shown in these reference images. Do NOT ignor
           console.log(`[GEMINI] Success with model: ${model}`)
           break
         } else {
-          lastError = `${model}: ${response.status}`
-          console.warn(`[GEMINI] ${model} failed: ${response.status}`)
+          const errBody = await response.text().catch(() => 'no body')
+          lastError = `${model}: ${response.status} - ${errBody.slice(0, 200)}`
+          console.warn(`[GEMINI] ${model} failed: ${response.status}`, errBody.slice(0, 300))
           // 429 rate limit → 2초 대기 후 다음 모델
           if (response.status === 429) await new Promise(r => setTimeout(r, 2000))
         }
