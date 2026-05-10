@@ -21,6 +21,8 @@ const ScenarioSlider = dynamic(() => import("@/components/scenario-slider").then
 export interface FinancialStepProps {
   selectedLayoutData: LayoutOption
   allLayouts: LayoutOption[]
+  projectType: 'new' | 'reconstruction' | 'unknown'
+  existingBuildingInfo?: { mainPurpose?: string; groundFloors?: number; buildingName?: string; householdCount?: number; totalFloorArea?: number } | null
   address: string
   siteAreaNum: number
   gfa: number
@@ -34,7 +36,7 @@ export interface FinancialStepProps {
 
 export function FinancialStep(props: FinancialStepProps) {
   const {
-    selectedLayoutData, allLayouts, address, siteAreaNum, gfa, regulation,
+    selectedLayoutData, allLayouts, projectType, existingBuildingInfo, address, siteAreaNum, gfa, regulation,
     feasibilityResult, landPriceData, marketPrice, regionalPricing,
     setCurrentStep,
   } = props
@@ -190,7 +192,19 @@ export function FinancialStep(props: FinancialStepProps) {
               const isExistingBuilding = buildingAge >= 15 // 15년 이상 기존 건물만
               if (!isExistingBuilding) return (
                 <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs text-muted-foreground">
-                  <span className="font-semibold text-emerald-500">신축 사업</span> — 본 프로젝트는 신규 건축으로 분담금 시뮬레이션 및 재건축/리모델링 시나리오가 적용되지 않습니다.
+                  {projectType === 'reconstruction' ? (
+                    <>
+                      <span className="font-semibold text-orange-500">재건축·리모델링 사업</span> — 기존 건물이 존재합니다.
+                      {existingBuildingInfo?.mainPurpose && ` 용도: ${existingBuildingInfo.mainPurpose}`}
+                      {existingBuildingInfo?.groundFloors && ` (지상 ${existingBuildingInfo.groundFloors}층)`}
+                      {existingBuildingInfo?.householdCount && existingBuildingInfo.householdCount > 0 && ` ${existingBuildingInfo.householdCount}세대`}
+                      . 분담금 시뮬레이션 및 재건축/리모델링 시나리오를 검토해야 합니다.
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-emerald-500">신축 사업</span> — 본 프로젝트는 신규 건축으로 분담금 시뮬레이션 및 재건축/리모델링 시나리오가 적용되지 않습니다.
+                    </>
+                  )}
                 </div>
               )
               return (<>

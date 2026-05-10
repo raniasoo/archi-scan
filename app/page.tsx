@@ -489,6 +489,10 @@ export default function ArchiScanPage() {
   
   const [address, setAddress] = useState("")
   const [siteArea, setSiteArea] = useState("")
+  const [projectType, setProjectType] = useState<'new' | 'reconstruction' | 'unknown'>('unknown')
+  const [existingBuildingInfo, setExistingBuildingInfo] = useState<{
+    mainPurpose?: string; groundFloors?: number; buildingName?: string; householdCount?: number; totalFloorArea?: number
+  } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [layouts, setLayouts] = useState<LayoutOption[]>([])
   const [selectedLayout, setSelectedLayout] = useState<number | null>(null)
@@ -1076,6 +1080,29 @@ export default function ArchiScanPage() {
     // MOLIT 조회 결과 처리 — 기존 vworld-zone 데이터 보존
     setMolitSupplementData(prev => ({ ...prev }))
     if (data.bdMgtSn) setSiteBdMgtSn(data.bdMgtSn)
+    
+    // ━━━ 신축/재건축 자동 판단 ━━━
+    const d = data as any
+    if (d.mainPurpose || (d.groundFloors && d.groundFloors > 0) || d.buildingName) {
+      setProjectType('reconstruction')
+      setExistingBuildingInfo({
+        mainPurpose: d.mainPurpose,
+        groundFloors: d.groundFloors,
+        buildingName: d.buildingName,
+        householdCount: d.householdCount,
+        totalFloorArea: d.totalFloorArea,
+      })
+      console.log('[v0] 기존 건물 감지 → 재건축/리모델링 사업:', d.mainPurpose, d.groundFloors, '층')
+    } else if (data.bdMgtSn) {
+      // bdMgtSn은 있지만 건물 상세 없음 → 기존 건물 존재 가능성
+      setProjectType('reconstruction')
+      setExistingBuildingInfo(null)
+      console.log('[v0] bdMgtSn 존재 → 기존 건물 가능성:', data.bdMgtSn)
+    } else {
+      setProjectType('new')
+      setExistingBuildingInfo(null)
+      console.log('[v0] 기존 건물 없음 → 신축 사업')
+    }
     const mappedZone = mapZoneString(data.zoneType || '')
     const roadAddr = data.roadAddress || address || ''
     const hasDistrict = !!((data.area?.includes('지구단위')) || (data.district?.includes('지구단위')))
@@ -1546,7 +1573,7 @@ export default function ArchiScanPage() {
     return {
       address,
       siteArea: area,
-      projectType: '공동주택 신축사업',
+      projectType: projectType === 'reconstruction' ? '재건축·리모델링 사업' : '공동주택 신축사업',
       dateStr: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
       docNumber: `AS-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
       zoneType: regulation.zoneType,
@@ -2086,6 +2113,11 @@ export default function ArchiScanPage() {
               <Building2 className="h-4 w-4 text-primary shrink-0" />
               <p className="text-sm font-medium truncate">{address}</p>
               <Badge variant="secondary" className="text-[11px] shrink-0">{parseFloat(siteArea).toLocaleString()}㎡</Badge>
+              {projectType !== 'unknown' && (
+                <Badge variant={projectType === 'reconstruction' ? 'destructive' : 'default'} className="text-[10px] shrink-0">
+                  {projectType === 'reconstruction' ? '재건축·리모델링' : '신축'}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-4 text-sm shrink-0">
               {regulation && (
@@ -2166,6 +2198,11 @@ export default function ArchiScanPage() {
               <div className="flex items-center justify-between gap-2 mb-2">
                 <p className="text-xs font-medium text-foreground truncate flex-1">{address}</p>
                 <Badge variant="secondary" className="text-[10px] shrink-0">{parseFloat(siteArea).toLocaleString()}㎡</Badge>
+                {projectType !== 'unknown' && (
+                  <Badge variant={projectType === 'reconstruction' ? 'destructive' : 'default'} className="text-[9px] shrink-0 px-1.5">
+                    {projectType === 'reconstruction' ? '재건축' : '신축'}
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-3 text-[11px]">
                 {regulation && (
@@ -2402,6 +2439,8 @@ export default function ArchiScanPage() {
           <FinancialStep
             selectedLayoutData={selectedLayoutData}
             allLayouts={layouts}
+            projectType={projectType}
+            existingBuildingInfo={existingBuildingInfo}
             address={address} siteAreaNum={siteAreaNum} gfa={gfa}
             regulation={regulation} feasibilityResult={feasibilityResult}
             landPriceData={landPriceData} marketPrice={marketPrice}
