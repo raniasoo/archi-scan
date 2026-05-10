@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, ChevronDown, FileText, Sparkles, ImageIcon, Mountain } from "lucide-react"
 import { type TerrainAnalysis } from "@/lib/terrain-analysis"
 import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
@@ -41,109 +41,93 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
   // AI 렌더링 상태
   const [renderImage, setRenderImage] = useState<string | null>(null)
   const [renderLoading, setRenderLoading] = useState(false)
-  const [renderRetry, setRenderRetry] = useState(0)
   
   const [siteContext, setSiteContext] = useState<any>(null)
   const [vworldState, setVworldState] = useState<any>(null)
   const [terrain, setTerrain] = useState<TerrainAnalysis | null>(null)
   const [sunAnalysis, setSunAnalysis] = useState<SunAnalysisResult | null>(null)
 
-  // 결과가 나오면 AI 렌더링 자동 시작 (vworldState 로딩 후)
+  // 결과가 나오면 AI 렌더링 자동 시작 (1회만, 3초 딜레이)
+  const renderStarted = useRef(false)
   useEffect(() => {
-    if (!result) return
-    // vworldState가 아직 로딩 중이면 대기 (최대 5초 후 없어도 진행)
-    const hasVworld = !!vworldState
-    if (!hasVworld && renderRetry < 1) {
-      const timer = setTimeout(() => setRenderRetry(1), 5000)
-      return () => clearTimeout(timer)
-    }
-    
-    setRenderImage(null)
+    if (!result) { renderStarted.current = false; return }
+    if (renderStarted.current) return
+    renderStarted.current = true
     setRenderLoading(true)
 
-    let cancelled = false
-    const fetchRender = async () => {
-      try {
-        const res = await fetch('/api/ai-render', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: `${result.zoneName} ${result.bestLayout.floors}층 ${result.bestLayout.units}세대 주거건물, 대지면적 ${result.siteArea}㎡`,
-            style: 'modern-luxury',
-            cameraAngle: 'eye-level',
-            sceneMode: 'afternoon',
-            address: result.address,
-            layoutName: result.bestLayout.name || 'AI 추천 배치안',
-            floors: result.bestLayout.floors,
-            units: result.bestLayout.units,
-            siteArea: result.siteArea,
-            buildingType: result.bestLayout.type,
-            coverage: result.buildingCoverage,
-            strategy: strategy || 'profitability',
-            values: userValues ? {
-              profitVsQuality: userValues.profitVsQuality,
-              privacyVsCommunity: userValues.privacyVsCommunity,
-              efficiencyVsSpace: userValues.efficiencyVsSpace,
-            } : undefined,
-            patterns: userValues?.selectedPatterns,
-            surroundingContext: (() => {
-              try {
-                const ctx = buildSiteContextPrompt({
-                  address: result.address,
-                  siteArea: result.siteArea,
-                  polygon: vworldState?.parcel?.polygon,
-                  centroid: vworldState?.parcel?.centroid,
-                  nearbyBuildings: vworldState?.nearbyBuildings,
-                  siteContext: vworldState?.context,
-                  terrain: terrain,
-                  sunAnalysis: sunAnalysis,
-                  elevation: terrain?.maxElevation,
-                  floors: result.bestLayout.floors,
-                  buildingHeight: result.bestLayout.floors * 3.3,
-                  directions: vworldState?.directions,
-                  roadSummary: vworldState?.roadSummary,
-                  shadowBlockers: vworldState?.shadowBlockers,
-                  nearbyRenderPrompt: vworldState?.renderPrompt,
-                })
-                return ctx.fullPrompt || undefined
-              } catch { return undefined }
-            })(),
-            satelliteUrl: vworldState?.satelliteUrl,
-            cadastralMapUrl: vworldState?.cadastralMapUrl,
-            streetViewUrls: vworldState?.streetViewUrls,
-            sitePolygon: vworldState?.parcel?.polygon,
-            regulation: {
-              heightLimit: result.heightLimit,
-              farRatio: result.farRatio,
-              zoneName: result.zoneName,
-              northShadow: true, // 한국은 기본적으로 북측사선 적용
-              northShadowAngle: 45,
-              overlappingRegs: result.overlappingNames,
-            },
-            terrainInfo: terrain ? {
-              slopeDirection: terrain.slopeDirection,
-              elevationDiff: terrain.elevationDiff,
-              avgSlope: terrain.avgSlope,
-            } : undefined,
-          }),
-        })
-        const data = await res.json()
-        if (!cancelled && data.success && data.image) {
-          setRenderImage(data.image)
+    const timer = setTimeout(async () => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const res = await fetch('/api/ai-render', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: `${result.zoneName} ${result.bestLayout.floors}층 ${result.bestLayout.units}세대 주거건물, 대지면적 ${result.siteArea}㎡`,
+              style: 'modern-luxury',
+              cameraAngle: 'eye-level',
+              sceneMode: 'afternoon',
+              address: result.address,
+              layoutName: result.bestLayout.name || 'AI 추천 배치안',
+              floors: result.bestLayout.floors,
+              units: result.bestLayout.units,
+              siteArea: result.siteArea,
+              buildingType: result.bestLayout.type,
+              coverage: result.buildingCoverage,
+              strategy: strategy || 'profitability',
+              values: userValues ? {
+                profitVsQuality: userValues.profitVsQuality,
+                privacyVsCommunity: userValues.privacyVsCommunity,
+                efficiencyVsSpace: userValues.efficiencyVsSpace,
+              } : undefined,
+              patterns: userValues?.selectedPatterns,
+              surroundingContext: (() => {
+                try {
+                  const ctx = buildSiteContextPrompt({
+                    address: result.address, siteArea: result.siteArea,
+                    polygon: vworldState?.parcel?.polygon, centroid: vworldState?.parcel?.centroid,
+                    nearbyBuildings: vworldState?.nearbyBuildings, siteContext: vworldState?.context,
+                    terrain, sunAnalysis, elevation: terrain?.maxElevation,
+                    floors: result.bestLayout.floors, buildingHeight: result.bestLayout.floors * 3.3,
+                    directions: vworldState?.directions, roadSummary: vworldState?.roadSummary,
+                    shadowBlockers: vworldState?.shadowBlockers, nearbyRenderPrompt: vworldState?.renderPrompt,
+                  })
+                  return ctx.fullPrompt || undefined
+                } catch { return undefined }
+              })(),
+              satelliteUrl: vworldState?.satelliteUrl,
+              cadastralMapUrl: vworldState?.cadastralMapUrl,
+              streetViewUrls: vworldState?.streetViewUrls,
+              sitePolygon: vworldState?.parcel?.polygon,
+              regulation: {
+                heightLimit: result.heightLimit, farRatio: result.farRatio,
+                zoneName: result.zoneName, northShadow: true, northShadowAngle: 45,
+                overlappingRegs: result.overlappingNames,
+              },
+              terrainInfo: terrain ? {
+                slopeDirection: terrain.slopeDirection,
+                elevationDiff: terrain.elevationDiff,
+                avgSlope: terrain.avgSlope,
+              } : undefined,
+            }),
+          })
+          const data = await res.json()
+          if (data.success && data.image) {
+            setRenderImage(data.image)
+            setRenderLoading(false)
+            console.log('[QuickAnalysis] AI 렌더링 성공 ✅')
+            return
+          }
+          console.warn(`[QuickAnalysis] AI 렌더링 attempt ${attempt + 1} 실패:`, data.error)
+        } catch (e) {
+          console.warn(`[QuickAnalysis] AI 렌더링 attempt ${attempt + 1} 에러:`, e)
         }
-      } catch (e) {
-        console.warn('AI render failed:', e)
-        // 자동 재시도 (최대 2회)
-        if (!cancelled && renderRetry < 2) {
-          setTimeout(() => setRenderRetry(prev => prev + 1), 3000)
-        }
-      } finally {
-        if (!cancelled) setRenderLoading(false)
+        if (attempt < 1) await new Promise(r => setTimeout(r, 3000))
       }
-    }
-    fetchRender()
-    return () => { cancelled = true }
-  }, [result, vworldState, renderRetry]) // eslint-disable-line react-hooks/exhaustive-deps
+      setRenderLoading(false)
+    }, 3000) // 3초 딜레이 — vworldState 로딩 대기
+
+    return () => clearTimeout(timer)
+  }, [result]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const analyze = async () => {
     if (!address.trim()) return
