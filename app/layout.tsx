@@ -107,7 +107,7 @@ export default function RootLayout({
         
           <SubscriptionProvider>
             {children}
-            <Toaster position="bottom-center" richColors closeButton offset={80} />
+            <Toaster position="bottom-center" richColors closeButton />
             <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}` }} />
           </SubscriptionProvider>
         

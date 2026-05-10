@@ -1107,3 +1107,13 @@
   .stat-grid-4 { grid-template-columns: repeat(2, 1fr); }
   .stat-grid-3 { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Sonner toast — 하단 네비 위에 표시 */
+[data-sonner-toaster][data-y-position="bottom"] {
+  bottom: 80px !important;
+}
+@media (min-width: 768px) {
+  [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: 32px !important;
+  }
+}
