@@ -6,6 +6,8 @@ import { X, RotateCcw, ZoomIn, ZoomOut } from "lucide-react"
 interface BuildingVolume3DProps {
   layoutName: string
   layoutType: 'tower' | 'courtyard' | 'lshape' | 'linear' | 'cluster'
+  originalType?: string
+  buildingCount?: number
   floors: number
   siteArea: number
   coverage: number
@@ -156,7 +158,7 @@ function makeWindowTex(floorCount: number, winCols: number): HTMLCanvasElement {
 }
 
 export function BuildingVolume3D({
-  layoutName, layoutType, floors, siteArea, coverage, floorHeight = 3.3, sitePolygon, onClose
+  layoutName, layoutType, originalType, buildingCount, floors, siteArea, coverage, floorHeight = 3.3, sitePolygon, onClose
 }: BuildingVolume3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
@@ -179,7 +181,40 @@ export function BuildingVolume3D({
       try { THREE = await import('three') } catch (e: any) { setError(e.message); setLoaded(true); return }
       if (!mounted || !canvasRef.current) return
 
-      const blocks = getLayoutBlocks(layoutType)
+      const blocks = (() => {
+        if (layoutType === 'cluster' && buildingCount) {
+          // 동적 다동 생성
+          const n = buildingCount
+          const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
+          const rows = Math.ceil(n / cols)
+          const ot = originalType || 'tower'
+          const result: Block[] = []
+          let cnt = 0
+          for (let r = 0; r < rows && cnt < n; r++) {
+            for (let c = 0; c < cols && cnt < n; c++) {
+              const bx = -0.35 + c * (0.7 / (cols - 1 || 1))
+              const bz = -0.3 + r * (0.55 / (rows - 1 || 1))
+              if (ot === 'lshape') {
+                // ㄱ자형: 수직 + 수평 블록
+                result.push({ x: bx - 0.06, z: bz, w: 0.12, d: 0.22, label: `${String.fromCharCode(65 + cnt)}동` })
+                result.push({ x: bx + 0.04, z: bz + 0.08, w: 0.14, d: 0.08, label: '' })
+              } else if (ot === 'linear') {
+                result.push({ x: bx, z: bz, w: 0.28, d: 0.10, label: `${String.fromCharCode(65 + cnt)}동` })
+              } else if (ot === 'courtyard') {
+                const t = 0.04
+                result.push({ x: bx - 0.08, z: bz, w: t, d: 0.18, label: '' })
+                result.push({ x: bx + 0.08, z: bz, w: t, d: 0.18, label: '' })
+                result.push({ x: bx, z: bz + 0.07, w: 0.20, d: t, label: `${String.fromCharCode(65 + cnt)}동` })
+              } else {
+                result.push({ x: bx, z: bz, w: 0.15, d: 0.14, label: `${String.fromCharCode(65 + cnt)}동` })
+              }
+              cnt++
+            }
+          }
+          return result
+        }
+        return getLayoutBlocks(layoutType)
+      })()
       const info: { label: string; floors: number }[] = []
       
       try { // ★ 전체 3D 렌더링을 하나의 try로 보호

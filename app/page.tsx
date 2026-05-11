@@ -424,6 +424,12 @@ function generateLayouts(
     if (layout.type !== 'cluster' && layout.type !== 'tower' &&
         siteArea > 1500 && (layout.units || 0) > 20 && layout.floors <= 5) {
       layout.type = 'cluster'
+      // ★ 동수 자동 계산 (타입별 차별화)
+      if (!layout.buildingCount) {
+        const perFloor: Record<string, number> = { linear: 12, lshape: 6, courtyard: 10, tower: 4, cluster: 4 }
+        const maxPerFloor = perFloor[layout._originalType] || 4
+        layout.buildingCount = Math.max(2, Math.ceil((layout.units || 20) / (maxPerFloor * layout.floors)))
+      }
     }
   })
 
@@ -1942,6 +1948,8 @@ export default function ArchiScanPage() {
         <BuildingVolume3D
           layoutName={selectedLayoutData.name}
           layoutType={selectedLayoutData.type as any}
+          originalType={selectedLayoutData._originalType}
+          buildingCount={selectedLayoutData.buildingCount}
           floors={selectedLayoutData.floors}
           siteArea={siteAreaNum}
           coverage={selectedLayoutData.coverage}
