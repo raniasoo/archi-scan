@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation, terrainInfo, referenceImage } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, buildingCount: userBuildingCount, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation, terrainInfo, referenceImage } = await req.json()
     const ti = terrainInfo as { slopeDirection?: string; elevationDiff?: number; avgSlope?: number } | undefined
 
     if (!prompt) {
@@ -324,7 +324,7 @@ export async function POST(req: NextRequest) {
       for (let ai = 0; ai < angles.length; ai++) {
         const a = angles[ai]
         const aPrompt = buildArchitecturePrompt({
-          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, regulation
+          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, userBuildingCount, regulation
         })
         
         const parts: any[] = []
@@ -430,7 +430,7 @@ The entrance must use the SAME materials and style visible in the street-level i
     }
 
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, regulation, polygonShapeDesc
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, regulation, polygonShapeDesc
     })
 
     // Gemini API 호출 — 모델 fallback 체인
@@ -572,6 +572,7 @@ function buildArchitecturePrompt(params: {
   cameraAngle?: string
   sceneMode?: string
   material?: { type?: string; color?: string; accent?: string }
+  userBuildingCount?: number  // 사용자가 수동 입력한 동수
   polygonShapeDesc?: string
   // 법규 검토 데이터
   regulation?: {
@@ -586,7 +587,7 @@ function buildArchitecturePrompt(params: {
     zoneName?: string          // 용도지역 이름
   }
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, regulation, polygonShapeDesc } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, regulation, polygonShapeDesc } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
@@ -637,6 +638,10 @@ function buildArchitecturePrompt(params: {
     const maxPerFloor = unitsPerFloorPerBldg[bt2] || 4
     const maxPerBldg = maxPerFloor * f
     buildingCount = Math.max(2, Math.ceil(u / maxPerBldg))
+    // 사용자가 수동 입력한 동수가 있으면 우선 적용
+    if (userBuildingCount && userBuildingCount >= 1) {
+      buildingCount = userBuildingCount
+    }
     
     const eachFootprint = Math.round(footprint / buildingCount)
     // 판상형은 세로보다 가로가 3배 이상 긴 비율

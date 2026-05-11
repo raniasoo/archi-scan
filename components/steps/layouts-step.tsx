@@ -56,6 +56,7 @@ export interface LayoutsStepProps {
   selectedLayoutData: LayoutOption | undefined
   setSelectedLayout: Dispatch<SetStateAction<number | null>>
   onCardRoiChanged?: (roi: number) => void
+  onUpdateLayout?: (layoutId: number, updates: { floors?: number; units?: number; buildingCount?: number }) => void
   setCurrentStep: Dispatch<SetStateAction<any>>
   setLayoutViewMode: Dispatch<SetStateAction<"card" | "compare">>
   setShowComparisonModal: Dispatch<SetStateAction<boolean>>
@@ -91,7 +92,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
     setSelectedLayout, setCurrentStep, setLayoutViewMode, setShowComparisonModal, setOptimizationResult,
     layoutViewMode, isGenerating, address, siteArea, siteAreaNum,
     regulation, strategy, userValues, gfa,
-    landPriceData, marketPrice, regionalPricing, onCardRoiChanged,
+    landPriceData, marketPrice, regionalPricing, onCardRoiChanged, onUpdateLayout,
     feasibilityResult, optimizationResult, molitSupplementData, loadLayoutOptimizer,
     handleSelectLayout,
   } = props
@@ -286,6 +287,88 @@ export function LayoutsStep(props: LayoutsStepProps) {
           </p>
         </div>
       )}
+
+      {/* ━━━ 배치 수동 조정 ━━━ */}
+      {selectedLayout && selectedLayoutData && onUpdateLayout && (() => {
+        const layout = selectedLayoutData
+        const typeName: Record<string, string> = { tower: '타워형', courtyard: '중정형', lshape: 'ㄱ자형', linear: '판상형', cluster: '클러스터' }
+        const bt = layout._originalType || layout.type
+        const defaultBldgCount = (() => {
+          if (layout.buildingCount) return layout.buildingCount
+          const f = layout.floors || 3
+          const u = layout.units || 10
+          const sa = safeNumber(siteArea, 660)
+          if (f <= 5 && u > 20 && sa > 1500) {
+            const perFloor: Record<string, number> = { linear: 12, lshape: 6, courtyard: 10, tower: 4, cluster: 4 }
+            return Math.max(1, Math.ceil(u / ((perFloor[bt] || 4) * f)))
+          }
+          return 1
+        })()
+        return (
+          <div className="rounded-xl border border-border bg-card/50 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-foreground">🔧 배치 조정</span>
+              <span className="text-[10px] text-muted-foreground">{typeName[bt] || bt}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {/* 동수 */}
+              <div className="text-center">
+                <label className="text-[9px] text-muted-foreground block mb-1">동수</label>
+                <div className="flex items-center justify-center gap-1">
+                  <button
+                    className="w-6 h-6 rounded bg-secondary text-xs font-bold hover:bg-secondary/80"
+                    onClick={() => {
+                      const cur = layout.buildingCount || defaultBldgCount
+                      if (cur > 1) onUpdateLayout(layout.id, { buildingCount: cur - 1 })
+                    }}
+                  >−</button>
+                  <span className="text-sm font-bold w-6 text-center">{layout.buildingCount || defaultBldgCount}</span>
+                  <button
+                    className="w-6 h-6 rounded bg-secondary text-xs font-bold hover:bg-secondary/80"
+                    onClick={() => {
+                      const cur = layout.buildingCount || defaultBldgCount
+                      onUpdateLayout(layout.id, { buildingCount: cur + 1 })
+                    }}
+                  >+</button>
+                </div>
+              </div>
+              {/* 세대수 */}
+              <div className="text-center">
+                <label className="text-[9px] text-muted-foreground block mb-1">세대수</label>
+                <div className="flex items-center justify-center gap-1">
+                  <button
+                    className="w-6 h-6 rounded bg-secondary text-xs font-bold hover:bg-secondary/80"
+                    onClick={() => { if (layout.units > 4) onUpdateLayout(layout.id, { units: layout.units - 2 }) }}
+                  >−</button>
+                  <span className="text-sm font-bold w-8 text-center">{layout.units}</span>
+                  <button
+                    className="w-6 h-6 rounded bg-secondary text-xs font-bold hover:bg-secondary/80"
+                    onClick={() => onUpdateLayout(layout.id, { units: layout.units + 2 })}
+                  >+</button>
+                </div>
+              </div>
+              {/* 층수 */}
+              <div className="text-center">
+                <label className="text-[9px] text-muted-foreground block mb-1">층수</label>
+                <div className="flex items-center justify-center gap-1">
+                  <button
+                    className="w-6 h-6 rounded bg-secondary text-xs font-bold hover:bg-secondary/80"
+                    onClick={() => { if (layout.floors > 2) onUpdateLayout(layout.id, { floors: layout.floors - 1 }) }}
+                  >−</button>
+                  <span className="text-sm font-bold w-6 text-center">{layout.floors}</span>
+                  <button
+                    className="w-6 h-6 rounded bg-secondary text-xs font-bold hover:bg-secondary/80"
+                    onClick={() => onUpdateLayout(layout.id, { floors: layout.floors + 1 })}
+                  >+</button>
+                </div>
+              </div>
+            </div>
+            {layout._userEdited && (
+              <p className="text-[9px] text-amber-400 mt-2 text-center">⚡ 수동 조정됨 — AI 렌더링에 반영됩니다</p>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ━━━ 3. 핵심 점수 대시보드 (항상 보임) ━━━ */}
       {selectedLayout && selectedLayoutData && (() => {

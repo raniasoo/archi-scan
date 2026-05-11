@@ -11,6 +11,7 @@ interface ConceptInput {
   roi: number; totalProjectCost: number; strategy: string
   slope?: { grade: string; average: number; direction: string }
   buildingType?: string
+  buildingCount?: number
   isMultiBuilding?: boolean
   values?: { profitVsQuality?: number; privacyVsCommunity?: number; efficiencyVsSpace?: number }
   patterns?: string[]
@@ -177,7 +178,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
         style, address:input.address, layoutName:input.layoutName,
         floors:input.floors, units:input.units, siteArea:input.siteArea,
-        buildingType:input.buildingType, coverage:input.buildingCoverageRatio,
+        buildingType:input.buildingType, buildingCount:input.buildingCount, coverage:input.buildingCoverageRatio,
         strategy:input.strategy, values:input.values, patterns:input.patterns,
         surroundingContext:input.surroundingContext,
         cameraAngle: angle, sceneMode: scene,
@@ -216,7 +217,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
         style, address:input.address, layoutName:input.layoutName,
         floors:input.floors, units:input.units, siteArea:input.siteArea,
-        buildingType:input.buildingType, coverage:input.buildingCoverageRatio,
+        buildingType:input.buildingType, buildingCount:input.buildingCount, coverage:input.buildingCoverageRatio,
         strategy:input.strategy, values:input.values, patterns:input.patterns,
         surroundingContext:input.surroundingContext, sceneMode: scene,
         satelliteUrl: input.satelliteUrl,

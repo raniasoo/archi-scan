@@ -124,12 +124,14 @@ export interface LayoutOption {
   parking: number
   gfa: number
   openSpace: number
+  buildingCount?: number // 동수 (사용자 수동 입력 가능)
   features: string[]
   scores: LayoutScores
   recommendation: LayoutRecommendation
   reasoning: AIReasoning
   isLegallyCompliant?: boolean // 법규 준수 여부
   _originalType?: "tower" | "courtyard" | "lshape" | "linear" | "cluster" // 클러스터 변환 전 원래 타입
+  _userEdited?: boolean // 사용자가 수동 조정했는지 여부
 }
 
 // safeNumber is imported from @/lib/project-analysis-state
@@ -1537,6 +1539,33 @@ export default function ArchiScanPage() {
     setSelectedFloor(1)
   }
 
+  // 배치안 수동 조정 핸들러
+  const handleUpdateLayout = (layoutId: number, updates: { floors?: number; units?: number; buildingCount?: number }) => {
+    setLayouts(prev => prev.map(layout => {
+      if (layout.id !== layoutId) return layout
+      
+      const newFloors = updates.floors ?? layout.floors
+      const newUnits = updates.units ?? layout.units
+      const newBuildingCount = updates.buildingCount ?? layout.buildingCount
+      
+      // 건폐율은 유지, GFA와 주차 재계산
+      const siteAreaNum = parseFloat(siteArea) || 660
+      const buildingArea = (siteAreaNum * layout.coverage) / 100
+      const newGfa = buildingArea * newFloors
+      const newParking = Math.ceil(newUnits * (regulation?.parkingRatio || 1))
+      
+      return {
+        ...layout,
+        floors: newFloors,
+        units: newUnits,
+        buildingCount: newBuildingCount,
+        gfa: newGfa,
+        parking: newParking,
+        _userEdited: true,
+      }
+    }))
+  }
+
   // 추천 배치안 찾기
   const recommendedLayout = layouts.find(l => l.recommendation.isRecommended) || layouts[0]
 
@@ -2383,6 +2412,7 @@ export default function ArchiScanPage() {
             marketPrice={marketPrice}
             regionalPricing={regionalPricing}
             onCardRoiChanged={setCardRoi}
+            onUpdateLayout={handleUpdateLayout}
             feasibilityResult={feasibilityResult}
             optimizationResult={optimizationResult}
             molitSupplementData={molitSupplementData}
@@ -2453,6 +2483,7 @@ export default function ArchiScanPage() {
                 totalProjectCost: feasibilityResult?.totalCost || 0,
                 strategy,
                 buildingType: selectedLayoutData._originalType || selectedLayoutData.type,
+                buildingCount: selectedLayoutData.buildingCount,
                 isMultiBuilding: selectedLayoutData.type === 'cluster' && (selectedLayoutData._originalType || selectedLayoutData.type) !== 'cluster',
                 values: userValues ? {
                   profitVsQuality: userValues.profitVsQuality,
