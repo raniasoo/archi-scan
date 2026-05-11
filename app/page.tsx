@@ -577,6 +577,7 @@ export default function ArchiScanPage() {
   // Centralized computed results - single source of truth
   const [legalSummary, setLegalSummary] = useState<LegalSummary | null>(null)
   const [feasibilityResult, setFeasibilityResult] = useState<FeasibilityResult | null>(null)
+  const [cardRoi, setCardRoi] = useState<number | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [siteVisuals, setSiteVisuals] = useState<SiteVisualsConfig>(EMPTY_SITE_VISUALS)
@@ -1465,8 +1466,8 @@ export default function ArchiScanPage() {
 
   // 요약 스트립용 ROI — useEffect 파라미터와 100% 동일
   const siteAreaNum = safeNumber(siteArea, 660)
-  // 스트립 ROI = feasibilityResult.roi (Score Dashboard와 동일 소스, 카드와 일치)
-  const stripRoi = feasibilityResult?.roi ?? null
+  // 스트립 ROI = 카드가 직접 계산한 ROI (100% 일치 보장)
+  const stripRoi = cardRoi
   
   // Debug: Log selected layout data for troubleshooting
   if (selectedLayoutData && process.env.NODE_ENV === 'development') {
@@ -2304,6 +2305,7 @@ export default function ArchiScanPage() {
             landPriceData={landPriceData}
             marketPrice={marketPrice}
             regionalPricing={regionalPricing}
+            onCardRoiChanged={setCardRoi}
             feasibilityResult={feasibilityResult}
             optimizationResult={optimizationResult}
             molitSupplementData={molitSupplementData}

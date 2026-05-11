@@ -55,6 +55,7 @@ export interface LayoutsStepProps {
   selectedLayout: number | null
   selectedLayoutData: LayoutOption | undefined
   setSelectedLayout: Dispatch<SetStateAction<number | null>>
+  onCardRoiChanged?: (roi: number) => void
   setCurrentStep: Dispatch<SetStateAction<any>>
   setLayoutViewMode: Dispatch<SetStateAction<"card" | "compare">>
   setShowComparisonModal: Dispatch<SetStateAction<boolean>>
@@ -90,7 +91,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
     setSelectedLayout, setCurrentStep, setLayoutViewMode, setShowComparisonModal, setOptimizationResult,
     layoutViewMode, isGenerating, address, siteArea, siteAreaNum,
     regulation, strategy, userValues, gfa,
-    landPriceData, marketPrice, regionalPricing,
+    landPriceData, marketPrice, regionalPricing, onCardRoiChanged,
     feasibilityResult, optimizationResult, molitSupplementData, loadLayoutOptimizer,
     handleSelectLayout,
   } = props
@@ -113,6 +114,22 @@ export function LayoutsStep(props: LayoutsStepProps) {
     ? marketPrice.suggestedSalePrice
     : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000
   const constructionCost = regionalPricing?.constructionCostPerM2 || 2500000
+
+  // 선택된 배치안의 ROI를 부모에게 전달 (스트립 ROI와 카드 ROI 100% 일치 보장)
+  useEffect(() => {
+    if (!selectedLayoutData || !onCardRoiChanged) return
+    const f = calculateFeasibility({
+      siteArea: siteAreaNum || 1,
+      grossFloorArea: selectedLayoutData.gfa || 1,
+      unitCount: selectedLayoutData.units || 1,
+      floorCount: selectedLayoutData.floors || 1,
+      parkingCount: selectedLayoutData.parking || 0,
+      landPricePerM2: landPriceData.pricePerM2 || 5000000,
+      salesPricePerM2: salesPrice,
+      constructionCostPerM2: constructionCost,
+    })
+    onCardRoiChanged(f?.roi ?? 0)
+  }, [selectedLayout, salesPrice, constructionCost, siteAreaNum, landPriceData.pricePerM2]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ROI 전체 마이너스 여부
   const allNegativeROI = layouts.length > 0 && layouts.every(l => {
