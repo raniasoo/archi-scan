@@ -7,6 +7,7 @@ interface ElevationViewProps {
   buildingCoverage: number
   floors: number
   units: number
+  buildingCount?: number
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   layoutName?: string
   roadWidth: number
@@ -14,7 +15,7 @@ interface ElevationViewProps {
 }
 
 export function ElevationView({
-  siteArea, buildingCoverage, floors, units, type, layoutName,
+  siteArea, buildingCoverage, floors, units, buildingCount, type, layoutName,
   roadWidth, heightLimit,
 }: ElevationViewProps) {
   const [face, setFace] = useState<"front" | "side">("front")
@@ -40,9 +41,9 @@ export function ElevationView({
 
   // 클러스터: 개별 동 크기로 축소 (AI 렌더링 일치)
   if (type === 'cluster') {
-    const buildingCount = Math.max(3, Math.round(Math.sqrt(units / 4)))
-    bldRealW = bldRealW / Math.sqrt(buildingCount) * 1.1
-    bldRealD = bldRealD / Math.sqrt(buildingCount) * 1.1
+    const bc = buildingCount || Math.max(3, Math.round(Math.sqrt(units / 4)))
+    bldRealW = bldRealW / Math.sqrt(bc) * 1.1
+    bldRealD = bldRealD / Math.sqrt(bc) * 1.1
   }
 
   const faceW = face === "front" ? bldRealW : bldRealD

@@ -7,6 +7,7 @@ interface IsometricViewProps {
   buildingCoverage: number
   floors: number
   units: number
+  buildingCount?: number
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   layoutName?: string
   zoneType?: string
@@ -86,7 +87,7 @@ function IsoCar({ x, y, color = "#475569" }: { x: number; y: number; color?: str
   )
 }
 
-export function IsometricView({ siteArea, buildingCoverage, floors, units, type, layoutName, zoneType }: IsometricViewProps) {
+export function IsometricView({ siteArea, buildingCoverage, floors, units, buildingCount, type, layoutName, zoneType }: IsometricViewProps) {
   const W = 520, H = 440
   const cx = W / 2, cy = H * 0.62
 
@@ -129,15 +130,17 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, type,
       case "linear":
         return [{ x: -bW / 2, y: -bD * 0.2, w: bW, d: bD * 0.4, h: buildH, label: "판상동" }]
       case "cluster": {
-        // AI 렌더링과 일치: 4~6동 분산 배치
-        const cols = 3, rows = 2
+        const n = buildingCount || Math.max(2, Math.min(6, Math.ceil(units / (floors * 4))))
+        const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
+        const rows = Math.ceil(n / cols)
         const gapX = bW * 0.06, gapY = bD * 0.06
         const blockW = (bW - gapX * (cols - 1)) / cols
         const blockD = (bD - gapY * (rows - 1)) / rows
         const blocks: { x: number; y: number; w: number; d: number; h: number; label: string }[] = []
         const labels = ["A동", "B동", "C동", "D동", "E동", "F동"]
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
+        let count = 0
+        for (let r = 0; r < rows && count < n; r++) {
+          for (let c = 0; c < cols && count < n; c++) {
             const offsetX = (r % 2 === 1) ? blockW * 0.15 : 0
             blocks.push({
               x: -bW / 2 + c * (blockW + gapX) + offsetX,
@@ -145,8 +148,9 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, type,
               w: blockW * 0.9,
               d: blockD * 0.85,
               h: buildH * (0.85 + Math.random() * 0.15),
-              label: labels[r * cols + c] || `${r * cols + c + 1}동`,
+              label: labels[count] || `${count + 1}동`,
             })
+            count++
           }
         }
         return blocks

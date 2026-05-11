@@ -7,6 +7,7 @@ interface PerspectiveViewProps {
   buildingCoverage: number
   floors: number
   units: number
+  buildingCount?: number
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   layoutName?: string
   zoneType?: string
@@ -89,7 +90,7 @@ function PerspCar({ x, depth, color = "#475569" }: { x: number; depth: number; c
   )
 }
 
-export function PerspectiveView({ siteArea, buildingCoverage, floors, units, type, layoutName, zoneType }: PerspectiveViewProps) {
+export function PerspectiveView({ siteArea, buildingCoverage, floors, units, buildingCount, type, layoutName, zoneType }: PerspectiveViewProps) {
   const W = 400, H = 400
   const floorH = Math.max(25, Math.min(45, 200 / Math.max(floors, 2))) // 층고 (px 스케일로 변환)
   const totalH = floors * floorH
@@ -131,16 +132,28 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, typ
     case 'linear':
       buildingBlocks = [{ x: bx, depth: bDepth, w: bw, d: bd * 0.5, floors }]
       break
-    case 'cluster':
+    case 'cluster': {
+      const n = buildingCount || Math.max(2, Math.min(6, Math.ceil(units / (floors * 4))))
       const cFloors = Math.max(2, floors - 1)
-      buildingBlocks = [
-        { x: bx, depth: bDepth, w: bw * 0.28, d: bd * 0.7, floors },
-        { x: bx + bw * 0.32, depth: bDepth + 8, w: bw * 0.28, d: bd * 0.7, floors: cFloors },
-        { x: bx + bw * 0.64, depth: bDepth + 3, w: bw * 0.28, d: bd * 0.7, floors },
-        { x: bx + bw * 0.12, depth: bDepth - bd * 0.6, w: bw * 0.28, d: bd * 0.65, floors: cFloors },
-        { x: bx + bw * 0.48, depth: bDepth - bd * 0.55, w: bw * 0.28, d: bd * 0.65, floors },
-      ]
+      const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
+      const rows = Math.ceil(n / cols)
+      const bwEach = bw * 0.85 / cols
+      buildingBlocks = []
+      let cnt = 0
+      for (let r = 0; r < rows && cnt < n; r++) {
+        for (let c = 0; c < cols && cnt < n; c++) {
+          buildingBlocks.push({
+            x: bx + c * (bwEach + bw * 0.04),
+            depth: bDepth - r * bd * 0.55,
+            w: bwEach * 0.9,
+            d: bd * (r === 0 ? 0.7 : 0.65),
+            floors: (cnt % 2 === 1) ? cFloors : floors,
+          })
+          cnt++
+        }
+      }
       break
+    }
     default:
       buildingBlocks = [{ x: bx, depth: bDepth, w: bw * 0.7, d: bd, floors }]
   }

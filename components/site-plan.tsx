@@ -8,6 +8,7 @@ interface SitePlanProps {
   floors: number
   units: number
   parking: number
+  buildingCount?: number
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   setbacks: { front: number; side: number; rear: number }
   landscapingRatio: number  // %
@@ -18,7 +19,7 @@ interface SitePlanProps {
 }
 
 export function SitePlan({
-  siteArea, buildingCoverage, floors, units, parking, type,
+  siteArea, buildingCoverage, floors, units, parking, buildingCount, type,
   setbacks, landscapingRatio, roadWidth, hasDistrictPlan,
   layoutName = "", sitePolygon,
 }: SitePlanProps) {
@@ -126,14 +127,17 @@ export function SitePlan({
           label: "판상형"
         }
       case "cluster": {
-        // AI 렌더링과 일치: 4~6동 분산 배치
-        const cols = 3, rows = 2
+        // buildingCount 기반 다동 배치
+        const n = buildingCount || Math.max(2, Math.min(6, Math.ceil(units / (floors * 4))))
+        const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
+        const rows = Math.ceil(n / cols)
         const gapX = bW * 0.06, gapY = bH * 0.06
         const blockW = (bW - gapX * (cols - 1)) / cols
         const blockH = (bH - gapY * (rows - 1)) / rows
         const shapes: { x: number; y: number; w: number; h: number }[] = []
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
+        let count = 0
+        for (let r = 0; r < rows && count < n; r++) {
+          for (let c = 0; c < cols && count < n; c++) {
             const offsetX = (r % 2 === 1) ? blockW * 0.15 : 0 // 엇갈림 배치
             shapes.push({
               x: bX + c * (blockW + gapX) + offsetX,
@@ -141,6 +145,7 @@ export function SitePlan({
               w: blockW * 0.92,
               h: blockH * 0.88,
             })
+            count++
           }
         }
         return { shapes, label: "클러스터" }

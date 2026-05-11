@@ -9,6 +9,7 @@ interface SectionViewProps {
   units: number
   parking: number
   heightLimit: number
+  buildingCount?: number
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   layoutName?: string
   roadWidth: number
@@ -16,7 +17,7 @@ interface SectionViewProps {
 }
 
 export function SectionView({
-  siteArea, buildingCoverage, floors, units, parking, heightLimit,
+  siteArea, buildingCoverage, floors, units, buildingCount, parking, heightLimit,
   type, layoutName, roadWidth, hasDistrictPlan,
 }: SectionViewProps) {
   const W = 500, H = 380
@@ -48,8 +49,8 @@ export function SectionView({
   let bldW = siteSvgW * bldRatio
   // 클러스터: 개별 동 크기 (AI 렌더링 일치)
   if (type === 'cluster') {
-    const buildingCount = Math.max(3, Math.round(Math.sqrt(units / 4)))
-    bldW = bldW / Math.sqrt(buildingCount) * 1.1
+    const bc = buildingCount || Math.max(3, Math.round(Math.sqrt(units / 4)))
+    bldW = bldW / Math.sqrt(bc) * 1.1
   }
   const bldX = siteX + (siteSvgW - bldW) / 2
 
