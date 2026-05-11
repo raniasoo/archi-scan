@@ -454,11 +454,8 @@ export function LayoutsStep(props: LayoutsStepProps) {
           selectedLayout={selectedLayout}
           recommendedLayoutId={recommendedLayout?.id}
           landPricePerM2={landPriceData.pricePerM2 || 5000000}
-          salesPricePerM2={
-            (marketPrice.loaded && marketPrice.suggestedSalePrice > 0) ? marketPrice.suggestedSalePrice
-            : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : undefined
-          }
-          constructionCostPerM2={regionalPricing?.constructionCostPerM2 || undefined}
+          salesPricePerM2={salesPrice}
+          constructionCostPerM2={constructionCost}
           onSelect={(id) => handleSelectLayout(id)}
         />
       )}
