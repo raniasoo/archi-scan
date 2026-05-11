@@ -589,6 +589,7 @@ export default function ArchiScanPage() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [siteVisuals, setSiteVisuals] = useState<SiteVisualsConfig>(EMPTY_SITE_VISUALS)
   const [aiRenderImage, setAiRenderImage] = useState<string | null>(null)
+  const [aiMultiImages, setAiMultiImages] = useState<{angle:string; image:string|null}[] | null>(null)
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
   const [optimizationResult, setOptimizationResult] = useState<OptimizationReport | null>(null)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -2469,6 +2470,8 @@ export default function ArchiScanPage() {
               }}
               onRenderComplete={setAiRenderImage}
               previousRenderImage={aiRenderImage}
+              savedMultiImages={aiMultiImages}
+              onMultiImagesComplete={setAiMultiImages}
             />
 
             {/* 하단 CTA — 평면도 → 사업성 */}

@@ -140,7 +140,7 @@ function getOptimalSettings(input: ConceptInput): { style: string; angle: string
   return { style, angle, scene, material, reason }
 }
 
-export function AIHub({ input, onRenderComplete, previousRenderImage }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void; previousRenderImage?: string | null }) {
+export function AIHub({ input, onRenderComplete, previousRenderImage, savedMultiImages, onMultiImagesComplete }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void; previousRenderImage?: string | null; savedMultiImages?: {angle:string; image:string|null}[] | null; onMultiImagesComplete?: (images: {angle:string; image:string|null}[]) => void }) {
   let optimal = { style: 'modern-luxury', angle: 'eye-level', scene: 'afternoon', material: null as string | null, reason: '' }
   try { optimal = getOptimalSettings(input) } catch (e) { console.warn('[AIHub] getOptimalSettings error:', e) }
   const [isOpen, setIsOpen] = useState(false)
@@ -150,11 +150,11 @@ export function AIHub({ input, onRenderComplete, previousRenderImage }: { input:
   const [scene, setScene] = useState(optimal.scene)
   const [materialId, setMaterialId] = useState<string | null>(optimal.material)
   const [showStyleOptions, setShowStyleOptions] = useState(false)
-  const [multiImages, setMultiImages] = useState<{angle:string; image:string|null}[] | null>(null)
+  const [multiImages, setMultiImages] = useState<{angle:string; image:string|null}[] | null>(savedMultiImages || null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
   const [copied, setCopied] = useState<string|null>(null)
-  const [renderImg, setRenderImg] = useState<string|null>(null)
+  const [renderImg, setRenderImg] = useState<string|null>(previousRenderImage || null)
   const [useReference, setUseReference] = useState(!!previousRenderImage)
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<string|null>(null)
@@ -230,6 +230,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage }: { input:
       const d = await r.json()
       if (d.success && d.images) {
         setMultiImages(d.images)
+        onMultiImagesComplete?.(d.images)
         const first = d.images.find((i: any) => i.image)
         if (first) onRenderComplete?.(first.image)
       } else setError(d.error || '멀티앵글 생성 실패')
