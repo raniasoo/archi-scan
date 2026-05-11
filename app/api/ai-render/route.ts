@@ -241,6 +241,67 @@ export async function POST(req: NextRequest) {
         const svgBase64 = Buffer.from(svg).toString('base64')
         refImages.push({ base64: svgBase64, mimeType: 'image/svg+xml', label: 'cadastral-polygon' })
         
+        // ━━━ 높이 참조 SVG 생성 — 사람/나무/건물 비교 ━━━
+        if (floors && floors <= 7) {
+          const hF = floors
+          const bldgH = hF * 3.3 // 건물 높이(m)
+          const personH = 1.7    // 사람 높이(m)
+          const treeH = Math.max(bldgH * 0.8, 6) // 나무 높이
+          const maxH = Math.max(bldgH, treeH, personH) + 2
+          const svgW2 = 500, svgH2 = 350
+          const ground = svgH2 - 60
+          const px = (m: number) => ground - (m / maxH) * (ground - 40) // m→y
+
+          // 건물 그리기 (층별 구분선)
+          const bTop = px(bldgH), bBot = ground
+          const bLeft = 120, bRight = 320
+          let bldgLines = ''
+          for (let i = 1; i <= hF; i++) {
+            const floorY = px(i * 3.3)
+            const floorBotY = px((i - 1) * 3.3)
+            bldgLines += `<rect x="${bLeft}" y="${floorY}" width="${bRight - bLeft}" height="${floorBotY - floorY - 1}" fill="${i === 1 ? '#8B6914' : '#4A90D9'}" stroke="#fff" stroke-width="1" rx="1"/>`
+            bldgLines += `<text x="${bRight + 8}" y="${(floorY + floorBotY) / 2 + 4}" fill="#fff" font-size="12" font-family="sans-serif">${i}F</text>`
+            // 창문
+            for (let w = 0; w < 4; w++) {
+              const wx = bLeft + 15 + w * 45
+              bldgLines += `<rect x="${wx}" y="${floorY + 6}" width="25" height="${(floorBotY - floorY) * 0.5}" fill="rgba(255,255,200,0.3)" stroke="rgba(255,255,255,0.5)" stroke-width="0.5" rx="1"/>`
+            }
+          }
+
+          // 사람 (왼쪽)
+          const pBot = ground, pTop = px(personH)
+          const personSvg = `<line x1="60" y1="${pTop + 10}" x2="60" y2="${pBot}" stroke="#FFD700" stroke-width="3"/>
+  <circle cx="60" cy="${pTop + 4}" r="6" fill="#FFD700"/>
+  <text x="60" y="${pBot + 15}" text-anchor="middle" fill="#FFD700" font-size="10" font-family="sans-serif">1.7m</text>`
+
+          // 나무 (오른쪽)
+          const tTop = px(treeH)
+          const treeSvg = `<line x1="400" y1="${px(treeH * 0.3)}" x2="400" y2="${ground}" stroke="#8B4513" stroke-width="4"/>
+  <circle cx="400" cy="${tTop + (px(treeH * 0.3) - tTop) / 2}" r="${(px(treeH * 0.3) - tTop) / 2 + 5}" fill="#228B22" opacity="0.8"/>
+  <text x="400" y="${ground + 15}" text-anchor="middle" fill="#228B22" font-size="10" font-family="sans-serif">${treeH.toFixed(0)}m</text>`
+
+          // 높이 치수선
+          const dimSvg = `<line x1="90" y1="${bTop}" x2="90" y2="${bBot}" stroke="#FF4444" stroke-width="2"/>
+  <line x1="85" y1="${bTop}" x2="95" y2="${bTop}" stroke="#FF4444" stroke-width="2"/>
+  <line x1="85" y1="${bBot}" x2="95" y2="${bBot}" stroke="#FF4444" stroke-width="2"/>
+  <text x="90" y="${(bTop + bBot) / 2 + 4}" text-anchor="middle" fill="#FF4444" font-size="14" font-weight="bold" font-family="sans-serif">${bldgH.toFixed(1)}m</text>`
+
+          const heightSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW2}" height="${svgH2}" viewBox="0 0 ${svgW2} ${svgH2}">
+  <rect width="${svgW2}" height="${svgH2}" fill="#1a1a2e"/>
+  <text x="${svgW2/2}" y="25" text-anchor="middle" fill="#FF4444" font-size="16" font-weight="bold" font-family="sans-serif">★ EXACTLY ${hF} FLOORS = ${bldgH.toFixed(1)}m ★</text>
+  <text x="${svgW2/2}" y="42" text-anchor="middle" fill="#aaa" font-size="11" font-family="sans-serif">The building MUST be this height. Compare with person (1.7m) and tree (${treeH.toFixed(0)}m).</text>
+  <line x1="20" y1="${ground}" x2="${svgW2-20}" y2="${ground}" stroke="#555" stroke-width="1"/>
+  ${bldgLines}
+  ${personSvg}
+  ${treeSvg}
+  ${dimSvg}
+  <text x="${(bLeft+bRight)/2}" y="${ground + 15}" text-anchor="middle" fill="#4A90D9" font-size="11" font-family="sans-serif">${hF}-STORY BUILDING</text>
+  <text x="${svgW2/2}" y="${svgH2-8}" text-anchor="middle" fill="#FF4444" font-size="12" font-weight="bold" font-family="sans-serif">DO NOT generate more than ${hF} floors. The building is ${hF <= 3 ? 'SHORTER than nearby trees' : 'about the same height as trees'}.</text>
+</svg>`
+          const heightSvgBase64 = Buffer.from(heightSvg).toString('base64')
+          refImages.push({ base64: heightSvgBase64, mimeType: 'image/svg+xml', label: 'height-reference' })
+        }
+        
         // ━━━ 대지 형상 텍스트 분석 (프롬프트용) ━━━
         const widthM = Math.round(w) // 미터 단위 폭
         const heightM = Math.round(h) // 미터 단위 깊이
@@ -482,7 +543,7 @@ The entrance must use the SAME materials and style visible in the street-level i
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
           parts.push({ text: `REFERENCE IMAGES (${refImages.length}):
-${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows the exact lot boundary (blue), setback line (orange dashed), AND the BUILDING FOOTPRINTS (orange filled shapes). The ORANGE SHAPES show EXACTLY where and what shape the buildings must be. The rendered buildings MUST match these orange footprint shapes — same position, same shape (L-shaped, linear, U-shaped, etc.), same number of buildings. This is the MOST IMPORTANT reference image.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label}`).join('\n')}
+${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows the exact lot boundary (blue), setback line (orange dashed), AND the BUILDING FOOTPRINTS (orange filled shapes). The ORANGE SHAPES show EXACTLY where and what shape the buildings must be. The rendered buildings MUST match these orange footprint shapes — same position, same shape (L-shaped, linear, U-shaped, etc.), same number of buildings. This is the MOST IMPORTANT reference image.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label === 'height-reference' ? `★★★ HEIGHT REFERENCE DIAGRAM — This diagram shows the EXACT correct height of the building. The building has EXACTLY ${floors || 3} floors and is ${((floors || 3) * 3.3).toFixed(1)}m tall. Compare with the person (1.7m) and tree. The building is ${(floors || 3) <= 3 ? 'SHORTER than nearby trees — it is a LOW building' : 'about the same height as trees'}. DO NOT generate a taller building. COUNT THE FLOORS in this diagram and match them EXACTLY.` : r.label}`).join('\n')}
 The rendering MUST reflect what is shown in these reference images. Do NOT ignore them.` })
         }
         
@@ -884,11 +945,13 @@ ${buildingType === 'linear' ? `- The building in view is a LONG HORIZONTAL SLAB 
 ${buildingType === 'lshape' ? `- The building in view is L-SHAPED (ㄱ자형). You can see one wing going forward and another wing going to the side.` : ''}
 - You are standing on the street or sidewalk, looking HORIZONTALLY at the nearest building's facade.
 - The foreground building has EXACTLY ${f} floors. You can count each floor from bottom to top.
+- ${f <= 3 ? `★ HEIGHT CHECK: The building is ONLY ${f} stories (${Math.round(f * 3.3)}m). It is SHORTER than the trees next to it. A person standing on the roof is close to the treetops. This is a LOW building — like a large villa or townhouse, NOT an apartment tower.` : `★ HEIGHT CHECK: The building has exactly ${f} visible floor levels (${Math.round(f * 3.3)}m tall).`}
 - Show the building entrance, windows, balconies, and materials at close range.
 - The SKY is visible above the building roofline. You CANNOT see the roof surface.
 - This is a STREET PHOTOGRAPH taken by a person walking, NOT an architectural model photo or aerial survey.`
     : `- This is a MULTI-BUILDING COMPLEX with ${buildingCount} separate ${f}-story buildings. Show MULTIPLE distinct buildings, NOT one large structure.
 - Each building MUST have EXACTLY ${f} floors. They should look like a cohesive village/community.
+- ${f <= 3 ? `★ HEIGHT: From above, the buildings are LOW — their roofs are at the SAME HEIGHT or LOWER than the surrounding trees. The trees partially HIDE the buildings. This is key to recognizing ${f}-story buildings from a drone view.` : `★ HEIGHT: Each building is ${f} floors (${Math.round(f * 3.3)}m). They are about the same height as the trees around them.`}
 - Show spaces BETWEEN buildings: gardens, walkways, small courtyards, parking areas.
 ${buildingType === 'linear' ? `- ★★★ ARRANGEMENT: All buildings are LONG HORIZONTAL SLABS arranged PARALLEL to each other, running EAST-WEST. From above it looks like ${buildingCount} horizontal bars. This is a Korean 판상형 아파트 complex. DO NOT arrange them in a cluster or random pattern.` : ''}
 ${buildingType === 'lshape' ? `- Each building is clearly L-SHAPED (ㄱ자) from above. Two wings meeting at 90 degrees.` : ''}
@@ -902,7 +965,10 @@ ${buildingType === 'courtyard' ? `- Buildings form U or C shapes around courtyar
 - 16:9 aspect ratio
 
 AVOID (do NOT include):
-- Extra floors beyond ${f} stories
+- ★★★ ABSOLUTELY NO extra floors beyond ${f} stories. If you drew ${f + 1} or more floors, DELETE and REDRAW.
+- Buildings taller than ${Math.round(f * 3.3)}m. ${f <= 3 ? `A ${f}-story building is SHORT — shorter than most trees. It looks like a large house, NOT an apartment tower.` : `A ${f}-story building is about ${Math.round(f * 3.3)}m — roughly the height of ${f <= 5 ? 'a telephone pole' : 'a medium tree'}.`}
+- ${f <= 3 ? 'ANY building that looks like 4+ stories. If a person on the roof cannot safely jump to the ground, it is TOO TALL.' : `ANY building that looks like ${f + 2}+ stories.`}
+- High-rise or mid-rise apartment towers (this is a ${f <= 3 ? 'LOW-RISE' : 'LOW to MID-RISE'} project)
 ${isComplex && (cameraAngle === 'eye-level' || !cameraAngle) ? '- Aerial or elevated viewpoint (you are ON THE GROUND)\n- Visible roof surfaces from above (the roof is a silhouette against the sky)\n- Showing all buildings equally (focus on 1-2 in foreground)\n- Architectural model perspective (this is a real street photograph)' : ''}
 ${isComplex && cameraAngle === 'birds-eye' ? '- One single monolithic building (MUST show multiple separate buildings)\n- Identical-looking buildings (each should have slight variation)' : ''}
 - Distorted or unrealistic proportions
@@ -911,11 +977,11 @@ ${isComplex && cameraAngle === 'birds-eye' ? '- One single monolithic building (
 - Cars or people that look artificial
 
 ${cameraAngle === 'birds-eye' ? `FINAL COMPOSITION CHECK — BIRDS-EYE:
-Before generating, verify: Am I looking DOWN from the sky? Can I see the ROOF? Is the ground plane visible BELOW? If the answer to any is NO, re-compose from a higher altitude.` 
+Before generating, verify: Am I looking DOWN from the sky? Can I see the ROOF? Is the ground plane visible BELOW? Are there EXACTLY ${f} floors on each building (count the floor levels on the visible facades)? ${f <= 3 ? `Are the buildings LOW enough that trees partially obscure them?` : ''} If any answer is NO, re-compose.` 
 : cameraAngle === 'entrance' ? `FINAL COMPOSITION CHECK — ENTRANCE CLOSE-UP:
 Before generating, verify: Does the entrance door fill most of the frame? Are only 1-2 floors visible? Can I see door hardware details? If the full building is visible, ZOOM IN closer.`
 : `FINAL COMPOSITION CHECK — EYE-LEVEL:
-Before generating, verify: Is the camera at 1.6m (ground level)? Is sky visible ABOVE the roofline? Can I see the base of the building meeting the ground? Can I see the ROOF SURFACE from above? If YES to the last question, the camera is TOO HIGH — move it DOWN to street level. The roof should be a silhouette against the sky, NOT a visible surface.`}
+Before generating, verify: Is the camera at 1.6m (ground level)? Can I count EXACTLY ${f} floor levels on the building facade? ${f <= 3 ? `Is the building roofline BELOW or at the same height as nearby trees?` : ''} Is sky visible ABOVE the roofline? Can I see the ROOF SURFACE from above? If YES to the last question, the camera is TOO HIGH — move it DOWN to street level.`}
 
 ${prompt}
 
