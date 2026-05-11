@@ -5,6 +5,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  serverExternalPackages: ['@resvg/resvg-js'],
   images: {
     unoptimized: true,
   },
