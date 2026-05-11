@@ -498,6 +498,64 @@ export default function ArchiScanPage() {
   const [layouts, setLayouts] = useState<LayoutOption[]>([])
   const [selectedLayout, setSelectedLayout] = useState<number | null>(null)
   const [currentStep, setCurrentStep] = useState<AppStep>("input")
+  
+  // ━━━ 변경 감지 + 무효화 시스템 ━━━
+  // 상위 단계 변경 시 하위 단계를 무효화 (stale)
+  const [staleSteps, setStaleSteps] = useState<Set<string>>(new Set())
+  const [dataSnapshots, setDataSnapshots] = useState<Record<string, string>>({})
+  
+  // 데이터 스냅샷 생성 (현재 입력값의 해시)
+  const currentInputHash = `${address}|${siteArea}`
+  const currentRegHash = `${regulation?.zoneType}|${regulation?.maxCoverageRatio}|${regulation?.maxFloorAreaRatio}`
+  const currentStrategyHash = `${strategy}|${userValues?.profitVsQuality}|${userValues?.privacyVsCommunity}`
+  
+  // 대지 입력 변경 → 법규/배치/사업성 무효화
+  useEffect(() => {
+    if (!dataSnapshots.input || !address) return
+    if (dataSnapshots.input !== currentInputHash) {
+      setStaleSteps(prev => {
+        const next = new Set(prev)
+        next.add('regulation'); next.add('layouts'); next.add('financial'); next.add('report')
+        return next
+      })
+    }
+  }, [currentInputHash]) // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // 법규 변경 → 배치/사업성 무효화
+  useEffect(() => {
+    if (!dataSnapshots.regulation || !regulation?.zoneType) return
+    if (dataSnapshots.regulation !== currentRegHash) {
+      setStaleSteps(prev => {
+        const next = new Set(prev)
+        next.add('layouts'); next.add('financial'); next.add('report')
+        return next
+      })
+    }
+  }, [currentRegHash]) // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // 전략 변경 → 배치 무효화
+  useEffect(() => {
+    if (!dataSnapshots.strategy) return
+    if (dataSnapshots.strategy !== currentStrategyHash) {
+      setStaleSteps(prev => {
+        const next = new Set(prev)
+        next.add('layouts'); next.add('financial'); next.add('report')
+        return next
+      })
+    }
+  }, [currentStrategyHash]) // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // 단계 완료 시 스냅샷 저장 + stale 해제
+  const markStepFresh = (stepId: string) => {
+    setStaleSteps(prev => { const next = new Set(prev); next.delete(stepId); return next })
+    setDataSnapshots(prev => ({
+      ...prev,
+      ...(stepId === 'input' ? { input: currentInputHash } : {}),
+      ...(stepId === 'regulation' ? { regulation: currentRegHash } : {}),
+      ...(stepId === 'strategy' ? { strategy: currentStrategyHash } : {}),
+      ...(stepId === 'layouts' ? { layouts: `${layouts.length}|${selectedLayout}` } : {}),
+    }))
+  }
   const [selectedFloor, setSelectedFloor] = useState(1)
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
@@ -846,6 +904,7 @@ export default function ArchiScanPage() {
   }, [currentStep, aiRenderImage, selectedLayout, layouts]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSiteInputComplete = () => {
+    markStepFresh('input')
     setCurrentStep("regulation")
   }
 
@@ -1365,6 +1424,9 @@ export default function ArchiScanPage() {
       
       // Set layouts to state
       setLayouts(generatedLayouts)
+      markStepFresh('strategy')
+      markStepFresh('regulation')
+      setTimeout(() => markStepFresh('layouts'), 500)
       
       // ━━━ 수익 최적화 배치안 자동 생성 ━━━
       try {
@@ -1733,8 +1795,9 @@ export default function ArchiScanPage() {
   }
   
   // 탭 데이터 상태 아이콘
-  const getTabStatus = (stepId: string): 'active' | 'ready' | 'locked' => {
+  const getTabStatus = (stepId: string): 'active' | 'ready' | 'locked' | 'stale' => {
     if (!isStepClickable(stepId)) return 'locked'
+    if (staleSteps.has(stepId)) return 'stale'
     if (stepId === 'layouts' && layouts.length > 0) return 'ready'
     if (stepId === 'regulation' && regulation) return 'ready'
     if ((stepId === 'ai-render' || stepId === 'floorplan' || stepId === 'financial' || stepId === 'report') && selectedLayout !== null) return 'ready'
@@ -1806,6 +1869,8 @@ export default function ArchiScanPage() {
         setShowQuickMode(false)
         setAutoTriggerLookup(true)
         setCurrentStep('input' as AppStep)
+        // 입력 완료 스냅샷
+        setTimeout(() => markStepFresh('input'), 100)
       }} />
     )
   }
@@ -2101,6 +2166,9 @@ export default function ArchiScanPage() {
                   {status === 'ready' && !isActive && (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   )}
+                  {status === 'stale' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  )}
                 </button>
               )
             })}
@@ -2283,7 +2351,16 @@ export default function ArchiScanPage() {
         )}
 
         {/* Step: Layouts */}
-        {currentStep === "layouts" && (
+        {currentStep === "layouts" && (<>
+          {staleSteps.has('layouts') && (
+            <div className="mx-4 mb-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-400 text-sm">⚠️</span>
+                <span className="text-xs text-amber-300">이전 단계 정보가 변경되어 배치안 재생성이 필요합니다</span>
+              </div>
+              <button onClick={() => { markStepFresh('layouts'); setCurrentStep('strategy') }} className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-[10px] font-medium border border-amber-500/30">재생성</button>
+            </div>
+          )}
           <LayoutsStep
             layouts={layouts}
             selectedLayout={selectedLayout}
@@ -2337,7 +2414,7 @@ export default function ArchiScanPage() {
               } catch { return undefined }
             })()}
           />
-        )}
+        </>)}
 
         {currentStep === "ai-render" && selectedLayoutData && (
           <div className="space-y-4">
@@ -2441,7 +2518,16 @@ export default function ArchiScanPage() {
             selectedPatterns={userValues.selectedPatterns}
           />
         )}
-        {currentStep === "financial" && selectedLayoutData && (
+        {currentStep === "financial" && selectedLayoutData && (<>
+          {staleSteps.has('financial') && (
+            <div className="mx-4 mb-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-400 text-sm">⚠️</span>
+                <span className="text-xs text-amber-300">배치안이 변경되어 사업성 재검토가 필요합니다</span>
+              </div>
+              <button onClick={() => { markStepFresh('financial'); }} className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-[10px] font-medium border border-amber-500/30">확인</button>
+            </div>
+          )}
           <FinancialStep
             selectedLayoutData={selectedLayoutData}
             allLayouts={layouts}
@@ -2452,7 +2538,7 @@ export default function ArchiScanPage() {
             landPriceData={landPriceData} marketPrice={marketPrice}
             regionalPricing={regionalPricing} setCurrentStep={setCurrentStep}
           />
-        )}
+        </>)}
 
         {/* Step: Report */}
         {currentStep === "report" && selectedLayoutData && (
@@ -2604,6 +2690,9 @@ export default function ArchiScanPage() {
                   <Icon className={`${isActive ? 'h-5 w-5' : 'h-4 w-4'} transition-all`} />
                   {status === 'ready' && !isActive && (
                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  )}
+                  {status === 'stale' && (
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   )}
                 </div>
                 <span className={`leading-none ${isActive ? 'text-[10px] font-bold' : 'text-[9px]'}`}>{shortLabel}</span>
