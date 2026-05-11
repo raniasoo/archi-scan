@@ -516,7 +516,7 @@ function buildArchitecturePrompt(params: {
   if (f <= 2 && u <= 4) {
     buildingForm = `A low-rise detached house, ${f} stories, compact and elegant. Footprint ~${bW}m × ${bD}m. Residential entrance with garden.`
   } else if (f <= 5 && u <= 20) {
-    buildingForm = `A low-rise multi-family villa, ${f} stories, ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: entrance hall + parking. Upper: residential.`
+    buildingForm = `A low-rise multi-family villa, EXACTLY ${f} stories tall (${Math.round(f * 3.3)}m), ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: entrance hall + parking. Upper: residential. DO NOT make taller than ${f} floors. DO NOT generate round or cylindrical buildings.`
   } else if (f <= 5 && u > 20 && siteArea && siteArea > 1500) {
     // ★ 저층 + 많은 세대 + 넓은 대지 = 다동(多棟) 단지
     isComplex = true
@@ -552,13 +552,19 @@ Buildings are arranged organically on the site with varied orientations.`,
     const shapeDesc = typeDesc[buildingType || 'cluster'] || typeDesc.cluster
     
     buildingForm = `A MULTI-BUILDING RESIDENTIAL COMPLEX — NOT a single building.
-${buildingCount} separate ${f}-story buildings spread across a ${siteArea}㎡ site. Total ${u} units.
+${buildingCount} separate buildings on a ${siteArea}㎡ site. Total ${u} units.
+
+★★★ CRITICAL HEIGHT: EXACTLY ${f} STORIES (${Math.round(f * 3.3)}m tall). NOT taller. NOT shorter.
+Each building is ONLY ${f} floors high — this is a LOW-RISE complex, NOT high-rise towers.
+DO NOT generate buildings taller than ${f} stories under ANY circumstances.
+DO NOT generate round, cylindrical, or curved buildings — ALL buildings must have FLAT walls and RIGHT ANGLES.
+
 ${shapeDesc}
 IMPORTANT: If the site is on a slope, buildings MUST be placed at DIFFERENT ELEVATION LEVELS following the natural terrain.
 If the site is flat, buildings are spaced apart with landscaped gardens and walkways.
 CRITICAL SITE SHAPE: If a cadastral reference image is provided, arrange buildings to fit WITHIN the actual irregular lot boundary.
-CRITICAL: Show ${buildingCount} SEPARATE buildings clearly visible in the image.
-REPEAT: The building shape described above is MANDATORY — do NOT default to simple rectangular boxes.`
+CRITICAL: Show ${buildingCount} SEPARATE ${f}-story buildings clearly visible in the image.
+REPEAT: The building shape described above is MANDATORY — do NOT default to simple rectangular boxes or cylindrical towers.`
   } else if (f <= 10) {
     if (u > 40 && siteArea && siteArea > 3000) {
       isComplex = true
