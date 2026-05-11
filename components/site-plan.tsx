@@ -29,6 +29,7 @@ export function SitePlan({
   // ━━━ 실제 필지 형상 변환 (sitePolygon → SVG 좌표) ━━━
   const hasRealShape = sitePolygon && sitePolygon.coords.length > 2
   let polyPoints = '' // SVG polygon points
+  let svgPolyCoords: {x: number; y: number}[] = [] // SVG 좌표 (배치 계산용)
   let siteW: number, siteH: number, siteX: number, siteY: number, svgScale: number
   let siteRealW = Math.sqrt(siteArea * 1.25)
   let siteRealH = siteArea / siteRealW
@@ -63,6 +64,7 @@ export function SitePlan({
     polyPoints = meterCoords.map(([mx, my]) => {
       const px = siteX + (mx - minX) * svgScale
       const py = siteY + (my - minY) * svgScale
+      svgPolyCoords.push({ x: px, y: py })
       return `${px},${py}`
     }).join(' ')
   } else {
@@ -129,6 +131,67 @@ export function SitePlan({
       case "cluster": {
         // buildingCount 기반 다동 배치
         const n = buildingCount || Math.max(2, Math.min(6, Math.ceil(units / (floors * 4))))
+        
+        // 점-인-폴리곤 테스트 (ray casting)
+        const ptInPoly = (px: number, py: number, poly: {x:number;y:number}[]) => {
+          let inside = false
+          for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y
+            if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside
+          }
+          return inside
+        }
+        
+        if (svgPolyCoords.length > 2) {
+          // ★ 실제 필지 형상 기반 배치
+          // 1. 이격 적용한 내접 폴리곤 중심 계산
+          const cx = svgPolyCoords.reduce((s, p) => s + p.x, 0) / svgPolyCoords.length
+          const cy = svgPolyCoords.reduce((s, p) => s + p.y, 0) / svgPolyCoords.length
+          
+          // 2. 폴리곤 내부에서 사용 가능한 영역 계산
+          const polyXs = svgPolyCoords.map(p => p.x)
+          const polyYs = svgPolyCoords.map(p => p.y)
+          const polyMinX = Math.min(...polyXs) + ss, polyMaxX = Math.max(...polyXs) - ss
+          const polyMinY = Math.min(...polyYs) + sr, polyMaxY = Math.max(...polyYs) - sf
+          const usableW = polyMaxX - polyMinX
+          const usableH = polyMaxY - polyMinY
+          
+          // 3. 그리드 계산 (폴리곤 비율에 맞춤)
+          const cols = n <= 2 ? (usableW > usableH * 1.3 ? 2 : 1) : n <= 4 ? 2 : 3
+          const rows = Math.ceil(n / cols)
+          const blockW = usableW * 0.85 / cols
+          const blockH = usableH * 0.8 / rows
+          
+          // 4. 건물 배치 — 폴리곤 안에 들어가는 위치만 사용
+          const shapes: { x: number; y: number; w: number; h: number }[] = []
+          const gridStartX = polyMinX + (usableW - cols * blockW) / 2
+          const gridStartY = polyMinY + (usableH - rows * blockH) / 2
+          
+          let count = 0
+          for (let r = 0; r < rows && count < n; r++) {
+            for (let c = 0; c < cols && count < n; c++) {
+              const bx = gridStartX + c * (usableW * 0.95 / cols)
+              const by = gridStartY + r * (usableH * 0.9 / rows)
+              const bcx = bx + blockW / 2
+              const bcy = by + blockH / 2
+              
+              // 건물 중심이 폴리곤 안에 있는지 확인
+              if (ptInPoly(bcx, bcy, svgPolyCoords)) {
+                shapes.push({ x: bx, y: by, w: blockW * 0.88, h: blockH * 0.85 })
+                count++
+              } else {
+                // 중심을 폴리곤 중심 쪽으로 조정
+                const dx = cx - bcx, dy = cy - bcy
+                const nbx = bx + dx * 0.3, nby = by + dy * 0.3
+                shapes.push({ x: nbx, y: nby, w: blockW * 0.8, h: blockH * 0.78 })
+                count++
+              }
+            }
+          }
+          return { shapes, label: "클러스터" }
+        }
+        
+        // fallback: 직사각형 그리드 (폴리곤 없을 때)
         const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
         const rows = Math.ceil(n / cols)
         const gapX = bW * 0.06, gapY = bH * 0.06
