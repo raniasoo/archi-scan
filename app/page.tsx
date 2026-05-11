@@ -2392,6 +2392,7 @@ export default function ArchiScanPage() {
                 },
               }}
               onRenderComplete={setAiRenderImage}
+              previousRenderImage={aiRenderImage}
             />
 
             {/* 하단 CTA — 평면도 → 사업성 */}

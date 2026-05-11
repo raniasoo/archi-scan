@@ -140,7 +140,7 @@ function getOptimalSettings(input: ConceptInput): { style: string; angle: string
   return { style, angle, scene, material, reason }
 }
 
-export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void }) {
+export function AIHub({ input, onRenderComplete, previousRenderImage }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void; previousRenderImage?: string | null }) {
   let optimal = { style: 'modern-luxury', angle: 'eye-level', scene: 'afternoon', material: null as string | null, reason: '' }
   try { optimal = getOptimalSettings(input) } catch (e) { console.warn('[AIHub] getOptimalSettings error:', e) }
   const [isOpen, setIsOpen] = useState(false)
@@ -155,6 +155,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
   const [error, setError] = useState<string|null>(null)
   const [copied, setCopied] = useState<string|null>(null)
   const [renderImg, setRenderImg] = useState<string|null>(null)
+  const [useReference, setUseReference] = useState(!!previousRenderImage)
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<string|null>(null)
   const [proposal, setProposal] = useState<string|null>(null)
@@ -186,6 +187,7 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
         sitePolygon: input.sitePolygon,
         material: materialId ? { type: materialId } : undefined,
         regulation: input.regulation,
+        referenceImage: useReference && previousRenderImage ? previousRenderImage : undefined,
       }) })
       const d = await r.json()
       if (d.success && d.image) {
@@ -361,6 +363,28 @@ export function AIHub({ input, onRenderComplete }: { input: ConceptInput; onRend
                 </button>
               ))}
             </div>
+              </div>
+            )}
+            {/* 이전 렌더링 참조 옵션 */}
+            {previousRenderImage && !renderImg && !multiImages && (
+              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-violet-300">📷 이전 렌더링</span>
+                  <button
+                    onClick={() => setUseReference(!useReference)}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
+                      useReference 
+                        ? 'bg-violet-500/30 text-violet-300 border border-violet-500/40' 
+                        : 'bg-muted/50 text-muted-foreground border border-border/50'
+                    }`}
+                  >
+                    {useReference ? '✅ 참조 사용' : '참조 안 함'}
+                  </button>
+                </div>
+                <img src={previousRenderImage} alt="이전 렌더링" className={`w-full rounded-lg border ${useReference ? 'border-violet-500/40 opacity-100' : 'border-border/30 opacity-40'}`} style={{ maxHeight: 120, objectFit: 'cover' }} />
+                <p className="text-[9px] text-muted-foreground">
+                  {useReference ? '이전 렌더링을 참조하여 유사한 스타일로 새 이미지를 생성합니다' : '참조 없이 새로운 스타일로 생성합니다'}
+                </p>
               </div>
             )}
             {/* 렌더링 버튼 (항상 보임) */}
