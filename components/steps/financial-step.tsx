@@ -188,7 +188,12 @@ export function FinancialStep(props: FinancialStepProps) {
 
             {/* 분담금 시뮬레이션 + 사업 시나리오 */}
             {feasibilityResult && (() => {
-              if (projectType !== 'reconstruction') return (
+              if (projectType === 'unknown') return (
+                <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/20 text-xs text-muted-foreground">
+                  <span className="font-semibold text-blue-400">🔍 건물 정보 확인 중</span> — 국토부 건축물대장을 조회하여 신축/재건축 여부를 판단하고 있습니다.
+                </div>
+              )
+              if (projectType === 'new') return (
                 <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs text-muted-foreground">
                   <span className="font-semibold text-emerald-500">신축 사업</span> — 본 프로젝트는 신규 건축으로 분담금 시뮬레이션 및 재건축/리모델링 시나리오가 적용되지 않습니다.
                 </div>

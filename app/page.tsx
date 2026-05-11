@@ -1866,6 +1866,19 @@ export default function ArchiScanPage() {
             }))
           }
         }
+        // ━━━ QuickAnalysis rawData에서 신축/재건축 판단 ━━━
+        if (rawData?.mainPurpose || (rawData?.groundFloors && rawData.groundFloors > 0) || rawData?.buildingName) {
+          setProjectType('reconstruction')
+          setExistingBuildingInfo({
+            mainPurpose: rawData.mainPurpose,
+            groundFloors: rawData.groundFloors,
+            buildingName: rawData.buildingName,
+            householdCount: rawData.householdCount,
+            totalFloorArea: rawData.totalFloorArea,
+          })
+        } else if (rawData?.bdMgtSn) {
+          setProjectType('reconstruction')
+        }
         setShowQuickMode(false)
         setAutoTriggerLookup(true)
         setCurrentStep('input' as AppStep)
