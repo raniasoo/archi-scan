@@ -155,8 +155,9 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
   const [copied, setCopied] = useState<string|null>(null)
-  const [renderImg, setRenderImg] = useState<string|null>(previousRenderImage || null)
+  const [renderImg, setRenderImg] = useState<string|null>(null)
   const [useReference, setUseReference] = useState(!!previousRenderImage)
+  const [hasChosenPrevious, setHasChosenPrevious] = useState(false) // 이전 렌더링 선택/거부 여부
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<string|null>(null)
   const [proposal, setProposal] = useState<string|null>(null)
@@ -368,7 +369,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               </div>
             )}
             {/* 이전 렌더링 — 사용/참조/새로 생성 */}
-            {previousRenderImage && !renderImg && !multiImages && (
+            {previousRenderImage && !hasChosenPrevious && !renderImg && !multiImages && (
               <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-emerald-300">✨ AI 렌더링 결과</span>
@@ -377,13 +378,13 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                 <img src={previousRenderImage} alt="AI 렌더링" className="w-full rounded-lg border border-emerald-500/30" />
                 <div className="flex gap-1.5">
                   <button
-                    onClick={() => { setRenderImg(previousRenderImage); onRenderComplete?.(previousRenderImage); toast.success('렌더링 이미지를 사용합니다') }}
+                    onClick={() => { setHasChosenPrevious(true); setRenderImg(previousRenderImage); onRenderComplete?.(previousRenderImage); toast.success('렌더링 이미지를 사용합니다') }}
                     className="flex-1 py-2 rounded-lg bg-emerald-600/80 text-white text-[11px] font-semibold"
                   >
                     ✅ 이 렌더링 사용
                   </button>
                   <button
-                    onClick={() => { setUseReference(true); doRender(0) }}
+                    onClick={() => { setHasChosenPrevious(true); setUseReference(true); doRender(0) }}
                     disabled={loading}
                     className="flex-1 py-2 rounded-lg bg-violet-600/80 text-white text-[11px] font-semibold disabled:opacity-50"
                   >
