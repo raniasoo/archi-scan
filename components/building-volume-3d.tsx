@@ -199,7 +199,7 @@ export function BuildingVolume3D({
       r.outputColorSpace = THREE.SRGBColorSpace
       rendererRef.current = r
       
-      // ━━━ 포스트프로세싱 체인 (Bloom + Vignette) ━━━
+      // ━━━ 포스트프로세싱 체인 (Bloom only) ━━━
       let composer: any = null
       // (scene/cam은 아래에서 생성 후 setupPostProcessing()으로 설정)
       const setupPostProcessing = (sc: any, ca: any) => {
@@ -219,29 +219,8 @@ export function BuildingVolume3D({
             composer.addPass(bloom)
           }
           
-          // Vignette (가장자리 어둡게)
-          if (ShaderPass) {
-            const vignetteShader = {
-              uniforms: {
-                tDiffuse: { value: null },
-                offset: { value: 1.0 },
-                darkness: { value: 1.3 },
-              },
-              vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-              fragmentShader: `uniform sampler2D tDiffuse; uniform float offset; uniform float darkness; varying vec2 vUv;
-                void main() {
-                  vec4 texel = texture2D(tDiffuse, vUv);
-                  vec2 uv = (vUv - vec2(0.5)) * vec2(offset);
-                  float dist = length(uv);
-                  float vig = smoothstep(0.8, offset * 0.5, dist * (darkness + offset));
-                  texel.rgb = mix(texel.rgb * 0.3, texel.rgb, vig);
-                  gl_FragColor = texel;
-                }`,
-            }
-            composer.addPass(new ShaderPass(vignetteShader))
-          }
           
-          console.log('[3D] Post-processing enabled: Bloom + Vignette ✅')
+          console.log('[3D] Post-processing enabled: Bloom ✅')
         } catch (e) {
           console.warn('[3D] Post-processing setup failed:', e)
           composer = null
