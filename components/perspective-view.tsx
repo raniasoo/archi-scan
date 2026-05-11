@@ -122,9 +122,10 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, typ
       ]
       break
     case 'lshape':
+      // ㄱ자형: 남향 날개(긴) + 동향 날개(짧) — 명확한 L형
       buildingBlocks = [
-        { x: bx, depth: bDepth, w: bw * 0.4, d: bd, floors },
-        { x: bx, depth: bDepth + bd * 0.6, w: bw, d: bd * 0.4, floors: Math.max(3, floors - 2) },
+        { x: bx, depth: bDepth, w: bw * 0.35, d: bd, floors },           // 동향 날개 (세로)
+        { x: bx, depth: bDepth + bd * 0.6, w: bw * 0.85, d: bd * 0.4, floors }, // 남향 날개 (가로)
       ]
       break
     case 'linear':

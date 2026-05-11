@@ -40,8 +40,50 @@ function Core({ x, y, w, h }: { x:number;y:number;w:number;h:number }) {
 // ━━━━━ 타입 ━━━━━
 interface UnitLayout { id: string; type: string; size: 'S'|'M'|'L'; variant: string; x: number; y: number; w: number; h: number; rooms: RoomDef[] }
 
-function buildFloor(unitConfigs: {type:string; size:'S'|'M'|'L'; variant:string}[]): { bW:number; bD:number; coreX:number; coreW:number; units: UnitLayout[] } {
-  const coreW = 30, leftCount = Math.ceil(unitConfigs.length / 2)
+function buildFloor(unitConfigs: {type:string; size:'S'|'M'|'L'; variant:string}[], buildingType?: string): { bW:number; bD:number; coreX:number; coreW:number; units: UnitLayout[]; isLShape?: boolean } {
+  const coreW = 30
+  
+  // ㄱ자형: L자 배치
+  if (buildingType === 'lshape') {
+    const wing1Count = Math.ceil(unitConfigs.length * 0.4) // 동향 날개 (세로)
+    const wing2Count = unitConfigs.length - wing1Count      // 남향 날개 (가로)
+    const units: UnitLayout[] = []
+    
+    // Wing 1 (세로 날개) — 유닛을 세로로 배치
+    let wy = 0
+    for (let i = 0; i < wing1Count; i++) {
+      const { type, size, variant } = unitConfigs[i]
+      const spec = getSizeSpec(type, size)
+      const tpls = getVariants(type, size)
+      const tpl = tpls.find(t => t.variant === variant) || tpls[0]
+      units.push({ id: String.fromCharCode(65+i), type, size, variant, x: 0, y: wy, w: spec.h, h: spec.w, rooms: tpl.generate(spec.h, spec.w, false) })
+      wy += spec.w
+    }
+    const wing1W = units[0]?.w || 60
+    const wing1H = wy
+    
+    // Core at junction
+    const coreY = wing1H
+    
+    // Wing 2 (가로 날개) — 코어 뒤에 가로로 배치
+    let wx = 0
+    for (let i = wing1Count; i < unitConfigs.length; i++) {
+      const { type, size, variant } = unitConfigs[i]
+      const spec = getSizeSpec(type, size)
+      const tpls = getVariants(type, size)
+      const tpl = tpls.find(t => t.variant === variant) || tpls[0]
+      units.push({ id: String.fromCharCode(65+i), type, size, variant, x: wx, y: coreY + coreW, w: spec.w, h: spec.h, rooms: tpl.generate(spec.w, spec.h, false) })
+      wx += spec.w
+    }
+    const wing2H = units[wing1Count]?.h || 60
+    
+    const totalW = Math.max(wing1W, wx)
+    const totalH = wing1H + coreW + wing2H
+    return { bW: totalW, bD: totalH, coreX: 0, coreW, units, isLShape: true }
+  }
+  
+  // 기본: 일자 배치 (기존 로직)
+  const leftCount = Math.ceil(unitConfigs.length / 2)
   const units: UnitLayout[] = []
   let lx = 0
   for (let i = 0; i < leftCount; i++) {
@@ -81,17 +123,30 @@ function RoomsSVG({ rooms, ox, oy }: { rooms: RoomDef[]; ox: number; oy: number 
 
 // ━━━━━ 기준층 전체 뷰 ━━━━━
 function FloorView({ layout, onUnitClick }: { layout: ReturnType<typeof buildFloor>; onUnitClick: (u: UnitLayout) => void }) {
-  const { bW, bD, coreX, coreW, units } = layout
+  const { bW, bD, coreX, coreW, units, isLShape } = layout
   const pad = 35, colors = ['#10b981','#3b82f6','#8b5cf6','#f59e0b']
   return (
     <svg viewBox={`0 0 ${bW+pad*2} ${bD+pad*2+16}`} className="w-full h-auto" style={{minWidth:300}}>
       <g transform={`translate(${pad},${pad})`}>
-        <rect x={0} y={0} width={bW} height={bD} fill="none" stroke="currentColor" strokeWidth={WALL_EXT} className="text-foreground"/>
-        <Core x={coreX} y={bD*.15} w={coreW} h={bD*.7}/>
-        <rect x={coreX} y={0} width={coreW} height={bD*.15} fill="#f1f5f910" stroke="#64748b" strokeWidth={.3}/>
-        <text x={coreX+coreW/2} y={bD*.08+1} fontSize="3.5" textAnchor="middle" fill="#64748b">복도</text>
-        <rect x={coreX} y={bD*.85} width={coreW} height={bD*.15} fill="#f1f5f910" stroke="#64748b" strokeWidth={.3}/>
-        <text x={coreX+coreW/2} y={bD*.92+1} fontSize="3.5" textAnchor="middle" fill="#64748b">복도</text>
+        {isLShape ? (
+          <>
+            {/* ㄱ자형 외곽선 — L형 경로 */}
+            <path d={`M 0 0 L ${units[0]?.w || bW*0.4} 0 L ${units[0]?.w || bW*0.4} ${coreX || bD*0.5} L ${bW} ${coreX || bD*0.5} L ${bW} ${bD} L 0 ${bD} Z`}
+              fill="none" stroke="currentColor" strokeWidth={WALL_EXT} className="text-foreground"/>
+            {/* 코어 (ㄱ 꺾이는 지점) */}
+            <Core x={0} y={coreX || bD*0.4} w={units[0]?.w || 30} h={coreW}/>
+            <text x={(units[0]?.w || 30)/2} y={(coreX || bD*0.4) + coreW/2 + 2} fontSize="4" textAnchor="middle" fill="#64748b">코어</text>
+          </>
+        ) : (
+          <>
+            <rect x={0} y={0} width={bW} height={bD} fill="none" stroke="currentColor" strokeWidth={WALL_EXT} className="text-foreground"/>
+            <Core x={coreX} y={bD*.15} w={coreW} h={bD*.7}/>
+            <rect x={coreX} y={0} width={coreW} height={bD*.15} fill="#f1f5f910" stroke="#64748b" strokeWidth={.3}/>
+            <text x={coreX+coreW/2} y={bD*.08+1} fontSize="3.5" textAnchor="middle" fill="#64748b">복도</text>
+            <rect x={coreX} y={bD*.85} width={coreW} height={bD*.15} fill="#f1f5f910" stroke="#64748b" strokeWidth={.3}/>
+            <text x={coreX+coreW/2} y={bD*.92+1} fontSize="3.5" textAnchor="middle" fill="#64748b">복도</text>
+          </>
+        )}
         {units.map((unit, ui) => {
           const color = colors[ui % colors.length]
           return <g key={unit.id} className="cursor-pointer" onClick={() => onUnitClick(unit)}>
@@ -233,7 +288,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
   const firstKey = Object.keys(mixPresets)[0] || autoLabel
   const currentMix = (mixPresets[selectedMix] || mixPresets[firstKey] || autoPreset).map((m,i) => ({...m, variant: 'ABCD'[(i+variantIdx)%4]}))
   const layout = useMemo(() => {
-    const base = buildFloor(currentMix)
+    const base = buildFloor(currentMix, props.type)
     // 패턴 선택이 있으면 각 세대의 실 배치에 반영
     if (selectedPatterns?.length) {
       base.units = base.units.map(u => ({
