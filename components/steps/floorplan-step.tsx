@@ -220,6 +220,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
               units={selectedLayoutData.units}
               parking={selectedLayoutData.parking}
               buildingCount={selectedLayoutData.buildingCount}
+              originalType={selectedLayoutData._originalType}
               type={selectedLayoutData.type}
               setbacks={{
                 front: molit.hasDistrictPlan ? 2 : 1,
@@ -236,22 +237,22 @@ export function FloorplanStep(props: FloorplanStepProps) {
 
           {/* 아이소메트릭 */}
           {drawingTab === "iso" && (
-            <IsometricView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} buildingCount={selectedLayoutData.buildingCount} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
+            <IsometricView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
           )}
 
           {/* 투시도 */}
           {drawingTab === "perspective" && (
-            <PerspectiveView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} buildingCount={selectedLayoutData.buildingCount} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
+            <PerspectiveView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
           )}
 
           {/* 단면도 */}
           {drawingTab === "section" && (
-            <SectionView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} parking={selectedLayoutData.parking} heightLimit={molit.heightLimit || regulation.maxHeight} buildingCount={selectedLayoutData.buildingCount} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} hasDistrictPlan={molit.hasDistrictPlan ?? false} />
+            <SectionView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} parking={selectedLayoutData.parking} heightLimit={molit.heightLimit || regulation.maxHeight} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} hasDistrictPlan={molit.hasDistrictPlan ?? false} />
           )}
 
           {/* 입면도 */}
           {drawingTab === "elevation" && (
-            <ElevationView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} buildingCount={selectedLayoutData.buildingCount} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} heightLimit={molit.heightLimit || regulation.maxHeight} />
+            <ElevationView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} heightLimit={molit.heightLimit || regulation.maxHeight} />
           )}
         </div>
       </div>

@@ -8,6 +8,7 @@ interface ElevationViewProps {
   floors: number
   units: number
   buildingCount?: number
+  originalType?: string
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   layoutName?: string
   roadWidth: number
@@ -15,7 +16,7 @@ interface ElevationViewProps {
 }
 
 export function ElevationView({
-  siteArea, buildingCoverage, floors, units, buildingCount, type, layoutName,
+  siteArea, buildingCoverage, floors, units, buildingCount, originalType, type, layoutName,
   roadWidth, heightLimit,
 }: ElevationViewProps) {
   const [face, setFace] = useState<"front" | "side">("front")

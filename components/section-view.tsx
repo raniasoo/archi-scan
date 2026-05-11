@@ -10,6 +10,7 @@ interface SectionViewProps {
   parking: number
   heightLimit: number
   buildingCount?: number
+  originalType?: string
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   layoutName?: string
   roadWidth: number
@@ -17,7 +18,7 @@ interface SectionViewProps {
 }
 
 export function SectionView({
-  siteArea, buildingCoverage, floors, units, buildingCount, parking, heightLimit,
+  siteArea, buildingCoverage, floors, units, buildingCount, originalType, parking, heightLimit,
   type, layoutName, roadWidth, hasDistrictPlan,
 }: SectionViewProps) {
   const W = 500, H = 380

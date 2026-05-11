@@ -9,6 +9,7 @@ interface SitePlanProps {
   units: number
   parking: number
   buildingCount?: number
+  originalType?: string
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   setbacks: { front: number; side: number; rear: number }
   landscapingRatio: number  // %
@@ -19,7 +20,7 @@ interface SitePlanProps {
 }
 
 export function SitePlan({
-  siteArea, buildingCoverage, floors, units, parking, buildingCount, type,
+  siteArea, buildingCoverage, floors, units, parking, buildingCount, originalType, type,
   setbacks, landscapingRatio, roadWidth, hasDistrictPlan,
   layoutName = "", sitePolygon,
 }: SitePlanProps) {
@@ -311,11 +312,34 @@ export function SitePlan({
           </>
         )}
 
-        {/* 건물 */}
-        {building.shapes.map((s, i) => (
-          <rect key={i} x={s.x} y={s.y} width={s.w} height={s.h}
-            fill="#1e3a5f" stroke="#60a5fa" strokeWidth="1.2" opacity="0.9" />
-        ))}
+        {/* 건물 — originalType에 따른 형태 */}
+        {building.shapes.map((s, i) => {
+          const ot = (type === 'cluster' && originalType && originalType !== 'cluster') ? originalType : type
+          if (ot === 'lshape') {
+            // ㄱ자형: L-shape
+            const armW = s.w * 0.4, armH = s.h
+            const legW = s.w, legH = s.h * 0.35
+            return <g key={i}>
+              <rect x={s.x} y={s.y} width={armW} height={armH} fill="#1e3a5f" stroke="#60a5fa" strokeWidth="1.2" opacity="0.9" />
+              <rect x={s.x + armW} y={s.y + armH - legH} width={legW - armW} height={legH} fill="#1e3a5f" stroke="#60a5fa" strokeWidth="1.2" opacity="0.9" />
+            </g>
+          } else if (ot === 'courtyard') {
+            // 중정형: U-shape
+            const t = Math.min(s.w * 0.22, s.h * 0.22)
+            return <g key={i}>
+              <rect x={s.x} y={s.y} width={t} height={s.h} fill="#1e3a5f" stroke="#60a5fa" strokeWidth="1.2" opacity="0.9" />
+              <rect x={s.x + s.w - t} y={s.y} width={t} height={s.h} fill="#1e3a5f" stroke="#60a5fa" strokeWidth="1.2" opacity="0.9" />
+              <rect x={s.x} y={s.y + s.h - t} width={s.w} height={t} fill="#1e3a5f" stroke="#60a5fa" strokeWidth="1.2" opacity="0.9" />
+              <rect x={s.x + t + 2} y={s.y} width={s.w - t * 2 - 4} height={s.h - t - 2} fill="#052e1620" stroke="#10b981" strokeWidth="0.5" strokeDasharray="2 1" rx="1" />
+            </g>
+          } else if (ot === 'linear') {
+            // 판상형: 넓고 낮은 직사각형
+            const lh = s.h * 0.4
+            return <rect key={i} x={s.x} y={s.y + (s.h - lh) / 2} width={s.w} height={lh} fill="#1e3a5f" stroke="#60a5fa" strokeWidth="1.2" opacity="0.9" />
+          } else {
+            return <rect key={i} x={s.x} y={s.y} width={s.w} height={s.h} fill="#1e3a5f" stroke="#60a5fa" strokeWidth="1.2" opacity="0.9" />
+          }
+        })}
 
         {/* 중정 (courtyard) */}
         {'courtyard' in building && building.courtyard && (

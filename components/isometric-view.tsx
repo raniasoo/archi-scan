@@ -8,6 +8,7 @@ interface IsometricViewProps {
   floors: number
   units: number
   buildingCount?: number
+  originalType?: string
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   layoutName?: string
   zoneType?: string
@@ -87,7 +88,7 @@ function IsoCar({ x, y, color = "#475569" }: { x: number; y: number; color?: str
   )
 }
 
-export function IsometricView({ siteArea, buildingCoverage, floors, units, buildingCount, type, layoutName, zoneType }: IsometricViewProps) {
+export function IsometricView({ siteArea, buildingCoverage, floors, units, buildingCount, originalType, type, layoutName, zoneType }: IsometricViewProps) {
   const W = 520, H = 440
   const cx = W / 2, cy = H * 0.62
 
@@ -160,7 +161,31 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, build
     }
   }
 
-  const blocks = getBlocks()
+  let blocks = getBlocks()
+  
+  // ★ originalType에 따라 각 블록 형태 변환 (클러스터일 때)
+  if (type === 'cluster' && originalType && originalType !== 'cluster' && originalType !== 'tower') {
+    const newBlocks: typeof blocks = []
+    for (const b of blocks) {
+      if (originalType === 'lshape') {
+        // ㄱ자형: 수직동 + 수평동
+        newBlocks.push({ ...b, w: b.w * 0.4, label: b.label })
+        newBlocks.push({ x: b.x + b.w * 0.4, y: b.y + b.d * 0.6, w: b.w * 0.6, d: b.d * 0.4, h: b.h, label: '' })
+      } else if (originalType === 'linear') {
+        // 판상형: 넓고 얇은 직사각형
+        newBlocks.push({ ...b, d: b.d * 0.45, y: b.y + b.d * 0.275, label: b.label })
+      } else if (originalType === 'courtyard') {
+        // 중정형: U자 3면
+        const t = Math.min(b.w * 0.25, b.d * 0.25)
+        newBlocks.push({ x: b.x, y: b.y, w: t, d: b.d, h: b.h, label: '' })
+        newBlocks.push({ x: b.x + b.w - t, y: b.y, w: t, d: b.d, h: b.h, label: '' })
+        newBlocks.push({ x: b.x, y: b.y + b.d - t, w: b.w, d: t, h: b.h, label: b.label })
+      } else {
+        newBlocks.push(b)
+      }
+    }
+    blocks = newBlocks
+  }
   const sitePoints = [
     toIso(-siteW / 2, -siteD / 2, 0), toIso(siteW / 2, -siteD / 2, 0),
     toIso(siteW / 2, siteD / 2, 0), toIso(-siteW / 2, siteD / 2, 0),
