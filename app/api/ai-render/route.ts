@@ -515,13 +515,28 @@ function buildArchitecturePrompt(params: {
     const eachW = Math.round(Math.sqrt(eachFootprint * 1.4))
     const eachD = Math.round(eachFootprint / eachW)
     
-    // 원래 건축 타입에 따른 개별 건물 형태 설명
+    // 원래 건축 타입에 따른 개별 건물 형태 설명 — 매우 구체적으로
     const typeDesc: Record<string, string> = {
-      linear: `Each building is a LINEAR SLAB shape (판상형) — long and narrow, ~${eachW}m × ${eachD}m, with units arranged in a row along a central corridor. South-facing balconies.`,
-      courtyard: `Buildings are arranged around a CENTRAL COURTYARD (중정형) — U-shaped or L-shaped buildings enclosing a shared green garden in the center.`,
-      lshape: `Each building is L-SHAPED (ㄱ자형) — two wings meeting at a right angle, creating a semi-enclosed outdoor space.`,
-      tower: `Each building is a COMPACT TOWER (타워형) — square footprint ~${eachW}m × ${eachD}m, with units arranged around a central core.`,
-      cluster: `Buildings are VARIED individual volumes (클러스터) — each building has a unique form and character, arranged organically on the site.`,
+      linear: `BUILDING SHAPE: Each building is a LONG RECTANGULAR SLAB (판상형).
+Each building is approximately ${eachW * 2}m long × ${eachD}m wide — the width is at least 2-3 times the depth.
+All units face SOUTH with continuous balconies on the south facade.
+The north side has a corridor connecting all units.
+DO NOT draw square buildings. Each building MUST be noticeably elongated/rectangular.`,
+      courtyard: `BUILDING SHAPE: Buildings form a U-SHAPE or C-SHAPE around a central courtyard (중정형).
+Each building group has 2-3 wings connected at right angles, enclosing a central garden.
+The courtyard/garden is CLEARLY VISIBLE from above, surrounded by building wings.
+DO NOT draw separate individual box buildings.`,
+      lshape: `BUILDING SHAPE: Each building is L-SHAPED / ㄱ-SHAPED (ㄱ자형).
+Each building has TWO WINGS meeting at a 90-degree RIGHT ANGLE — like the letter "L" or Korean "ㄱ".
+One wing faces SOUTH, the other wing faces EAST or WEST.
+The L-shape creates a semi-private garden in the corner where the two wings meet.
+DO NOT draw rectangular box buildings. Each building MUST clearly show the L-shaped footprint from above.`,
+      tower: `BUILDING SHAPE: Each building is a COMPACT TOWER (타워형).
+Square footprint ~${eachW}m × ${eachD}m with units arranged around a central elevator core.
+Each tower is a standalone vertical structure.`,
+      cluster: `BUILDING SHAPE: Buildings are VARIED individual volumes (클러스터).
+Each building has a unique form — some rectangular, some L-shaped, some with setbacks.
+Buildings are arranged organically on the site with varied orientations.`,
     }
     const shapeDesc = typeDesc[buildingType || 'cluster'] || typeDesc.cluster
     
@@ -531,7 +546,8 @@ ${shapeDesc}
 IMPORTANT: If the site is on a slope, buildings MUST be placed at DIFFERENT ELEVATION LEVELS following the natural terrain.
 If the site is flat, buildings are spaced apart with landscaped gardens and walkways.
 CRITICAL SITE SHAPE: If a cadastral reference image is provided, arrange buildings to fit WITHIN the actual irregular lot boundary.
-CRITICAL: Show ${buildingCount} SEPARATE buildings clearly visible in the image.`
+CRITICAL: Show ${buildingCount} SEPARATE buildings clearly visible in the image.
+REPEAT: The building shape described above is MANDATORY — do NOT default to simple rectangular boxes.`
   } else if (f <= 10) {
     if (u > 40 && siteArea && siteArea > 3000) {
       isComplex = true
