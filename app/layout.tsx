@@ -1,25 +1,12 @@
 import type { Metadata } from 'next'
-import localFont from 'next/font/local'
-
-// Google Fonts 대신 로컬 TTF 사용 (빌드 시 외부 의존성 제거)
-const notoSansKr = localFont({
-  src: [
-    { path: '../public/fonts/NotoSansKR-Regular.ttf', weight: '400', style: 'normal' },
-    { path: '../public/fonts/NotoSansKR-Regular.ttf', weight: '500', style: 'normal' },
-    { path: '../public/fonts/NotoSansKR-Bold.ttf', weight: '600', style: 'normal' },
-    { path: '../public/fonts/NotoSansKR-Bold.ttf', weight: '700', style: 'normal' },
-  ],
-  display: 'swap',
-  fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-})
-import { Analytics } from '@vercel/analytics/next'
+// 폰트는 globals.css에서 @import로 런타임 로드 (빌드 시 외부 의존성 없음)import { Analytics } from '@vercel/analytics/next'
 import { GoogleAnalytics } from '@/components/google-analytics'
 import { Toaster } from '@/components/ui/sonner'
 import { SubscriptionProvider } from '@/components/subscription-provider'
 
 import './globals.css'
 
-// notoSansKr is defined above with localFont
+// font loaded via globals.css @import
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.archiscan.kr'),
@@ -112,7 +99,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${notoSansKr.className} antialiased bg-background`}>
+      <body className="font-sans antialiased bg-background">
         
           <SubscriptionProvider>
             {children}
