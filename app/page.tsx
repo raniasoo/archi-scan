@@ -504,58 +504,7 @@ export default function ArchiScanPage() {
   const [staleSteps, setStaleSteps] = useState<Set<string>>(new Set())
   const [dataSnapshots, setDataSnapshots] = useState<Record<string, string>>({})
   
-  // 데이터 스냅샷 생성 (현재 입력값의 해시)
-  const currentInputHash = `${address}|${siteArea}`
-  const currentRegHash = `${regulation?.zoneType}|${regulation?.maxCoverageRatio}|${regulation?.maxFloorAreaRatio}`
-  const currentStrategyHash = `${strategy}|${userValues?.profitVsQuality}|${userValues?.privacyVsCommunity}`
-  
-  // 대지 입력 변경 → 법규/배치/사업성 무효화
-  useEffect(() => {
-    if (!dataSnapshots.input || !address) return
-    if (dataSnapshots.input !== currentInputHash) {
-      setStaleSteps(prev => {
-        const next = new Set(prev)
-        next.add('regulation'); next.add('layouts'); next.add('financial'); next.add('report')
-        return next
-      })
-    }
-  }, [currentInputHash]) // eslint-disable-line react-hooks/exhaustive-deps
-  
-  // 법규 변경 → 배치/사업성 무효화
-  useEffect(() => {
-    if (!dataSnapshots.regulation || !regulation?.zoneType) return
-    if (dataSnapshots.regulation !== currentRegHash) {
-      setStaleSteps(prev => {
-        const next = new Set(prev)
-        next.add('layouts'); next.add('financial'); next.add('report')
-        return next
-      })
-    }
-  }, [currentRegHash]) // eslint-disable-line react-hooks/exhaustive-deps
-  
-  // 전략 변경 → 배치 무효화
-  useEffect(() => {
-    if (!dataSnapshots.strategy) return
-    if (dataSnapshots.strategy !== currentStrategyHash) {
-      setStaleSteps(prev => {
-        const next = new Set(prev)
-        next.add('layouts'); next.add('financial'); next.add('report')
-        return next
-      })
-    }
-  }, [currentStrategyHash]) // eslint-disable-line react-hooks/exhaustive-deps
-  
-  // 단계 완료 시 스냅샷 저장 + stale 해제
-  const markStepFresh = (stepId: string) => {
-    setStaleSteps(prev => { const next = new Set(prev); next.delete(stepId); return next })
-    setDataSnapshots(prev => ({
-      ...prev,
-      ...(stepId === 'input' ? { input: currentInputHash } : {}),
-      ...(stepId === 'regulation' ? { regulation: currentRegHash } : {}),
-      ...(stepId === 'strategy' ? { strategy: currentStrategyHash } : {}),
-      ...(stepId === 'layouts' ? { layouts: `${layouts.length}|${selectedLayout}` } : {}),
-    }))
-  }
+  // ★ 해시 변수 + useEffect + markStepFresh는 모든 useState 뒤에 선언 (TDZ 방지)
   const [selectedFloor, setSelectedFloor] = useState(1)
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<"fit" | "original">("fit")
   const [isFloorPlanFullscreen, setIsFloorPlanFullscreen] = useState(false)
@@ -692,6 +641,43 @@ export default function ArchiScanPage() {
   const [downloadingHtml, setDownloadingHtml] = useState(false)
   const [downloadingExcel, setDownloadingExcel] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+
+  // ━━━ 변경 감지 해시 + useEffect (모든 useState 뒤에 선언 — TDZ 방지) ━━━
+  const currentInputHash = `${address}|${siteArea}`
+  const currentRegHash = `${regulation?.zoneType}|${regulation?.maxCoverageRatio}|${regulation?.maxFloorAreaRatio}`
+  const currentStrategyHash = `${strategy}|${userValues?.profitVsQuality}|${userValues?.privacyVsCommunity}`
+  
+  useEffect(() => {
+    if (!dataSnapshots.input || !address) return
+    if (dataSnapshots.input !== currentInputHash) {
+      setStaleSteps(prev => { const next = new Set(prev); next.add('regulation'); next.add('layouts'); next.add('financial'); next.add('report'); return next })
+    }
+  }, [currentInputHash]) // eslint-disable-line react-hooks/exhaustive-deps
+  
+  useEffect(() => {
+    if (!dataSnapshots.regulation || !regulation?.zoneType) return
+    if (dataSnapshots.regulation !== currentRegHash) {
+      setStaleSteps(prev => { const next = new Set(prev); next.add('layouts'); next.add('financial'); next.add('report'); return next })
+    }
+  }, [currentRegHash]) // eslint-disable-line react-hooks/exhaustive-deps
+  
+  useEffect(() => {
+    if (!dataSnapshots.strategy) return
+    if (dataSnapshots.strategy !== currentStrategyHash) {
+      setStaleSteps(prev => { const next = new Set(prev); next.add('layouts'); next.add('financial'); next.add('report'); return next })
+    }
+  }, [currentStrategyHash]) // eslint-disable-line react-hooks/exhaustive-deps
+  
+  const markStepFresh = (stepId: string) => {
+    setStaleSteps(prev => { const next = new Set(prev); next.delete(stepId); return next })
+    setDataSnapshots(prev => ({
+      ...prev,
+      ...(stepId === 'input' ? { input: currentInputHash } : {}),
+      ...(stepId === 'regulation' ? { regulation: currentRegHash } : {}),
+      ...(stepId === 'strategy' ? { strategy: currentStrategyHash } : {}),
+      ...(stepId === 'layouts' ? { layouts: `${layouts.length}|${selectedLayout}` } : {}),
+    }))
+  }
 
   useEffect(() => {
     setMounted(true)
