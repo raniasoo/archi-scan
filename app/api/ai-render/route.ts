@@ -132,6 +132,73 @@ export async function POST(req: NextRequest) {
   <text x="${svgW/2}" y="${svgH-10}" text-anchor="middle" fill="#6b7280" font-size="11" font-family="sans-serif">필지면적: ${siteArea ? siteArea.toLocaleString() + '㎡' : '—'}</text>
   
   ${slopeSvg}
+  
+  <!-- ★ 건물 배치 다이어그램 (AI 렌더링 참조용) -->
+  ${(() => {
+    // 이격거리 안쪽 건축 가능 영역 좌표 계산
+    const shrunkCoords = mCoords.map(([x, y]: number[]) => {
+      const dx = x - midX, dy = y - midY
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const shrink = dist > 0 ? Math.max(0, dist - 3) / dist : 1
+      return [cx + dx * shrink * scale, cy + dy * shrink * scale]
+    })
+    const ixs = shrunkCoords.map((c: number[]) => c[0])
+    const iys = shrunkCoords.map((c: number[]) => c[1])
+    const icx = ixs.reduce((s: number, v: number) => s + v, 0) / ixs.length
+    const icy = iys.reduce((s: number, v: number) => s + v, 0) / iys.length
+    const iw = Math.max(...ixs) - Math.min(...ixs)
+    const ih = Math.max(...iys) - Math.min(...iys)
+    const f = floors || 3
+    const bt = buildingType || 'tower'
+    const bldgColor = 'rgba(255,165,0,0.5)'
+    const bldgStroke = '#ff8c00'
+    
+    if (bt === 'lshape') {
+      const wing1W = iw * 0.3, wing1H = ih * 0.7
+      const wing2W = iw * 0.7, wing2H = ih * 0.3
+      const ox = Math.min(...ixs) + iw * 0.1
+      const oy = Math.min(...iys) + ih * 0.1
+      return `
+  <rect x="${ox}" y="${oy}" width="${wing1W}" height="${wing1H}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
+  <rect x="${ox}" y="${oy + wing1H - wing2H}" width="${wing2W}" height="${wing2H}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
+  <text x="${ox + wing1W/2}" y="${oy + wing1H/2}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F</text>
+  <text x="${ox + wing2W/2}" y="${oy + wing1H - wing2H/2}" text-anchor="middle" fill="#fff" font-size="11" font-family="sans-serif">L-SHAPE</text>`
+    } else if (bt === 'linear') {
+      const bw = iw * 0.8, bh = ih * 0.3
+      const ox = icx - bw/2, oy = icy - bh/2
+      return `
+  <rect x="${ox}" y="${oy}" width="${bw}" height="${bh}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
+  <text x="${icx}" y="${icy + 4}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F LINEAR</text>`
+    } else if (bt === 'courtyard') {
+      const uw = iw * 0.7, uh = ih * 0.7, t = iw * 0.15
+      const ox = icx - uw/2, oy = Math.min(...iys) + ih * 0.15
+      return `
+  <path d="M ${ox} ${oy} L ${ox+uw} ${oy} L ${ox+uw} ${oy+uh} L ${ox+uw-t} ${oy+uh} L ${ox+uw-t} ${oy+t} L ${ox+t} ${oy+t} L ${ox+t} ${oy+uh} L ${ox} ${oy+uh} Z" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2"/>
+  <text x="${icx}" y="${oy + t/2 + 4}" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">${f}F</text>
+  <text x="${icx}" y="${icy}" text-anchor="middle" fill="#22c55e" font-size="10" font-family="sans-serif">COURTYARD</text>`
+    } else if (bt === 'tower') {
+      const bs = Math.min(iw, ih) * 0.4
+      return `
+  <rect x="${icx-bs/2}" y="${icy-bs/2}" width="${bs}" height="${bs}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
+  <text x="${icx}" y="${icy + 4}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F</text>`
+    } else {
+      const cols = 3, rows = 2
+      const gx = iw * 0.08, gy = ih * 0.08
+      const bw = (iw * 0.8 - gx * (cols-1)) / cols
+      const bh = (ih * 0.7 - gy * (rows-1)) / rows
+      const startX = Math.min(...ixs) + iw * 0.1
+      const startY = Math.min(...iys) + ih * 0.15
+      let rects = ''
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) {
+          const rx = startX + c * (bw + gx)
+          const ry = startY + r * (bh + gy)
+          rects += '<rect x="' + rx + '" y="' + ry + '" width="' + bw + '" height="' + bh + '" fill="' + bldgColor + '" stroke="' + bldgStroke + '" stroke-width="1.5" rx="2"/>'
+        }
+      return rects + '<text x="' + icx + '" y="' + icy + '" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">' + f + 'F × ' + (cols*rows) + '</text>'
+    }
+  })()}
+  <text x="${svgW/2}" y="${svgH-58}" text-anchor="middle" fill="#ff8c00" font-size="10" font-family="sans-serif">BUILDING FOOTPRINT (${floors || 3}F, ${buildingType || 'cluster'})</text>
 </svg>`
 
         const svgBase64 = Buffer.from(svg).toString('base64')
@@ -378,7 +445,7 @@ The entrance must use the SAME materials and style visible in the street-level i
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
           parts.push({ text: `REFERENCE IMAGES (${refImages.length}):
-${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'CADASTRAL LOT BOUNDARY from real survey data — Blue line is the exact lot boundary shape. Dashed orange is the setback line. Green area is where the building can be placed. The new building footprint MUST fit within this shape.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label}`).join('\n')}
+${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows the exact lot boundary (blue), setback line (orange dashed), AND the BUILDING FOOTPRINTS (orange filled shapes). The ORANGE SHAPES show EXACTLY where and what shape the buildings must be. The rendered buildings MUST match these orange footprint shapes — same position, same shape (L-shaped, linear, U-shaped, etc.), same number of buildings. This is the MOST IMPORTANT reference image.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label}`).join('\n')}
 The rendering MUST reflect what is shown in these reference images. Do NOT ignore them.` })
         }
         
