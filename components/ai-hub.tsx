@@ -365,26 +365,39 @@ export function AIHub({ input, onRenderComplete, previousRenderImage }: { input:
             </div>
               </div>
             )}
-            {/* 이전 렌더링 참조 옵션 */}
+            {/* 이전 렌더링 — 사용/참조/새로 생성 */}
             {previousRenderImage && !renderImg && !multiImages && (
-              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-violet-300">📷 이전 렌더링</span>
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-emerald-300">✨ AI 렌더링 결과</span>
+                  <span className="text-[9px] text-muted-foreground">QuickAnalysis</span>
+                </div>
+                <img src={previousRenderImage} alt="AI 렌더링" className="w-full rounded-lg border border-emerald-500/30" />
+                <div className="flex gap-1.5">
                   <button
-                    onClick={() => setUseReference(!useReference)}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                      useReference 
-                        ? 'bg-violet-500/30 text-violet-300 border border-violet-500/40' 
-                        : 'bg-muted/50 text-muted-foreground border border-border/50'
-                    }`}
+                    onClick={() => { setRenderImg(previousRenderImage); onRenderComplete?.(previousRenderImage); toast.success('렌더링 이미지를 사용합니다') }}
+                    className="flex-1 py-2 rounded-lg bg-emerald-600/80 text-white text-[11px] font-semibold"
                   >
-                    {useReference ? '✅ 참조 사용' : '참조 안 함'}
+                    ✅ 이 렌더링 사용
+                  </button>
+                  <button
+                    onClick={() => { setUseReference(true); doRender(0) }}
+                    disabled={loading}
+                    className="flex-1 py-2 rounded-lg bg-violet-600/80 text-white text-[11px] font-semibold disabled:opacity-50"
+                  >
+                    🔄 스타일 유지 재생성
                   </button>
                 </div>
-                <img src={previousRenderImage} alt="이전 렌더링" className={`w-full rounded-lg border ${useReference ? 'border-violet-500/40 opacity-100' : 'border-border/30 opacity-40'}`} style={{ maxHeight: 120, objectFit: 'cover' }} />
-                <p className="text-[9px] text-muted-foreground">
-                  {useReference ? '이전 렌더링을 참조하여 유사한 스타일로 새 이미지를 생성합니다' : '참조 없이 새로운 스타일로 생성합니다'}
-                </p>
+                <button
+                  onClick={() => setUseReference(!useReference)}
+                  className={`w-full py-1.5 rounded-lg text-[10px] font-medium transition-colors ${
+                    useReference 
+                      ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' 
+                      : 'bg-muted/30 text-muted-foreground border border-border/30'
+                  }`}
+                >
+                  {useReference ? '📷 참조 ON — 유사 스타일로 생성' : '📷 참조 OFF — 완전히 새로 생성'}
+                </button>
               </div>
             )}
             {/* 렌더링 버튼 (항상 보임) */}
