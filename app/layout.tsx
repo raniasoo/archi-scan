@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-// 폰트는 globals.css에서 @import로 런타임 로드 (빌드 시 외부 의존성 없음)import { Analytics } from '@vercel/analytics/next'
+// 폰트는 globals.css에서 @import로 런타임 로드 (빌드 시 외부 의존성 없음)
+import { Analytics } from '@vercel/analytics/next'
 import { GoogleAnalytics } from '@/components/google-analytics'
 import { Toaster } from '@/components/ui/sonner'
 import { SubscriptionProvider } from '@/components/subscription-provider'
