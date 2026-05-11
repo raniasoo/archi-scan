@@ -1,5 +1,17 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_KR } from 'next/font/google'
+import localFont from 'next/font/local'
+
+// Google Fonts 대신 로컬 TTF 사용 (빌드 시 외부 의존성 제거)
+const notoSansKr = localFont({
+  src: [
+    { path: '../public/fonts/NotoSansKR-Regular.ttf', weight: '400', style: 'normal' },
+    { path: '../public/fonts/NotoSansKR-Regular.ttf', weight: '500', style: 'normal' },
+    { path: '../public/fonts/NotoSansKR-Bold.ttf', weight: '600', style: 'normal' },
+    { path: '../public/fonts/NotoSansKR-Bold.ttf', weight: '700', style: 'normal' },
+  ],
+  display: 'swap',
+  fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+})
 import { Analytics } from '@vercel/analytics/next'
 import { GoogleAnalytics } from '@/components/google-analytics'
 import { Toaster } from '@/components/ui/sonner'
@@ -7,10 +19,7 @@ import { SubscriptionProvider } from '@/components/subscription-provider'
 
 import './globals.css'
 
-const notoSansKr = Noto_Sans_KR({ 
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
+// notoSansKr is defined above with localFont
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.archiscan.kr'),
