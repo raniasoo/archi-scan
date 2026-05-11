@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Resvg } from '@resvg/resvg-js'
 
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY
+
+// SVG → PNG 변환 (Gemini는 SVG 미지원, PNG만 가능)
+function svgToPngBase64(svgString: string, width = 600): string {
+  try {
+    const resvg = new Resvg(svgString, { 
+      fitTo: { mode: 'width' as const, value: width },
+      font: { loadSystemFonts: false },
+    })
+    const pngData = resvg.render()
+    const pngBuffer = pngData.asPng()
+    return Buffer.from(pngBuffer).toString('base64')
+  } catch (e) {
+    console.error('[SVG→PNG] Conversion failed:', e)
+    return '' // 실패 시 빈 문자열 → 이미지 생략
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -239,7 +256,13 @@ export async function POST(req: NextRequest) {
 </svg>`
 
         const svgBase64 = Buffer.from(svg).toString('base64')
-        refImages.push({ base64: svgBase64, mimeType: 'image/svg+xml', label: 'cadastral-polygon' })
+        // SVG → PNG 변환 (Gemini는 SVG 미지원)
+        const cadastralPng = svgToPngBase64(svg, 600)
+        if (cadastralPng) {
+          refImages.push({ base64: cadastralPng, mimeType: 'image/png', label: 'cadastral-polygon' })
+        } else {
+          refImages.push({ base64: svgBase64, mimeType: 'image/svg+xml', label: 'cadastral-polygon' })
+        }
         
         // ━━━ 높이 참조 SVG 생성 — 사람/나무/건물 비교 ━━━
         if (floors && floors <= 7) {
@@ -299,7 +322,12 @@ export async function POST(req: NextRequest) {
   <text x="${svgW2/2}" y="${svgH2-8}" text-anchor="middle" fill="#FF4444" font-size="12" font-weight="bold" font-family="sans-serif">DO NOT generate more than ${hF} floors. The building is ${hF <= 3 ? 'SHORTER than nearby trees' : 'about the same height as trees'}.</text>
 </svg>`
           const heightSvgBase64 = Buffer.from(heightSvg).toString('base64')
-          refImages.push({ base64: heightSvgBase64, mimeType: 'image/svg+xml', label: 'height-reference' })
+          const heightPng = svgToPngBase64(heightSvg, 500)
+          if (heightPng) {
+            refImages.push({ base64: heightPng, mimeType: 'image/png', label: 'height-reference' })
+          } else {
+            refImages.push({ base64: heightSvgBase64, mimeType: 'image/svg+xml', label: 'height-reference' })
+          }
         }
         
         // ━━━ 대지 형상 텍스트 분석 (프롬프트용) ━━━
@@ -954,8 +982,20 @@ ${buildingType === 'lshape' ? `- The building in view is L-SHAPED (ㄱ자형). Y
 - ${f <= 3 ? `★ HEIGHT: From above, the buildings are LOW — their roofs are at the SAME HEIGHT or LOWER than the surrounding trees. The trees partially HIDE the buildings. This is key to recognizing ${f}-story buildings from a drone view.` : `★ HEIGHT: Each building is ${f} floors (${Math.round(f * 3.3)}m). They are about the same height as the trees around them.`}
 - Show spaces BETWEEN buildings: gardens, walkways, small courtyards, parking areas.
 ${buildingType === 'linear' ? `- ★★★ ARRANGEMENT: All buildings are LONG HORIZONTAL SLABS arranged PARALLEL to each other, running EAST-WEST. From above it looks like ${buildingCount} horizontal bars. This is a Korean 판상형 아파트 complex. DO NOT arrange them in a cluster or random pattern.` : ''}
-${buildingType === 'lshape' ? `- Each building is clearly L-SHAPED (ㄱ자) from above. Two wings meeting at 90 degrees.` : ''}
-${buildingType === 'courtyard' ? `- Buildings form U or C shapes around courtyards. The central gardens are clearly visible from above.` : ''}
+${buildingType === 'lshape' ? `- ★★★ BUILDING SHAPE: Each building is L-SHAPED (ㄱ자형) when viewed from ABOVE.
+  FROM THE SKY, each building looks like the letter "L" or Korean character "ㄱ":
+  - One wing runs EAST-WEST (horizontal)
+  - Another wing runs NORTH-SOUTH (vertical)  
+  - The two wings meet at a 90° corner
+  - The inside corner creates a small private garden/courtyard
+  DO NOT generate simple rectangular box buildings. The L-shape MUST be clearly visible from this bird's-eye angle.
+  Check the BUILDING LAYOUT DIAGRAM reference image — the ORANGE SHAPES show the exact L-footprint.` : ''}
+${buildingType === 'courtyard' ? `- ★★★ BUILDING SHAPE: Each building group forms a U-SHAPE or C-SHAPE (중정형) when viewed from ABOVE.
+  FROM THE SKY, each building group looks like the letter "U" or "C":
+  - Three wings arranged around a CENTRAL GARDEN/COURTYARD
+  - The courtyard is CLEARLY VISIBLE as an open green space in the center
+  - The wings enclose and protect the garden from wind
+  DO NOT generate separate individual buildings. Show the U-shape with enclosed courtyard clearly from above.` : ''}
 - The complex should feel like walking through a small residential neighborhood.`)
   : `- The building MUST have EXACTLY ${f} floors. Count them: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. This is non-negotiable.
 - ${f <= 2 ? 'This is a LOW-RISE building, maximum 2 stories tall. Do NOT make it taller.' : f <= 5 ? `This is a LOW to MID-RISE building with exactly ${f} visible floor levels.` : `This is a ${f}-story building. Each floor must be clearly visible and countable.`}`}
