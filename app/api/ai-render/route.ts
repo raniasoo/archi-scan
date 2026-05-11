@@ -330,7 +330,68 @@ export async function POST(req: NextRequest) {
           }
         }
         
-        // ━━━ 대지 형상 텍스트 분석 (프롬프트용) ━━━
+        // ━━━ 건물 형태 참조 PNG (조감도 전용) ━━━
+        // Gemini가 조감도에서 건물 풋프린트 형태를 정확히 따르도록
+        const bt3 = buildingType || 'cluster'
+        if (bt3 !== 'cluster' && bt3 !== 'tower') {
+          const sw = 500, sh = 400
+          const bldgCount2 = Math.min(4, Math.max(2, Math.ceil((units || 30) / ((floors || 3) * (bt3 === 'linear' ? 12 : bt3 === 'lshape' ? 6 : 10)))))
+          
+          let buildingShapes = ''
+          const cols = bldgCount2 <= 2 ? 2 : 2
+          const rows = Math.ceil(bldgCount2 / cols)
+          const cellW = (sw - 80) / cols
+          const cellH = (sh - 120) / rows
+          
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols && (r * cols + c) < bldgCount2; c++) {
+              const cx = 50 + c * cellW + cellW / 2
+              const cy = 80 + r * cellH + cellH / 2
+              const s = Math.min(cellW, cellH) * 0.35
+              
+              if (bt3 === 'lshape') {
+                // ㄱ자형: 명확한 L자
+                const wingW = s * 0.4  // 날개 두께
+                const wingL = s * 1.2  // 날개 길이
+                buildingShapes += `<path d="M ${cx - wingL/2} ${cy - wingL/2} L ${cx - wingL/2 + wingW} ${cy - wingL/2} L ${cx - wingL/2 + wingW} ${cy + wingL/2 - wingW} L ${cx + wingL/2} ${cy + wingL/2 - wingW} L ${cx + wingL/2} ${cy + wingL/2} L ${cx - wingL/2} ${cy + wingL/2} Z" fill="#FF6B00" stroke="#fff" stroke-width="3"/>`
+                // 90° 각도 표시
+                buildingShapes += `<path d="M ${cx - wingL/2 + wingW + 8} ${cy + wingL/2 - wingW} L ${cx - wingL/2 + wingW + 8} ${cy + wingL/2 - wingW - 8} L ${cx - wingL/2 + wingW} ${cy + wingL/2 - wingW - 8}" fill="none" stroke="#FFD700" stroke-width="2"/>`
+                buildingShapes += `<text x="${cx - wingL/2 + wingW + 15}" y="${cy + wingL/2 - wingW - 12}" fill="#FFD700" font-size="10" font-family="sans-serif">90°</text>`
+              } else if (bt3 === 'linear') {
+                // 판상형: 넓고 긴 직사각형
+                buildingShapes += `<rect x="${cx - s * 1.3}" y="${cy - s * 0.3}" width="${s * 2.6}" height="${s * 0.6}" fill="#FF6B00" stroke="#fff" stroke-width="3" rx="2"/>`
+              } else if (bt3 === 'courtyard') {
+                // 중정형: U자
+                const u = s * 0.3
+                buildingShapes += `<path d="M ${cx - s} ${cy - s * 0.8} L ${cx - s + u} ${cy - s * 0.8} L ${cx - s + u} ${cy + s * 0.5} L ${cx + s - u} ${cy + s * 0.5} L ${cx + s - u} ${cy - s * 0.8} L ${cx + s} ${cy - s * 0.8} L ${cx + s} ${cy + s * 0.8} L ${cx - s} ${cy + s * 0.8} Z" fill="#FF6B00" stroke="#fff" stroke-width="3"/>`
+                // 중앙 정원 표시
+                buildingShapes += `<rect x="${cx - s + u + 3}" y="${cy - s * 0.8 + 3}" width="${(s - u) * 2 - 6}" height="${s * 1.3 - 6}" fill="#228B22" opacity="0.4" rx="3"/>`
+                buildingShapes += `<text x="${cx}" y="${cy - s * 0.1}" text-anchor="middle" fill="#fff" font-size="8" font-family="sans-serif">garden</text>`
+              }
+              
+              // 동 번호
+              buildingShapes += `<text x="${cx}" y="${cy + s * 1.2 + 12}" text-anchor="middle" fill="#aaa" font-size="10" font-family="sans-serif">동 ${String.fromCharCode(65 + r * cols + c)}</text>`
+            }
+          }
+          
+          const typeNameEn: Record<string, string> = { lshape: 'L-SHAPE (ㄱ)', linear: 'LINEAR SLAB', courtyard: 'U-SHAPE COURTYARD' }
+          const typeNameKr: Record<string, string> = { lshape: 'ㄱ자형', linear: '판상형', courtyard: '중정형' }
+          
+          const shapeSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${sw}" height="${sh}" viewBox="0 0 ${sw} ${sh}">
+  <rect width="${sw}" height="${sh}" fill="#1a1a2e"/>
+  <text x="${sw/2}" y="28" text-anchor="middle" fill="#FF6B00" font-size="18" font-weight="bold" font-family="sans-serif">★ BUILDING FOOTPRINT: ${typeNameEn[bt3] || bt3} ★</text>
+  <text x="${sw/2}" y="48" text-anchor="middle" fill="#fff" font-size="13" font-family="sans-serif">EACH building MUST have this EXACT shape when viewed from ABOVE</text>
+  <text x="${sw/2}" y="66" text-anchor="middle" fill="#aaa" font-size="11" font-family="sans-serif">${bldgCount2} buildings × ${floors || 3}F — The ORANGE shapes show the roof footprint</text>
+  ${buildingShapes}
+  <text x="${sw/2}" y="${sh - 20}" text-anchor="middle" fill="#FF4444" font-size="13" font-weight="bold" font-family="sans-serif">${bt3 === 'lshape' ? 'DO NOT generate rectangular boxes. EVERY building MUST be L-shaped (ㄱ).' : bt3 === 'linear' ? 'EVERY building must be a LONG horizontal bar, NOT a square.' : 'EVERY building must form a U around a central garden.'}</text>
+  <text x="${sw/2}" y="${sh - 5}" text-anchor="middle" fill="#aaa" font-size="10" font-family="sans-serif">Compare your output with these shapes. If they don't match, regenerate.</text>
+</svg>`
+          
+          const shapePng = svgToPngBase64(shapeSvg, 500)
+          if (shapePng) {
+            refImages.push({ base64: shapePng, mimeType: 'image/png', label: 'shape-reference' })
+          }
+        }
         const widthM = Math.round(w) // 미터 단위 폭
         const heightM = Math.round(h) // 미터 단위 깊이
         const aspectRatio = widthM > 0 && heightM > 0 ? (widthM / heightM).toFixed(1) : '1.0'
@@ -571,7 +632,7 @@ The entrance must use the SAME materials and style visible in the street-level i
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
           parts.push({ text: `REFERENCE IMAGES (${refImages.length}):
-${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows the exact lot boundary (blue), setback line (orange dashed), AND the BUILDING FOOTPRINTS (orange filled shapes). The ORANGE SHAPES show EXACTLY where and what shape the buildings must be. The rendered buildings MUST match these orange footprint shapes — same position, same shape (L-shaped, linear, U-shaped, etc.), same number of buildings. This is the MOST IMPORTANT reference image.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label === 'height-reference' ? `★★★ HEIGHT REFERENCE DIAGRAM — This diagram shows the EXACT correct height of the building. The building has EXACTLY ${floors || 3} floors and is ${((floors || 3) * 3.3).toFixed(1)}m tall. Compare with the person (1.7m) and tree. The building is ${(floors || 3) <= 3 ? 'SHORTER than nearby trees — it is a LOW building' : 'about the same height as trees'}. DO NOT generate a taller building. COUNT THE FLOORS in this diagram and match them EXACTLY.` : r.label}`).join('\n')}
+${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows the exact lot boundary (blue), setback line (orange dashed), AND the BUILDING FOOTPRINTS (orange filled shapes). The ORANGE SHAPES show EXACTLY where and what shape the buildings must be. The rendered buildings MUST match these orange footprint shapes — same position, same shape (L-shaped, linear, U-shaped, etc.), same number of buildings. This is the MOST IMPORTANT reference image.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label === 'height-reference' ? `★★★ HEIGHT REFERENCE DIAGRAM — This diagram shows the EXACT correct height of the building. The building has EXACTLY ${floors || 3} floors and is ${((floors || 3) * 3.3).toFixed(1)}m tall. Compare with the person (1.7m) and tree. The building is ${(floors || 3) <= 3 ? 'SHORTER than nearby trees — it is a LOW building' : 'about the same height as trees'}. DO NOT generate a taller building. COUNT THE FLOORS in this diagram and match them EXACTLY.` : r.label === 'shape-reference' ? `★★★ BUILDING SHAPE REFERENCE — THIS IS THE MOST CRITICAL IMAGE. The ORANGE shapes show the EXACT footprint of each building as seen from ABOVE (bird's eye). Your rendered buildings MUST match these shapes EXACTLY. ${buildingType === 'lshape' ? 'Each building is L-SHAPED (ㄱ자형) — two wings meeting at 90°. If your buildings look like simple rectangles from above, they are WRONG.' : buildingType === 'linear' ? 'Each building is a LONG HORIZONTAL BAR. If your buildings look square from above, they are WRONG.' : buildingType === 'courtyard' ? 'Each building forms a U-SHAPE around a central garden. The garden MUST be visible from above.' : ''} Check your output against this reference before finalizing.` : r.label}`).join('\n')}
 The rendering MUST reflect what is shown in these reference images. Do NOT ignore them.` })
         }
         
