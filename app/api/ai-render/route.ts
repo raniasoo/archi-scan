@@ -154,21 +154,58 @@ export async function POST(req: NextRequest) {
     const bldgStroke = '#ff8c00'
     
     if (bt === 'lshape') {
-      const wing1W = iw * 0.3, wing1H = ih * 0.7
-      const wing2W = iw * 0.7, wing2H = ih * 0.3
-      const ox = Math.min(...ixs) + iw * 0.1
-      const oy = Math.min(...iys) + ih * 0.1
-      return `
+      // ㄱ자형: 다동일 수 있음 (대규모 대지)
+      const bldgCount = (units && floors && siteArea && siteArea > 1500 && units > 20) 
+        ? Math.max(2, Math.ceil(units / (6 * (floors || 3))))
+        : 1
+      
+      if (bldgCount <= 2) {
+        // 1-2동: 큰 L자 하나 또는 대칭 두 개
+        const wing1W = iw * 0.3, wing1H = ih * 0.7
+        const wing2W = iw * 0.7, wing2H = ih * 0.3
+        const ox = Math.min(...ixs) + iw * 0.1
+        const oy = Math.min(...iys) + ih * 0.1
+        return `
   <rect x="${ox}" y="${oy}" width="${wing1W}" height="${wing1H}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
   <rect x="${ox}" y="${oy + wing1H - wing2H}" width="${wing2W}" height="${wing2H}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
   <text x="${ox + wing1W/2}" y="${oy + wing1H/2}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F</text>
-  <text x="${ox + wing2W/2}" y="${oy + wing1H - wing2H/2}" text-anchor="middle" fill="#fff" font-size="11" font-family="sans-serif">L-SHAPE</text>`
+  <text x="${ox + wing2W/2}" y="${oy + wing1H - wing2H/2}" text-anchor="middle" fill="#fff" font-size="11" font-family="sans-serif">ㄱ-SHAPE</text>`
+      } else {
+        // 3동 이상: 작은 L자 여러개 배치
+        const cols = Math.min(bldgCount, 3)
+        const rows = Math.ceil(bldgCount / cols)
+        const cellW = iw * 0.75 / cols
+        const cellH = ih * 0.7 / rows
+        const startX = Math.min(...ixs) + iw * 0.12
+        const startY = Math.min(...iys) + ih * 0.15
+        let shapes = ''
+        let drawn = 0
+        for (let r = 0; r < rows && drawn < bldgCount; r++) {
+          for (let c = 0; c < cols && drawn < bldgCount; c++) {
+            const cx2 = startX + c * cellW + cellW * 0.1
+            const cy2 = startY + r * cellH + cellH * 0.1
+            const lw = cellW * 0.35, lh = cellH * 0.7, lw2 = cellW * 0.7, lh2 = cellH * 0.3
+            shapes += '<rect x="' + cx2 + '" y="' + cy2 + '" width="' + lw + '" height="' + lh + '" fill="' + bldgColor + '" stroke="' + bldgStroke + '" stroke-width="1.5" rx="1"/>'
+            shapes += '<rect x="' + cx2 + '" y="' + (cy2 + lh - lh2) + '" width="' + lw2 + '" height="' + lh2 + '" fill="' + bldgColor + '" stroke="' + bldgStroke + '" stroke-width="1.5" rx="1"/>'
+            drawn++
+          }
+        }
+        return shapes + '<text x="' + icx + '" y="' + icy + '" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">' + f + 'F × ' + bldgCount + ' ㄱ</text>'
+      }
     } else if (bt === 'linear') {
-      const bw = iw * 0.8, bh = ih * 0.3
-      const ox = icx - bw/2, oy = icy - bh/2
-      return `
-  <rect x="${ox}" y="${oy}" width="${bw}" height="${bh}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
-  <text x="${icx}" y="${icy + 4}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F LINEAR</text>`
+      // 판상형: 2-3동의 긴 직사각형이 평행 배치
+      const bldgCount = Math.max(2, Math.min(3, Math.ceil((units || 30) / ((floors || 3) * 12))))
+      const bw = iw * 0.85
+      const bh = ih * 0.15  // 얇은 직사각형
+      const gap = (ih * 0.7 - bh * bldgCount) / (bldgCount - 1 || 1)
+      const startY = Math.min(...iys) + ih * 0.15
+      const ox = icx - bw/2
+      let rects = ''
+      for (let i = 0; i < bldgCount; i++) {
+        const ry = startY + i * (bh + gap)
+        rects += '<rect x="' + ox + '" y="' + ry + '" width="' + bw + '" height="' + bh + '" fill="' + bldgColor + '" stroke="' + bldgStroke + '" stroke-width="2" rx="2"/>'
+      }
+      return rects + '<text x="' + icx + '" y="' + (startY + (bldgCount * (bh + gap) - gap) / 2 + 4) + '" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">' + f + 'F × ' + bldgCount + ' LINEAR</text>'
     } else if (bt === 'courtyard') {
       const uw = iw * 0.7, uh = ih * 0.7, t = iw * 0.15
       const ox = icx - uw/2, oy = Math.min(...iys) + ih * 0.15
@@ -585,53 +622,84 @@ function buildArchitecturePrompt(params: {
   } else if (f <= 5 && u <= 20) {
     buildingForm = `A low-rise multi-family villa, EXACTLY ${f} stories tall (${Math.round(f * 3.3)}m), ${u} units. Footprint ~${bW}m × ${bD}m. Ground floor: entrance hall + parking. Upper: residential. DO NOT make taller than ${f} floors. DO NOT generate round or cylindrical buildings.`
   } else if (f <= 5 && u > 20 && siteArea && siteArea > 1500) {
-    // ★ 저층 + 많은 세대 + 넓은 대지 = 다동(多棟) 단지
+    // ★ 저층 + 많은 세대 + 넓은 대지 — 타입별 건물 수 차별화
     isComplex = true
-    const unitsPerBldg = Math.ceil(u / Math.max(Math.round(u / (f * 4)), 2))
-    buildingCount = Math.ceil(u / unitsPerBldg)
+    const bt2 = buildingType || 'cluster'
+    
+    // 타입별 1동당 최대 세대수 (층당)
+    const unitsPerFloorPerBldg: Record<string, number> = {
+      linear: 12,    // 판상형: 복도식으로 1층에 10-14세대
+      lshape: 6,     // ㄱ자형: L날개 양쪽 각 3세대
+      courtyard: 10, // 중정형: U자 3면 각 3-4세대
+      tower: 4,      // 타워형: 코어 주변 4세대
+      cluster: 4,    // 클러스터: 소규모 동
+    }
+    const maxPerFloor = unitsPerFloorPerBldg[bt2] || 4
+    const maxPerBldg = maxPerFloor * f
+    buildingCount = Math.max(2, Math.ceil(u / maxPerBldg))
+    
     const eachFootprint = Math.round(footprint / buildingCount)
-    const eachW = Math.round(Math.sqrt(eachFootprint * 1.4))
+    // 판상형은 세로보다 가로가 3배 이상 긴 비율
+    const linearRatio = bt2 === 'linear' ? 3.5 : 1.4
+    const eachW = Math.round(Math.sqrt(eachFootprint * linearRatio))
     const eachD = Math.round(eachFootprint / eachW)
     
-    // 원래 건축 타입에 따른 개별 건물 형태 설명 — 매우 구체적으로
+    // 원래 건축 타입에 따른 건물 배치 설명
     const typeDesc: Record<string, string> = {
-      linear: `BUILDING SHAPE: Each building is a LONG RECTANGULAR SLAB (판상형).
-Each building is approximately ${eachW * 2}m long × ${eachD}m wide — the width is at least 2-3 times the depth.
-All units face SOUTH with continuous balconies on the south facade.
-The north side has a corridor connecting all units.
-DO NOT draw square buildings. Each building MUST be noticeably elongated/rectangular.`,
-      courtyard: `BUILDING SHAPE: Buildings form a U-SHAPE or C-SHAPE around a central courtyard (중정형).
-Each building group has 2-3 wings connected at right angles, enclosing a central garden.
-The courtyard/garden is CLEARLY VISIBLE from above, surrounded by building wings.
+      linear: `★★★ LAYOUT TYPE: 판상형 (PARALLEL SLAB BUILDINGS) ★★★
+This is a KOREAN-STYLE LINEAR APARTMENT COMPLEX with ${buildingCount} LONG SLAB buildings.
+
+EACH BUILDING SHAPE:
+- Very LONG and NARROW — approximately ${eachW}m long × ${eachD}m wide
+- The length is ${(eachW/eachD).toFixed(1)}× the depth — clearly elongated, NOT square
+- All units face SOUTH with continuous balconies on the SOUTH facade
+- The NORTH side has an enclosed corridor connecting all units
+
+SITE ARRANGEMENT:
+- All ${buildingCount} buildings are arranged PARALLEL to each other, running EAST-WEST
+- Equal spacing (~15-20m) between buildings for sunlight
+- This looks like a typical Korean apartment complex (아파트 단지) from above
+- From bird's eye view: ${buildingCount} horizontal bars side by side
+
+DO NOT generate square or tower-shaped buildings.
+DO NOT generate buildings arranged in a cluster/village pattern.
+The buildings must be PARALLEL horizontal slabs — this is the defining feature.`,
+
+      courtyard: `LAYOUT TYPE: 중정형 (COURTYARD BUILDINGS)
+${buildingCount} building groups, each forming a U-SHAPE or C-SHAPE around a central courtyard.
+Each group has 2-3 wings (~${eachW}m × ${eachD}m each) connected at right angles, enclosing a garden.
+The courtyard is CLEARLY VISIBLE from above, surrounded by building wings.
 DO NOT draw separate individual box buildings.`,
-      lshape: `BUILDING SHAPE: Each building is L-SHAPED / ㄱ-SHAPED (ㄱ자형).
+
+      lshape: `LAYOUT TYPE: ㄱ자형 (L-SHAPED BUILDINGS)
+${buildingCount} separate L-SHAPED buildings on the site.
 Each building has TWO WINGS meeting at a 90-degree RIGHT ANGLE — like the letter "L" or Korean "ㄱ".
-One wing faces SOUTH, the other wing faces EAST or WEST.
+One wing runs EAST-WEST (south-facing), the other runs NORTH-SOUTH.
 The L-shape creates a semi-private garden in the corner where the two wings meet.
-DO NOT draw rectangular box buildings. Each building MUST clearly show the L-shaped footprint from above.`,
-      tower: `BUILDING SHAPE: Each building is a COMPACT TOWER (타워형).
-Square footprint ~${eachW}m × ${eachD}m with units arranged around a central elevator core.
-Each tower is a standalone vertical structure.`,
-      cluster: `BUILDING SHAPE: Buildings are VARIED individual volumes (클러스터).
-Each building has a unique form — some rectangular, some L-shaped, some with setbacks.
-Buildings are arranged organically on the site with varied orientations.`,
+DO NOT draw rectangular box buildings. Each building MUST clearly show the L-shaped footprint.`,
+
+      tower: `LAYOUT TYPE: 타워형 (TOWER BUILDINGS)
+${buildingCount} separate COMPACT TOWER buildings.
+Each tower has a square footprint ~${eachW}m × ${eachD}m with units around a central elevator core.
+Towers are evenly spaced across the site with landscaped gardens between them.`,
+
+      cluster: `LAYOUT TYPE: 클러스터 (VARIED CLUSTER)
+${buildingCount} buildings with VARIED individual forms — some rectangular, some L-shaped, some with setbacks.
+Buildings are arranged organically with varied orientations for visual interest.`,
     }
-    const shapeDesc = typeDesc[buildingType || 'cluster'] || typeDesc.cluster
+    const shapeDesc = typeDesc[bt2] || typeDesc.cluster
     
-    buildingForm = `A MULTI-BUILDING RESIDENTIAL COMPLEX — NOT a single building.
-${buildingCount} separate buildings on a ${siteArea}㎡ site. Total ${u} units.
+    buildingForm = `${shapeDesc}
 
-★★★ CRITICAL HEIGHT: EXACTLY ${f} STORIES (${Math.round(f * 3.3)}m tall). NOT taller. NOT shorter.
-Each building is ONLY ${f} floors high — this is a LOW-RISE complex, NOT high-rise towers.
+★★★ CRITICAL HEIGHT: EXACTLY ${f} STORIES (${Math.round(f * 3.3)}m tall) ★★★
+EVERY building is ONLY ${f} floors. This is a LOW-RISE complex, NOT high-rise towers.
+Count the floors: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. That's ALL.
+Each floor is ~3.3m tall. Total building height: ${Math.round(f * 3.3)}m.
+A ${f}-story building is about as tall as ${f <= 3 ? 'a large tree' : 'a telephone pole'}.
 DO NOT generate buildings taller than ${f} stories under ANY circumstances.
-DO NOT generate round, cylindrical, or curved buildings — ALL buildings must have FLAT walls and RIGHT ANGLES.
 
-${shapeDesc}
-IMPORTANT: If the site is on a slope, buildings MUST be placed at DIFFERENT ELEVATION LEVELS following the natural terrain.
-If the site is flat, buildings are spaced apart with landscaped gardens and walkways.
-CRITICAL SITE SHAPE: If a cadastral reference image is provided, arrange buildings to fit WITHIN the actual irregular lot boundary.
-CRITICAL: Show ${buildingCount} SEPARATE ${f}-story buildings clearly visible in the image.
-REPEAT: The building shape described above is MANDATORY — do NOT default to simple rectangular boxes or cylindrical towers.`
+Total: ${u} units across ${buildingCount} buildings on a ${siteArea}㎡ site.
+DO NOT generate round, cylindrical, or curved buildings — ALL buildings must have FLAT walls and RIGHT ANGLES.`
   } else if (f <= 10) {
     if (u > 40 && siteArea && siteArea > 3000) {
       isComplex = true
@@ -807,7 +875,8 @@ ${isComplex
   ? (cameraAngle === 'eye-level' || !cameraAngle 
     ? `- This is a multi-building residential complex, but you are photographing it from STREET LEVEL (1.6m).
 - From this low angle, you can clearly see only 1-2 buildings in the FOREGROUND. They fill most of the frame.
-- Other buildings in the complex are partially visible BEHIND or BESIDE the foreground building, but they are NOT the focus.
+${buildingType === 'linear' ? `- The building in view is a LONG HORIZONTAL SLAB (판상형). It extends far to the left and right — the facade is very WIDE. It is NOT a compact tower.` : ''}
+${buildingType === 'lshape' ? `- The building in view is L-SHAPED (ㄱ자형). You can see one wing going forward and another wing going to the side.` : ''}
 - You are standing on the street or sidewalk, looking HORIZONTALLY at the nearest building's facade.
 - The foreground building has EXACTLY ${f} floors. You can count each floor from bottom to top.
 - Show the building entrance, windows, balconies, and materials at close range.
@@ -816,6 +885,9 @@ ${isComplex
     : `- This is a MULTI-BUILDING COMPLEX with ${buildingCount} separate ${f}-story buildings. Show MULTIPLE distinct buildings, NOT one large structure.
 - Each building MUST have EXACTLY ${f} floors. They should look like a cohesive village/community.
 - Show spaces BETWEEN buildings: gardens, walkways, small courtyards, parking areas.
+${buildingType === 'linear' ? `- ★★★ ARRANGEMENT: All buildings are LONG HORIZONTAL SLABS arranged PARALLEL to each other, running EAST-WEST. From above it looks like ${buildingCount} horizontal bars. This is a Korean 판상형 아파트 complex. DO NOT arrange them in a cluster or random pattern.` : ''}
+${buildingType === 'lshape' ? `- Each building is clearly L-SHAPED (ㄱ자) from above. Two wings meeting at 90 degrees.` : ''}
+${buildingType === 'courtyard' ? `- Buildings form U or C shapes around courtyards. The central gardens are clearly visible from above.` : ''}
 - The complex should feel like walking through a small residential neighborhood.`)
   : `- The building MUST have EXACTLY ${f} floors. Count them: ${Array.from({length: f}, (_, i) => `floor ${i+1}`).join(', ')}. This is non-negotiable.
 - ${f <= 2 ? 'This is a LOW-RISE building, maximum 2 stories tall. Do NOT make it taller.' : f <= 5 ? `This is a LOW to MID-RISE building with exactly ${f} visible floor levels.` : `This is a ${f}-story building. Each floor must be clearly visible and countable.`}`}
