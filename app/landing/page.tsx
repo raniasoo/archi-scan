@@ -351,6 +351,45 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ━━━ REAL SCREENSHOTS — Feature Showcase ━━━ */}
+      <section className="py-20 md:py-28 bg-white/[0.02] border-y border-white/5">
+        <div className="max-w-5xl mx-auto px-5">
+          <div className="text-center mb-14">
+            <span className="text-xs text-teal-400 font-semibold tracking-widest uppercase">Real Output</span>
+            <h2 className="text-3xl md:text-4xl font-extrabold mt-3">
+              실제 <span className="bg-gradient-to-r from-teal-300 to-emerald-400 bg-clip-text text-transparent">분석 결과물</span>
+            </h2>
+            <p className="text-sm text-white/40 mt-3 max-w-lg mx-auto">Archi-Scan이 자동으로 생성하는 전문 보고서의 실제 화면입니다</p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              { img: "/screenshots/report-cover.jpg", title: "전문 보고서", desc: "AI 렌더링이 포함된 사전검토 보고서를 자동 생성" },
+              { img: "/screenshots/report-summary.jpg", title: "종합 검토 결과", desc: "ROI, 총사업비, 예상수익을 한눈에 확인" },
+              { img: "/screenshots/legal-review.jpg", title: "법규 검토 & 배치안 비교", desc: "건폐율·용적률·높이제한 적정 여부와 배치안별 ROI 비교" },
+              { img: "/screenshots/blueprints.jpg", title: "설계 도면 자동 생성", desc: "평면도, 배치도, 단면도, 아이소메트릭을 자동 생성" },
+              { img: "/screenshots/scenario-compare.jpg", title: "사업 시나리오 비교", desc: "재건축·리모델링·통매각 시나리오별 분담금과 기간 비교" },
+              { img: "/screenshots/market-price.jpg", title: "실거래가 시세 분석", desc: "인근 실거래 데이터 기반 분양가 추천과 시뮬레이션" },
+            ].map((item) => (
+              <div key={item.title} className="group rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden hover:border-teal-500/20 transition-all">
+                <div className="aspect-[9/16] overflow-hidden bg-black/20 max-h-[320px]">
+                  <img
+                    src={item.img}
+                    alt={item.title}
+                    className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform duration-500"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="p-4">
+                  <h3 className="text-sm font-bold text-white mb-1">{item.title}</h3>
+                  <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ━━━ CASES ━━━ */}
       <section id="cases" className="py-20 md:py-28">
         <div className="max-w-5xl mx-auto px-5">
