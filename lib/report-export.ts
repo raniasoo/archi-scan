@@ -1233,7 +1233,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Noto Sans KR', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #f1f5f9; color: #1f2937; line-height: 1.6; -webkit-font-smoothing: antialiased;
       width: 100%; min-width: 320px;
     }
@@ -2300,6 +2300,12 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     iframeDoc.write(htmlContent);
     iframeDoc.close();
     
+    // 한글 폰트 로딩 (핵심 요약 등 한글 깨짐 방지)
+    const fontLink = iframeDoc.createElement('link');
+    fontLink.rel = 'stylesheet';
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap';
+    iframeDoc.head.appendChild(fontLink);
+    
     // PDF 전용 스타일 주입 (html2canvas 렌더링 최적화)
     const pdfStyle = iframeDoc.createElement('style');
     pdfStyle.textContent = `
@@ -2687,7 +2693,7 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Noto Sans KR', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #f1f5f9; color: #1f2937; line-height: 1.6; -webkit-font-smoothing: antialiased;
       width: 100%; min-width: 320px;
     }

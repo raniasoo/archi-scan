@@ -79,7 +79,7 @@ export function BaselineValuesBar({
       siteArea ? `${siteArea.toLocaleString()}㎡` : null,
       formatZoneType(zoneType, zoneTypeLabel),
       roadCondition || null,
-      heightLimit ? `높이 ${heightLimit}m` : null,
+      heightLimit && heightLimit > 0 ? `높이 ${heightLimit}m` : null,
       districtPlan != null ? `지구단위 ${formatDistrictPlan(districtPlan === 'yes' || districtPlan === true)}` : null,
     ].filter(Boolean)
 
@@ -149,7 +149,7 @@ export function BaselineValuesBar({
             {showSources && sources?.heightLimit && <SourceLabel source={sources.heightLimit} />}
           </div>
           <span className="text-[11px] font-semibold text-foreground">
-            {heightLimit ? `${heightLimit}m` : '미입력'}
+            {heightLimit && heightLimit > 0 ? `${heightLimit}m` : '미입력'}
           </span>
         </div>
 
