@@ -1,6 +1,7 @@
 "use client"
 
 import { type Dispatch, type SetStateAction } from "react"
+import { trackPdfDownload } from "@/components/google-analytics"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -143,6 +144,7 @@ export function ReportStep(props: ReportStepProps) {
                         setDownloadError(result.error || 'PDF 다운로드 중 오류가 발생했습니다.');
                       } else {
                         toast.success('PDF 다운로드 완료', { id: 'pdf-dl' })
+                        trackPdfDownload()
                       }
                     } catch (err) {
                       const errorMsg = err instanceof Error ? err.message : String(err);

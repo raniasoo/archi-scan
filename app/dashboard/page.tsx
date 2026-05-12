@@ -10,6 +10,7 @@ import {
   LogOut, ChevronRight, BarChart3, MapPin, User as UserIcon, Share2, FileText,
   MessageSquare, Send, Loader2, CheckCircle2, BookOpen
 } from "lucide-react"
+import { trackContactSubmit } from "@/components/google-analytics"
 
 interface UserInfo {
   id: string
@@ -89,6 +90,7 @@ export default function DashboardPage() {
       const data = await res.json()
       if (data.success) {
         setContactSent(true)
+        trackContactSubmit(contactCategory)
         setContactMessage("")
         // 목록 갱신
         const sb = createClient()

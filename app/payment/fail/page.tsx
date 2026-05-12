@@ -1,14 +1,17 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { XCircle, Loader2 } from "lucide-react"
+import { trackPaymentFail } from "@/components/google-analytics"
 
 function PaymentFailContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const code = searchParams.get("code") || ""
   const message = searchParams.get("message") || "결제가 취소되었거나 실패했습니다"
+
+  useEffect(() => { trackPaymentFail(code || 'user_cancelled') }, [code])
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-5">

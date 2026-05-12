@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { trackUpgradeModalOpen, trackPaymentStart } from "@/components/google-analytics"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Crown, Check, Loader2, CreditCard, Shield } from "lucide-react"
@@ -26,12 +27,14 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
 
+  useEffect(() => { if (open) trackUpgradeModalOpen('usage_limit') }, [open])
+
   const handleTossPayment = async () => {
     if (!user) {
       window.location.href = "/auth/login"
       return
     }
-
+    trackPaymentStart()
     setIsLoading(true)
 
     try {

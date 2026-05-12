@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { trackQuickAnalysisStart, trackQuickAnalysisComplete } from "@/components/google-analytics"
 import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, ChevronDown, FileText, Sparkles, ImageIcon, Mountain } from "lucide-react"
 import { type TerrainAnalysis } from "@/lib/terrain-analysis"
 import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
@@ -143,6 +144,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
     setLoading(true)
     setError(null)
     setResult(null)
+    trackQuickAnalysisStart()
     setRenderImage(null)
 
     try {
@@ -335,6 +337,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
       else if (roi >= 0) { verdict = '조건부 추진 검토'; verdictColor = '#d97706'; verdictEmoji = '🟡' }
       else { verdict = '추가 검토 필요'; verdictColor = '#dc2626'; verdictEmoji = '🔴' }
 
+      trackQuickAnalysisComplete(Math.round(roi * 10) / 10)
       setResult({
         address: address.trim(),
         siteArea,

@@ -111,6 +111,7 @@ const loadExportFunctions = () => import("@/lib/report-export")
 const loadDxfGenerator = () => import("@/lib/dxf-generator")
 const loadLayoutOptimizer = () => import("@/lib/layout-optimizer")
 import type { OptimizationReport } from "@/lib/layout-optimizer"
+import { trackStepChange, trackDetailedAnalysisStart, trackPdfDownload } from "@/components/google-analytics"
 
 export interface LayoutOption {
   id: number
@@ -509,6 +510,9 @@ export default function ArchiScanPage() {
   const [selectedLayout, setSelectedLayout] = useState<number | null>(null)
   const [currentStep, setCurrentStep] = useState<AppStep>("input")
   
+  // ━━━ GA 단계 변경 추적 ━━━
+  useEffect(() => { if (currentStep !== 'input') trackStepChange(currentStep) }, [currentStep])
+
   // ━━━ 변경 감지 + 무효화 시스템 ━━━
   // 상위 단계 변경 시 하위 단계를 무효화 (stale)
   const [staleSteps, setStaleSteps] = useState<Set<string>>(new Set())
@@ -1313,6 +1317,7 @@ export default function ArchiScanPage() {
     setIsGenerating(true)
     setSelectedLayout(null)
     setCurrentStep("layouts")
+    trackDetailedAnalysisStart(strategy)
     
     try {
       // Generate layouts first (synchronous calculation)

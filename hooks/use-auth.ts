@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
+import { trackLogin, trackSignUp } from "@/components/google-analytics"
 
 export interface UsageInfo {
   plan: string
@@ -72,6 +73,7 @@ export function useAuth() {
   }, [fetchUsage])
 
   const signInWithGoogle = useCallback(async () => {
+    trackLogin('google')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -80,6 +82,7 @@ export function useAuth() {
   }, [])
 
   const signInWithKakao = useCallback(async () => {
+    trackLogin('kakao')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -88,16 +91,19 @@ export function useAuth() {
   }, [])
 
   const signInWithNaver = useCallback(async () => {
+    trackLogin('naver')
     // 네이버는 커스텀 OAuth 라우트로 처리
     window.location.href = "/api/auth/naver"
   }, [])
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
+    trackLogin('email')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
   }, [])
 
   const signUpWithEmail = useCallback(async (email: string, password: string) => {
+    trackSignUp('email')
     const { error } = await supabase.auth.signUp({
       email,
       password,

@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { CheckCircle2, Loader2, XCircle } from "lucide-react"
+import { trackPaymentSuccess, trackPaymentFail } from "@/components/google-analytics"
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams()
@@ -31,6 +32,7 @@ function PaymentSuccessContent() {
       .then((data) => {
         if (data.success) {
           setStatus("success")
+          trackPaymentSuccess()
           // 구독 상태 localStorage에도 저장 (subscription-provider 호환)
           localStorage.setItem(
             "archi-scan-plan",
@@ -40,6 +42,7 @@ function PaymentSuccessContent() {
           setTimeout(() => router.push("/"), 3000)
         } else {
           setStatus("error")
+          trackPaymentFail(data.error || "confirm_failed")
           setErrorMsg(data.error || "결제 승인에 실패했습니다")
         }
       })

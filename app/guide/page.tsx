@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   Building2, MapPin, Scale, LayoutGrid, Ruler, Sparkles, DollarSign, FileText,
   ChevronDown, ChevronRight, Zap, ArrowRight, HelpCircle, BookOpen, Lightbulb,
   Search, CheckCircle2, Clock, MousePointerClick
 } from "lucide-react"
+import { trackGuideView } from "@/components/google-analytics"
 
 /* ── Accordion ── */
 function Accordion({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
@@ -55,6 +56,8 @@ function TipBox({ children }: { children: React.ReactNode }) {
 
 export default function GuidePage() {
   const [activeSection, setActiveSection] = useState<string>("quick")
+
+  useEffect(() => { trackGuideView(activeSection) }, [activeSection])
 
   const sections = [
     { id: "quick", label: "빠른 분석", icon: Zap },
