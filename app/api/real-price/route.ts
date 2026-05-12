@@ -67,6 +67,11 @@ export async function GET(request: Request) {
       
       const text = await res.text()
       
+      // 응답 디버깅 (첫 월만)
+      if (dealYmd === months[0]) {
+        console.log(`[real-price] HTTP ${res.status} | 응답 ${text.length}자 | 첫 300자: ${text.slice(0, 300).replace(/\n/g, ' ')}`)
+      }
+      
       // 에러 응답 체크
       if (text.includes('SERVICE_KEY_IS_NOT_REGISTERED') || text.includes('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS')) {
         console.warn(`[real-price] ${dealYmd} API 키 인증 오류`)
