@@ -239,63 +239,43 @@ export default function LandingPage() {
           <p className="text-xs text-white/30">카카오 · 네이버 · 이메일로 간편 가입</p>
         </div>
 
-        {/* Hero visual — mock dashboard */}
+        {/* Hero visual — Real app screenshots */}
         <div className="relative max-w-4xl mx-auto mt-16 px-5">
-          <div className="relative rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent backdrop-blur-sm overflow-hidden shadow-2xl shadow-black/50">
-            {/* Top bar */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-400/80" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
-                <div className="w-3 h-3 rounded-full bg-green-400/80" />
+          {/* Main showcase */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {/* AI Rendering - large */}
+            <div className="col-span-2 rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 relative group">
+              <img src="/screenshots/ai-render-bird.jpg" alt="AI 건축 렌더링 — 조감도" className="w-full h-auto" loading="eager" />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                <div className="text-xs text-teal-400 font-semibold">✨ AI 건축 렌더링</div>
+                <div className="text-sm text-white/90 font-medium">Gemini AI가 자동 생성한 포토리얼 조감도</div>
               </div>
-              <span className="text-xs text-white/30 ml-2">archiscan.kr</span>
             </div>
-            {/* Content simulation */}
-            <div className="p-6 md:p-10 grid md:grid-cols-2 gap-6">
-              {/* Left: Site info */}
-              <div className="space-y-4">
-                <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-3">
-                  <div className="text-xs text-teal-400 font-semibold">📍 대상지 정보</div>
-                  <div className="text-sm text-white/80">서울 강남구 역삼동 123-45</div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-lg bg-white/5 p-2">
-                      <span className="text-white/40">용도지역</span>
-                      <div className="text-white/90 font-medium mt-0.5">제3종일반주거</div>
-                    </div>
-                    <div className="rounded-lg bg-white/5 p-2">
-                      <span className="text-white/40">대지면적</span>
-                      <div className="text-white/90 font-medium mt-0.5">450㎡</div>
-                    </div>
-                    <div className="rounded-lg bg-white/5 p-2">
-                      <span className="text-white/40">건폐율</span>
-                      <div className="text-white/90 font-medium mt-0.5">50%</div>
-                    </div>
-                    <div className="rounded-lg bg-white/5 p-2">
-                      <span className="text-white/40">용적률</span>
-                      <div className="text-white/90 font-medium mt-0.5">250%</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-xl bg-gradient-to-r from-teal-500/20 to-emerald-500/20 border border-teal-500/30 p-4">
-                  <div className="text-xs text-teal-400 font-semibold mb-2">💰 사업성 요약</div>
-                  <div className="text-2xl font-extrabold text-white">ROI 28.9%</div>
-                  <div className="text-xs text-white/50 mt-1">예상수익 20.4억원 · 분양률 77.6%</div>
-                </div>
+
+            {/* Isometric view */}
+            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl shadow-black/30">
+              <img src="/screenshots/isometric.jpg" alt="아이소메트릭 배치도" className="w-full h-full object-cover" loading="eager" />
+            </div>
+
+            {/* Analysis result */}
+            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl shadow-black/30">
+              <img src="/screenshots/analysis-result.jpg" alt="종합 검토 결과" className="w-full h-full object-cover" loading="lazy" />
+            </div>
+
+            {/* AI Rendering front */}
+            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl shadow-black/30 relative">
+              <img src="/screenshots/ai-render-front.jpg" alt="AI 건축 렌더링 — 정면" className="w-full h-full object-cover" loading="lazy" />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                <div className="text-[10px] text-teal-400 font-semibold">🎨 Eye-level 렌더링</div>
               </div>
-              {/* Right: AI render placeholder */}
-              <div className="rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/10 p-4 flex flex-col items-center justify-center min-h-[240px]">
-                <Camera className="h-10 w-10 text-teal-400/60 mb-3" />
-                <div className="text-sm font-semibold text-white/70">AI 포토리얼 렌더링</div>
-                <div className="text-xs text-white/40 mt-1">Gemini AI 자동 생성</div>
-                <div className="mt-4 grid grid-cols-3 gap-2 w-full">
-                  {["조감도", "투시도", "아이레벨"].map((v) => (
-                    <div key={v} className="rounded-lg bg-white/5 py-2 text-center text-[10px] text-white/50">{v}</div>
-                  ))}
-                </div>
-              </div>
+            </div>
+
+            {/* PDF Report */}
+            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl shadow-black/30">
+              <img src="/screenshots/pdf-report.jpg" alt="PDF 보고서" className="w-full h-full object-cover" loading="lazy" />
             </div>
           </div>
+
           {/* Glow under card */}
           <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-teal-500/10 blur-3xl rounded-full" />
         </div>
