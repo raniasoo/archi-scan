@@ -130,7 +130,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
       constructionCostPerM2: constructionCost,
     })
     onCardRoiChanged(f?.roi ?? 0)
-  }, [selectedLayout, salesPrice, constructionCost, siteAreaNum, landPriceData.pricePerM2]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedLayout, layouts, salesPrice, constructionCost, siteAreaNum, landPriceData.pricePerM2]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ROI 전체 마이너스 여부
   const allNegativeROI = layouts.length > 0 && layouts.every(l => {
