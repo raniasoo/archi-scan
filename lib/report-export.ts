@@ -2477,7 +2477,7 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
             pdf.addPage(); aiY = topMargin;
           }
           
-          pdf.addImage(aiImg.image!, 'PNG', sideMargin, aiY, imgWidth, imgHeight);
+          pdf.addImage(aiImg.image!, aiImg.image!.includes('image/jpeg') ? 'JPEG' : 'PNG', sideMargin, aiY, imgWidth, imgHeight);
           aiY += imgHeight + 1;
           
           // 캡션
