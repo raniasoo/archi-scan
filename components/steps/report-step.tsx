@@ -371,6 +371,7 @@ export function ReportStep(props: ReportStepProps) {
                   userValues={userValues}
                   designStrategy={strategy}
                   aiRenderImage={props.aiRenderImage}
+                  aiMultiImages={props.aiMultiImages}
                   sitePolygon={props.sitePolygon}
                 />
               </TabsContent>

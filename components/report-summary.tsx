@@ -147,6 +147,7 @@ interface ReportSummaryProps {
   userValues?: { profitVsQuality: number; privacyVsCommunity: number; efficiencyVsSpace: number; selectedPatterns: string[] }
   designStrategy?: string
   aiRenderImage?: string | null
+  aiMultiImages?: {angle: string; image: string | null}[] | null
   sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
 }
 
@@ -217,7 +218,7 @@ function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): Layout
   return bestLayout
 }
 
-export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility, userValues, designStrategy, aiRenderImage, sitePolygon }: ReportSummaryProps) {
+export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility, userValues, designStrategy, aiRenderImage, aiMultiImages, sitePolygon }: ReportSummaryProps) {
   // molitData 우선 적용 — regulation race condition 방지
   // regulation 한도(buildingCoverageLimit/farLimit)에서 용도지역 역추정 (zone-lookup 미완료 시 안전장치)
   const inferZoneFromLimits = (coverage?: number, far?: number): string => {
@@ -2443,14 +2444,36 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
           </div>
         </div>
 
-        {/* AI 건축 렌더링 — 표지 바로 다음 */}
-        {aiRenderImage ? (
+        {/* AI 건축 렌더링 — 멀티앵글 3장 우선, 단일 fallback */}
+        {aiMultiImages && aiMultiImages.filter(m => m.image).length > 0 ? (() => {
+          const images = aiMultiImages.filter(m => m.image)
+          const angleLabels: Record<string, string> = { 'eye-level': '정면 · 보행자 시점', 'birds-eye': '조감도 · 드론 시점', 'entrance': '입구 · 클로즈업' }
+          return (
+            <div className="report-card avoid-break print-section overflow-hidden">
+              <div className="space-y-2 p-3">
+                {images.map((m, i) => (
+                  <div key={i} className={`rounded-lg overflow-hidden border border-border ${i === 0 ? '' : ''}`}>
+                    <img src={m.image!} alt={angleLabels[m.angle] || m.angle} className="w-full" style={{ height: 'auto' }} />
+                    <div className="px-3 py-1.5 bg-secondary/20 text-[9px] text-muted-foreground">{angleLabels[m.angle] || m.angle}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="px-4 py-2 flex items-center justify-between bg-secondary/20 border-t border-border">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3" style={{ color: '#7c3aed' }} />
+                  <span className="text-[10px] font-medium">AI 건축 렌더링</span>
+                </div>
+                <span className="text-[9px] text-muted-foreground">Powered by Gemini</span>
+              </div>
+            </div>
+          )
+        })() : aiRenderImage ? (
           <div className="report-card avoid-break print-section overflow-hidden">
             <img 
               src={aiRenderImage} 
               alt="AI 건축 렌더링" 
               className="w-full"
-              style={{ maxHeight: '320px', objectFit: 'cover' }}
+              style={{ height: 'auto' }}
             />
             <div className="px-4 py-2 flex items-center justify-between bg-secondary/20">
               <div className="flex items-center gap-1.5">
