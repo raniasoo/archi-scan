@@ -2369,8 +2369,21 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     `;
     iframeDoc.head.appendChild(pdfStyle);
     
-    // 렌더링 대기 (폰트/이미지 로딩 보장)
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // 렌더링 대기 — 모든 이미지 로딩 완료까지 대기
+    const allImgs = Array.from(iframeDoc.querySelectorAll('img'))
+    if (allImgs.length > 0) {
+      await Promise.all(allImgs.map(img =>
+        img.complete && img.naturalHeight > 0
+          ? Promise.resolve()
+          : new Promise<void>(resolve => {
+              img.onload = () => resolve()
+              img.onerror = () => { console.warn('[PDF] 이미지 로드 실패:', img.src?.substring(0, 80)); resolve() }
+              setTimeout(resolve, 5000) // 5초 타임아웃
+            })
+      ))
+      console.log(`[PDF] ${allImgs.length}개 이미지 로딩 완료`)
+    }
+    await new Promise(resolve => setTimeout(resolve, 300)); // 추가 렌더링 안정화
     
     // PDF 생성
     const pdf = new jsPDF({
