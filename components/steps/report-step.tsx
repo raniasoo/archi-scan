@@ -137,9 +137,11 @@ export function ReportStep(props: ReportStepProps) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
                       const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages });
+                      console.log('[PDF] exportData built, aiMultiImages:', (exportData.aiMultiImages || []).length, 'images')
                       // PDF 파일 다운로드 (인쇄 미리보기 아님)
                       const { downloadPdf } = await loadExportFunctions(); const result = await downloadPdf(exportData);
                       if (!result.success) {
+                        console.error('[PDF] Download failed:', result.error);
                         setDownloadError(result.error || 'PDF 다운로드 중 오류가 발생했습니다.');
                       }
                     } catch (err) {
