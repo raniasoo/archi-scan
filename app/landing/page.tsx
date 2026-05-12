@@ -506,7 +506,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-6 text-xs text-white/30">
             <a href="/terms" className="hover:text-white/60 transition">이용약관</a>
             <a href="/privacy" className="hover:text-white/60 transition">개인정보처리방침</a>
-            <a href="mailto:contact@archiscan.kr" className="hover:text-white/60 transition">문의</a>
+            <a href="/contact" className="hover:text-white/60 transition">문의하기</a>
           </div>
           <p className="text-xs text-white/20">© 2026 Archi-Scan. All rights reserved.</p>
         </div>
