@@ -8,6 +8,7 @@ const PUBLIC_ROUTES = [
   '/auth/callback',
   '/api/og',
   '/api/auth',
+  '/payment',
   '/share',
 ]
 
