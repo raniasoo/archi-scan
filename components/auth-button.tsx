@@ -174,6 +174,14 @@ export function AuthButton() {
               <LayoutDashboard className="h-3.5 w-3.5" />
               내 대시보드
             </a>
+            <a
+              href="/dashboard?tab=contact"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-sm text-foreground hover:bg-secondary transition-colors touch-manipulation min-h-[44px]"
+              onClick={() => setShowMenu(false)}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              문의하기
+            </a>
             <button
               onClick={async (e) => { 
                 e.stopPropagation()

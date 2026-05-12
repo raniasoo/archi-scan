@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { getCloudProjects, deleteCloudProject, type CloudProject } from "@/lib/cloud-storage"
 import { getRecentProjects, type ProjectListItem } from "@/lib/project-storage"
 import {
   Building2, FolderOpen, TrendingUp, Clock, Plus, ArrowRight, Trash2,
-  LogOut, ChevronRight, BarChart3, MapPin, User as UserIcon, Share2, FileText
+  LogOut, ChevronRight, BarChart3, MapPin, User as UserIcon, Share2, FileText,
+  MessageSquare, Send, Loader2, CheckCircle2
 } from "lucide-react"
 
 interface UserInfo {
@@ -17,14 +18,31 @@ interface UserInfo {
   avatar: string
 }
 
+interface Inquiry {
+  id: string
+  category: string
+  message: string
+  status: string
+  created_at: string
+}
+
 export default function DashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<UserInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [cloudProjects, setCloudProjects] = useState<CloudProject[]>([])
   const [localProjects, setLocalProjects] = useState<ProjectListItem[]>([])
-  const [activeTab, setActiveTab] = useState<'cloud' | 'local'>('cloud')
+  const initialTab = searchParams.get('tab') === 'contact' ? 'contact' : 'cloud'
+  const [activeTab, setActiveTab] = useState<'cloud' | 'local' | 'contact'>(initialTab as any)
   const [deleting, setDeleting] = useState<string | null>(null)
+
+  // 문의 상태
+  const [inquiries, setInquiries] = useState<Inquiry[]>([])
+  const [contactCategory, setContactCategory] = useState("일반")
+  const [contactMessage, setContactMessage] = useState("")
+  const [contactSending, setContactSending] = useState(false)
+  const [contactSent, setContactSent] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -45,7 +63,38 @@ export default function DashboardPage() {
     // 프로젝트 로드
     getCloudProjects(20).then(setCloudProjects)
     try { setLocalProjects(getRecentProjects(20)) } catch {}
+
+    // 내 문의 로드
+    const loadInquiries = async () => {
+      const sb = createClient()
+      const { data } = await sb.from("inquiries").select("id,category,message,status,created_at").order("created_at", { ascending: false }).limit(20)
+      if (data) setInquiries(data)
+    }
+    loadInquiries()
   }, [router])
+
+  const handleSendInquiry = async () => {
+    if (!contactMessage.trim() || !user) return
+    setContactSending(true)
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: user.name, email: user.email, category: contactCategory, message: contactMessage }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setContactSent(true)
+        setContactMessage("")
+        // 목록 갱신
+        const sb = createClient()
+        const { data: updated } = await sb.from("inquiries").select("id,category,message,status,created_at").order("created_at", { ascending: false }).limit(20)
+        if (updated) setInquiries(updated)
+        setTimeout(() => setContactSent(false), 3000)
+      }
+    } catch {}
+    setContactSending(false)
+  }
 
   const handleDeleteCloud = async (id: string) => {
     if (!confirm('이 프로젝트를 삭제할까요?')) return
@@ -208,10 +257,18 @@ export default function DashboardPage() {
               >
                 로컬 ({localProjects.length})
               </button>
+              <button
+                onClick={() => setActiveTab('contact')}
+                className={`px-3 py-1 text-xs rounded-md transition-colors flex items-center gap-1 ${
+                  activeTab === 'contact' ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <MessageSquare className="h-3 w-3" /> 문의
+              </button>
             </div>
           </div>
 
-          {allProjects.length === 0 ? (
+          {activeTab !== 'contact' && (allProjects.length === 0 ? (
             <div className="text-center py-12 bg-card rounded-xl border border-border/50">
               <FolderOpen className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground mb-4">
@@ -296,8 +353,85 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          )}
+          ))}
         </div>
+
+        {/* 문의 탭 */}
+        {activeTab === 'contact' && (
+          <div className="space-y-4">
+            {/* 문의 작성 */}
+            <div className="bg-card rounded-xl border border-border/50 p-4 space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Send className="h-4 w-4 text-primary" /> 새 문의
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {["일반", "결제", "기능", "버그", "제휴"].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setContactCategory(c)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                      contactCategory === c ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={contactMessage}
+                onChange={(e) => setContactMessage(e.target.value)}
+                placeholder="궁금한 점이나 건의사항을 작성해 주세요"
+                rows={3}
+                className="w-full px-3 py-2.5 rounded-lg border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground">{user?.email}로 답변 드립니다</span>
+                <button
+                  onClick={handleSendInquiry}
+                  disabled={contactSending || !contactMessage.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition disabled:opacity-40"
+                >
+                  {contactSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> :
+                   contactSent ? <CheckCircle2 className="h-3.5 w-3.5" /> :
+                   <Send className="h-3.5 w-3.5" />}
+                  {contactSent ? "접수 완료!" : "보내기"}
+                </button>
+              </div>
+            </div>
+
+            {/* 내 문의 내역 */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2">내 문의 내역</h3>
+              {inquiries.length === 0 ? (
+                <div className="text-center py-8 bg-card rounded-xl border border-border/50 text-sm text-muted-foreground">
+                  아직 문의 내역이 없습니다
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {inquiries.map((inq) => (
+                    <div key={inq.id} className="bg-card rounded-xl border border-border/50 p-3">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                          inq.status === "new" ? "bg-blue-500/10 text-blue-500" :
+                          inq.status === "read" ? "bg-yellow-500/10 text-yellow-600" :
+                          inq.status === "replied" ? "bg-emerald-500/10 text-emerald-600" :
+                          "bg-muted text-muted-foreground"
+                        }`}>
+                          {inq.status === "new" ? "접수" : inq.status === "read" ? "확인 중" : inq.status === "replied" ? "답변 완료" : "종료"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">{inq.category}</span>
+                        <span className="text-[10px] text-muted-foreground ml-auto">
+                          {new Date(inq.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground line-clamp-2">{inq.message}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
