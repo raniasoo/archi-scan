@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { getCloudProjects, deleteCloudProject, type CloudProject } from "@/lib/cloud-storage"
 import { getRecentProjects, type ProjectListItem } from "@/lib/project-storage"
@@ -28,13 +28,11 @@ interface Inquiry {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [user, setUser] = useState<UserInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [cloudProjects, setCloudProjects] = useState<CloudProject[]>([])
   const [localProjects, setLocalProjects] = useState<ProjectListItem[]>([])
-  const initialTab = searchParams.get('tab') === 'contact' ? 'contact' : 'cloud'
-  const [activeTab, setActiveTab] = useState<'cloud' | 'local' | 'contact'>(initialTab as any)
+  const [activeTab, setActiveTab] = useState<'cloud' | 'local' | 'contact'>('cloud')
   const [deleting, setDeleting] = useState<string | null>(null)
 
   // 문의 상태
@@ -45,6 +43,12 @@ export default function DashboardPage() {
   const [contactSent, setContactSent] = useState(false)
 
   useEffect(() => {
+    // URL 파라미터로 탭 설정
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('tab') === 'contact') setActiveTab('contact')
+    }
+
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
