@@ -6,10 +6,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/_next/'],
+        disallow: ['/admin', '/api/', '/payment/', '/share/'],
       },
     ],
     sitemap: 'https://www.archiscan.kr/sitemap.xml',
-    host: 'https://www.archiscan.kr',
   }
 }

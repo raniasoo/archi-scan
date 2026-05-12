@@ -74,7 +74,8 @@ export async function middleware(request: NextRequest) {
 
   // Protected routes: require auth
   if (!user && pathname === '/') {
-    return NextResponse.redirect(new URL('/landing', request.url))
+    // SEO: rewrite (not redirect) so Google indexes landing content at /
+    return NextResponse.rewrite(new URL('/landing', request.url))
   }
 
   return supabaseResponse

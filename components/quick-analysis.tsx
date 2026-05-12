@@ -628,7 +628,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                   <div className="flex justify-between"><span className="text-muted-foreground">규모</span><span className="font-semibold">지상 {result.bestLayout.floors}층, {result.bestLayout.units}세대</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">건폐율</span><span className="font-semibold">{result.buildingCoverage}%</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">용적률</span><span className="font-semibold">{result.floorAreaRatio}%</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">높이제한</span><span className="font-semibold">{result.heightLimit}m</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">높이제한</span><span className="font-semibold">{result.heightLimit > 0 ? `${result.heightLimit}m` : '제한 없음'}</span></div>
                   {result.overlappingCount > 0 && (
                     <div className="flex justify-between"><span className="text-muted-foreground">중첩 규제</span><span className="font-semibold text-amber-400">{result.overlappingCount}개 적용</span></div>
                   )}
@@ -678,7 +678,7 @@ ${imgTag}
 <h2>🏢 AI 추천 배치안: ${result.bestLayout.name}</h2>
 <table><tr><th>항목</th><th>수치</th></tr><tr><td>층수</td><td>${result.bestLayout.floors}층</td></tr><tr><td>세대수</td><td>${result.bestLayout.units}세대</td></tr><tr><td>건폐율</td><td>${result.bestLayout.coverage}%</td></tr><tr><td>총사업비</td><td>${(result.bestLayout.totalCost / 1e8).toFixed(1)}억원</td></tr><tr><td>예상수익</td><td>${(result.bestLayout.expectedProfit / 1e8).toFixed(1)}억원</td></tr><tr><td>ROI</td><td style="color:${roi >= 0 ? '#059669' : '#dc2626'};font-weight:700">${roi.toFixed(1)}%</td></tr></table>
 <h2>⚖️ 법규 검토 요약</h2>
-<table><tr><th>항목</th><th>기준</th></tr><tr><td>높이 제한</td><td>${result.heightLimit}m</td></tr><tr><td>건폐율 한도</td><td>${result.buildingCoverage}%</td></tr><tr><td>용적률 한도</td><td>${result.floorAreaRatio}%</td></tr><tr><td>중첩 규제</td><td>${result.overlappingCount}건</td></tr></table>
+<table><tr><th>항목</th><th>기준</th></tr><tr><td>높이 제한</td><td>${result.heightLimit > 0 ? result.heightLimit + 'm' : '제한 없음'}</td></tr><tr><td>건폐율 한도</td><td>${result.buildingCoverage}%</td></tr><tr><td>용적률 한도</td><td>${result.floorAreaRatio}%</td></tr><tr><td>중첩 규제</td><td>${result.overlappingCount}건</td></tr></table>
 ${result.overlappingCount > 0 ? `<h2>🔍 중첩 규제 목록</h2><ul>${overlaps}</ul>` : ''}
 <div class="footer"><p>이 보고서는 AI가 자동 생성한 간이 보고서입니다. 실제 사업 추진 시 전문가 검토가 필요합니다.</p><p>Archi-Scan | archiscan.kr | ${new Date().toLocaleString('ko-KR')}</p></div>
 </body></html>`
