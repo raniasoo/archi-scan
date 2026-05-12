@@ -491,7 +491,11 @@ export default function ArchiScanPage() {
     showUpgradeModal, 
     setShowUpgradeModal, 
     showPricingModal, 
-    setShowPricingModal 
+    setShowPricingModal,
+    canAnalyze,
+    monthlyUsage,
+    monthlyLimit,
+    checkAndTrackUsage,
   } = useSubscription()
   
   const [address, setAddress] = useState("")
@@ -1302,6 +1306,10 @@ export default function ArchiScanPage() {
 
 
   const handleGenerate = async () => {
+    // 사용량 체크 (무료 5회 초과 시 차단 + 업그레이드 모달)
+    const allowed = await checkAndTrackUsage()
+    if (!allowed) return
+
     setIsGenerating(true)
     setSelectedLayout(null)
     setCurrentStep("layouts")
@@ -2068,6 +2076,19 @@ export default function ArchiScanPage() {
               <button onClick={() => setShowBrandingEditor(true)} className="p-2 rounded-lg hover:bg-secondary transition-colors" title="보고서 브랜딩 설정">
                 <Settings2 className="h-4 w-4 text-muted-foreground" />
               </button>
+              {!isProUser && monthlyLimit !== Infinity && (
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${
+                    canAnalyze
+                      ? "bg-muted text-muted-foreground hover:bg-secondary"
+                      : "bg-destructive/10 text-destructive animate-pulse"
+                  }`}
+                  title="분석 사용량"
+                >
+                  {monthlyUsage}/{monthlyLimit}회
+                </button>
+              )}
               <AuthButton />
             </div>
 

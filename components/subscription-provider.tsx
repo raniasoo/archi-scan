@@ -17,6 +17,11 @@ interface SubscriptionContextType {
   handlePayment: () => Promise<void>
   isPaymentLoading: boolean
   refreshPlan: () => Promise<void>
+  canAnalyze: boolean
+  monthlyUsage: number
+  monthlyLimit: number
+  checkAndTrackUsage: () => Promise<boolean>
+  refreshUsage: () => Promise<void>
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined)
@@ -26,87 +31,91 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showPricingModal, setShowPricingModal] = useState(false)
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
+  const [canAnalyze, setCanAnalyze] = useState(true)
+  const [monthlyUsage, setMonthlyUsage] = useState(0)
+  const [monthlyLimit, setMonthlyLimit] = useState(5)
 
   const supabase = createClient()
 
-  // Supabase 프로필에서 플랜 상태 조회
+  const refreshUsage = useCallback(async () => {
+    try {
+      const res = await fetch("/api/usage")
+      if (!res.ok) return
+      const data = await res.json()
+      setCanAnalyze(data.can_analyze ?? true)
+      setMonthlyUsage(data.monthly_usage ?? 0)
+      setMonthlyLimit(data.monthly_limit === -1 ? Infinity : (data.monthly_limit ?? 5))
+      if (data.plan) setPlan(data.plan)
+    } catch {}
+  }, [])
+
+  const checkAndTrackUsage = useCallback(async (): Promise<boolean> => {
+    try {
+      if (plan === "pro") {
+        fetch("/api/usage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "analysis" }) })
+        return true
+      }
+      const checkRes = await fetch("/api/usage")
+      if (!checkRes.ok) return true
+      const checkData = await checkRes.json()
+      if (!checkData.can_analyze) {
+        setMonthlyUsage(checkData.monthly_usage)
+        setCanAnalyze(false)
+        setShowUpgradeModal(true)
+        return false
+      }
+      const trackRes = await fetch("/api/usage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "analysis" }) })
+      if (trackRes.status === 429) {
+        setCanAnalyze(false)
+        setShowUpgradeModal(true)
+        return false
+      }
+      const trackData = await trackRes.json()
+      setMonthlyUsage(trackData.monthly_usage ?? checkData.monthly_usage + 1)
+      if (trackData.monthly_usage >= (checkData.monthly_limit ?? 5)) setCanAnalyze(false)
+      return true
+    } catch { return true }
+  }, [plan])
+
   const refreshPlan = useCallback(async () => {
     try {
-      // 1. localStorage 먼저 확인 (빠른 복원)
       const saved = localStorage.getItem('archi-scan-plan')
       if (saved) {
         const { plan: savedPlan, expiresAt } = JSON.parse(saved)
-        if (savedPlan === 'pro' && new Date(expiresAt) > new Date()) {
-          setPlan('pro')
-        } else {
-          localStorage.removeItem('archi-scan-plan')
-        }
+        if (savedPlan === 'pro' && new Date(expiresAt) > new Date()) setPlan('pro')
+        else localStorage.removeItem('archi-scan-plan')
       }
-
-      // 2. Supabase 프로필에서 실제 상태 확인
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('plan, plan_expires_at')
-        .eq('id', user.id)
-        .single()
-
+      const { data: profile } = await supabase.from('profiles').select('plan, plan_expires_at').eq('id', user.id).single()
       if (profile?.plan === 'pro') {
         const expired = profile.plan_expires_at && new Date(profile.plan_expires_at) < new Date()
         if (!expired) {
           setPlan('pro')
-          localStorage.setItem('archi-scan-plan', JSON.stringify({
-            plan: 'pro',
-            expiresAt: profile.plan_expires_at,
-          }))
-        } else {
-          setPlan('free')
-          localStorage.removeItem('archi-scan-plan')
-        }
+          localStorage.setItem('archi-scan-plan', JSON.stringify({ plan: 'pro', expiresAt: profile.plan_expires_at }))
+        } else { setPlan('free'); localStorage.removeItem('archi-scan-plan') }
       }
     } catch {}
   }, [])
 
-  useEffect(() => { refreshPlan() }, [refreshPlan])
+  useEffect(() => { refreshPlan(); refreshUsage() }, [refreshPlan, refreshUsage])
 
   const isProUser = plan === "pro"
-
   const upgradeToPro = () => {
-    setPlan("pro")
+    setPlan("pro"); setCanAnalyze(true); setMonthlyLimit(Infinity)
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     localStorage.setItem('archi-scan-plan', JSON.stringify({ plan: 'pro', expiresAt }))
-    setShowUpgradeModal(false)
-    setShowPricingModal(false)
+    setShowUpgradeModal(false); setShowPricingModal(false)
   }
-
-  const downgradeToFree = () => {
-    setPlan("free")
-    localStorage.removeItem('archi-scan-plan')
-  }
-
-  const handlePayment = async () => {
-    // 토스페이먼츠 결제는 UpgradeModal에서 직접 처리
-    setShowUpgradeModal(true)
-  }
+  const downgradeToFree = () => { setPlan("free"); setMonthlyLimit(5); localStorage.removeItem('archi-scan-plan') }
+  const handlePayment = async () => { setShowUpgradeModal(true) }
 
   return (
-    <SubscriptionContext.Provider
-      value={{
-        plan,
-        isProUser,
-        showUpgradeModal,
-        setShowUpgradeModal,
-        showPricingModal,
-        setShowPricingModal,
-        upgradeToPro,
-        downgradeToFree,
-        handlePayment,
-        isPaymentLoading,
-        refreshPlan,
-      }}
-    >
+    <SubscriptionContext.Provider value={{
+      plan, isProUser, showUpgradeModal, setShowUpgradeModal, showPricingModal, setShowPricingModal,
+      upgradeToPro, downgradeToFree, handlePayment, isPaymentLoading, refreshPlan,
+      canAnalyze, monthlyUsage, monthlyLimit, checkAndTrackUsage, refreshUsage,
+    }}>
       {children}
     </SubscriptionContext.Provider>
   )
@@ -114,8 +123,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
 export function useSubscription() {
   const context = useContext(SubscriptionContext)
-  if (context === undefined) {
-    throw new Error("useSubscription must be used within a SubscriptionProvider")
-  }
+  if (context === undefined) throw new Error("useSubscription must be used within a SubscriptionProvider")
   return context
 }

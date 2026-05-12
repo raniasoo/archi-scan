@@ -7,6 +7,7 @@ import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
 import { buildSiteContextPrompt } from "@/lib/site-context-builder"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 import { getRegionalPricing, getZoneMultiplier } from "@/lib/regional-pricing"
+import { useSubscription } from "@/components/subscription-provider"
 
 interface QuickAnalysisProps {
   onDetailedAnalysis: (address: string, siteArea: number, data: any, renderImage?: string | null) => void
@@ -37,6 +38,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
   const [result, setResult] = useState<QuickResult | null>(null)
+  const { checkAndTrackUsage, canAnalyze, monthlyUsage, monthlyLimit, isProUser, setShowUpgradeModal } = useSubscription()
   const [error, setError] = useState<string | null>(null)
   const [showMore, setShowMore] = useState(false)
 
@@ -133,6 +135,11 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
 
   const analyze = async () => {
     if (!address.trim()) return
+
+    // 사용량 체크 (무료 5회 초과 시 차단)
+    const allowed = await checkAndTrackUsage()
+    if (!allowed) return
+
     setLoading(true)
     setError(null)
     setResult(null)
@@ -423,6 +430,15 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                   <><Search className="h-4 w-4" />사업성 분석하기</>
                 )}
               </button>
+
+              {!isProUser && monthlyLimit !== Infinity && (
+                <div className={`text-center text-[10px] ${canAnalyze ? 'text-muted-foreground' : 'text-destructive font-medium'}`}>
+                  {canAnalyze
+                    ? `이번 달 ${monthlyUsage}/${monthlyLimit}회 사용`
+                    : `무료 분석 ${monthlyLimit}회 소진 · Pro 업그레이드로 무제한 이용`
+                  }
+                </div>
+              )}
 
               {error && (
                 <p className="text-xs text-red-400 text-center">{error}</p>
