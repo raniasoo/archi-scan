@@ -237,6 +237,8 @@ export function ReportStep(props: ReportStepProps) {
                       const { downloadExcel } = await loadExportFunctions(); const result = downloadExcel(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || '엑셀 다운로드 중 오류가 발생했습니다.');
+                      } else {
+                        toast.success('엑셀 다운로드 완료', { id: 'excel-dl' });
                       }
                     } catch (err) {
                       const errorMsg = err instanceof Error ? err.message : String(err);
