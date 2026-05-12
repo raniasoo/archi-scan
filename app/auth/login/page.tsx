@@ -40,6 +40,8 @@ function LoginForm() {
         naver_state_mismatch: "보안 검증에 실패했습니다. 다시 시도해 주세요",
         naver_missing_params: "인증 정보가 누락되었습니다",
         naver_session_failed: "세션 생성에 실패했습니다",
+        naver_confirm_needed: "가입 완료! 이메일 확인 후 다시 로그인해 주세요",
+        naver_profile_failed: "네이버 프로필 조회에 실패했습니다",
       }
       setError(errorMessages[urlError] || "로그인 중 오류가 발생했습니다")
     }

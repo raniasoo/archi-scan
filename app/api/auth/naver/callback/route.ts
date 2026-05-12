@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { createClient } from "@supabase/supabase-js"
-import { createClient as createServerClient } from "@/lib/supabase/server"
+import { createServerClient } from "@supabase/ssr"
+import { createHash } from "crypto"
 
 /**
  * 네이버 OAuth 콜백
- * 1. state 검증 (CSRF)
- * 2. authorization_code → access_token 교환
- * 3. 네이버 프로필 API 호출
- * 4. Supabase 유저 생성/로그인
- * 5. 메인 앱으로 리다이렉트
+ * service_role 키 없이 동작: 네이버 ID → 결정론적 비밀번호 → signUp/signIn
  */
+
+const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || "rSgB5a0sDgfvMxzDZtE7"
+const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || "foiiOPedy9"
+const NAVER_PASSWORD_SALT = "archiscan-naver-bridge-v1-$2026$"
+
+function makeNaverPassword(naverId: string): string {
+  return createHash("sha256").update(`${NAVER_PASSWORD_SALT}:${naverId}`).digest("hex")
+}
 
 interface NaverProfile {
   resultcode: string
@@ -21,7 +25,6 @@ interface NaverProfile {
     name?: string
     nickname?: string
     profile_image?: string
-    mobile?: string
   }
 }
 
@@ -30,29 +33,18 @@ export async function GET(request: Request) {
   const code = searchParams.get("code")
   const state = searchParams.get("state")
   const error = searchParams.get("error")
-
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.archiscan.kr"
 
-  // 에러 처리
-  if (error) {
-    console.error("[NAVER] OAuth error:", error, searchParams.get("error_description"))
+  if (error || !code || !state) {
     return NextResponse.redirect(`${siteUrl}/auth/login?error=naver_denied`)
   }
 
-  if (!code || !state) {
-    return NextResponse.redirect(`${siteUrl}/auth/login?error=naver_missing_params`)
-  }
-
-  // State 검증 (CSRF 방지)
+  // CSRF 검증
   const cookieStore = await cookies()
   const savedState = cookieStore.get("naver_oauth_state")?.value
-
   if (!savedState || savedState !== state) {
-    console.error("[NAVER] State mismatch:", { saved: savedState?.slice(0, 8), received: state?.slice(0, 8) })
     return NextResponse.redirect(`${siteUrl}/auth/login?error=naver_state_mismatch`)
   }
-
-  // State 쿠키 삭제
   cookieStore.delete("naver_oauth_state")
 
   try {
@@ -62,122 +54,97 @@ export async function GET(request: Request) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "authorization_code",
-        client_id: process.env.NAVER_CLIENT_ID!,
-        client_secret: process.env.NAVER_CLIENT_SECRET!,
+        client_id: NAVER_CLIENT_ID,
+        client_secret: NAVER_CLIENT_SECRET,
         code,
         state,
       }),
     })
-
     const tokenData = await tokenRes.json()
-
     if (tokenData.error) {
-      console.error("[NAVER] Token error:", tokenData.error, tokenData.error_description)
+      console.error("[NAVER] Token error:", tokenData.error)
       return NextResponse.redirect(`${siteUrl}/auth/login?error=naver_token_failed`)
     }
 
-    const accessToken = tokenData.access_token
-
     // ── 2. 프로필 조회 ──
     const profileRes = await fetch("https://openapi.naver.com/v1/nid/me", {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
     })
-
     const profileData: NaverProfile = await profileRes.json()
-
     if (profileData.resultcode !== "00") {
       console.error("[NAVER] Profile error:", profileData.message)
       return NextResponse.redirect(`${siteUrl}/auth/login?error=naver_profile_failed`)
     }
 
-    const naverUser = profileData.response
-    const email = naverUser.email || `naver_${naverUser.id}@naver.archiscan.kr`
-    const name = naverUser.name || naverUser.nickname || "네이버 사용자"
+    const naver = profileData.response
+    const email = naver.email || `naver_${naver.id}@naver.archiscan.kr`
+    const password = makeNaverPassword(naver.id)
+    const name = naver.name || naver.nickname || "네이버 사용자"
 
-    console.log("[NAVER] Profile fetched:", { id: naverUser.id, email, name })
+    console.log("[NAVER] Login:", { id: naver.id, email, name })
 
-    // ── 3. Supabase Admin으로 유저 생성/로그인 ──
-    const supabaseAdmin = createClient(
+    // ── 3. Supabase 세션 생성 (쿠키 기반) ──
+    let supabaseResponse = NextResponse.redirect(`${siteUrl}/`)
+
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
-
-    // 기존 유저 확인 (이메일로)
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
-    const existingUser = existingUsers?.users?.find(
-      (u) => u.email === email || u.user_metadata?.naver_id === naverUser.id
-    )
-
-    let userId: string
-
-    if (existingUser) {
-      // 기존 유저 → 메타데이터 업데이트
-      userId = existingUser.id
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        user_metadata: {
-          ...existingUser.user_metadata,
-          naver_id: naverUser.id,
-          full_name: name,
-          avatar_url: naverUser.profile_image,
-          provider: "naver",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll() },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              supabaseResponse.cookies.set(name, value, options)
+            })
+          },
         },
-      })
-    } else {
-      // 신규 유저 생성
-      const tempPassword = `naver_${naverUser.id}_${Date.now()}_${Math.random().toString(36)}`
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      }
+    )
+
+    // 먼저 로그인 시도
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (signInError) {
+      // 로그인 실패 → 회원가입 시도
+      console.log("[NAVER] SignIn failed, trying signUp:", signInError.message)
+
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
-        password: tempPassword,
-        email_confirm: true, // 네이버 인증 완료이므로 바로 확인
-        user_metadata: {
-          naver_id: naverUser.id,
-          full_name: name,
-          avatar_url: naverUser.profile_image,
-          provider: "naver",
+        password,
+        options: {
+          data: {
+            full_name: name,
+            avatar_url: naver.profile_image,
+            provider: "naver",
+            naver_id: naver.id,
+          },
         },
       })
 
-      if (createError) {
-        console.error("[NAVER] User creation error:", createError.message)
+      if (signUpError) {
+        console.error("[NAVER] SignUp error:", signUpError.message)
         return NextResponse.redirect(`${siteUrl}/auth/login?error=naver_create_failed`)
       }
 
-      userId = newUser.user!.id
-
-      // profiles 테이블에도 생성
-      await supabaseAdmin.from("profiles").upsert({
-        id: userId,
+      // 가입 후 자동 로그인 (email confirm 비활성화 시 바로 세션 생성됨)
+      // confirm이 필요한 경우 다시 signIn
+      const { error: retryError } = await supabase.auth.signInWithPassword({
         email,
-        name,
-        avatar_url: naverUser.profile_image,
-        provider: "naver",
+        password,
       })
+
+      if (retryError) {
+        console.log("[NAVER] Post-signup signIn failed:", retryError.message)
+        // 이메일 확인이 필요한 경우 → 사용자에게 안내
+        return NextResponse.redirect(`${siteUrl}/auth/login?error=naver_confirm_needed`)
+      }
     }
 
-    // ── 4. Magic Link로 세션 생성 ──
-    // generateLink로 세션 토큰을 생성하여 클라이언트에 전달
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email,
-    })
-
-    if (linkError || !linkData) {
-      console.error("[NAVER] Magic link error:", linkError?.message)
-      return NextResponse.redirect(`${siteUrl}/auth/login?error=naver_session_failed`)
-    }
-
-    // Magic link의 token_hash와 type을 사용해 세션 교환
-    const hashed_token = linkData.properties?.hashed_token
-    if (!hashed_token) {
-      console.error("[NAVER] No hashed_token in link data")
-      return NextResponse.redirect(`${siteUrl}/auth/login?error=naver_token_missing`)
-    }
-
-    // Supabase의 verify endpoint로 리다이렉트하여 세션 생성
-    const verifyUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/verify?token=${hashed_token}&type=magiclink&redirect_to=${encodeURIComponent(siteUrl + "/auth/callback")}`
-
-    return NextResponse.redirect(verifyUrl)
+    console.log("[NAVER] Session created, redirecting to app")
+    return supabaseResponse
 
   } catch (err: any) {
     console.error("[NAVER] Unexpected error:", err.message)
