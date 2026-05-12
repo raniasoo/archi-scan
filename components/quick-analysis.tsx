@@ -281,7 +281,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
       const constructionCostPerM2 = 2800000
       const earthworkCost = terrainResult?.earthworkCost || 0
       const totalCost = gfa * constructionCostPerM2 + siteArea * 5000000 + earthworkCost
-      const salesPricePerM2 = 8000000
+      const salesPricePerM2 = 5000000
       const totalRevenue = gfa * 0.85 * salesPricePerM2
       const profit = totalRevenue - totalCost
       const roi = totalCost > 0 ? (profit / totalCost * 100) : 0

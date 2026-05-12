@@ -368,7 +368,7 @@ export function calculateFeasibility(input: FeasibilityInput): FeasibilityResult
     parkingCount,
     landPricePerM2 = 5000000, // 기본값: 500만원/㎡
     constructionCostPerM2 = 2500000, // 기본값: 250만원/㎡
-    salesPricePerM2 = 8000000, // 기본값: 800만원/㎡
+    salesPricePerM2 = 5000000, // 기본값: 500만원/㎡
   } = input
   
   // 안전한 숫자 처리

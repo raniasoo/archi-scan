@@ -264,7 +264,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     floorCount: layout.floors, parkingCount: layout.parking,
     landPricePerM2: landPricePerM2 || 5000000,
   })
-  const effectiveSalesPrice = centralFeasibility.salesPricePerM2 || 8000000
+  const effectiveSalesPrice = centralFeasibility.salesPricePerM2 || 5000000
   const effectiveConstCost = centralFeasibility.constructionCostPerM2 || 2500000
   const financials = {
     gfa: gfa || centralFeasibility.grossFloorArea || layout.gfa,

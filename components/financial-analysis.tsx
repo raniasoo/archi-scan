@@ -243,7 +243,7 @@ export function FinancialAnalysis({ siteArea, gfa, units, floors, feasibilityRes
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">분양 매출</span>
-                  <span className="font-mono">{gfa.toLocaleString()}㎡ × 800만원 = {formatKRW(data.projectedRevenue)}</span>
+                  <span className="font-mono">{gfa.toLocaleString()}㎡ × {Math.round(data.projectedRevenue / Math.max(gfa, 1) / 10000)}만원 = {formatKRW(data.projectedRevenue)}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>(연면적 기준 산정)</span>

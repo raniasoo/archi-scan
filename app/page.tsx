@@ -1653,7 +1653,7 @@ export default function ArchiScanPage() {
     const otherCosts = feasibilityResult?.softCost || constructionCost * 0.15
     const parkingCost = selected.parking * 30000000
     const totalInvestment = feasibilityResult?.totalCost || (landCost + constructionCost + otherCosts + parkingCost)
-    const projectedRevenue = feasibilityResult?.totalRevenue || gfa * 8000000
+    const projectedRevenue = feasibilityResult?.totalRevenue || gfa * 5000000
     const profit = feasibilityResult?.profit || (projectedRevenue - totalInvestment)
     const roi = feasibilityResult?.roi || (totalInvestment > 0 ? (profit / totalInvestment) * 100 : 0)
     
