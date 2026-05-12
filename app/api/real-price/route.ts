@@ -29,6 +29,10 @@ const API_ENDPOINTS: Record<string, { url: string; nameTag: string; label: strin
   },
 }
 
+// 인메모리 캐시 (1시간 TTL)
+const cache = new Map<string, { data: any; ts: number }>()
+const CACHE_TTL = 60 * 60 * 1000 // 1시간
+
 interface RealPriceResult {
   avgPricePerM2: number       // ㎡당 평균 거래가 (원)
   avgPricePerPyeong: number   // 평당 평균 거래가 (원)
@@ -64,6 +68,16 @@ export async function GET(request: Request) {
   const typesToFetch = propertyType === 'all' 
     ? ['apt', 'villa', 'officetel'] 
     : [propertyType]
+  
+  // 캐시 확인
+  const cacheKey = `${lawdCd}_${propertyType}`
+  const cached = cache.get(cacheKey)
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    console.log(`[real-price] 캐시 히트: ${cacheKey}`)
+    return NextResponse.json(cached.data, { 
+      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=3600' } 
+    })
+  }
   
   // 실거래 데이터는 1-2개월 지연 → 전월부터 6개월 조회
   const now = new Date()
@@ -180,5 +194,15 @@ export async function GET(request: Request) {
       .slice(0, 10), // 상위 10건만
   }
 
-  return NextResponse.json(result)
+  // 캐시 저장
+  cache.set(cacheKey, { data: result, ts: Date.now() })
+  // 캐시 크기 제한 (100개 초과 시 오래된 항목 삭제)
+  if (cache.size > 100) {
+    const oldest = [...cache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0]
+    if (oldest) cache.delete(oldest[0])
+  }
+
+  return NextResponse.json(result, {
+    headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=3600' }
+  })
 }
