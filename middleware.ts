@@ -9,6 +9,8 @@ const PUBLIC_ROUTES = [
   '/api/og',
   '/api/auth',
   '/payment',
+  '/terms',
+  '/privacy',
   '/share',
 ]
 
