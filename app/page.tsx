@@ -88,7 +88,6 @@ const CollaborationManager = dynamic(() => import("@/components/collaboration-ma
 const ProjectComparison = dynamic(() => import("@/components/project-comparison").then(m => ({ default: m.ProjectComparison })))
 const SiteVisualsManager = dynamic(() => import("@/components/site-visuals-manager").then(m => ({ default: m.SiteVisualsManager })))
 const BrandingEditor = dynamic(() => import("@/components/branding-editor").then(m => ({ default: m.BrandingEditor })))
-const LandingPage = dynamic(() => import("@/components/landing-page").then(m => ({ default: m.LandingPage })))
 const QuickAnalysis = dynamic(() => import("@/components/quick-analysis").then(m => ({ default: m.QuickAnalysis })))
 
 // ── 동적 임포트: 관리/도구 컴포넌트 ──
@@ -483,8 +482,7 @@ type AppStep = "input" | "strategy" | "regulation" | "layouts" | "floorplan" | "
 
 export default function ArchiScanPage() {
   const [mounted, setMounted] = useState(false) // v2
-  const [showLanding, setShowLanding] = useState(true)
-  const [showQuickMode, setShowQuickMode] = useState(false)
+  const [showQuickMode, setShowQuickMode] = useState(true)
   const [autoTriggerLookup, setAutoTriggerLookup] = useState(false)
   const [inAppBrowser, setInAppBrowser] = useState<string | null>(null)
   
@@ -700,11 +698,9 @@ export default function ArchiScanPage() {
     // Initialize user
     getOrCreateUser().then(setCurrentUser)
 
-    // 랜딩 페이지 스킵 여부 (이전 방문자 또는 세션 존재 시)
-    const hasUsed = localStorage.getItem('archi-scan-session') || localStorage.getItem('archi-scan-visited')
+    // 세션 존재 시 Quick 모드 스킵
     const hasSession = localStorage.getItem('archi-scan-session')
-    if (hasSession) { setShowLanding(false); setShowQuickMode(false) }
-    else if (hasUsed) { setShowLanding(false); setShowQuickMode(true) }
+    if (hasSession) { setShowQuickMode(false) }
 
     // 저장된 프로젝트 상태 복원
     try {
@@ -1841,17 +1837,6 @@ export default function ArchiScanPage() {
           <p className="text-muted-foreground">로딩 중...</p>
         </div>
       </div>
-    )
-  }
-
-  // 랜딩 페이지 표시 (첫 방문자)
-  if (showLanding) {
-    return (
-      <LandingPage onStart={() => {
-        localStorage.setItem('archi-scan-visited', 'true')
-        setShowQuickMode(true)
-        setShowLanding(false)
-      }} />
     )
   }
 
