@@ -10,7 +10,7 @@ import { buildSiteContextPrompt } from "@/lib/site-context-builder"
  *   - Initial bundle reduced by ~60%
  *   - Only step 1 (input) components loaded on first render
  */
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
