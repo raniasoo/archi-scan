@@ -23,11 +23,12 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Archi-Scan | AI 건축 사전기획 플랫폼',
     description: '주소 입력만으로 대지 분석, 건축 기획, 법규 검토, 사업성 분석까지. 디벨로퍼·건축사·시행사를 위한 AI 건축 사전기획 플랫폼.',
+    url: 'https://www.archiscan.kr',
     type: 'website',
     locale: 'ko_KR',
     siteName: 'Archi-Scan',
     images: [{
-      url: '/api/og?v=3',
+      url: '/api/og?v=4',
       width: 1200,
       height: 630,
       alt: 'Archi-Scan - AI 건축 사전기획 플랫폼',
@@ -37,7 +38,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Archi-Scan | AI 건축 사전기획 플랫폼',
     description: '주소 입력만으로 대지 분석, 건축 기획, 법규 검토, 사업성 분석까지.',
-    images: ['/api/og?v=3'],
+    images: ['/api/og?v=4'],
   },
   other: {
     'mobile-web-app-capable': 'yes',
