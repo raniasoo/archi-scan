@@ -34,18 +34,14 @@ export function ElevationView({
   const maxBldH = groundY - PAD - 30
   const vScale = maxBldH / (totalH + mechH + 4)
 
-  // 건물 폭 (배치 유형별)
-  const siteRealW = Math.sqrt(siteArea * 1.25)
-  const bldRatio = Math.sqrt(buildingCoverage / 100) * 0.85
-  let bldRealW = siteRealW * bldRatio
-  let bldRealD = (siteArea / siteRealW) * bldRatio
-
-  // 클러스터: 개별 동 크기로 축소 (AI 렌더링 일치)
-  if (type === 'cluster') {
-    const bc = buildingCount || Math.max(3, Math.round(Math.sqrt(units / 4)))
-    bldRealW = bldRealW / Math.sqrt(bc) * 1.1
-    bldRealD = bldRealD / Math.sqrt(bc) * 1.1
-  }
+  // 건물 폭 — AI 렌더링과 동일한 공식
+  const buildingArea = siteArea * (buildingCoverage / 100)
+  const effectiveBldgCount = (type === 'cluster' && buildingCount) ? buildingCount : 1
+  const eachFP = buildingArea / effectiveBldgCount
+  const ot = (type === 'cluster' && originalType) ? originalType : type
+  const linearR = ot === 'linear' ? 3.5 : ot === 'lshape' ? 1.8 : ot === 'courtyard' ? 1.5 : 1.4
+  let bldRealW = Math.round(Math.sqrt(eachFP * linearR))
+  let bldRealD = Math.round(eachFP / bldRealW)
 
   const faceW = face === "front" ? bldRealW : bldRealD
   const hScale = Math.min((W - PAD * 2 - 40) / faceW, vScale)

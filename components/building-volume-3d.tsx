@@ -183,30 +183,45 @@ export function BuildingVolume3D({
 
       const blocks = (() => {
         if (layoutType === 'cluster' && buildingCount) {
-          // 동적 다동 생성
+          // 동적 다동 생성 — AI 렌더링과 동일한 치수
           const n = buildingCount
-          const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
-          const rows = Math.ceil(n / cols)
           const ot = originalType || 'tower'
           const result: Block[] = []
+          
+          // AI 렌더링(route.ts)과 동일한 건물 치수 계산
+          const covRatio = (coverage || 50) / 100
+          const eachFP = covRatio / Math.max(n, 1)
+          const linearR = ot === 'linear' ? 3.5 : ot === 'lshape' ? 1.8 : ot === 'courtyard' ? 1.5 : 1.4
+          const calcW = Math.sqrt(eachFP * linearR)
+          const calcD = eachFP / calcW
+          
+          // 판상형은 1열 배치 (남향 평행 배치), 나머지는 그리드
+          const isLinear = ot === 'linear'
+          const cols = isLinear ? 1 : n <= 2 ? 2 : n <= 4 ? 2 : 3
+          const rows = Math.ceil(n / cols)
+          
+          // 건물 간 간격 (판상형: 넓은 동간격)
+          const gapZ = isLinear ? Math.max(0.12, calcD * 0.8) : 0.15
+          const totalZ = rows * calcD + (rows - 1) * gapZ
+          const totalX = cols * calcW + (cols - 1) * 0.08
+          
           let cnt = 0
           for (let r = 0; r < rows && cnt < n; r++) {
             for (let c = 0; c < cols && cnt < n; c++) {
-              const bx = -0.35 + c * (0.7 / (cols - 1 || 1))
-              const bz = -0.3 + r * (0.55 / (rows - 1 || 1))
+              const bx = cols === 1 ? 0 : -totalX / 2 + calcW / 2 + c * (calcW + 0.08)
+              const bz = -totalZ / 2 + calcD / 2 + r * (calcD + gapZ)
               if (ot === 'lshape') {
-                // ㄱ자형: 수직 + 수평 블록
-                result.push({ x: bx - 0.06, z: bz, w: 0.12, d: 0.22, label: `${String.fromCharCode(65 + cnt)}동` })
-                result.push({ x: bx + 0.04, z: bz + 0.08, w: 0.14, d: 0.08, label: '' })
-              } else if (ot === 'linear') {
-                result.push({ x: bx, z: bz, w: 0.28, d: 0.10, label: `${String.fromCharCode(65 + cnt)}동` })
+                const lw = calcW * 0.45, ld = calcD
+                result.push({ x: bx - calcW * 0.15, z: bz, w: lw * 0.5, d: ld, label: `${String.fromCharCode(65 + cnt)}동` })
+                result.push({ x: bx + lw * 0.15, z: bz + ld * 0.3, w: lw, d: ld * 0.35, label: '' })
               } else if (ot === 'courtyard') {
-                const t = 0.04
-                result.push({ x: bx - 0.08, z: bz, w: t, d: 0.18, label: '' })
-                result.push({ x: bx + 0.08, z: bz, w: t, d: 0.18, label: '' })
-                result.push({ x: bx, z: bz + 0.07, w: 0.20, d: t, label: `${String.fromCharCode(65 + cnt)}동` })
+                const t = calcD * 0.2
+                result.push({ x: bx - calcW * 0.35, z: bz, w: t, d: calcD * 0.8, label: '' })
+                result.push({ x: bx + calcW * 0.35, z: bz, w: t, d: calcD * 0.8, label: '' })
+                result.push({ x: bx, z: bz + calcD * 0.35, w: calcW * 0.75, d: t, label: `${String.fromCharCode(65 + cnt)}동` })
               } else {
-                result.push({ x: bx, z: bz, w: 0.15, d: 0.14, label: `${String.fromCharCode(65 + cnt)}동` })
+                // linear, tower, default
+                result.push({ x: bx, z: bz, w: calcW, d: calcD, label: `${String.fromCharCode(65 + cnt)}동` })
               }
               cnt++
             }

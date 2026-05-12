@@ -98,9 +98,14 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, bui
   const realFloorH = 3.3, realGfH = 4.5
   const realTotalH = realGfH + (floors - 1) * realFloorH // 실제 미터 단위
 
-  // 건물 크기 — 화면 꽉 차게 (VP 기준 70% 점유)
+  // 건물 크기 — AI 렌더링과 동일한 공식
   const buildingArea = siteArea * (buildingCoverage / 100)
-  const sideM = Math.sqrt(buildingArea)
+  const effectiveBldgCount = (type === 'cluster' && buildingCount) ? buildingCount : 1
+  const eachFootprint = buildingArea / effectiveBldgCount
+  const linearR = (originalType || type) === 'linear' ? 3.5 : (originalType || type) === 'lshape' ? 1.8 : 1.4
+  const realBldgW = Math.round(Math.sqrt(eachFootprint * linearR))
+  const realBldgD = Math.round(eachFootprint / realBldgW)
+  const sideM = realBldgW // 개별 동 폭 표시
 
   // VP_X=200이므로 건물폭은 좌우로 140px씩 = 280px
   const bw = 280
