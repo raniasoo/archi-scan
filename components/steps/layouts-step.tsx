@@ -78,6 +78,8 @@ export interface LayoutsStepProps {
   landPriceData: { pricePerM2: number }
   marketPrice: { loaded: boolean; suggestedSalePrice: number }
   regionalPricing: RegionalPricing | null
+  effectiveSalesPrice: number  // 중앙 계산값 (page.tsx useMemo)
+  effectiveConstructionCost: number  // 중앙 계산값
   feasibilityResult: FeasibilityResult | null
   optimizationResult: OptimizationReport | null
   molitSupplementData: Record<string, unknown>
@@ -92,7 +94,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
     setSelectedLayout, setCurrentStep, setLayoutViewMode, setShowComparisonModal, setOptimizationResult,
     layoutViewMode, isGenerating, address, siteArea, siteAreaNum,
     regulation, strategy, userValues, gfa,
-    landPriceData, marketPrice, regionalPricing, onCardRoiChanged, onUpdateLayout,
+    landPriceData, marketPrice, regionalPricing, effectiveSalesPrice, effectiveConstructionCost, onCardRoiChanged, onUpdateLayout,
     feasibilityResult, optimizationResult, molitSupplementData, loadLayoutOptimizer,
     handleSelectLayout,
   } = props
@@ -111,10 +113,9 @@ export function LayoutsStep(props: LayoutsStepProps) {
   const recommendedLayout = layouts.find(l => l.recommendation?.isRecommended) || layouts[0]
 
   // 분양가 계산
-  const salesPrice = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
-    ? marketPrice.suggestedSalePrice
-    : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000
-  const constructionCost = regionalPricing?.constructionCostPerM2 || 2500000
+  // 중앙 계산값 사용 (page.tsx effectiveSalesPrice useMemo)
+  const salesPrice = effectiveSalesPrice
+  const constructionCost = effectiveConstructionCost
 
   // 선택된 배치안의 ROI를 부모에게 전달 (스트립 ROI와 카드 ROI 100% 일치 보장)
   useEffect(() => {

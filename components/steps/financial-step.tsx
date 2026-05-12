@@ -31,13 +31,15 @@ export interface FinancialStepProps {
   landPriceData: { pricePerM2: number }
   marketPrice: { loaded: boolean; suggestedSalePrice: number; avgPricePerM2: number; transactionCount: number; transactions: any[] }
   regionalPricing: RegionalPricing | null
+  effectiveSalesPrice: number
+  effectiveConstructionCost: number
   setCurrentStep: Dispatch<SetStateAction<any>>
 }
 
 export function FinancialStep(props: FinancialStepProps) {
   const {
     selectedLayoutData, allLayouts, projectType, existingBuildingInfo, address, siteAreaNum, gfa, regulation,
-    feasibilityResult, landPriceData, marketPrice, regionalPricing,
+    feasibilityResult, landPriceData, marketPrice, regionalPricing, effectiveSalesPrice, effectiveConstructionCost,
     setCurrentStep,
   } = props
 
@@ -177,10 +179,8 @@ export function FinancialStep(props: FinancialStepProps) {
               floors={selectedLayoutData.floors}
               parking={selectedLayoutData.parking}
               landPricePerM2={landPriceData.pricePerM2 || 5000000}
-              salesPricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
-                ? marketPrice.suggestedSalePrice 
-                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000}
-              constructionCostPerM2={regionalPricing?.constructionCostPerM2 || 2500000}
+              salesPricePerM2={effectiveSalesPrice}
+              constructionCostPerM2={effectiveConstructionCost}
               baseROI={feasibilityResult?.roi ?? 0}
               baseTotalCost={feasibilityResult?.totalCost ?? 0}
               baseProfit={feasibilityResult?.profit ?? 0}

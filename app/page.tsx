@@ -2421,6 +2421,8 @@ export default function ArchiScanPage() {
             landPriceData={landPriceData}
             marketPrice={marketPrice}
             regionalPricing={regionalPricing}
+            effectiveSalesPrice={effectiveSalesPrice}
+            effectiveConstructionCost={effectiveConstructionCost}
             onCardRoiChanged={setCardRoi}
             onUpdateLayout={handleUpdateLayout}
             feasibilityResult={feasibilityResult}
@@ -2579,7 +2581,10 @@ export default function ArchiScanPage() {
             address={address} siteAreaNum={siteAreaNum} gfa={gfa}
             regulation={regulation} feasibilityResult={feasibilityResult}
             landPriceData={landPriceData} marketPrice={marketPrice}
-            regionalPricing={regionalPricing} setCurrentStep={setCurrentStep}
+            regionalPricing={regionalPricing}
+            effectiveSalesPrice={effectiveSalesPrice}
+            effectiveConstructionCost={effectiveConstructionCost}
+            setCurrentStep={setCurrentStep}
           />
         </>)}
 
