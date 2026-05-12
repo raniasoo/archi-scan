@@ -2186,12 +2186,12 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     const _aL: Record<string,string> = {'eye-level':'정면','birds-eye':'조감도','entrance':'입구'}
     const _mI = data.aiMultiImages?.filter(m => m.image) || []
     if (_mI.length > 0) {
-      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">&#10024; AI 건축 렌더링</div>' +
-        '<div style="border-radius:8px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+_mI[0].image+'" style="width:100%;display:block"/><div style="padding:4px 10px;background:#f8fafc;font-size:9px;color:#64748b">'+(_aL[_mI[0].angle]||_mI[0].angle)+'</div></div></div>' + _mI.slice(1).map(m => '<div class="pdf-section" style="margin:0 30px;padding:4px 0"><div style="border-radius:8px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+m.image+'" style="width:100%;display:block"/><div style="padding:4px 10px;background:#f8fafc;font-size:9px;color:#64748b">'+(_aL[m.angle]||m.angle)+'</div></div></div>').join('');
-      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
+      // AI 이미지는 html2canvas 대신 jsPDF.addImage()로 직접 삽입 (placeholder만 HTML에 삽입)
+      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div><div style="font-size:9px;color:#94a3b8">3장의 AI 렌더링 이미지가 아래에 표시됩니다</div></div>';
+      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- AI_IMAGES_PLACEHOLDER -->' + '<!-- Executive Summary -->');
     } else if (data.aiRenderImage) {
-      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+data.aiRenderImage+'" style="width:100%;display:block"/><div style="padding:8px 14px;background:#f8fafc"><span style="font-size:10px;font-weight:600;color:#475569">&#10024; AI 건축 렌더링</span></div></div></div>';
-      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
+      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div></div>';
+      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- AI_IMAGES_PLACEHOLDER -->' + '<!-- Executive Summary -->');
     }
     
     // 도면 SVG 삽입
@@ -2453,7 +2453,44 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       pdf.addPage();
     }
     
-    // 직접 addImage 제거하여 중복 방지
+    // ━━━ AI 렌더링 이미지 직접 삽입 (html2canvas 우회) ━━━
+    const aiImages = data.aiMultiImages?.filter(m => m.image) || (data.aiRenderImage ? [{ angle: 'eye-level', image: data.aiRenderImage }] : []);
+    if (aiImages.length > 0) {
+      const aiLabels: Record<string,string> = {'eye-level':'정면 · 보행자 시점','birds-eye':'조감도 · 드론 시점','entrance':'입구 · 클로즈업'};
+      let aiY = topMargin;
+      // 제목
+      pdf.setFontSize(11); pdf.setFont('helvetica','bold'); pdf.setTextColor(30,41,59);
+      pdf.text('✨ AI 건축 렌더링', sideMargin, aiY + 4); aiY += 8;
+      
+      for (const aiImg of aiImages) {
+        try {
+          const imgEl = new Image();
+          imgEl.src = aiImg.image!;
+          await new Promise<void>((res) => { imgEl.onload = () => res(); imgEl.onerror = () => res(); setTimeout(res, 3000); });
+          
+          const iw = imgEl.naturalWidth || 800, ih = imgEl.naturalHeight || 600;
+          const imgWidth = contentWidth;
+          const imgHeight = (ih / iw) * imgWidth;
+          
+          // 페이지 넘침 체크
+          if (aiY + imgHeight + 8 > pdfHeight - bottomMargin) {
+            pdf.addPage(); aiY = topMargin;
+          }
+          
+          pdf.addImage(aiImg.image!, 'PNG', sideMargin, aiY, imgWidth, imgHeight);
+          aiY += imgHeight + 1;
+          
+          // 캡션
+          pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(100,116,139);
+          pdf.text(aiLabels[aiImg.angle] || aiImg.angle, sideMargin + 2, aiY + 3);
+          aiY += 6;
+        } catch (e) { console.warn('[PDF] AI 이미지 삽입 실패:', e); }
+      }
+      // Powered by Gemini
+      pdf.setFontSize(6); pdf.setTextColor(148,163,184);
+      pdf.text('Powered by Gemini', pdfWidth - sideMargin - 25, aiY + 2);
+      pdf.addPage();
+    }
     
     // 블록별로 캡처하여 최적 배치
     let currentY = topMargin;
@@ -2575,12 +2612,12 @@ export function openPrintPreview(data: ExportData): { success: boolean; error?: 
     const _aL: Record<string,string> = {'eye-level':'정면','birds-eye':'조감도','entrance':'입구'}
     const _mI = data.aiMultiImages?.filter(m => m.image) || []
     if (_mI.length > 0) {
-      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">&#10024; AI 건축 렌더링</div>' +
-        '<div style="border-radius:8px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+_mI[0].image+'" style="width:100%;display:block"/><div style="padding:4px 10px;background:#f8fafc;font-size:9px;color:#64748b">'+(_aL[_mI[0].angle]||_mI[0].angle)+'</div></div></div>' + _mI.slice(1).map(m => '<div class="pdf-section" style="margin:0 30px;padding:4px 0"><div style="border-radius:8px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+m.image+'" style="width:100%;display:block"/><div style="padding:4px 10px;background:#f8fafc;font-size:9px;color:#64748b">'+(_aL[m.angle]||m.angle)+'</div></div></div>').join('');
-      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
+      // AI 이미지는 html2canvas 대신 jsPDF.addImage()로 직접 삽입 (placeholder만 HTML에 삽입)
+      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div><div style="font-size:9px;color:#94a3b8">3장의 AI 렌더링 이미지가 아래에 표시됩니다</div></div>';
+      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- AI_IMAGES_PLACEHOLDER -->' + '<!-- Executive Summary -->');
     } else if (data.aiRenderImage) {
-      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+data.aiRenderImage+'" style="width:100%;display:block"/><div style="padding:8px 14px;background:#f8fafc"><span style="font-size:10px;font-weight:600;color:#475569">&#10024; AI 건축 렌더링</span></div></div></div>';
-      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
+      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div></div>';
+      htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- AI_IMAGES_PLACEHOLDER -->' + '<!-- Executive Summary -->');
     }
     
     // 도면 SVG 삽입 (HTML 다운로드와 동일)
