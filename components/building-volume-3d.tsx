@@ -14,6 +14,7 @@ interface BuildingVolume3DProps {
   floorHeight?: number
   sitePolygon?: { coords: [number, number][], centroid: [number, number] } | null
   terrain?: { elevationDiff?: number; avgSlope?: number; slopeDirection?: string } | null
+  siteCoords?: { lng: number; lat: number } | null
   onClose: () => void
 }
 
@@ -159,7 +160,7 @@ function makeWindowTex(floorCount: number, winCols: number): HTMLCanvasElement {
 }
 
 export function BuildingVolume3D({
-  layoutName, layoutType, originalType, buildingCount, floors, siteArea, coverage, floorHeight = 3.3, sitePolygon, terrain, onClose
+  layoutName, layoutType, originalType, buildingCount, floors, siteArea, coverage, floorHeight = 3.3, sitePolygon, terrain, siteCoords, onClose
 }: BuildingVolume3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
@@ -315,7 +316,7 @@ export function BuildingVolume3D({
       back.position.set(-S * 0.5, S * 0.3, S * 2)
       scene.add(back)
 
-      /* ── Ground (잔디) ── */
+      /* ── Ground (실제 표고 지형 or 단순 경사) ── */
       const grassC = document.createElement('canvas')
       grassC.width = grassC.height = 256
       const gg = grassC.getContext('2d')!
@@ -326,17 +327,52 @@ export function BuildingVolume3D({
       }
       const gTex = new THREE.CanvasTexture(grassC)
       gTex.wrapS = gTex.wrapT = THREE.RepeatWrapping; gTex.repeat.set(S / 8, S / 8)
-      const ground = new THREE.Mesh(new THREE.PlaneGeometry(S * 4, S * 4),
-        new THREE.MeshStandardMaterial({ map: gTex, roughness: 0.95, color: 0x2a5a32 }))
+      const gMat = new THREE.MeshStandardMaterial({ map: gTex, roughness: 0.95, color: 0x2a5a32 })
+      
+      // 실제 표고 데이터 fetch → 지형 메시 (Terrain3DView와 동일 API)
+      const TERRAIN_GRID = 20
+      const groundGeo = new THREE.PlaneGeometry(S * 4, S * 4, TERRAIN_GRID - 1, TERRAIN_GRID - 1)
+      const ground = new THREE.Mesh(groundGeo, gMat)
       ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true
-      // 지형 경사 반영 (terrain prop)
-      if (terrain?.elevationDiff && terrain.elevationDiff > 1) {
+      
+      if (siteCoords?.lat && siteCoords?.lng) {
+        try {
+          const range = 0.003
+          const eRes = await fetch(`/api/elevation-grid?lat=${siteCoords.lat}&lng=${siteCoords.lng}&grid=12&range=${range}`)
+          const eData = await eRes.json()
+          if (eData.elevations?.length > 0) {
+            const elev = eData.elevations as number[]
+            const minE = Math.min(...elev), maxE = Math.max(...elev)
+            const eRange = Math.max(maxE - minE, 0.5)
+            const heightScale = Math.min(S * 0.15, eRange * 2) // 시각적 스케일
+            const pos = groundGeo.attributes.position
+            for (let i = 0; i < pos.count; i++) {
+              const gx = Math.floor((i % TERRAIN_GRID) / (TERRAIN_GRID - 1) * 11)
+              const gy = Math.floor(Math.floor(i / TERRAIN_GRID) / (TERRAIN_GRID - 1) * 11)
+              const idx = Math.min(gy * 12 + gx, elev.length - 1)
+              const norm = (elev[idx] - minE) / eRange
+              pos.setZ(i, norm * heightScale)
+            }
+            pos.needsUpdate = true
+            groundGeo.computeVertexNormals()
+            console.log(`[3D] 실제 표고 지형 적용: 고저차 ${eRange.toFixed(1)}m (${minE.toFixed(0)}~${maxE.toFixed(0)}m)`)
+          }
+        } catch (e) {
+          console.warn('[3D] 표고 데이터 로딩 실패:', e)
+          // fallback: terrain prop 기반 단순 기울기
+          if (terrain?.elevationDiff && terrain.elevationDiff > 1) {
+            const slopeAngle = Math.atan(terrain.elevationDiff / (S * 2)) * 0.7
+            const dir = terrain.slopeDirection || ''
+            if (dir.includes('남') || dir.includes('S')) ground.rotation.x += slopeAngle
+            else if (dir.includes('북') || dir.includes('N')) ground.rotation.x -= slopeAngle
+          }
+        }
+      } else if (terrain?.elevationDiff && terrain.elevationDiff > 1) {
+        // siteCoords 없으면 terrain prop 기반 단순 기울기
         const slopeAngle = Math.atan(terrain.elevationDiff / (S * 2)) * 0.7
         const dir = terrain.slopeDirection || ''
         if (dir.includes('남') || dir.includes('S')) ground.rotation.x += slopeAngle
         else if (dir.includes('북') || dir.includes('N')) ground.rotation.x -= slopeAngle
-        if (dir.includes('동') || dir.includes('E')) ground.rotation.y += slopeAngle
-        else if (dir.includes('서') || dir.includes('W')) ground.rotation.y -= slopeAngle
       }
       scene.add(ground)
 
