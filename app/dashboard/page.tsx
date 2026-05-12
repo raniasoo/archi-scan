@@ -8,7 +8,7 @@ import { getRecentProjects, type ProjectListItem } from "@/lib/project-storage"
 import {
   Building2, FolderOpen, TrendingUp, Clock, Plus, ArrowRight, Trash2,
   LogOut, ChevronRight, BarChart3, MapPin, User as UserIcon, Share2, FileText,
-  MessageSquare, Send, Loader2, CheckCircle2
+  MessageSquare, Send, Loader2, CheckCircle2, BookOpen
 } from "lucide-react"
 
 interface UserInfo {
@@ -223,19 +223,15 @@ export default function DashboardPage() {
             </div>
           </button>
           <button
-            onClick={() => {
-              localStorage.removeItem('archi-scan-session')
-              localStorage.removeItem('archi-scan-visited')
-              router.push('/')
-            }}
+            onClick={() => router.push('/guide')}
             className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-xl hover:bg-secondary/30 transition-all text-left"
           >
             <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-              <FileText className="h-5 w-5 text-muted-foreground" />
+              <BookOpen className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">랜딩 페이지</p>
-              <p className="text-xs text-muted-foreground">앱 소개 보기</p>
+              <p className="text-sm font-semibold text-foreground">사용 가이드</p>
+              <p className="text-xs text-muted-foreground">단계별 사용법</p>
             </div>
           </button>
         </div>
