@@ -6,6 +6,7 @@ import { type TerrainAnalysis } from "@/lib/terrain-analysis"
 import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
 import { buildSiteContextPrompt } from "@/lib/site-context-builder"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
+import { getRegionalPricing, getZoneMultiplier } from "@/lib/regional-pricing"
 
 interface QuickAnalysisProps {
   onDetailedAnalysis: (address: string, siteArea: number, data: any, renderImage?: string | null) => void
@@ -277,19 +278,22 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         setSunAnalysis(sunResult)
       }
 
-      // 사업성 계산 — calculateFeasibility()와 동일한 공식 사용 (ROI 일치 보장)
+      // 사업성 계산 — calculateFeasibility()와 동일한 공식 + 지역별 동적 분양가
       setProgress('💰 사업성 분석 중...')
       const earthworkCost = terrainResult?.earthworkCost || 0
       const parkingCount = Math.ceil(totalUnits * 1.0) // 주차비율 1.0
+      const regional = getRegionalPricing(undefined, address.trim())
+      const dynamicSalesPrice = Math.round(regional.salesPricePerM2 * getZoneMultiplier(zoneCode))
+      const dynamicConstCost = regional.constructionCostPerM2
       const feasibility = calculateFeasibility({
         siteArea,
         grossFloorArea: gfa,
         unitCount: totalUnits,
         floorCount: floors,
         parkingCount,
-        landPricePerM2: 5000000, // QuickAnalysis는 실거래가 미조회 → 기본값
-        salesPricePerM2: 5000000,
-        constructionCostPerM2: 2500000,
+        landPricePerM2: 5000000,
+        salesPricePerM2: dynamicSalesPrice,
+        constructionCostPerM2: dynamicConstCost,
       })
       // 토공비 반영
       const totalCost = feasibility.totalCost + earthworkCost
