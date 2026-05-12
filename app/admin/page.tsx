@@ -1,97 +1,125 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Users, 
-  FileText, 
-  Building2, 
-  ArrowLeft,
-  Crown,
-  Calendar,
-  MapPin,
-  Download,
-  TrendingUp,
-  Eye,
-  RefreshCw,
-  Loader2
-} from "lucide-react"
+import { useRouter } from "next/navigation"
 import {
-  getAdminStats,
-  getAllUsers,
-  getAllReports,
-  type User,
-  type Report,
-  type Project,
-} from "@/lib/database"
+  Users, Crown, CreditCard, BarChart3, TrendingUp,
+  ArrowLeft, RefreshCw, Loader2, Search, Calendar,
+  FileText, Sparkles, Building2, ChevronDown, ChevronUp
+} from "lucide-react"
+
+interface Stats {
+  totalUsers: number
+  proUsers: number
+  freeUsers: number
+  todaySignups: number
+  monthlySignups: number
+  totalAnalyses: number
+  totalReports: number
+  totalRenders: number
+  totalRevenue: number
+  paymentCount: number
+}
+
+interface Profile {
+  id: string
+  email: string
+  name: string
+  avatar_url: string | null
+  provider: string
+  plan: string
+  monthly_usage: number
+  plan_expires_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface LogEntry {
+  id: string
+  user_id: string
+  action: string
+  metadata: any
+  created_at: string
+}
 
 export default function AdminPage() {
-  const [mounted, setMounted] = useState(false)
-  const [activeTab, setActiveTab] = useState("overview")
-  const [isLoading, setIsLoading] = useState(true)
-  
-  // Real data from Supabase
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    proUsers: 0,
-    totalProjects: 0,
-    totalReports: 0,
-    totalRevenue: 0,
-  })
-  const [users, setUsers] = useState<User[]>([])
-  const [reports, setReports] = useState<Array<Report & { project?: Project; user?: User }>>([])
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [recentLogs, setRecentLogs] = useState<LogEntry[]>([])
+  const [paymentLogs, setPaymentLogs] = useState<LogEntry[]>([])
+  const [tab, setTab] = useState<"users" | "activity" | "payments">("users")
+  const [search, setSearch] = useState("")
+  const [expandedUser, setExpandedUser] = useState<string | null>(null)
 
-  const loadData = async () => {
-    setIsLoading(true)
+  const fetchData = async () => {
+    setLoading(true)
+    setError("")
     try {
-      const [adminStats, allUsers, allReports] = await Promise.all([
-        getAdminStats(),
-        getAllUsers(),
-        getAllReports(),
-      ])
-      
-      setStats({
-        totalUsers: adminStats.totalUsers,
-        proUsers: adminStats.proUsers,
-        totalProjects: adminStats.totalProjects,
-        totalReports: adminStats.totalReports,
-        totalRevenue: adminStats.totalRevenue,
-      })
-      setUsers(allUsers)
-      setReports(allReports)
-    } catch (error) {
-      console.error('Error loading admin data:', error)
+      const res = await fetch("/api/admin")
+      if (res.status === 403) {
+        setError("관리자 권한이 필요합니다")
+        setLoading(false)
+        return
+      }
+      if (!res.ok) throw new Error("데이터 로드 실패")
+      const data = await res.json()
+      setStats(data.stats)
+      setProfiles(data.profiles)
+      setRecentLogs(data.recentLogs)
+      setPaymentLogs(data.paymentLogs)
+    } catch (err: any) {
+      setError(err.message)
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  useEffect(() => {
-    setMounted(true)
-    loadData()
-  }, [])
+  useEffect(() => { fetchData() }, [])
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('ko-KR', { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
-    })
+  const filteredProfiles = profiles.filter(p =>
+    !search || 
+    p.email?.toLowerCase().includes(search.toLowerCase()) ||
+    p.name?.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const fmtDate = (d: string) => {
+    if (!d) return "-"
+    const dt = new Date(d)
+    return `${dt.getMonth() + 1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2, "0")}`
   }
 
-  if (!mounted) {
+  const fmtFullDate = (d: string) => {
+    if (!d) return "-"
+    return new Date(d).toLocaleDateString("ko-KR", { year: "numeric", month: "short", day: "numeric" })
+  }
+
+  const actionLabel: Record<string, string> = {
+    analysis: "분석",
+    report: "보고서",
+    ai_render: "AI렌더링",
+    pdf_export: "PDF",
+    payment: "결제",
+  }
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg animate-pulse">
-            <Building2 className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <p className="text-muted-foreground">로딩 중...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-5">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-destructive mb-3">{error}</p>
+          <button onClick={() => router.push("/")} className="text-sm text-muted-foreground hover:underline">
+            ← 앱으로 돌아가기
+          </button>
         </div>
       </div>
     )
@@ -100,374 +128,261 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <Link href="/">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="hidden sm:inline">메인으로</span>
-                </Button>
-              </Link>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                  <Building2 className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">Archi-Scan 관리자</h1>
-                  <p className="text-xs text-muted-foreground">사용자 및 보고서 관리</p>
-                </div>
-              </div>
+      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.push("/")} className="text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              <span className="font-bold">Admin</span>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={loadData}
-              disabled={isLoading}
-              className="gap-2"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              새로고침
-            </Button>
           </div>
+          <button onClick={fetchData} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+            <RefreshCw className="h-3.5 w-3.5" />
+            새로고침
+          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="overview" className="gap-2">
-              <TrendingUp className="h-4 w-4 hidden sm:block" />
-              대시보드
-            </TabsTrigger>
-            <TabsTrigger value="users" className="gap-2">
-              <Users className="h-4 w-4 hidden sm:block" />
-              사용자
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="gap-2">
-              <FileText className="h-4 w-4 hidden sm:block" />
-              보고서
-            </TabsTrigger>
-          </TabsList>
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        {/* Stats Cards */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: "전체 사용자", value: stats.totalUsers, icon: Users, color: "text-blue-500" },
+              { label: "Pro 사용자", value: stats.proUsers, icon: Crown, color: "text-yellow-500" },
+              { label: "이번 달 가입", value: stats.monthlySignups, icon: Calendar, color: "text-emerald-500" },
+              { label: "총 매출", value: `₩${stats.totalRevenue.toLocaleString()}`, icon: CreditCard, color: "text-violet-500" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border bg-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">{s.label}</span>
+                  <s.icon className={`h-4 w-4 ${s.color}`} />
+                </div>
+                <div className="text-2xl font-bold">{s.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">전체 사용자</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalUsers}명</div>
-                  <p className="text-xs text-muted-foreground">
-                    프로 {stats.proUsers}명 / 무료 {stats.totalUsers - stats.proUsers}명
-                  </p>
-                </CardContent>
-              </Card>
+        {/* Secondary Stats */}
+        {stats && (
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+            {[
+              { label: "무료 사용자", value: stats.freeUsers },
+              { label: "오늘 가입", value: stats.todaySignups },
+              { label: "분석 횟수", value: stats.totalAnalyses },
+              { label: "보고서", value: stats.totalReports },
+              { label: "AI 렌더링", value: stats.totalRenders },
+            ].map((s) => (
+              <div key={s.label} className="rounded-lg border bg-card p-3 text-center">
+                <div className="text-lg font-bold">{s.value}</div>
+                <div className="text-[10px] text-muted-foreground">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">프로 사용자</CardTitle>
-                  <Crown className="h-4 w-4 text-amber-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.proUsers}명</div>
-                  <p className="text-xs text-muted-foreground">
-                    전환율 {stats.totalUsers > 0 ? ((stats.proUsers / stats.totalUsers) * 100).toFixed(0) : 0}%
-                  </p>
-                </CardContent>
-              </Card>
+        {/* Tabs */}
+        <div className="flex gap-1 border-b">
+          {([
+            { key: "users", label: "사용자", icon: Users },
+            { key: "activity", label: "활동 로그", icon: BarChart3 },
+            { key: "payments", label: "결제 내역", icon: CreditCard },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                tab === t.key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <t.icon className="h-4 w-4" />
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">전체 보고서</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalReports}건</div>
-                  <p className="text-xs text-muted-foreground">
-                    프로젝트 {stats.totalProjects}개
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">총 매출</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalRevenue.toLocaleString()}원</div>
-                  <p className="text-xs text-muted-foreground">
-                    구독 결제 기준
-                  </p>
-                </CardContent>
-              </Card>
+        {/* Users Tab */}
+        {tab === "users" && (
+          <div className="space-y-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="이름 또는 이메일 검색..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
             </div>
 
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>최근 보고서</CardTitle>
-                <CardDescription>최근 생성된 사업성 검토 보고서</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : reports.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    아직 생성된 보고서가 없습니다.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {reports.slice(0, 5).map((report) => (
-                      <div key={report.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-muted/50">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded bg-primary/10">
-                            <MapPin className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">{report.project?.address || report.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {report.project?.site_area ? `${report.project.site_area}㎡` : ''} · {report.doc_number}
-                            </p>
-                          </div>
+            {/* User List */}
+            <div className="border rounded-xl overflow-hidden">
+              <div className="hidden md:grid grid-cols-[1fr_120px_80px_80px_100px] gap-3 px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground">
+                <span>사용자</span>
+                <span>플랜</span>
+                <span>사용량</span>
+                <span>가입방식</span>
+                <span>가입일</span>
+              </div>
+              {filteredProfiles.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">사용자 없음</div>
+              ) : (
+                filteredProfiles.map((p) => (
+                  <div key={p.id}>
+                    <div
+                      className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_120px_80px_80px_100px] gap-3 px-4 py-3 border-t items-center cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => setExpandedUser(expandedUser === p.id ? null : p.id)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
+                          {(p.name || p.email || "?")[0].toUpperCase()}
                         </div>
-                        <div className="flex items-center gap-2 ml-11 sm:ml-0">
-                          <Badge variant="secondary" className="text-xs">
-                            {formatDate(report.created_at)}
-                          </Badge>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{p.name || "-"}</div>
+                          <div className="text-xs text-muted-foreground truncate">{p.email}</div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Users Tab */}
-          <TabsContent value="users" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>사용자 목록</CardTitle>
-                <CardDescription>등록된 모든 사용자 ({users.length}명)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    아직 등록된 사용자가 없습니다.
-                  </div>
-                ) : (
-                  <>
-                    {/* Mobile View */}
-                    <div className="space-y-3 lg:hidden">
-                      {users.map((user) => (
-                        <div key={user.id} className="p-4 rounded-lg border border-border">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-sm font-medium text-primary">
-                                  {(user.name || user.email || 'U').charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div>
-                                <p className="font-medium">{user.name || '익명 사용자'}</p>
-                                <p className="text-xs text-muted-foreground">{user.email || 'No email'}</p>
-                              </div>
-                            </div>
-                            <Badge 
-                              variant={user.subscription_tier === "pro" ? "default" : "secondary"}
-                              className={user.subscription_tier === "pro" ? "bg-amber-500 hover:bg-amber-600" : ""}
-                            >
-                              {user.subscription_tier === "pro" ? "프로" : "무료"}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {formatDate(user.created_at)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <FileText className="h-3 w-3" />
-                              사용 {user.usage_count}회
-                            </span>
-                          </div>
+                      <div className="hidden md:block">
+                        {p.plan === "pro" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-600 text-xs font-medium">
+                            <Crown className="h-3 w-3" /> Pro
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">무료</span>
+                        )}
+                      </div>
+                      <div className="hidden md:block text-sm">{p.monthly_usage || 0}회</div>
+                      <div className="hidden md:block">
+                        <span className="text-xs text-muted-foreground capitalize">{p.provider || "email"}</span>
+                      </div>
+                      <div className="hidden md:block text-xs text-muted-foreground">{fmtFullDate(p.created_at)}</div>
+                      <div className="md:hidden">
+                        {expandedUser === p.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                      </div>
+                    </div>
+                    {/* Mobile expanded details */}
+                    {expandedUser === p.id && (
+                      <div className="md:hidden px-4 pb-3 pt-0 grid grid-cols-3 gap-2 text-xs border-t bg-muted/20">
+                        <div>
+                          <span className="text-muted-foreground">플랜:</span>{" "}
+                          <span className="font-medium">{p.plan === "pro" ? "Pro" : "무료"}</span>
                         </div>
-                      ))}
-                    </div>
-
-                    {/* Desktop View */}
-                    <div className="hidden lg:block overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">이름</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">이메일</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">플랜</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">가입일</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">사용 횟수</th>
-                            <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">작업</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {users.map((user) => (
-                            <tr key={user.id} className="border-b border-border last:border-0">
-                              <td className="py-3 px-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <span className="text-sm font-medium text-primary">
-                                      {(user.name || user.email || 'U').charAt(0).toUpperCase()}
-                                    </span>
-                                  </div>
-                                  <span className="font-medium">{user.name || '익명 사용자'}</span>
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 text-muted-foreground">{user.email || '-'}</td>
-                              <td className="py-3 px-4">
-                                <Badge 
-                                  variant={user.subscription_tier === "pro" ? "default" : "secondary"}
-                                  className={user.subscription_tier === "pro" ? "bg-amber-500 hover:bg-amber-600" : ""}
-                                >
-                                  {user.subscription_tier === "pro" ? "프로" : "무료"}
-                                </Badge>
-                              </td>
-                              <td className="py-3 px-4 text-muted-foreground">{formatDate(user.created_at)}</td>
-                              <td className="py-3 px-4">{user.usage_count}회</td>
-                              <td className="py-3 px-4 text-right">
-                                <Button variant="ghost" size="sm">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Reports Tab */}
-          <TabsContent value="reports" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>보고서 목록</CardTitle>
-                <CardDescription>생성된 모든 사업성 검토 보고서 ({reports.length}건)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : reports.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    아직 생성된 보고서가 없습니다.
-                  </div>
-                ) : (
-                  <>
-                    {/* Mobile View */}
-                    <div className="space-y-3 lg:hidden">
-                      {reports.map((report) => (
-                        <div key={report.id} className="p-4 rounded-lg border border-border">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div>
-                              <p className="font-medium text-sm">{report.project?.address || report.title}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {report.project?.site_area ? `${report.project.site_area}㎡` : ''} · {report.doc_number}
-                              </p>
-                            </div>
-                            <Badge variant="outline">완료</Badge>
-                          </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              {report.user?.name || '익명'}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {formatDate(report.created_at)}
-                            </span>
-                          </div>
-                          <div className="mt-3 flex gap-2">
-                            <Button variant="outline" size="sm" className="flex-1 gap-1">
-                              <Eye className="h-3 w-3" />
-                              보기
-                            </Button>
-                            <Button variant="outline" size="sm" className="flex-1 gap-1">
-                              <Download className="h-3 w-3" />
-                              다운로드
-                            </Button>
-                          </div>
+                        <div>
+                          <span className="text-muted-foreground">사용량:</span>{" "}
+                          <span className="font-medium">{p.monthly_usage || 0}회</span>
                         </div>
-                      ))}
-                    </div>
+                        <div>
+                          <span className="text-muted-foreground">가입:</span>{" "}
+                          <span className="font-medium">{p.provider || "email"}</span>
+                        </div>
+                        <div className="col-span-3">
+                          <span className="text-muted-foreground">가입일:</span>{" "}
+                          <span className="font-medium">{fmtFullDate(p.created_at)}</span>
+                        </div>
+                        <div className="col-span-3 text-[10px] text-muted-foreground/50 truncate">ID: {p.id}</div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground text-right">총 {filteredProfiles.length}명</div>
+          </div>
+        )}
 
-                    {/* Desktop View */}
-                    <div className="hidden lg:block overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">주소</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">면적</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">문서번호</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">작성자</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">작성일</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">상태</th>
-                            <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">작업</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reports.map((report) => (
-                            <tr key={report.id} className="border-b border-border last:border-0">
-                              <td className="py-3 px-4 font-medium max-w-[200px] truncate">
-                                {report.project?.address || report.title}
-                              </td>
-                              <td className="py-3 px-4 text-muted-foreground">
-                                {report.project?.site_area ? `${report.project.site_area}㎡` : '-'}
-                              </td>
-                              <td className="py-3 px-4">{report.doc_number}</td>
-                              <td className="py-3 px-4 text-muted-foreground">{report.user?.name || '익명'}</td>
-                              <td className="py-3 px-4 text-muted-foreground">{formatDate(report.created_at)}</td>
-                              <td className="py-3 px-4">
-                                <Badge variant="outline">완료</Badge>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Button variant="ghost" size="sm">
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm">
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+        {/* Activity Tab */}
+        {tab === "activity" && (
+          <div className="border rounded-xl overflow-hidden">
+            <div className="hidden md:grid grid-cols-[100px_1fr_120px_140px] gap-3 px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground">
+              <span>액션</span>
+              <span>사용자</span>
+              <span>상세</span>
+              <span>시간</span>
+            </div>
+            {recentLogs.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">활동 로그 없음</div>
+            ) : (
+              recentLogs.slice(0, 50).map((log) => {
+                const profile = profiles.find(p => p.id === log.user_id)
+                return (
+                  <div key={log.id} className="grid grid-cols-[80px_1fr_auto] md:grid-cols-[100px_1fr_120px_140px] gap-3 px-4 py-2.5 border-t items-center text-sm">
+                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full w-fit ${
+                      log.action === "payment" ? "bg-violet-500/10 text-violet-600" :
+                      log.action === "analysis" ? "bg-blue-500/10 text-blue-600" :
+                      log.action === "ai_render" ? "bg-orange-500/10 text-orange-600" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {actionLabel[log.action] || log.action}
+                    </span>
+                    <span className="text-xs truncate">{profile?.email || log.user_id.slice(0, 8)}</span>
+                    <span className="hidden md:block text-xs text-muted-foreground truncate">
+                      {log.metadata?.address || log.metadata?.method || "-"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{fmtDate(log.created_at)}</span>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+
+        {/* Payments Tab */}
+        {tab === "payments" && (
+          <div className="space-y-3">
+            {stats && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border bg-card p-4">
+                  <div className="text-xs text-muted-foreground mb-1">총 매출</div>
+                  <div className="text-2xl font-bold">₩{stats.totalRevenue.toLocaleString()}</div>
+                </div>
+                <div className="rounded-xl border bg-card p-4">
+                  <div className="text-xs text-muted-foreground mb-1">결제 건수</div>
+                  <div className="text-2xl font-bold">{stats.paymentCount}건</div>
+                </div>
+              </div>
+            )}
+
+            <div className="border rounded-xl overflow-hidden">
+              <div className="hidden md:grid grid-cols-[1fr_100px_100px_140px] gap-3 px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground">
+                <span>사용자</span>
+                <span>금액</span>
+                <span>결제수단</span>
+                <span>시간</span>
+              </div>
+              {paymentLogs.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">결제 내역 없음</div>
+              ) : (
+                paymentLogs.map((log) => {
+                  const profile = profiles.find(p => p.id === log.user_id)
+                  return (
+                    <div key={log.id} className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_100px_100px_140px] gap-3 px-4 py-3 border-t items-center">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{profile?.name || "-"}</div>
+                        <div className="text-xs text-muted-foreground truncate">{profile?.email}</div>
+                      </div>
+                      <div className="text-sm font-semibold text-right md:text-left">
+                        ₩{(log.metadata?.amount || 0).toLocaleString()}
+                      </div>
+                      <div className="hidden md:block text-xs text-muted-foreground">
+                        {log.metadata?.method || "-"}
+                      </div>
+                      <div className="hidden md:block text-xs text-muted-foreground">
+                        {fmtDate(log.created_at)}
+                      </div>
                     </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
