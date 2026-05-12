@@ -4,7 +4,7 @@
  */
 import { NextResponse } from 'next/server'
 
-const MOLIT_API_KEY = process.env.MOLIT_API_KEY || ''
+const MOLIT_API_KEY = process.env.MOLIT_API_KEY || '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba5d56d21444098'
 
 interface RealPriceResult {
   avgPricePerM2: number       // ㎡당 평균 거래가 (원)
@@ -61,11 +61,17 @@ export async function GET(request: Request) {
       })
       
       const res = await fetch(
-        `http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcAptTradeDev?${params}`,
+        `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev?${params}`,
         { signal: AbortSignal.timeout(10000) }
       )
       
       const text = await res.text()
+      
+      // 에러 응답 체크
+      if (text.includes('SERVICE_KEY_IS_NOT_REGISTERED') || text.includes('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS')) {
+        console.warn(`[real-price] ${dealYmd} API 키 인증 오류`)
+        continue
+      }
       
       // XML 파싱 (간단한 정규식)
       const items = text.match(/<item>([\s\S]*?)<\/item>/g) || []
@@ -93,7 +99,8 @@ export async function GET(request: Request) {
         }
       }
     } catch (e) {
-      console.warn(`[real-price] ${dealYmd} 조회 실패:`, e)
+      const errMsg = e instanceof Error ? e.message : String(e)
+      console.warn(`[real-price] ${dealYmd} 조회 실패: ${errMsg}`)
     }
     // 충분한 데이터 확보 시 조기 종료 (20건 이상)
     if (allTransactions.length >= 20) break
