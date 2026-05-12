@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import {
   Users, Crown, CreditCard, BarChart3, TrendingUp,
   ArrowLeft, RefreshCw, Loader2, Search, Calendar,
-  FileText, Sparkles, Building2, ChevronDown, ChevronUp
+  FileText, Sparkles, Building2, ChevronDown, ChevronUp,
+  MessageSquare, CheckCircle2, Clock, Reply
 } from "lucide-react"
 
 interface Stats {
@@ -42,6 +43,18 @@ interface LogEntry {
   created_at: string
 }
 
+interface Inquiry {
+  id: string
+  user_id: string | null
+  name: string
+  email: string
+  category: string
+  message: string
+  status: string
+  admin_note: string | null
+  created_at: string
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -50,9 +63,12 @@ export default function AdminPage() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [recentLogs, setRecentLogs] = useState<LogEntry[]>([])
   const [paymentLogs, setPaymentLogs] = useState<LogEntry[]>([])
-  const [tab, setTab] = useState<"users" | "activity" | "payments">("users")
+  const [inquiries, setInquiries] = useState<Inquiry[]>([])
+  const [tab, setTab] = useState<"users" | "activity" | "payments" | "inquiries">("users")
   const [search, setSearch] = useState("")
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [expandedInquiry, setExpandedInquiry] = useState<string | null>(null)
+  const [replyNote, setReplyNote] = useState("")
 
   const fetchData = async () => {
     setLoading(true)
@@ -70,6 +86,7 @@ export default function AdminPage() {
       setProfiles(data.profiles)
       setRecentLogs(data.recentLogs)
       setPaymentLogs(data.paymentLogs)
+      setInquiries(data.inquiries || [])
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -191,6 +208,7 @@ export default function AdminPage() {
             { key: "users", label: "사용자", icon: Users },
             { key: "activity", label: "활동 로그", icon: BarChart3 },
             { key: "payments", label: "결제 내역", icon: CreditCard },
+            { key: "inquiries", label: `문의 ${stats?.newInquiries ? `(${stats.newInquiries})` : ""}`, icon: MessageSquare },
           ] as const).map((t) => (
             <button
               key={t.key}
@@ -379,6 +397,145 @@ export default function AdminPage() {
                     </div>
                   )
                 })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Inquiries Tab */}
+        {tab === "inquiries" && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "전체", value: inquiries.length, color: "" },
+                { label: "신규", value: inquiries.filter(i => i.status === "new").length, color: "text-blue-500" },
+                { label: "답변 완료", value: inquiries.filter(i => i.status === "replied").length, color: "text-emerald-500" },
+              ].map((s) => (
+                <div key={s.label} className="rounded-lg border bg-card p-3 text-center">
+                  <div className={`text-lg font-bold ${s.color}`}>{s.value}</div>
+                  <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border rounded-xl overflow-hidden">
+              {inquiries.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">접수된 문의 없음</div>
+              ) : (
+                inquiries.map((inq) => (
+                  <div key={inq.id} className="border-t first:border-t-0">
+                    <div
+                      className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => setExpandedInquiry(expandedInquiry === inq.id ? null : inq.id)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                            inq.status === "new" ? "bg-blue-500/10 text-blue-500" :
+                            inq.status === "read" ? "bg-yellow-500/10 text-yellow-600" :
+                            inq.status === "replied" ? "bg-emerald-500/10 text-emerald-600" :
+                            "bg-muted text-muted-foreground"
+                          }`}>
+                            {inq.status === "new" ? "신규" : inq.status === "read" ? "확인" : inq.status === "replied" ? "답변완료" : "종료"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{inq.category}</span>
+                        </div>
+                        <div className="text-sm truncate">{inq.message}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{inq.name} · {inq.email} · {fmtDate(inq.created_at)}</div>
+                      </div>
+                      {expandedInquiry === inq.id ? <ChevronUp className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />}
+                    </div>
+
+                    {expandedInquiry === inq.id && (
+                      <div className="px-4 pb-4 space-y-3 bg-muted/10">
+                        {/* Full message */}
+                        <div className="rounded-lg border bg-card p-3">
+                          <div className="text-xs font-medium text-muted-foreground mb-1">문의 내용</div>
+                          <div className="text-sm whitespace-pre-wrap">{inq.message}</div>
+                        </div>
+
+                        {/* Admin note */}
+                        {inq.admin_note && (
+                          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                            <div className="text-xs font-medium text-emerald-600 mb-1 flex items-center gap-1">
+                              <Reply className="h-3 w-3" /> 관리자 메모
+                            </div>
+                            <div className="text-sm">{inq.admin_note}</div>
+                          </div>
+                        )}
+
+                        {/* Reply input */}
+                        <div>
+                          <textarea
+                            value={expandedInquiry === inq.id ? replyNote : ""}
+                            onChange={(e) => setReplyNote(e.target.value)}
+                            placeholder="관리자 메모 또는 답변 내용..."
+                            rows={2}
+                            className="w-full px-3 py-2 rounded-lg border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-2">
+                          {inq.status === "new" && (
+                            <button
+                              onClick={async () => {
+                                await fetch("/api/admin", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ id: inq.id, status: "read" }),
+                                })
+                                fetchData()
+                              }}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20"
+                            >
+                              <Clock className="h-3 w-3" /> 확인 처리
+                            </button>
+                          )}
+                          <button
+                            onClick={async () => {
+                              await fetch("/api/admin", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  id: inq.id,
+                                  status: "replied",
+                                  admin_note: replyNote || inq.admin_note,
+                                }),
+                              })
+                              setReplyNote("")
+                              fetchData()
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                          >
+                            <CheckCircle2 className="h-3 w-3" /> 답변 완료
+                          </button>
+                          {inq.status !== "closed" && (
+                            <button
+                              onClick={async () => {
+                                await fetch("/api/admin", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ id: inq.id, status: "closed" }),
+                                })
+                                fetchData()
+                              }}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80"
+                            >
+                              종료
+                            </button>
+                          )}
+                          <a
+                            href={`mailto:${inq.email}?subject=Re: [Archi-Scan] ${inq.category} 문의&body=${encodeURIComponent(`안녕하세요, ${inq.name}님.\n\nArchi-Scan을 이용해 주셔서 감사합니다.\n문의하신 내용에 대해 답변 드립니다.\n\n---\n\n감사합니다.\nArchi-Scan 팀`)}`}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 ml-auto"
+                          >
+                            <Reply className="h-3 w-3" /> 이메일 답변
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           </div>

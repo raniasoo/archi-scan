@@ -39,7 +39,14 @@ export async function GET() {
       .order("created_at", { ascending: false })
       .limit(50)
 
-    // 4. 통계 계산
+    // 4. 문의 목록
+    const { data: inquiries } = await supabase
+      .from("inquiries")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100)
+
+    // 5. 통계 계산
     const allProfiles = profiles || []
     const totalUsers = allProfiles.length
     const proUsers = allProfiles.filter(p => p.plan === "pro").length
@@ -79,13 +86,52 @@ export async function GET() {
         totalRenders,
         totalRevenue,
         paymentCount: (paymentLogs || []).length,
+        inquiryCount: (inquiries || []).length,
+        newInquiries: (inquiries || []).filter(i => i.status === "new").length,
       },
       profiles: allProfiles,
       recentLogs: recentLogs || [],
       paymentLogs: paymentLogs || [],
+      inquiries: inquiries || [],
     })
   } catch (err: any) {
     console.error("[ADMIN] Error:", err.message)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
+// 문의 상태 업데이트
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user || !ADMIN_EMAILS.includes(user.email || "")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    const { id, status, admin_note } = await req.json()
+
+    if (!id) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 })
+    }
+
+    const updates: any = {}
+    if (status) updates.status = status
+    if (admin_note !== undefined) updates.admin_note = admin_note
+
+    const { error } = await supabase
+      .from("inquiries")
+      .update(updates)
+      .eq("id", id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error("[ADMIN] PATCH error:", err.message)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
