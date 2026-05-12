@@ -11,6 +11,7 @@ interface FloorPlanProps {
   zoneType?: string
   units?: number
   gfa?: number
+  buildingCount?: number  // 클러스터 동수
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -107,13 +108,17 @@ function CoreBlock({ x, y, w, h }: { x: number; y: number; w: number; h: number 
 // 메인 컴포넌트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType, units = 0, gfa = 0 }: FloorPlanProps) {
+export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType, units = 0, gfa = 0, buildingCount }: FloorPlanProps) {
   const isGF = floor === 1
   const isTop = floor === totalFloors
 
+  // 클러스터: 동당 세대수로 계산
+  const bc = buildingCount && buildingCount > 1 ? buildingCount : 1
+  const buildingUnits = Math.ceil((units || 0) / bc)
+
   // 용도지역 + 규모 → 건물 용도 세분화
   const bUse: 'house' | 'villa' | 'apartment' | 'commercial' = (() => {
-    const u = units || 0
+    const u = buildingUnits || 0
     if (!zoneType) {
       if (totalFloors <= 3 && u <= 2) return 'house'
       if (totalFloors <= 5 && u <= 20) return 'villa'
@@ -149,12 +154,12 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
   const gfC = allowComm ? '#f59e0b' : '#22c55e'
   const gfF = allowComm ? '#f59e0b15' : '#22c55e15'
 
-  const tU = units || 10
+  const tU = buildingUnits || 10
   const residentialFloors = Math.max(totalFloors - 1, 1) // 1층 제외
   const upU = Math.max(Math.ceil(tU / residentialFloors), 1) // 층당 세대수
   const gfU = totalFloors > 1 ? Math.min(Math.max(Math.floor(upU * 0.6), 2), upU) : tU // 1층은 적게
   const curU = isGF ? gfU : upU
-  const tGFA = gfa || (tU * 59)
+  const tGFA = (gfa || (tU * 59)) / bc
   const uA = Math.round(tGFA / Math.max(tU, 1))
 
   const gc = () => {
@@ -170,12 +175,13 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
   }
   const c = gc()
 
+  const clusterPrefix = bc > 1 ? '동A ' : ''
   const desc = isGF 
-    ? bUse === 'house' ? `1층 (거실+주방+현관)` 
-    : bUse === 'villa' ? `1층 (${gfU}세대+현관홀+주차)` 
-    : bUse === 'commercial' ? `1층 (${gfU}상가+코어+주차)` 
-    : `1층 (${gfU}${gfL}+로비)` 
-    : isTop ? `${floor}층 (최상층)` : `${floor}층 (기준층 ${curU}세대)`
+    ? bUse === 'house' ? `${clusterPrefix}1층 (거실+주방+현관)` 
+    : bUse === 'villa' ? `${clusterPrefix}1층 (${gfU}세대+현관홀+주차)` 
+    : bUse === 'commercial' ? `${clusterPrefix}1층 (${gfU}상가+코어+주차)` 
+    : `${clusterPrefix}1층 (${gfU}${gfL}+로비)` 
+    : isTop ? `${clusterPrefix}${floor}층 (최상층)` : `${clusterPrefix}${floor}층 (기준층 ${curU}세대)`
   const sL = strategy === "view-priority" ? "조망형" : strategy === "privacy-priority" ? "프라이버시형" : strategy === "area-maximize" ? "면적형" : strategy === "parking-efficient" ? "주차형" : strategy === "profitability" ? "사업성형" : "실거주형"
 
   return (

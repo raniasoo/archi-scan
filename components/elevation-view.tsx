@@ -224,7 +224,7 @@ export function ElevationView({
 
         {/* 정보 */}
         <text x={W / 2} y={H - 6} textAnchor="middle" fontSize="6" fill="#64748b">
-          {layoutName || type} {face === "front" ? "정면도" : "측면도"} · {floors}층 · {totalH.toFixed(1)}m
+          {layoutName || type} {type === 'cluster' ? '동A ' : ''}{face === "front" ? "정면도" : "측면도"} · {floors}층 · {totalH.toFixed(1)}m
         </text>
       </svg>
     </div>

@@ -217,11 +217,12 @@ export interface AIFloorPlanProps {
   type?: string; layoutName?: string; address?: string; zoneType?: string
   heightLimit?: number; setbacks?: { front?: number; side?: number; rear?: number }
   buildingUse?: 'house' | 'villa' | 'apartment' | 'commercial'
+  buildingCount?: number  // 클러스터 동수
   selectedPatterns?: string[]
 }
 
 export function AIFloorPlan(props: AIFloorPlanProps) {
-  const { siteArea, buildingCoverage, floors, units, zoneType, buildingUse, selectedPatterns } = props
+  const { siteArea, buildingCoverage, floors, units, zoneType, buildingUse, buildingCount, selectedPatterns } = props
   const [fullscreen, setFullscreen] = useState(false)
   const [variantIdx, setVariantIdx] = useState(0)
   const [selectedUnit, setSelectedUnit] = useState<UnitLayout | null>(null)
@@ -231,16 +232,19 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
     'semi-residential':'준주거지역','commercial-neighborhood':'근린상업지역','commercial-general':'일반상업지역',
   }
   const zoneName = (zoneType && ZONE_NAMES[zoneType]) || zoneType || '제2종일반주거지역'
+  // 클러스터: 동당 세대수로 계산 (전체 세대수 ÷ 동수)
+  const bc = buildingCount && buildingCount > 1 ? buildingCount : 1
+  const unitsPerBuilding = Math.ceil(units / bc)
   // 층당 세대수 — buildingUse에 따라 1층 비주거 고려
   const residentialFloors = (buildingUse === 'villa' || buildingUse === 'apartment') && floors > 1
     ? Math.max(floors - 1, 1) // 1층 = 로비/주차 (비주거)
     : Math.max(floors, 1)     // house/commercial = 전 층 사용
-  const unitsPerFloor = Math.min(Math.max(Math.ceil(units / residentialFloors), 2), 8)
+  const unitsPerFloor = Math.min(Math.max(Math.ceil(unitsPerBuilding / residentialFloors), 2), 8)
   const catalog = getCatalog()
 
-  // ━━━ 세대당 면적 자동 계산 ━━━
+  // ━━━ 세대당 면적 자동 계산 (동당 면적 기준) ━━━
   const coreArea = 15
-  const footprint = siteArea * ((buildingCoverage || 50) / 100)
+  const footprint = (siteArea * ((buildingCoverage || 50) / 100)) / bc
   const areaPerUnit = Math.round((footprint - coreArea) / Math.max(unitsPerFloor, 1))
 
   function bestType(area: number): { type: string; size: 'S'|'M'|'L' } {
@@ -336,7 +340,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-primary"/>
-              <span className="text-xs font-bold">기준층 평면도</span>
+              <span className="text-xs font-bold">{bc > 1 ? '동A ' : ''}기준층 평면도</span>
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">{catalog.length}종</span>
             </div>
             <div className="flex gap-1">

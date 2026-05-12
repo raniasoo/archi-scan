@@ -178,6 +178,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
                   zoneType={molit.zoneCode || regulation?.zoneType}
                   units={selectedLayoutData.units}
                   gfa={selectedLayoutData.gfa || gfa}
+                  buildingCount={selectedLayoutData.buildingCount}
                 />
               </div>
               <div className="grid grid-cols-4 gap-x-1 mt-2">
@@ -197,6 +198,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
               floors={selectedLayoutData.floors}
               units={selectedLayoutData.units}
               type={selectedLayoutData.type}
+              buildingCount={selectedLayoutData.buildingCount}
               layoutName={selectedLayoutData.name}
               address={address}
               zoneType={molit.zoneCode || regulation?.zoneType}

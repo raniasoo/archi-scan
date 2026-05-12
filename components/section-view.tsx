@@ -207,7 +207,7 @@ export function SectionView({
 
         {/* 정보 */}
         <text x={W / 2} y={H - 6} textAnchor="middle" fontSize="6" fill="#64748b">
-          {layoutName || type} 단면도 · 지상 {floors}층 ({totalHeight.toFixed(1)}m) + 지하 {basementFloors}층 · 주차 {parking}대
+          {layoutName || type} {type === 'cluster' ? '동A ' : ''}단면도 · 지상 {floors}층 ({totalHeight.toFixed(1)}m) + 지하 {basementFloors}층 · 주차 {parking}대
         </text>
       </svg>
     </div>
