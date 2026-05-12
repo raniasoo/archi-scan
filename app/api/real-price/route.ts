@@ -107,9 +107,9 @@ export async function GET(request: Request) {
       recentMonth: months[0],
       district: lawdCd,
       priceRange: { min: 0, max: 0 },
-      suggestedSalePrice: 8000000, // 기본값 유지
+      suggestedSalePrice: 0, // 데이터 없음 → 호출처에서 지역테이블 fallback 사용
       transactions: [],
-      message: '최근 6개월 실거래 데이터가 없습니다. 기본 분양가(800만원/㎡)를 사용합니다.',
+      message: '최근 6개월 실거래 데이터가 없습니다. 지역별 시세 테이블을 사용합니다.',
     })
   }
 
