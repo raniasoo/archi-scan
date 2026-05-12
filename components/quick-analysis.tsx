@@ -5,6 +5,7 @@ import { Building2, Search, Loader2, TrendingUp, Clock, MapPin, ArrowRight, Chev
 import { type TerrainAnalysis } from "@/lib/terrain-analysis"
 import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
 import { buildSiteContextPrompt } from "@/lib/site-context-builder"
+import { calculateFeasibility } from "@/lib/project-analysis-state"
 
 interface QuickAnalysisProps {
   onDetailedAnalysis: (address: string, siteArea: number, data: any, renderImage?: string | null) => void
@@ -276,14 +277,23 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         setSunAnalysis(sunResult)
       }
 
-      // 사업성 계산
+      // 사업성 계산 — calculateFeasibility()와 동일한 공식 사용 (ROI 일치 보장)
       setProgress('💰 사업성 분석 중...')
-      const constructionCostPerM2 = 2800000
       const earthworkCost = terrainResult?.earthworkCost || 0
-      const totalCost = gfa * constructionCostPerM2 + siteArea * 5000000 + earthworkCost
-      const salesPricePerM2 = 5000000
-      const totalRevenue = gfa * 0.85 * salesPricePerM2
-      const profit = totalRevenue - totalCost
+      const parkingCount = Math.ceil(totalUnits * 1.0) // 주차비율 1.0
+      const feasibility = calculateFeasibility({
+        siteArea,
+        grossFloorArea: gfa,
+        unitCount: totalUnits,
+        floorCount: floors,
+        parkingCount,
+        landPricePerM2: 5000000, // QuickAnalysis는 실거래가 미조회 → 기본값
+        salesPricePerM2: 5000000,
+        constructionCostPerM2: 2500000,
+      })
+      // 토공비 반영
+      const totalCost = feasibility.totalCost + earthworkCost
+      const profit = feasibility.totalRevenue - totalCost
       const roi = totalCost > 0 ? (profit / totalCost * 100) : 0
 
       let verdict = '', verdictColor = '', verdictEmoji = ''
