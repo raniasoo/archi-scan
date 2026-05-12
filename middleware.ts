@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = [
   '/privacy',
   '/contact',
   '/share',
+  '/guide',
 ]
 
 function isPublicRoute(pathname: string): boolean {

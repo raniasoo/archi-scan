@@ -398,7 +398,12 @@ export function LandingPage({ onStart }: LandingPageProps) {
             <span className="font-semibold text-foreground">Archi-Scan</span>
             <span>© 2026</span>
           </div>
-          <p>AI 기반 건축 기획 솔루션</p>
+          <div className="flex items-center gap-4">
+            <a href="/guide" className="hover:text-foreground transition-colors">사용 가이드</a>
+            <a href="/terms" className="hover:text-foreground transition-colors">이용약관</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors">개인정보처리방침</a>
+            <a href="/contact" className="hover:text-foreground transition-colors">문의하기</a>
+          </div>
         </div>
       </footer>
     </div>

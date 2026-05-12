@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
-import { LogIn, LogOut, User, ChevronDown, Mail, X, Eye, EyeOff, LayoutDashboard } from "lucide-react"
+import { LogIn, LogOut, User, ChevronDown, Mail, X, Eye, EyeOff, LayoutDashboard, BookOpen } from "lucide-react"
 
 export function AuthButton() {
   const { user, loading, signInWithGoogle, signInWithKakao, signInWithNaver, signInWithEmail, signUpWithEmail, signOut } = useAuth()
@@ -173,6 +173,14 @@ export function AuthButton() {
             >
               <LayoutDashboard className="h-3.5 w-3.5" />
               내 대시보드
+            </a>
+            <a
+              href="/guide"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-sm text-foreground hover:bg-secondary transition-colors touch-manipulation min-h-[44px]"
+              onClick={() => setShowMenu(false)}
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              사용 가이드
             </a>
             <a
               href="/dashboard?tab=contact"
