@@ -278,12 +278,33 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         setSunAnalysis(sunResult)
       }
 
-      // 사업성 계산 — calculateFeasibility()와 동일한 공식 + 지역별 동적 분양가
+      // 사업성 계산 — page.tsx effectiveSalesPrice와 동일한 우선순위
+      // 1순위: 실거래가 API → 2순위: 지역 테이블 → 3순위: 500만 fallback
       setProgress('💰 사업성 분석 중...')
       const earthworkCost = terrainResult?.earthworkCost || 0
-      const parkingCount = Math.ceil(totalUnits * 1.0) // 주차비율 1.0
-      const regional = getRegionalPricing(undefined, address.trim())
-      const dynamicSalesPrice = Math.round(regional.salesPricePerM2 * getZoneMultiplier(zoneCode))
+      const parkingCount = Math.ceil(totalUnits * 1.0)
+      
+      // 실거래가 조회 (sigunguCode 있으면)
+      let realPriceSalesPrice = 0
+      const sigunguCode = molitData.data?.sigunguCode
+      if (sigunguCode && sigunguCode.length >= 5) {
+        try {
+          const rpRes = await fetch(`/api/real-price?sigunguCd=${sigunguCode.slice(0, 5)}`)
+          const rpData = await rpRes.json()
+          if (rpData.suggestedSalePrice > 0) {
+            realPriceSalesPrice = rpData.suggestedSalePrice
+            console.log(`[QuickAnalysis] 실거래가 반영: ${(realPriceSalesPrice/10000).toFixed(0)}만/㎡ (${rpData.transactionCount}건)`)
+          }
+        } catch (e) {
+          console.warn('[QuickAnalysis] 실거래가 조회 실패:', e)
+        }
+      }
+      
+      // effectiveSalesPrice 동일 우선순위: 실거래가 > 지역테이블 > fallback
+      const regional = getRegionalPricing(sigunguCode, address.trim())
+      const dynamicSalesPrice = realPriceSalesPrice > 0
+        ? realPriceSalesPrice
+        : Math.round(regional.salesPricePerM2 * getZoneMultiplier(zoneCode))
       const dynamicConstCost = regional.constructionCostPerM2
       const feasibility = calculateFeasibility({
         siteArea,
@@ -343,6 +364,9 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           satelliteUrl: vworldData?.satelliteUrl,
           cadastralMapUrl: vworldData?.cadastralMapUrl,
           streetViewUrls: vworldData?.streetViewUrls,
+          // 실거래가 데이터 → 상세분석 전환 시 page.tsx effectiveSalesPrice에 반영
+          _marketPrice: realPriceSalesPrice > 0 ? { suggestedSalePrice: realPriceSalesPrice } : undefined,
+          _dynamicSalesPrice: dynamicSalesPrice,
         },
       })
 

@@ -1863,6 +1863,14 @@ export default function ArchiScanPage() {
         setAnalysisRawData(rawData)
         // Quick에서 생성된 AI 렌더링 이미지 전달
         if (quickRenderImage) setAiRenderImage(quickRenderImage)
+        // Quick에서 조회한 실거래가 → marketPrice에 반영 (effectiveSalesPrice 즉시 유효)
+        if (rawData?._marketPrice?.suggestedSalePrice > 0) {
+          setMarketPrice(prev => ({
+            ...prev,
+            suggestedSalePrice: rawData._marketPrice.suggestedSalePrice,
+            loaded: true,
+          }))
+        }
         if (rawData) {
           const zc = rawData.zoneType || ''
           if (zc) {
