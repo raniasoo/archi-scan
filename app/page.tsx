@@ -794,6 +794,18 @@ export default function ArchiScanPage() {
     fetchPolygon()
   }, [siteCoords, address])
 
+  // ━━━ 중앙 분양가/공사비 단가 (Single Source of Truth) ━━━
+  // 모든 컴포넌트가 이 값을 사용해야 ROI 일치 보장
+  const effectiveSalesPrice = useMemo(() => {
+    if (marketPrice.loaded && marketPrice.suggestedSalePrice > 0) return marketPrice.suggestedSalePrice
+    if (regionalPricing) return Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || ''))
+    return 5000000
+  }, [marketPrice.loaded, marketPrice.suggestedSalePrice, regionalPricing, regulation.zoneType])
+  
+  const effectiveConstructionCost = useMemo(() => {
+    return regionalPricing?.constructionCostPerM2 || 2500000
+  }, [regionalPricing])
+
   // Auto-calculate feasibilityResult when selectedLayout changes
   useEffect(() => {
     if (selectedLayout === null || layouts.length === 0) {
@@ -809,16 +821,6 @@ export default function ArchiScanPage() {
     
     const siteAreaNum = safeNumber(siteArea, 660)
     
-    // 분양가 우선순위: 실거래가 > 지역별 테이블 > 기본값 (카드와 동일)
-    const effectiveSalesPrice = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
-      ? marketPrice.suggestedSalePrice
-      : regionalPricing 
-        ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || ''))
-        : 5000000
-    
-    // 공사비: 지역별 테이블 > 기본값 (카드와 동일)
-    const effectiveConstCost = regionalPricing?.constructionCostPerM2 || 2500000
-    
     const result = calculateFeasibility({
       siteArea: siteAreaNum,
       grossFloorArea: layout.gfa,
@@ -827,12 +829,12 @@ export default function ArchiScanPage() {
       parkingCount: layout.parking,
       landPricePerM2: landPriceData.pricePerM2 || 5000000,
       salesPricePerM2: effectiveSalesPrice,
-      constructionCostPerM2: effectiveConstCost,
+      constructionCostPerM2: effectiveConstructionCost,
     })
     
     setFeasibilityResult(result)
-    console.log('[v0] FeasibilityResult updated:', result, '분양가:', (effectiveSalesPrice || 8000000) / 10000, '만/㎡')
-  }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, marketPrice.suggestedSalePrice, regionalPricing, regulation.zoneType])
+    console.log('[v0] FeasibilityResult updated:', result, '분양가:', effectiveSalesPrice / 10000, '만/㎡')
+  }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, effectiveSalesPrice, effectiveConstructionCost])
 
   // ━━━ AI 렌더링 이미지 sessionStorage 영속화 ━━━
   // 마운트 시 복원
@@ -1435,7 +1437,7 @@ export default function ArchiScanPage() {
           parkingRatio: regulation.parkingRatio || 1.0,
           landCostPerM2: landPriceData.pricePerM2 || 5000000,
           constructionCostPerM2: regionalPricing?.constructionCostPerM2 || 2500000,
-          salesPricePerM2: marketPrice.suggestedSalePrice || regionalPricing?.salesPricePerM2 || 5000000,
+          salesPricePerM2: effectiveSalesPrice,
         })
         if (optResult?.best) {
           const b = optResult.best
@@ -2621,17 +2623,12 @@ export default function ArchiScanPage() {
       {showComparisonModal && layouts.length > 0 && (() => {
         const fins = layouts.map(l => {
           try {
-            const effectiveSalesPrice = (marketPrice.loaded && marketPrice.suggestedSalePrice > 0)
-              ? marketPrice.suggestedSalePrice
-              : regionalPricing
-                ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || ''))
-                : undefined
             return calculateFeasibility({
               siteArea: siteAreaNum || 1, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
               floorCount: l.floors || 1, parkingCount: l.parking || 0,
               landPricePerM2: landPriceData.pricePerM2 || 5000000,
               salesPricePerM2: effectiveSalesPrice,
-              constructionCostPerM2: regionalPricing?.constructionCostPerM2 || undefined,
+              constructionCostPerM2: effectiveConstructionCost,
             })
           } catch { return { roi: 0, profit: 0, totalCost: 0 } }
         })
