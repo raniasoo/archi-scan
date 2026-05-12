@@ -331,7 +331,11 @@ export function LayoutsStep(props: LayoutsStepProps) {
                     className="w-6 h-6 rounded bg-secondary text-xs font-bold hover:bg-secondary/80"
                     onClick={() => {
                       const cur = layout.buildingCount || defaultBldgCount
-                      onUpdateLayout(layout.id, { buildingCount: cur + 1 })
+                      // 건축가능영역 기반 최대 동수 제한
+                      const maxByFootprint = Math.floor(siteAreaNum * (layout.coverage || 50) / 100 / 300) // 동당 최소 300㎡
+                      const maxByUnits = Math.floor(layout.units / (layout.floors * 2)) // 동당 최소 2세대/층
+                      const maxBldg = Math.min(maxByFootprint, maxByUnits, 8) // 최대 8동
+                      if (cur < maxBldg) onUpdateLayout(layout.id, { buildingCount: cur + 1 })
                     }}
                   >+</button>
                 </div>
