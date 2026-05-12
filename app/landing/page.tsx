@@ -50,7 +50,7 @@ const PLANS = [
     cta: "무료로 시작",
     highlight: false,
     features: [
-      { text: "월 3회 사업성 분석", included: true },
+      { text: "월 5회 사업성 분석", included: true },
       { text: "기본 보고서 (HTML)", included: true },
       { text: "국토부 자동조회", included: true },
       { text: "기본 배치안 4종", included: true },

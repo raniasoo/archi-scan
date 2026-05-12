@@ -24,9 +24,9 @@ export const PLANS: Record<PlanTier, Plan> = {
     price: 0,
     priceLabel: '₩0',
     maxProjects: 3,
-    maxReports: 3,
+    maxReports: 5,
     features: [
-      '월 3회 사업성 분석',
+      '월 5회 사업성 분석',
       '기본 배치안 4종',
       'HTML 보고서',
       '국토부 자동조회',

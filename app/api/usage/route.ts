@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
-const FREE_MONTHLY_LIMIT = 3
+const FREE_MONTHLY_LIMIT = 5
 const PRO_MONTHLY_LIMIT = -1 // unlimited
 
 export async function GET() {
