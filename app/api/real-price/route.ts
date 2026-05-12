@@ -61,7 +61,7 @@ export async function GET(request: Request) {
       })
       
       const res = await fetch(
-        `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev?${params}`,
+        `https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade?${params}`,
         { signal: AbortSignal.timeout(10000) }
       )
       
