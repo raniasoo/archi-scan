@@ -88,18 +88,8 @@ export function useAuth() {
   }, [])
 
   const signInWithNaver = useCallback(async () => {
-    // Naver requires custom OIDC configuration in Supabase
-    // Until configured, this will show an appropriate error
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "kakao" as any, // placeholder until Naver OIDC is configured
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
-      })
-      if (error) throw error
-    } catch (err: any) {
-      console.error("Naver login error:", err.message)
-      throw new Error("네이버 로그인은 준비 중입니다")
-    }
+    // 네이버는 커스텀 OAuth 라우트로 처리
+    window.location.href = "/api/auth/naver"
   }, [])
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {

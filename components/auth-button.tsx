@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { LogIn, LogOut, User, ChevronDown, Mail, X, Eye, EyeOff, LayoutDashboard } from "lucide-react"
 
 export function AuthButton() {
-  const { user, loading, signInWithGoogle, signInWithKakao, signInWithEmail, signUpWithEmail, signOut } = useAuth()
+  const { user, loading, signInWithGoogle, signInWithKakao, signInWithNaver, signInWithEmail, signUpWithEmail, signOut } = useAuth()
   const [showMenu, setShowMenu] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
@@ -73,6 +73,16 @@ export function AuthButton() {
                     <path fillRule="evenodd" clipRule="evenodd" d="M9 0.6C4.03 0.6 0 3.713 0 7.537c0 2.466 1.642 4.632 4.108 5.858l-1.05 3.848c-.093.34.295.614.589.416L7.76 14.97c.407.054.822.083 1.24.083 4.97 0 9-3.113 9-6.937S13.97.6 9 .6" fill="#191919"/>
                   </svg>
                   카카오로 계속하기
+                </button>
+
+                <button
+                  onClick={signInWithNaver}
+                  className="flex items-center justify-center gap-2.5 w-full py-3 rounded-lg bg-[#03C75A] text-white text-sm font-semibold hover:bg-[#02b351] transition-colors touch-manipulation min-h-[48px]"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+                    <path d="M16.27 3v8.18L7.73 3H3v18h4.73v-8.18L16.27 21H21V3h-4.73z" />
+                  </svg>
+                  네이버로 계속하기
                 </button>
 
                 <div className="flex items-center gap-2">

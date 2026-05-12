@@ -30,6 +30,19 @@ function LoginForm() {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) router.push("/")
     })
+    // URL 에러 파라미터 처리 (네이버 콜백 등)
+    const urlError = searchParams.get("error")
+    if (urlError) {
+      const errorMessages: Record<string, string> = {
+        naver_denied: "네이버 로그인이 취소되었습니다",
+        naver_token_failed: "네이버 인증에 실패했습니다. 다시 시도해 주세요",
+        naver_create_failed: "계정 생성에 실패했습니다. 다시 시도해 주세요",
+        naver_state_mismatch: "보안 검증에 실패했습니다. 다시 시도해 주세요",
+        naver_missing_params: "인증 정보가 누락되었습니다",
+        naver_session_failed: "세션 생성에 실패했습니다",
+      }
+      setError(errorMessages[urlError] || "로그인 중 오류가 발생했습니다")
+    }
   }, [])
 
   const handleSocialLogin = async (provider: "kakao" | "google") => {
@@ -52,25 +65,8 @@ function LoginForm() {
   const handleNaverLogin = async () => {
     setSocialLoading("naver")
     setError("")
-    // Naver uses custom OIDC provider or direct OAuth
-    // For Supabase, we use the redirect URL approach
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "kakao" as any, // Naver configured as custom OIDC in Supabase
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            // If using custom OIDC for Naver
-            provider_token: "naver",
-          },
-        },
-      })
-      if (error) throw error
-    } catch (err: any) {
-      // Fallback: show message that Naver login needs Supabase OIDC config
-      setError("네이버 로그인은 준비 중입니다. 카카오 또는 이메일로 로그인해 주세요.")
-      setSocialLoading(null)
-    }
+    // 네이버는 Supabase 기본 제공이 아니므로 커스텀 OAuth 라우트 사용
+    window.location.href = "/api/auth/naver"
   }
 
   const handleEmailSubmit = async () => {
