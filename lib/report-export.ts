@@ -663,6 +663,11 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         zoom: 1 !important;
       }
 
+      /* 화면 보기에서 page-break 빈 공간 제거 */
+      @media screen {
+        .page, .pdf-section, section { page-break-before: auto !important; page-break-after: auto !important; }
+      }
+
       /* ===== 표지 ===== */
       .cover, .pdf-cover { 
         height: 267mm !important;
@@ -2435,22 +2440,7 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       pdf.addPage();
     }
     
-    // AI 건축 렌더링 이미지 직접 삽입 (표지 바로 다음 페이지)
-    if (data.aiRenderImage) {
-      try {
-        const imgW = pdfWidth - sideMargin * 2;
-        const imgH = imgW * 0.56; // 16:9
-        const imgY = topMargin;
-        pdf.addImage(data.aiRenderImage, 'JPEG', sideMargin, imgY, imgW, imgH);
-        // 캡션
-        pdf.setFontSize(7);
-        pdf.setTextColor(120, 130, 150);
-        pdf.text('✨ AI 건축 렌더링  |  Powered by Gemini', sideMargin, imgY + imgH + 4);
-        pdf.addPage();
-      } catch (e) {
-        console.warn('[v0] PDF AI 렌더링 삽입 실패:', e);
-      }
-    }
+    // 직접 addImage 제거하여 중복 방지
     
     // 블록별로 캡처하여 최적 배치
     let currentY = topMargin;
