@@ -350,6 +350,7 @@ export interface FeasibilityInput {
   unitCount: number // 세대수
   floorCount: number // 층수
   parkingCount: number // 주차대수
+  buildingCount?: number // 동수 (코어 비용에 영향)
   landPricePerM2?: number // 토지 단가 (원/㎡)
   constructionCostPerM2?: number // 공사비 단가 (원/㎡)
   salesPricePerM2?: number // 분양가 단가 (원/㎡)
@@ -366,6 +367,7 @@ export function calculateFeasibility(input: FeasibilityInput): FeasibilityResult
     unitCount,
     floorCount,
     parkingCount,
+    buildingCount = 1,
     landPricePerM2 = 5000000, // 기본값: 500만원/㎡
     constructionCostPerM2 = 2500000, // 기본값: 250만원/㎡
     salesPricePerM2 = 5000000, // 기본값: 500만원/㎡
@@ -375,6 +377,7 @@ export function calculateFeasibility(input: FeasibilityInput): FeasibilityResult
   const safeSiteArea = Math.max(siteArea, 1)
   const safeGFA = Math.max(grossFloorArea, 1)
   const safeUnitCount = Math.max(unitCount, 1)
+  const safeBldgCount = Math.max(buildingCount, 1)
   
   // 비용 계산
   const landCost = safeSiteArea * landPricePerM2
@@ -383,14 +386,22 @@ export function calculateFeasibility(input: FeasibilityInput): FeasibilityResult
   const heightPremium = floorCount > 15 ? 1.15 : floorCount > 10 ? 1.08 : 1.0
   const constructionCost = safeGFA * constructionCostPerM2 * heightPremium
   
+  // 코어 비용: 각 동마다 계단실(2개) + 엘리베이터(1-2대) + 로비 + 기계실 필요
+  // 동당 코어 면적 ≈ 85㎡/층, 코어 건설비 ≈ 350만원/㎡ (일반 시공비보다 40% 비쌈)
+  const coreAreaPerBldg = 85 // ㎡/층 (계단실 20㎡×2 + EV 15㎡ + 로비 20㎡ + 기계실 10㎡)
+  const coreCostPerM2 = 3500000 // 코어 시공비 단가
+  const coreTotalCost = safeBldgCount * coreAreaPerBldg * floorCount * coreCostPerM2
+  // 1동일 때도 코어 1개는 기본 포함 → 추가 동수분만 비용 추가
+  const additionalCoreCost = Math.max(safeBldgCount - 1, 0) * coreAreaPerBldg * floorCount * coreCostPerM2
+  
   // 간접비 (공사비의 15%)
   const softCost = constructionCost * 0.15
   
   // 지하주차장 비용 (주차 대수 × 3,000만원)
   const parkingCost = parkingCount * 30000000
   
-  // 총 투자비
-  const totalCost = landCost + constructionCost + softCost + parkingCost
+  // 총 투자비 (동수 증가에 따른 추가 코어 비용 포함)
+  const totalCost = landCost + constructionCost + softCost + parkingCost + additionalCoreCost
   
   // 수익 계산
   const totalRevenue = safeGFA * salesPricePerM2

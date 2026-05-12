@@ -312,6 +312,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
         unitCount: totalUnits,
         floorCount: floors,
         parkingCount,
+        buildingCount: siteArea > 1500 && totalUnits > 20 ? Math.max(2, Math.ceil(totalUnits / (6 * floors))) : 1,
         landPricePerM2: 5000000,
         salesPricePerM2: dynamicSalesPrice,
         constructionCostPerM2: dynamicConstCost,

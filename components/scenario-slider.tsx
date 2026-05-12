@@ -10,6 +10,7 @@ interface ScenarioSliderProps {
   units: number
   floors: number
   parking: number
+  buildingCount?: number
   landPricePerM2: number
   salesPricePerM2?: number
   constructionCostPerM2?: number
@@ -33,7 +34,7 @@ export function ScenarioSlider({
   // 기준 feasibility (0%일 때 위 사업성과 동일)
   const baseFeasibility = useMemo(() => calculateFeasibility({
     siteArea, grossFloorArea: gfa, unitCount: units,
-    floorCount: floors, parkingCount: parking,
+    floorCount: floors, parkingCount: parking, buildingCount: buildingCount || 1,
     landPricePerM2,
     salesPricePerM2: baseSalePrice,
     constructionCostPerM2: baseConstCost,
@@ -50,7 +51,7 @@ export function ScenarioSlider({
     }
     const base = calculateFeasibility({
       siteArea, grossFloorArea: gfa, unitCount: units,
-      floorCount: floors, parkingCount: parking,
+      floorCount: floors, parkingCount: parking, buildingCount: buildingCount || 1,
       landPricePerM2: landPricePerM2 * (1 + landPriceAdj / 100),
       constructionCostPerM2: baseConstCost * (1 + constCostAdj / 100),
       salesPricePerM2: baseSalePrice * (1 + salePriceAdj / 100),

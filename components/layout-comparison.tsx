@@ -28,6 +28,7 @@ export function LayoutComparison({
         unitCount: l.units || 1,
         floorCount: l.floors || 1,
         parkingCount: l.parking || 0,
+      buildingCount: l.buildingCount || 1,
         landPricePerM2: landPricePerM2 || 5000000,
         salesPricePerM2: salesPricePerM2 || undefined,
         constructionCostPerM2: constructionCostPerM2 || undefined,

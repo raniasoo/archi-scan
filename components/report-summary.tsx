@@ -174,6 +174,7 @@ function calculateFinancials(siteArea: number, layout: LayoutOption, landPricePe
     unitCount: layout.units,
     floorCount: layout.floors,
     parkingCount: layout.parking,
+      buildingCount: layout.buildingCount || 1,
     landPricePerM2: landPricePerM2 || 5000000,
     salesPricePerM2: salesPricePerM2 || undefined,
     constructionCostPerM2: constructionCostPerM2 || undefined,
@@ -263,6 +264,7 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   const centralFeasibility = externalFeasibility || calculateFeasibility({
     siteArea, grossFloorArea: gfa || layout.gfa, unitCount: layout.units,
     floorCount: layout.floors, parkingCount: layout.parking,
+      buildingCount: layout.buildingCount || 1,
     landPricePerM2: landPricePerM2 || 5000000,
   })
   const effectiveSalesPrice = centralFeasibility.salesPricePerM2 || 5000000

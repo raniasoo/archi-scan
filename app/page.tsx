@@ -827,6 +827,7 @@ export default function ArchiScanPage() {
       unitCount: layout.units,
       floorCount: layout.floors,
       parkingCount: layout.parking,
+      buildingCount: layout.buildingCount || 1,
       landPricePerM2: landPriceData.pricePerM2 || 5000000,
       salesPricePerM2: effectiveSalesPrice,
       constructionCostPerM2: effectiveConstructionCost,
@@ -2641,6 +2642,7 @@ export default function ArchiScanPage() {
             return calculateFeasibility({
               siteArea: siteAreaNum || 1, grossFloorArea: l.gfa || 1, unitCount: l.units || 1,
               floorCount: l.floors || 1, parkingCount: l.parking || 0,
+      buildingCount: l.buildingCount || 1,
               landPricePerM2: landPriceData.pricePerM2 || 5000000,
               salesPricePerM2: effectiveSalesPrice,
               constructionCostPerM2: effectiveConstructionCost,
