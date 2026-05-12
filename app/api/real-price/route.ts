@@ -1,10 +1,33 @@
 /**
  * 실거래가 조회 API
- * 국토부 아파트 실거래가 → 주변 시세 자동 반영
+ * 국토부 아파트/연립다세대/오피스텔 실거래가 → 주변 시세 자동 반영
+ * 
+ * Query params:
+ *   sigunguCd: 시군구 코드 5자리 (필수)
+ *   type: 'apt' | 'villa' | 'officetel' | 'all' (기본: apt)
  */
 import { NextResponse } from 'next/server'
 
 const MOLIT_API_KEY = process.env.MOLIT_API_KEY || '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba5d56d21444098'
+
+// 유형별 API 엔드포인트
+const API_ENDPOINTS: Record<string, { url: string; nameTag: string; label: string }> = {
+  apt: {
+    url: 'https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade',
+    nameTag: 'aptNm',
+    label: '아파트',
+  },
+  villa: {
+    url: 'https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDataSvcRHTrade',
+    nameTag: 'mhouseNm',
+    label: '연립다세대',
+  },
+  officetel: {
+    url: 'https://apis.data.go.kr/1613000/RTMSDataSvcOffiTrade/getRTMSDataSvcOffiTrade',
+    nameTag: 'offiNm',
+    label: '오피스텔',
+  },
+}
 
 interface RealPriceResult {
   avgPricePerM2: number       // ㎡당 평균 거래가 (원)
@@ -27,6 +50,7 @@ interface RealPriceResult {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const sigunguCd = searchParams.get('sigunguCd') || ''
+  const propertyType = searchParams.get('type') || 'apt' // apt, villa, officetel, all
   
   if (!sigunguCd || sigunguCd.length < 5) {
     return NextResponse.json({ error: '시군구 코드(5자리)가 필요합니다' }, { status: 400 })
@@ -37,6 +61,9 @@ export async function GET(request: Request) {
   }
 
   const lawdCd = sigunguCd.slice(0, 5)
+  const typesToFetch = propertyType === 'all' 
+    ? ['apt', 'villa', 'officetel'] 
+    : [propertyType]
   
   // 실거래 데이터는 1-2개월 지연 → 전월부터 6개월 조회
   const now = new Date()
@@ -51,61 +78,66 @@ export async function GET(request: Request) {
   }> = []
 
   for (const dealYmd of months) {
-    try {
-      const params = new URLSearchParams({
-        serviceKey: MOLIT_API_KEY,
-        LAWD_CD: lawdCd,
-        DEAL_YMD: dealYmd,
-        pageNo: '1',
-        numOfRows: '100',
-      })
+    for (const pType of typesToFetch) {
+      const endpoint = API_ENDPOINTS[pType]
+      if (!endpoint) continue
       
-      const res = await fetch(
-        `https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade?${params}`,
-        { signal: AbortSignal.timeout(10000) }
-      )
-      
-      const text = await res.text()
-      
-      // 응답 디버깅 (첫 월만)
-      if (dealYmd === months[0]) {
-        console.log(`[real-price] HTTP ${res.status} | 응답 ${text.length}자 | 첫 300자: ${text.slice(0, 300).replace(/\n/g, ' ')}`)
-      }
-      
-      // 에러 응답 체크
-      if (text.includes('SERVICE_KEY_IS_NOT_REGISTERED') || text.includes('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS')) {
-        console.warn(`[real-price] ${dealYmd} API 키 인증 오류`)
-        continue
-      }
-      
-      // XML 파싱 (간단한 정규식)
-      const items = text.match(/<item>([\s\S]*?)<\/item>/g) || []
-      
-      for (const item of items) {
-        const getValue = (tag: string) => {
-          const m = item.match(new RegExp(`<${tag}>\\s*([^<]*?)\\s*</${tag}>`))
-          return m ? m[1].trim() : ''
+      try {
+        const params = new URLSearchParams({
+          serviceKey: MOLIT_API_KEY,
+          LAWD_CD: lawdCd,
+          DEAL_YMD: dealYmd,
+          pageNo: '1',
+          numOfRows: '100',
+        })
+        
+        const res = await fetch(
+          `${endpoint.url}?${params}`,
+          { signal: AbortSignal.timeout(10000) }
+        )
+        
+        const text = await res.text()
+        
+        // 응답 디버깅 (첫 월 + 첫 유형만)
+        if (dealYmd === months[0] && pType === typesToFetch[0]) {
+          console.log(`[real-price] ${endpoint.label} HTTP ${res.status} | 응답 ${text.length}자 | 첫 300자: ${text.slice(0, 300).replace(/\n/g, ' ')}`)
         }
         
-        const areaStr = getValue('excluUseAr') || getValue('전용면적')
-        const priceStr = (getValue('dealAmount') || getValue('거래금액')).replace(/,/g, '')
-        const area = parseFloat(areaStr) || 0
-        const price = parseInt(priceStr) * 10000 // 만원 → 원
-        
-        if (area > 0 && price > 0) {
-          allTransactions.push({
-            name: getValue('aptNm') || getValue('아파트') || '—',
-            area,
-            price,
-            pricePerM2: Math.round(price / area),
-            floor: parseInt(getValue('floor') || getValue('층')) || 0,
-            dealDate: `${dealYmd.slice(0,4)}.${dealYmd.slice(4)}.${getValue('dealDay') || getValue('일')}`,
-          })
+        // 에러 응답 체크
+        if (text.includes('SERVICE_KEY_IS_NOT_REGISTERED') || text.includes('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS')) {
+          if (dealYmd === months[0]) console.warn(`[real-price] ${endpoint.label} API 키 미등록/한도초과`)
+          continue
         }
+        
+        // XML 파싱 (간단한 정규식)
+        const items = text.match(/<item>([\s\S]*?)<\/item>/g) || []
+        
+        for (const item of items) {
+          const getValue = (tag: string) => {
+            const m = item.match(new RegExp(`<${tag}>\\s*([^<]*?)\\s*</${tag}>`))
+            return m ? m[1].trim() : ''
+          }
+          
+          const areaStr = getValue('excluUseAr') || getValue('전용면적')
+          const priceStr = (getValue('dealAmount') || getValue('거래금액')).replace(/,/g, '')
+          const area = parseFloat(areaStr) || 0
+          const price = parseInt(priceStr) * 10000 // 만원 → 원
+          
+          if (area > 0 && price > 0) {
+            allTransactions.push({
+              name: getValue(endpoint.nameTag) || getValue('아파트') || getValue('연립다세대') || getValue('단지명') || '—',
+              area,
+              price,
+              pricePerM2: Math.round(price / area),
+              floor: parseInt(getValue('floor') || getValue('층')) || 0,
+              dealDate: `${dealYmd.slice(0,4)}.${dealYmd.slice(4)}.${getValue('dealDay') || getValue('일')}`,
+            })
+          }
+        }
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e)
+        console.warn(`[real-price] ${endpoint.label} ${dealYmd} 조회 실패: ${errMsg}`)
       }
-    } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e)
-      console.warn(`[real-price] ${dealYmd} 조회 실패: ${errMsg}`)
     }
     // 충분한 데이터 확보 시 조기 종료 (20건 이상)
     if (allTransactions.length >= 20) break
