@@ -1675,7 +1675,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
         <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 12px;">&#10024; AI 건축 렌더링</div>
         <div style="display: grid; grid-template-columns: ${images.length === 1 ? '1fr' : images.length === 2 ? '1fr 1fr' : '1fr 1fr'}; gap: 10px;">
           ${images.map((m, i) => `<div style="border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;${images.length === 3 && i === 0 ? ' grid-column: 1 / -1;' : ''}">
-            <img src="${m.image}" alt="${angleLabels[m.angle] || m.angle}" style="width: 100%; height: ${images.length === 3 && i === 0 ? '280px' : '180px'}; object-fit: cover; display: block;" />
+            <img src="${m.image}" alt="${angleLabels[m.angle] || m.angle}" style="width: 100%; height: auto; display: block;" />
             <div style="padding: 5px 10px; background: #f8fafc; font-size: 9px; color: #64748b;">${angleLabels[m.angle] || m.angle}</div>
           </div>`).join('')}
         </div>
@@ -1684,7 +1684,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     } else if (data.aiRenderImage) {
       return `<div style="margin: 0 30px; padding: 20px 0;">
         <div style="border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0;">
-          <img src="${data.aiRenderImage}" alt="AI 건축 렌더링" style="width: 100%; max-height: 400px; object-fit: cover; display: block;" />
+          <img src="${data.aiRenderImage}" alt="AI 건축 렌더링" style="width: 100%; height: auto; display: block;" />
           <div style="padding: 8px 14px; background: #f8fafc; display: flex; align-items: center; justify-content: space-between;">
             <span style="font-size: 10px; font-weight: 600; color: #475569;">&#10024; AI 건축 렌더링</span>
             <span style="font-size: 9px; color: #94a3b8;">Powered by Gemini</span>
@@ -2187,10 +2187,10 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     const _mI = data.aiMultiImages?.filter(m => m.image) || []
     if (_mI.length > 0) {
       const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">&#10024; AI 건축 렌더링</div>' +
-        _mI.map((m,i) => '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+m.image+'" style="width:100%;max-height:'+(i===0?'280':'180')+'px;object-fit:cover;display:block"/><div style="padding:4px 10px;background:#f8fafc;font-size:9px;color:#64748b">'+(_aL[m.angle]||m.angle)+'</div></div>').join('') + '</div>';
+        _mI.map((m,i) => '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+m.image+'" style="width:100%;height:auto;display:block"/><div style="padding:4px 10px;background:#f8fafc;font-size:9px;color:#64748b">'+(_aL[m.angle]||m.angle)+'</div></div>').join('') + '</div>';
       htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
     } else if (data.aiRenderImage) {
-      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+data.aiRenderImage+'" style="width:100%;max-height:400px;object-fit:cover;display:block"/><div style="padding:8px 14px;background:#f8fafc"><span style="font-size:10px;font-weight:600;color:#475569">&#10024; AI 건축 렌더링</span></div></div></div>';
+      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+data.aiRenderImage+'" style="width:100%;height:auto;display:block"/><div style="padding:8px 14px;background:#f8fafc"><span style="font-size:10px;font-weight:600;color:#475569">&#10024; AI 건축 렌더링</span></div></div></div>';
       htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
     }
     
@@ -2563,10 +2563,10 @@ export function openPrintPreview(data: ExportData): { success: boolean; error?: 
     const _mI = data.aiMultiImages?.filter(m => m.image) || []
     if (_mI.length > 0) {
       const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">&#10024; AI 건축 렌더링</div>' +
-        _mI.map((m,i) => '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+m.image+'" style="width:100%;max-height:'+(i===0?'280':'180')+'px;object-fit:cover;display:block"/><div style="padding:4px 10px;background:#f8fafc;font-size:9px;color:#64748b">'+(_aL[m.angle]||m.angle)+'</div></div>').join('') + '</div>';
+        _mI.map((m,i) => '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+m.image+'" style="width:100%;height:auto;display:block"/><div style="padding:4px 10px;background:#f8fafc;font-size:9px;color:#64748b">'+(_aL[m.angle]||m.angle)+'</div></div>').join('') + '</div>';
       htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
     } else if (data.aiRenderImage) {
-      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+data.aiRenderImage+'" style="width:100%;max-height:400px;object-fit:cover;display:block"/><div style="padding:8px 14px;background:#f8fafc"><span style="font-size:10px;font-weight:600;color:#475569">&#10024; AI 건축 렌더링</span></div></div></div>';
+      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0"><div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0"><img src="'+data.aiRenderImage+'" style="width:100%;height:auto;display:block"/><div style="padding:8px 14px;background:#f8fafc"><span style="font-size:10px;font-weight:600;color:#475569">&#10024; AI 건축 렌더링</span></div></div></div>';
       htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- Executive Summary -->');
     }
     
