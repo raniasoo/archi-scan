@@ -1964,6 +1964,7 @@ export default function ArchiScanPage() {
           siteArea={siteAreaNum}
           coverage={selectedLayoutData.coverage}
           sitePolygon={sitePolygon}
+          terrain={analysisRawData?.terrain}
           onClose={() => setShow3DVolume(false)}
         />
       )}

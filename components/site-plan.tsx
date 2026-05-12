@@ -81,12 +81,38 @@ export function SitePlan({
   const sf = setbacks.front * svgScale
   const ss = setbacks.side * svgScale
   const sr = setbacks.rear * svgScale
+  const avgSetback = (setbacks.front + setbacks.side + setbacks.rear) / 3
 
-  // 건축가능영역
-  const bldZoneX = siteX + ss
-  const bldZoneY = siteY + sr  // 후면=상단
-  const bldZoneW = siteW - ss * 2
-  const bldZoneH = siteH - sf - sr
+  // 건축가능영역 — 폴리곤이 있으면 폴리곤 인셋, 없으면 직사각형
+  let bldZoneX: number, bldZoneY: number, bldZoneW: number, bldZoneH: number
+  let bldZonePolyPoints = '' // 건축한계선 폴리곤 포인트 (SVG용)
+  
+  if (svgPolyCoords.length > 2) {
+    // 폴리곤 인셋: 각 꼭짓점을 centroid 방향으로 이격거리만큼 축소
+    const cx = svgPolyCoords.reduce((s, p) => s + p.x, 0) / svgPolyCoords.length
+    const cy = svgPolyCoords.reduce((s, p) => s + p.y, 0) / svgPolyCoords.length
+    const insetRatio = 1 - (avgSetback * svgScale * 2) / Math.max(siteW, siteH)
+    const safeRatio = Math.max(0.6, Math.min(0.95, insetRatio))
+    
+    const insetCoords = svgPolyCoords.map(p => ({
+      x: cx + (p.x - cx) * safeRatio,
+      y: cy + (p.y - cy) * safeRatio,
+    }))
+    bldZonePolyPoints = insetCoords.map(p => `${p.x},${p.y}`).join(' ')
+    
+    // 인셋 폴리곤의 바운딩 박스 → 건물 배치 영역
+    const ixs = insetCoords.map(p => p.x)
+    const iys = insetCoords.map(p => p.y)
+    bldZoneX = Math.min(...ixs)
+    bldZoneY = Math.min(...iys)
+    bldZoneW = Math.max(...ixs) - bldZoneX
+    bldZoneH = Math.max(...iys) - bldZoneY
+  } else {
+    bldZoneX = siteX + ss
+    bldZoneY = siteY + sr
+    bldZoneW = siteW - ss * 2
+    bldZoneH = siteH - sf - sr
+  }
 
   // 건물 크기
   const buildingArea = siteArea * buildingCoverage / 100
@@ -292,9 +318,14 @@ export function SitePlan({
         <rect x={siteX + siteW - ss} y={siteY + sr} width={ss} height={siteH - sf - sr}
           fill="#3b82f608" stroke="none" />
 
-        {/* 건축가능영역 경계 */}
-        <rect x={bldZoneX} y={bldZoneY} width={bldZoneW} height={bldZoneH}
-          fill="none" stroke="#22d3ee" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.6" />
+        {/* 건축가능영역 경계 — 폴리곤이 있으면 폴리곤 인셋, 없으면 직사각형 */}
+        {bldZonePolyPoints ? (
+          <polygon points={bldZonePolyPoints}
+            fill="none" stroke="#22d3ee" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.6" />
+        ) : (
+          <rect x={bldZoneX} y={bldZoneY} width={bldZoneW} height={bldZoneH}
+            fill="none" stroke="#22d3ee" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.6" />
+        )}
 
         {/* 조경 영역 */}
         {landscapeArea > 0 && (

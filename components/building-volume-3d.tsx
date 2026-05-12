@@ -13,6 +13,7 @@ interface BuildingVolume3DProps {
   coverage: number
   floorHeight?: number
   sitePolygon?: { coords: [number, number][], centroid: [number, number] } | null
+  terrain?: { elevationDiff?: number; avgSlope?: number; slopeDirection?: string } | null
   onClose: () => void
 }
 
@@ -158,7 +159,7 @@ function makeWindowTex(floorCount: number, winCols: number): HTMLCanvasElement {
 }
 
 export function BuildingVolume3D({
-  layoutName, layoutType, originalType, buildingCount, floors, siteArea, coverage, floorHeight = 3.3, sitePolygon, onClose
+  layoutName, layoutType, originalType, buildingCount, floors, siteArea, coverage, floorHeight = 3.3, sitePolygon, terrain, onClose
 }: BuildingVolume3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
@@ -328,6 +329,15 @@ export function BuildingVolume3D({
       const ground = new THREE.Mesh(new THREE.PlaneGeometry(S * 4, S * 4),
         new THREE.MeshStandardMaterial({ map: gTex, roughness: 0.95, color: 0x2a5a32 }))
       ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true
+      // 지형 경사 반영 (terrain prop)
+      if (terrain?.elevationDiff && terrain.elevationDiff > 1) {
+        const slopeAngle = Math.atan(terrain.elevationDiff / (S * 2)) * 0.7
+        const dir = terrain.slopeDirection || ''
+        if (dir.includes('남') || dir.includes('S')) ground.rotation.x += slopeAngle
+        else if (dir.includes('북') || dir.includes('N')) ground.rotation.x -= slopeAngle
+        if (dir.includes('동') || dir.includes('E')) ground.rotation.y += slopeAngle
+        else if (dir.includes('서') || dir.includes('W')) ground.rotation.y -= slopeAngle
+      }
       scene.add(ground)
 
       // 미세 그리드
