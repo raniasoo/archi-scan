@@ -287,24 +287,64 @@ export default function AdminPage() {
                     </div>
                     {/* Mobile expanded details */}
                     {expandedUser === p.id && (
-                      <div className="md:hidden px-4 pb-3 pt-0 grid grid-cols-3 gap-2 text-xs border-t bg-muted/20">
-                        <div>
-                          <span className="text-muted-foreground">플랜:</span>{" "}
-                          <span className="font-medium">{p.plan === "pro" ? "Pro" : "무료"}</span>
+                      <div className="px-4 pb-3 pt-2 border-t bg-muted/10 space-y-3">
+                        {/* Mobile info */}
+                        <div className="md:hidden grid grid-cols-3 gap-2 text-xs">
+                          <div><span className="text-muted-foreground">플랜:</span> <span className="font-medium">{p.plan === "pro" ? "Pro" : "무료"}</span></div>
+                          <div><span className="text-muted-foreground">사용량:</span> <span className="font-medium">{p.monthly_usage || 0}회</span></div>
+                          <div><span className="text-muted-foreground">가입:</span> <span className="font-medium">{p.provider || "email"}</span></div>
+                          <div className="col-span-3"><span className="text-muted-foreground">가입일:</span> <span className="font-medium">{fmtFullDate(p.created_at)}</span></div>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">사용량:</span>{" "}
-                          <span className="font-medium">{p.monthly_usage || 0}회</span>
+                        {/* Plan actions */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-muted-foreground mr-1">플랜 변경:</span>
+                          {p.plan !== "pro" ? (
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`${p.name || p.email}을(를) Pro로 업그레이드하시겠습니까?`)) return
+                                await fetch("/api/admin", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ type: "update_plan", userId: p.id, plan: "pro" }),
+                                })
+                                fetchData()
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20"
+                            >
+                              <Crown className="h-3 w-3" /> Pro 업그레이드
+                            </button>
+                          ) : (
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`${p.name || p.email}을(를) 무료로 다운그레이드하시겠습니까?`)) return
+                                await fetch("/api/admin", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ type: "update_plan", userId: p.id, plan: "free" }),
+                                })
+                                fetchData()
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80"
+                            >
+                              무료로 변경
+                            </button>
+                          )}
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`${p.name || p.email}의 사용량을 초기화하시겠습니까?`)) return
+                              await fetch("/api/admin", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ type: "reset_usage", userId: p.id }),
+                              })
+                              fetchData()
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"
+                          >
+                            사용량 초기화
+                          </button>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">가입:</span>{" "}
-                          <span className="font-medium">{p.provider || "email"}</span>
-                        </div>
-                        <div className="col-span-3">
-                          <span className="text-muted-foreground">가입일:</span>{" "}
-                          <span className="font-medium">{fmtFullDate(p.created_at)}</span>
-                        </div>
-                        <div className="col-span-3 text-[10px] text-muted-foreground/50 truncate">ID: {p.id}</div>
+                        <div className="text-[10px] text-muted-foreground/50 truncate">ID: {p.id}</div>
                       </div>
                     )}
                   </div>

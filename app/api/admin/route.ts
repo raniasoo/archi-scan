@@ -100,7 +100,7 @@ export async function GET() {
   }
 }
 
-// 문의 상태 업데이트
+// 문의 상태 업데이트 + 사용자 플랜 변경
 export async function PATCH(req: Request) {
   try {
     const supabase = await createClient()
@@ -110,7 +110,63 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const { id, status, admin_note } = await req.json()
+    const body = await req.json()
+    const { type } = body
+
+    // ── 사용자 플랜 변경 ──
+    if (type === "update_plan") {
+      const { userId, plan } = body
+      if (!userId || !plan) {
+        return NextResponse.json({ error: "userId and plan are required" }, { status: 400 })
+      }
+
+      const updates: any = { plan, updated_at: new Date().toISOString() }
+      if (plan === "pro") {
+        updates.plan_expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      } else {
+        updates.plan_expires_at = null
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", userId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+
+      // 로그 기록
+      await supabase.from("usage_logs").insert({
+        user_id: userId,
+        action: "admin_plan_change",
+        metadata: { plan, changed_by: user.email },
+      })
+
+      return NextResponse.json({ success: true })
+    }
+
+    // ── 사용량 초기화 ──
+    if (type === "reset_usage") {
+      const { userId } = body
+      if (!userId) {
+        return NextResponse.json({ error: "userId is required" }, { status: 400 })
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ monthly_usage: 0, updated_at: new Date().toISOString() })
+        .eq("id", userId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // ── 문의 상태 업데이트 (기본) ──
+    const { id, status, admin_note } = body
 
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 })
