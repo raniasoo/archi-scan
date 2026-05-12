@@ -178,6 +178,7 @@ export function FinancialStep(props: FinancialStepProps) {
               units={selectedLayoutData.units}
               floors={selectedLayoutData.floors}
               parking={selectedLayoutData.parking}
+              buildingCount={selectedLayoutData.buildingCount}
               landPricePerM2={landPriceData.pricePerM2 || 5000000}
               salesPricePerM2={effectiveSalesPrice}
               constructionCostPerM2={effectiveConstructionCost}

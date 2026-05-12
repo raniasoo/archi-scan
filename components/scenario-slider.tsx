@@ -20,7 +20,7 @@ interface ScenarioSliderProps {
 }
 
 export function ScenarioSlider({
-  siteArea, gfa, units, floors, parking,
+  siteArea, gfa, units, floors, parking, buildingCount,
   landPricePerM2, salesPricePerM2, constructionCostPerM2, baseROI, baseTotalCost, baseProfit,
 }: ScenarioSliderProps) {
   const [salePriceAdj, setSalePriceAdj] = useState(0)
