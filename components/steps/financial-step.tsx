@@ -179,8 +179,8 @@ export function FinancialStep(props: FinancialStepProps) {
               landPricePerM2={landPriceData.pricePerM2 || 5000000}
               salesPricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
                 ? marketPrice.suggestedSalePrice 
-                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : undefined}
-              constructionCostPerM2={regionalPricing?.constructionCostPerM2 || undefined}
+                : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000}
+              constructionCostPerM2={regionalPricing?.constructionCostPerM2 || 2500000}
               baseROI={feasibilityResult?.roi ?? 0}
               baseTotalCost={feasibilityResult?.totalCost ?? 0}
               baseProfit={feasibilityResult?.profit ?? 0}

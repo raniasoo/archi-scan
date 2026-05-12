@@ -27,7 +27,7 @@ export function ScenarioSlider({
   const [landPriceAdj, setLandPriceAdj] = useState(0)
   const [interestRate, setInterestRate] = useState(0) // 금리 (연 %, 0=금융비 미적용)
 
-  const baseSalePrice = salesPricePerM2 || 8000000
+  const baseSalePrice = salesPricePerM2 || 5000000
   const baseConstCost = constructionCostPerM2 || 2500000
 
   // 기준 feasibility (0%일 때 위 사업성과 동일)

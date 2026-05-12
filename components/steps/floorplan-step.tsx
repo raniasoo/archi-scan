@@ -171,7 +171,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
             <div>
               <div className="w-full" style={{ aspectRatio: '3/2', minHeight: 260, maxHeight: 420 }}>
                 <FloorPlan
-                  type={selectedLayoutData.type}
+                  type={selectedLayoutData._originalType || selectedLayoutData.type}
                   floor={selectedFloor}
                   totalFloors={selectedLayoutData.floors}
                   strategy={strategy}

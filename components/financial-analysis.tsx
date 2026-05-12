@@ -52,7 +52,7 @@ function calculateFinancials(siteArea: number, gfa: number, units: number, floor
   const heightPremium = floors > 15 ? 1.15 : floors > 10 ? 1.08 : 1.0
   
   // 수익 가정
-  const salesPricePerSqm = 8000000 // 분양가 ㎡당 800만원 (공통 함수와 동일)
+  const salesPricePerSqm = 5000000 // 분양가 ㎡당 500만원 (카드 ROI와 동일)
   
   // 계산
   const landCost = siteArea * landPricePerSqm
