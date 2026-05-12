@@ -23,6 +23,7 @@ interface BuildExportDataParams {
   strategy?: string
   userValues?: UserValues
   aiRenderImage?: string | null
+  aiMultiImages?: {angle: string; image: string | null}[] | null
 }
 
 export function buildExportData(params: BuildExportDataParams): ExportData {
@@ -55,6 +56,7 @@ export function buildExportData(params: BuildExportDataParams): ExportData {
     address,
     siteArea: siteAreaNum,
     aiRenderImage: params.aiRenderImage || (typeof window !== 'undefined' ? (() => { try { return sessionStorage.getItem('archi-scan-render') } catch { return null } })() : null),
+    aiMultiImages: params.aiMultiImages || null,
     branding: branding || undefined,
     layout: {
       name: selectedLayoutData.name,
