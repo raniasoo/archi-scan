@@ -128,8 +128,8 @@ export function ReportStep(props: ReportStepProps) {
                   onClick={async () => {
                     setDownloadingPdf(true);
                     setDownloadError(null);
+                    toast.loading('PDF 생성 중...', { id: 'pdf-dl' })
                     try {
-                      // 데이터 검증
                       if (!selectedLayoutData) {
                         throw new Error('배치안 데이터가 없습니다. 먼저 배치안을 생성해주세요.');
                       }
@@ -137,12 +137,12 @@ export function ReportStep(props: ReportStepProps) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
                       const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages });
-                      console.log('[PDF] exportData built, aiMultiImages:', (exportData.aiMultiImages || []).length, 'images')
-                      // PDF 파일 다운로드 (인쇄 미리보기 아님)
                       const { downloadPdf } = await loadExportFunctions(); const result = await downloadPdf(exportData);
                       if (!result.success) {
-                        console.error('[PDF] Download failed:', result.error);
+                        toast.error('PDF 생성 실패', { id: 'pdf-dl', description: result.error })
                         setDownloadError(result.error || 'PDF 다운로드 중 오류가 발생했습니다.');
+                      } else {
+                        toast.success('PDF 다운로드 완료', { id: 'pdf-dl' })
                       }
                     } catch (err) {
                       const errorMsg = err instanceof Error ? err.message : String(err);
@@ -176,6 +176,7 @@ export function ReportStep(props: ReportStepProps) {
                   onClick={async () => {
                     setDownloadingHtml(true);
                     setDownloadError(null);
+                    toast.loading('HTML 생성 중...', { id: 'html-dl' })
                     try {
                       if (!selectedLayoutData) {
                         throw new Error('배치안 데이터가 없습니다. 먼저 배치안을 생성해주세요.');
@@ -186,7 +187,10 @@ export function ReportStep(props: ReportStepProps) {
                       const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages });
                       const { downloadHtml } = await loadExportFunctions(); const result = downloadHtml(exportData);
                       if (!result.success) {
+                        toast.error('HTML 생성 실패', { id: 'html-dl', description: result.error })
                         setDownloadError(result.error || 'HTML 다운로드 중 오류가 발생했습니다.');
+                      } else {
+                        toast.success('HTML 다운로드 완료', { id: 'html-dl' })
                       }
                     } catch (err) {
                       const errorMsg = err instanceof Error ? err.message : String(err);
