@@ -433,12 +433,13 @@ export async function POST(req: NextRequest) {
     // bird-eye: 위성사진 우선, 거리뷰 제외 (눈높이 사진은 조감도에 부적합)
     const isEyeLevel = cameraAngle === 'eye-level' || !cameraAngle
     const isBirdEye = cameraAngle === 'bird-eye'
+    const isInterior = cameraAngle === 'interior'
     const directions = ['north', 'east', 'south', 'west']
     await Promise.all([
-      // 위성사진: 조감도일 때만 사용
-      (!isEyeLevel && satelliteUrl) ? fetchImage(satelliteUrl, 'satellite') : Promise.resolve(),
-      // 도로지도: 항상 사용 (작을 수 있어 skip될 수도 있음)
-      cadastralMapUrl ? fetchImage(cadastralMapUrl, 'cadastral') : Promise.resolve(),
+      // 위성사진: 조감도일 때만 사용 (인테리어 제외)
+      (!isEyeLevel && !isInterior && satelliteUrl) ? fetchImage(satelliteUrl, 'satellite') : Promise.resolve(),
+      // 도로지도: 인테리어 제외
+      (!isInterior && cadastralMapUrl) ? fetchImage(cadastralMapUrl, 'cadastral') : Promise.resolve(),
       // 거리뷰: 눈높이일 때만 사용 (최대 2장으로 제한하여 속도 개선)
       ...(isEyeLevel && Array.isArray(streetViewUrls) ? streetViewUrls.slice(0, 2).map((url: string, i: number) =>
         fetchImage(url, `street-view-${directions[i]}`)
@@ -945,6 +946,13 @@ WHAT MUST BE VISIBLE: Entrance canopy/awning structure, door material and hardwa
 SCALE REFERENCE: A person (or their shadow) near the entrance to show door height (~2.4m).
 MANDATORY: This is a CLOSE-UP architectural detail shot. The entrance area fills most of the frame. Upper floors are cropped or barely visible.
 FORBIDDEN: Do NOT show the full building. Do NOT pull the camera back to show the entire facade. This is NOT a building portrait — it is an entrance detail shot.`,
+    'interior': `CAMERA POSITION: Standing inside the main living room/common area, camera at 1.2m height (seated eye level on a sofa), facing toward the largest window or balcony.
+COMPOSITION: Interior perspective showing the living room as the main space, with the window/balcony providing natural light. The ceiling and floor are both visible, creating depth. The room fills the entire frame.
+WHAT MUST BE VISIBLE: Large windows with natural daylight streaming in, modern Korean residential interior finishes (wood-tone LVT flooring, white/warm gray walls, recessed ceiling lights), a living room with tasteful modern furniture (sofa, coffee table, TV unit), open-plan connection to dining area or kitchen visible in the background, balcony or terrace glimpse through the window.
+STYLE & MOOD: Bright, airy, warm — the feeling of a newly completed premium apartment unit. Clean lines, neutral palette with warm wood accents. Afternoon natural light casting soft shadows.
+SCALE REFERENCE: Furniture provides human scale — sofa ~0.85m seat height, dining table ~0.75m, ceiling height ~2.5m clearly visible.
+MANDATORY: This is a RESIDENTIAL INTERIOR shot. Show a realistic, lived-in but model-home quality space. Natural light from windows is the primary light source. The view through the window should suggest an urban or suburban Korean setting.
+FORBIDDEN: Do NOT show the building exterior. Do NOT show empty/unfurnished rooms. Do NOT use overly luxurious or unrealistic furniture. Do NOT make it look like a hotel lobby — this is a HOME.`,
   }
   const cameraDesc = angleDesc[cameraAngle || 'eye-level'] || angleDesc['eye-level']
 
@@ -1081,6 +1089,8 @@ ${cameraAngle === 'birds-eye' ? `FINAL COMPOSITION CHECK — BIRDS-EYE:
 Before generating, verify: Am I looking DOWN from the sky? Can I see the ROOF? Is the ground plane visible BELOW? Are there EXACTLY ${f} floors on each building (count the floor levels on the visible facades)? ${f <= 3 ? `Are the buildings LOW enough that trees partially obscure them?` : ''} If any answer is NO, re-compose.` 
 : cameraAngle === 'entrance' ? `FINAL COMPOSITION CHECK — ENTRANCE CLOSE-UP:
 Before generating, verify: Does the entrance door fill most of the frame? Are only 1-2 floors visible? Can I see door hardware details? If the full building is visible, ZOOM IN closer.`
+: cameraAngle === 'interior' ? `FINAL COMPOSITION CHECK — INTERIOR PERSPECTIVE:
+Before generating, verify: Am I INSIDE the apartment unit? Can I see the living room with furniture? Is natural light coming through windows? Is the ceiling height ~2.5m? Does it feel like a real Korean residential interior? Is there a view through the window suggesting an urban setting? If I can see the building exterior, I am in the WRONG position — move INSIDE.`
 : `FINAL COMPOSITION CHECK — EYE-LEVEL:
 Before generating, verify: Is the camera at 1.6m (ground level)? Can I count EXACTLY ${f} floor levels on the building facade? ${f <= 3 ? `Is the building roofline BELOW or at the same height as nearby trees?` : ''} Is sky visible ABOVE the roofline? Can I see the ROOF SURFACE from above? If YES to the last question, the camera is TOO HIGH — move it DOWN to street level.`}
 

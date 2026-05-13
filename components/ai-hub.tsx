@@ -67,6 +67,7 @@ const ANGLES = [
   { id: 'eye-level', label: '눈높이', emoji: '👁️' },
   { id: 'birds-eye', label: '조감도', emoji: '🦅' },
   { id: 'entrance', label: '입구', emoji: '🚪' },
+  { id: 'interior', label: '인테리어', emoji: '🛋️' },
 ]
 
 const SCENES = [
@@ -422,7 +423,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               {multiImages.map((mi, idx) => mi.image && (
                 <div key={idx} className="space-y-1">
                   <p className="text-[9px] text-muted-foreground font-medium">
-                    {mi.angle === 'eye-level' ? '👁️ 정면 · 보행자 시점 (1.6m)' : mi.angle === 'birds-eye' ? '🦅 조감도 · 드론 시점 (50m)' : '🚪 입구 · 클로즈업 (3m)'}
+                    {mi.angle === 'eye-level' ? '👁️ 정면 · 보행자 시점 (1.6m)' : mi.angle === 'birds-eye' ? '🦅 조감도 · 드론 시점 (50m)' : mi.angle === 'interior' ? '🛋️ 인테리어 · 실내 투시도' : '🚪 입구 · 클로즈업 (3m)'}
                   </p>
                   <img src={mi.image} alt={mi.angle} className="w-full rounded-lg border border-border" />
                 </div>
@@ -430,7 +431,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               <div className="flex gap-1">
                 {multiImages.filter(i => i.image).map((mi, idx) => (
                   <a key={idx} href={mi.image!} download={`render-${mi.angle}-${Date.now()}.png`} onClick={() => toast.success('렌더링 이미지 다운로드 시작')} className="flex-1 text-center text-[10px] text-violet-400 py-1 rounded bg-violet-500/10 border border-violet-500/20">
-                    <Download className="h-3 w-3 inline" /> {mi.angle === 'eye-level' ? '정면' : mi.angle === 'birds-eye' ? '조감' : '입구'}
+                    <Download className="h-3 w-3 inline" /> {mi.angle === 'eye-level' ? '정면' : mi.angle === 'birds-eye' ? '조감' : mi.angle === 'interior' ? '인테리어' : '입구'}
                   </a>
                 ))}
               </div>
