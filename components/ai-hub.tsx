@@ -80,6 +80,11 @@ const INTERIOR_STYLES = [
   { id: "int-minimal", label: "미니멀", emoji: "◻️", prompt: "minimalist interior, monochrome white/gray, hidden storage, matte surfaces" },
   { id: "int-jeju", label: "제주 감성", emoji: "🏝️", prompt: "Jeju-inspired interior, volcanic stone accents, natural wood, ocean view, bright airy" },
   { id: "int-classic", label: "클래식", emoji: "🪞", prompt: "neo-classic Korean interior, crown molding, dark wood, marble, elegant traditional" },
+  // 한국 스타일
+  { id: "int-hanok", label: "한옥 모던", emoji: "🏯", prompt: "modern hanok interior, exposed wood beam ceiling, ondol heated stone floor, hanji paper sliding doors, traditional Korean courtyard view, natural materials" },
+  { id: "int-premium-apt", label: "프리미엄 아파트", emoji: "🏢", prompt: "Korean premium apartment interior like Raemian or Hillstate, system air conditioner, built-in closet, LVT wood flooring, Samsung Bespoke appliances, recessed LED, clean modern Korean apartment" },
+  { id: "int-sinbon", label: "신혼집", emoji: "💑", prompt: "Korean newlywed apartment, bright white walls, pink/beige soft accents, cozy small living room, IKEA-style functional furniture, warm indirect lighting, romantic but practical" },
+  { id: "int-gangnam", label: "강남 럭셔리", emoji: "💎", prompt: "Gangnam luxury penthouse interior, floor-to-ceiling Han River view, Italian marble, Poliform kitchen, B&B Italia sofa, wine cellar, art gallery wall, ultra-premium Korean chaebol style" },
 ]
 
 const SCENES = [
@@ -314,9 +319,18 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                 <>
                   <p className="text-[9px] text-teal-400/70 font-medium">🛋️ 인테리어 스타일</p>
                   <div className="grid grid-cols-4 gap-1.5">
-                    {INTERIOR_STYLES.map(s => (
+                    {INTERIOR_STYLES.slice(0, 8).map(s => (
                       <button key={s.id} onClick={() => setStyle(s.id)}
                         className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-teal-500/20 border-2 border-teal-400 font-semibold' : 'bg-card/30 border border-border/50 hover:border-teal-300'}`}>
+                        <span className="text-base block">{s.emoji}</span>{s.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-amber-400/70 font-medium">🇰🇷 한국 인테리어</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {INTERIOR_STYLES.slice(8).map(s => (
+                      <button key={s.id} onClick={() => setStyle(s.id)}
+                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-card/30 border border-amber-900/30 hover:border-amber-400'}`}>
                         <span className="text-base block">{s.emoji}</span>{s.label}
                       </button>
                     ))}
