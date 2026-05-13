@@ -117,15 +117,24 @@ export async function GET(req: NextRequest) {
 }
 
 // 문의 상태 업데이트 + 사용자 플랜 변경
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    // ━━━ 인증: Admin Token 또는 Supabase 세션 ━━━
+    const adminToken = req.headers.get("X-Admin-Token") || ""
+    let isAuthorized = false
+    if (adminToken && verifyAdminToken(adminToken)) isAuthorized = true
+    
+    if (!isAuthorized) {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && ADMIN_EMAILS.includes(user.email || "")) isAuthorized = true
+    }
 
-    if (!user || !ADMIN_EMAILS.includes(user.email || "")) {
+    if (!isAuthorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
+    const supabase = await createClient()
     const body = await req.json()
     const { type } = body
 
@@ -136,27 +145,24 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ error: "userId and plan are required" }, { status: 400 })
       }
 
-      const updates: any = { plan, updated_at: new Date().toISOString() }
-      if (plan === "pro") {
-        updates.plan_expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      } else {
-        updates.plan_expires_at = null
-      }
+      const expiresAt = plan === "pro" ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null
 
-      const { error } = await supabase
-        .from("profiles")
-        .update(updates)
-        .eq("id", userId)
+      // RPC로 RLS 우회
+      const { data, error } = await supabase.rpc('admin_update_profile', {
+        admin_secret: 'archiscan-admin-2026',
+        target_user_id: userId,
+        new_plan: plan,
+        new_plan_expires: expiresAt,
+      })
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 })
-      }
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
       // 로그 기록
-      await supabase.from("usage_logs").insert({
-        user_id: userId,
-        action: "admin_plan_change",
-        metadata: { plan, changed_by: user.email },
+      await supabase.rpc('admin_insert_log', {
+        admin_secret: 'archiscan-admin-2026',
+        target_user_id: userId,
+        log_action: 'admin_plan_change',
+        log_metadata: { plan },
       })
 
       return NextResponse.json({ success: true })
@@ -169,21 +175,18 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ error: "userId is required" }, { status: 400 })
       }
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({ monthly_usage: 0, updated_at: new Date().toISOString() })
-        .eq("id", userId)
+      const { error } = await supabase.rpc('admin_update_profile', {
+        admin_secret: 'archiscan-admin-2026',
+        target_user_id: userId,
+        reset_usage: true,
+      })
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 })
-      }
-
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
       return NextResponse.json({ success: true })
     }
 
-    // ── 문의 상태 업데이트 (기본) ──
+    // ── 문의 상태 업데이트 ──
     const { id, status, admin_note } = body
-
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 })
     }
@@ -197,10 +200,7 @@ export async function PATCH(req: Request) {
       .update(updates)
       .eq("id", id)
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json({ success: true })
   } catch (err: any) {
     console.error("[ADMIN] PATCH error:", err.message)

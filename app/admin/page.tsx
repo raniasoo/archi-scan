@@ -109,6 +109,16 @@ export default function AdminPage() {
     setProfiles([])
   }
 
+  // Admin API 요청 헬퍼 (토큰 자동 첨부)
+  const adminFetch = (method: string, body: any) => {
+    const token = sessionStorage.getItem("admin_token") || ""
+    return fetch("/api/admin", {
+      method,
+      headers: { "Content-Type": "application/json", "X-Admin-Token": token },
+      body: JSON.stringify(body),
+    })
+  }
+
   const fetchData = async () => {
     setLoading(true)
     setError("")
@@ -392,11 +402,7 @@ export default function AdminPage() {
                             <button
                               onClick={async () => {
                                 if (!confirm(`${p.name || p.email}을(를) Pro로 업그레이드하시겠습니까?`)) return
-                                await fetch("/api/admin", {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ type: "update_plan", userId: p.id, plan: "pro" }),
-                                })
+                                await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "pro" })
                                 fetchData()
                               }}
                               className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20"
@@ -407,11 +413,7 @@ export default function AdminPage() {
                             <button
                               onClick={async () => {
                                 if (!confirm(`${p.name || p.email}을(를) 무료로 다운그레이드하시겠습니까?`)) return
-                                await fetch("/api/admin", {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ type: "update_plan", userId: p.id, plan: "free" }),
-                                })
+                                await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "free" })
                                 fetchData()
                               }}
                               className="px-2.5 py-1 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80"
@@ -422,11 +424,7 @@ export default function AdminPage() {
                           <button
                             onClick={async () => {
                               if (!confirm(`${p.name || p.email}의 사용량을 초기화하시겠습니까?`)) return
-                              await fetch("/api/admin", {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ type: "reset_usage", userId: p.id }),
-                              })
+                              await adminFetch("PATCH", { type: "reset_usage", userId: p.id })
                               fetchData()
                             }}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"
@@ -610,11 +608,7 @@ export default function AdminPage() {
                           {inq.status === "new" && (
                             <button
                               onClick={async () => {
-                                await fetch("/api/admin", {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ id: inq.id, status: "read" }),
-                                })
+                                await adminFetch("PATCH", { id: inq.id, status: "read" })
                                 fetchData()
                               }}
                               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20"
@@ -624,15 +618,11 @@ export default function AdminPage() {
                           )}
                           <button
                             onClick={async () => {
-                              await fetch("/api/admin", {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
+                              await adminFetch("PATCH", {
                                   id: inq.id,
                                   status: "replied",
                                   admin_note: replyNote || inq.admin_note,
-                                }),
-                              })
+                                })
                               setReplyNote("")
                               fetchData()
                             }}
@@ -643,11 +633,7 @@ export default function AdminPage() {
                           {inq.status !== "closed" && (
                             <button
                               onClick={async () => {
-                                await fetch("/api/admin", {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ id: inq.id, status: "closed" }),
-                                })
+                                await adminFetch("PATCH", { id: inq.id, status: "closed" })
                                 fetchData()
                               }}
                               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80"
