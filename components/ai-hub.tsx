@@ -71,6 +71,17 @@ const ANGLES = [
   { id: 'interior', label: '인테리어', emoji: '🛋️' },
 ]
 
+const INTERIOR_STYLES = [
+  { id: "int-modern-luxury", label: "모던 럭셔리", emoji: "✨", prompt: "modern luxury interior, marble accents, designer furniture, gallery-like walls" },
+  { id: "int-warm-wood", label: "화이트우드", emoji: "🪵", prompt: "white and wood tone interior, light oak, Scandinavian warmth, linen textures" },
+  { id: "int-hotel", label: "호텔리어", emoji: "🏨", prompt: "hotel-like premium interior, dark walnut, indirect lighting, boutique hotel suite" },
+  { id: "int-natural", label: "내추럴모던", emoji: "🌿", prompt: "natural modern interior, rattan, plants, earthy palette, organic shapes" },
+  { id: "int-newtro", label: "뉴트로", emoji: "🎨", prompt: "newtro retro-modern interior, terrazzo floor, curved furniture, pastel accents, vintage Korean" },
+  { id: "int-minimal", label: "미니멀", emoji: "◻️", prompt: "minimalist interior, monochrome white/gray, hidden storage, matte surfaces" },
+  { id: "int-jeju", label: "제주 감성", emoji: "🏝️", prompt: "Jeju-inspired interior, volcanic stone accents, natural wood, ocean view, bright airy" },
+  { id: "int-classic", label: "클래식", emoji: "🪞", prompt: "neo-classic Korean interior, crown molding, dark wood, marble, elegant traditional" },
+]
+
 const SCENES = [
   { id: 'afternoon', label: '오후', emoji: '☀️' },
   { id: 'golden', label: '황혼', emoji: '🌅' },
@@ -165,7 +176,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [proposal, setProposal] = useState<string|null>(null)
   const [retryCount, setRetryCount] = useState(0)
 
-  const styleName = STYLES.find(s => s.id === style)?.label || '모던 럭셔리'
+  const styleName = STYLES.find(s => s.id === style)?.label || INTERIOR_STYLES.find(s => s.id === style)?.label || '모던 럭셔리'
 
   const copy = async (text: string, id: string) => {
     try { await navigator.clipboard.writeText(text) } catch { const t=document.createElement("textarea");t.value=text;document.body.appendChild(t);t.select();document.execCommand("copy");document.body.removeChild(t) }
@@ -284,7 +295,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               {optimal.reason && <span className="text-[9px] text-muted-foreground ml-auto">{optimal.reason}</span>}
             </div>
             <div className="flex gap-2 text-[10px]">
-              <span className="px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">{STYLES.find(s => s.id === style)?.emoji} {STYLES.find(s => s.id === style)?.label}</span>
+              <span className={`px-1.5 py-0.5 rounded ${angle === 'interior' ? 'bg-teal-500/20 text-teal-300' : 'bg-violet-500/20 text-violet-300'}`}>{(STYLES.find(s => s.id === style) || INTERIOR_STYLES.find(s => s.id === style))?.emoji} {styleName}</span>
               <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">{ANGLES.find(a => a.id === angle)?.emoji} {ANGLES.find(a => a.id === angle)?.label}</span>
               <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">{SCENES.find(s => s.id === scene)?.emoji} {SCENES.find(s => s.id === scene)?.label}</span>
               {materialId && <span className="px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-300">{MATERIALS.find(m => m.id === materialId)?.emoji} {MATERIALS.find(m => m.id === materialId)?.label}</span>}
@@ -299,6 +310,20 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
 
           {showStyleOptions && (
             <div className="space-y-2">
+              {angle === 'interior' ? (
+                <>
+                  <p className="text-[9px] text-teal-400/70 font-medium">🛋️ 인테리어 스타일</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {INTERIOR_STYLES.map(s => (
+                      <button key={s.id} onClick={() => setStyle(s.id)}
+                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-teal-500/20 border-2 border-teal-400 font-semibold' : 'bg-card/30 border border-border/50 hover:border-teal-300'}`}>
+                        <span className="text-base block">{s.emoji}</span>{s.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
               <div className="grid grid-cols-3 gap-1.5">
                 {STYLES.slice(0, 6).map(s => (
                   <button key={s.id} onClick={() => setStyle(s.id)}
@@ -318,6 +343,8 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                   ))}
                 </div>
               </div>
+                </>
+              )}
             </div>
           )}
 
@@ -342,7 +369,11 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                 {/* #4: 카메라 앵글 */}
                 <div className="flex gap-1">
                   {ANGLES.map(a => (
-                    <button key={a.id} onClick={() => setAngle(a.id)}
+                    <button key={a.id} onClick={() => {
+                      setAngle(a.id)
+                      if (a.id === 'interior' && !style.startsWith('int-')) setStyle('int-modern-luxury')
+                      if (a.id !== 'interior' && style.startsWith('int-')) setStyle(optimal.style)
+                    }}
                       className={`flex-1 py-1.5 rounded-lg text-[10px] text-center transition-all ${angle === a.id ? 'bg-blue-500/20 border border-blue-400 font-semibold text-blue-300' : 'bg-card/20 border border-border/30 text-muted-foreground'}`}>
                       {a.emoji} {a.label}
                     </button>
@@ -412,8 +443,8 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               <button onClick={() => doRender(0)} disabled={loading} className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
                 {loading && !multiImages ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2` : '생성 중'}</> : '🎨 렌더링'}
               </button>
-              <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1" title="정면+조감+입구 3장">
-                {loading && multiImages !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '📐 3장'}
+              <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1" title="정면+조감+입구+인테리어 4장">
+                {loading && multiImages !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '📐 4장'}
               </button>
             </div>
             {/* #7: 위성사진 참조 표시 */}
@@ -422,7 +453,8 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
             {renderImg && !multiImages && <div className="space-y-2"><img src={renderImg} alt="렌더링" className="w-full rounded-lg border border-border" /><a href={renderImg} download={`render-${Date.now()}.png`} onClick={() => toast.success('렌더링 이미지 다운로드 시작')} className="flex items-center justify-center gap-1 text-xs text-emerald-400"><Download className="h-3 w-3" />다운로드</a></div>}
             {/* #9: 멀티앵글 결과 */}
             {multiImages && <div className="space-y-2">
-              <p className="text-[10px] text-violet-400 font-medium text-center">📐 멀티앵글 ({multiImages.filter(i => i.image).length}/3장 성공)</p>
+              <p className="text-[10px] text-violet-400 font-medium text-center">📐 멀티앵글 ({multiImages.filter(i => i.image).length}/{multiImages.length}장 성공)</p>
+              <div className="grid grid-cols-2 gap-2">
               {multiImages.map((mi, idx) => mi.image && (
                 <div key={idx} className="space-y-1">
                   <p className="text-[9px] text-muted-foreground font-medium">
@@ -431,7 +463,8 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                   <img src={mi.image} alt={mi.angle} className="w-full rounded-lg border border-border" />
                 </div>
               ))}
-              <div className="flex gap-1">
+              </div>
+              <div className="grid grid-cols-4 gap-1">
                 {multiImages.filter(i => i.image).map((mi, idx) => (
                   <a key={idx} href={mi.image!} download={`render-${mi.angle}-${Date.now()}.png`} onClick={() => toast.success('렌더링 이미지 다운로드 시작')} className="flex-1 text-center text-[10px] text-violet-400 py-1 rounded bg-violet-500/10 border border-violet-500/20">
                     <Download className="h-3 w-3 inline" /> {mi.angle === 'eye-level' ? '정면' : mi.angle === 'birds-eye' ? '조감' : mi.angle === 'interior' ? '인테리어' : '입구'}

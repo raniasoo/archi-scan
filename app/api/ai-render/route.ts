@@ -467,6 +467,7 @@ export async function POST(req: NextRequest) {
         { angle: 'eye-level', scene: sceneMode || 'afternoon' },
         { angle: 'birds-eye', scene: sceneMode || 'afternoon' },
         { angle: 'entrance', scene: sceneMode || 'afternoon' },
+        { angle: 'interior', scene: sceneMode || 'afternoon' },
       ]
       const images: { angle: string; image: string | null; error?: string }[] = []
       let firstImageBase64: string | null = null
@@ -484,6 +485,13 @@ export async function POST(req: NextRequest) {
         if (ai === 0) {
           // 1번 눈높이: 독립 생성 (거리뷰만 참조, 위성사진 제외)
           parts.push({ text: aPrompt })
+        } else if (a.angle === 'interior') {
+          // 4번 인테리어: 참조이미지 없이 독립 생성 (실내는 외관과 무관)
+          parts.push({ text: aPrompt })
+          if (firstImageBase64) {
+            parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
+            parts.push({ text: `The image above shows the EXTERIOR of this building. Generate the INTERIOR of one apartment unit inside this building. Match the building's quality level and style era, but this is a COMPLETELY DIFFERENT VIEW — you are INSIDE the apartment now. Do NOT show the building exterior.` })
+          }
         } else if (firstImageBase64) {
           // ★ 2,3번: 참조 이미지 순서 변경 — 눈높이 이미지를 마지막에 배치
           // 이유: Gemini는 마지막에 본 이미지에 가장 강하게 영향받음
@@ -1000,11 +1008,17 @@ FORBIDDEN: Do NOT show the building exterior. Do NOT show empty/unfurnished room
 
   // ━━━ 인테리어 전용 프롬프트 (외관 정보 제외) ━━━
   if (cameraAngle === 'interior') {
-    const interiorStyle = style === 'warm-natural' ? 'Warm Scandinavian — light oak wood tones, linen textures, soft beige/cream palette, rounded organic furniture shapes'
-      : style === 'modern-minimal' ? 'Modern Minimalist — monochromatic whites/grays, clean lines, hidden storage, matte surfaces, minimal decoration'
-      : style === 'industrial' ? 'Industrial Modern — exposed concrete accents, black metal frames, Edison bulbs, raw textures with warm wood balance'
-      : style === 'classic' ? 'Neo-Classic Korean — dark walnut wood, marble accents, crown molding, traditional Korean design elements with modern twist'
-      : 'Modern Luxury — premium finishes, marble/stone accents, warm wood tones, designer furniture, gallery-like clean walls'
+    const interiorStyleMap: Record<string, string> = {
+      'int-modern-luxury': 'Modern Luxury — premium finishes, marble/stone accents, warm wood tones, designer furniture, gallery-like clean walls, subtle gold/brass hardware',
+      'int-warm-wood': 'White & Wood — light oak wood tones throughout, white walls, Scandinavian warmth, linen/cotton textiles, soft beige/cream palette, rounded organic furniture',
+      'int-hotel': 'Hotel Suite — dark walnut wood paneling, indirect warm lighting, boutique hotel ambiance, deep earth tones, plush textures, mini bar area',
+      'int-natural': 'Natural Modern — rattan and wicker accents, indoor plants (monstera, ficus), earthy terracotta/olive palette, organic curved shapes, jute rugs',
+      'int-newtro': 'Newtro Retro-Modern — terrazzo flooring, curved/rounded furniture, pastel mint/peach accents, retro Korean apartment nostalgia with modern comfort, arched doorways',
+      'int-minimal': 'Pure Minimalist — monochromatic whites and light grays, perfectly clean surfaces, hidden storage, matte finishes, only essential furniture, zen-like calm',
+      'int-jeju': 'Jeju Coastal — volcanic basalt stone accent wall, natural raw wood, ocean-blue accent cushions, panoramic window with bright sky, airy and breezy mood',
+      'int-classic': 'Neo-Classic — crown molding, dark wood built-in bookshelves, marble fireplace accent, elegant chandelier, rich navy/burgundy accent colors, traditional Korean art on walls',
+    }
+    const interiorStyle = interiorStyleMap[style] || interiorStyleMap['int-modern-luxury']
 
     return `Generate a photorealistic INTERIOR perspective rendering of a Korean residential apartment unit.
 
