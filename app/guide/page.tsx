@@ -273,24 +273,30 @@ export default function GuidePage() {
               </ul>
             </Accordion>
 
-            <Accordion title="💎 무료 vs Pro 플랜">
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <div className="bg-muted/30 rounded-xl p-4">
-                  <p className="font-semibold text-sm mb-2">무료 플랜</p>
-                  <ul className="space-y-1.5 text-xs">
-                    <li>• 월 10회 분석</li>
-                    <li>• 빠른 분석</li>
-                    <li>• 기본 배치안</li>
-                    <li>• 기본 보고서</li>
+            <Accordion title="💎 요금제 비교">
+              <div className="grid grid-cols-3 gap-3 mt-2">
+                <div className="bg-muted/30 rounded-xl p-3">
+                  <p className="font-semibold text-xs mb-2">무료</p>
+                  <ul className="space-y-1 text-[11px]">
+                    <li>• 월 10회</li>
+                    <li>• AI 렌더링 ✅</li>
+                    <li>• PDF 보고서 ✅</li>
                   </ul>
                 </div>
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-                  <p className="font-semibold text-sm mb-2 text-primary">Pro 플랜</p>
-                  <ul className="space-y-1.5 text-xs">
-                    <li>• <strong>무제한</strong> 분석</li>
-                    <li>• AI 렌더링</li>
-                    <li>• 다중 배치안 비교</li>
-                    <li>• 프리미엄 보고서</li>
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+                  <p className="font-semibold text-xs mb-2 text-primary">Pro ₩29,000</p>
+                  <ul className="space-y-1 text-[11px]">
+                    <li>• 월 <strong>30회</strong></li>
+                    <li>• AI 렌더링 ✅</li>
+                    <li>• 클라우드 저장 ✅</li>
+                  </ul>
+                </div>
+                <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+                  <p className="font-semibold text-xs mb-2 text-amber-400">Enterprise ₩99,000</p>
+                  <ul className="space-y-1 text-[11px]">
+                    <li>• <strong>무제한</strong></li>
+                    <li>• 모든 기능 ✅</li>
+                    <li>• 우선 지원 ✅</li>
                   </ul>
                 </div>
               </div>

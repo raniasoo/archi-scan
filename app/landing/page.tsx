@@ -51,12 +51,11 @@ const PLANS = [
     highlight: false,
     features: [
       { text: "월 10회 사업성 분석", included: true },
-      { text: "기본 보고서 (HTML)", included: true },
+      { text: "AI 배치안 비교", included: true },
+      { text: "AI 렌더링", included: true },
+      { text: "PDF 보고서", included: true },
       { text: "국토부 자동조회", included: true },
-      { text: "기본 배치안 4종", included: true },
-      { text: "PDF/엑셀 보고서", included: false },
-      { text: "AI 렌더링", included: false },
-      { text: "실거래가 분석", included: false },
+      { text: "클라우드 저장", included: false },
       { text: "우선 기술지원", included: false },
     ],
   },
@@ -64,17 +63,33 @@ const PLANS = [
     name: "Pro",
     price: "₩29,000",
     period: "/월",
-    desc: "전문 디벨로퍼를 위한 플랜",
+    desc: "개인 디벨로퍼·건축사",
     cta: "Pro 시작하기",
     highlight: true,
     features: [
-      { text: "무제한 사업성 분석", included: true },
-      { text: "PDF + 엑셀 보고서", included: true },
+      { text: "월 30회 사업성 분석", included: true },
+      { text: "AI 배치안 비교", included: true },
+      { text: "AI 렌더링", included: true },
+      { text: "PDF 보고서", included: true },
       { text: "국토부 자동조회", included: true },
-      { text: "AI 최적 배치안", included: true },
-      { text: "AI 포토리얼 렌더링", included: true },
-      { text: "실거래가 트렌드 분석", included: true },
-      { text: "클라우드 프로젝트 저장", included: true },
+      { text: "클라우드 저장", included: true },
+      { text: "우선 기술지원", included: false },
+    ],
+  },
+  {
+    name: "Enterprise",
+    price: "₩99,000",
+    period: "/월",
+    desc: "건축사사무소·시행사 팀",
+    cta: "Enterprise 시작",
+    highlight: false,
+    features: [
+      { text: "무제한 사업성 분석", included: true },
+      { text: "AI 배치안 비교", included: true },
+      { text: "AI 렌더링", included: true },
+      { text: "PDF 보고서", included: true },
+      { text: "국토부 자동조회", included: true },
+      { text: "클라우드 저장", included: true },
       { text: "우선 기술지원", included: true },
     ],
   },
@@ -442,7 +457,7 @@ export default function LandingPage() {
               <span className="bg-gradient-to-r from-teal-300 to-emerald-400 bg-clip-text text-transparent">합리적인</span> 요금제
             </h2>
           </div>
-          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {PLANS.map((p) => (
               <div
                 key={p.name}

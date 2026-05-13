@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 const FREE_MONTHLY_LIMIT = 10
-const PRO_MONTHLY_LIMIT = -1 // unlimited
+const PRO_MONTHLY_LIMIT = 30
+const ENTERPRISE_MONTHLY_LIMIT = -1 // unlimited
 
 export async function GET() {
   try {
@@ -52,7 +53,7 @@ export async function GET() {
       profile.monthly_usage = 0
     }
 
-    const limit = profile.plan === "pro" ? PRO_MONTHLY_LIMIT : FREE_MONTHLY_LIMIT
+    const limit = profile.plan === "enterprise" ? ENTERPRISE_MONTHLY_LIMIT : profile.plan === "pro" ? PRO_MONTHLY_LIMIT : FREE_MONTHLY_LIMIT
     const canAnalyze = limit === -1 || profile.monthly_usage < limit
 
     return NextResponse.json({
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
 
     // Check limit for analysis actions
     if (action === "analysis") {
-      const limit = profile.plan === "pro" ? PRO_MONTHLY_LIMIT : FREE_MONTHLY_LIMIT
+      const limit = profile.plan === "enterprise" ? ENTERPRISE_MONTHLY_LIMIT : profile.plan === "pro" ? PRO_MONTHLY_LIMIT : FREE_MONTHLY_LIMIT
       if (limit !== -1 && (profile.monthly_usage || 0) >= limit) {
         return NextResponse.json({
           error: "월간 분석 횟수를 초과했습니다",

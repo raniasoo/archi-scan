@@ -39,7 +39,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
   const [result, setResult] = useState<QuickResult | null>(null)
-  const { checkAndTrackUsage, canAnalyze, monthlyUsage, monthlyLimit, isProUser, setShowUpgradeModal } = useSubscription()
+  const { checkAndTrackUsage, canAnalyze, monthlyUsage, monthlyLimit, isProUser, plan, setShowUpgradeModal } = useSubscription()
   const [error, setError] = useState<string | null>(null)
   const [showMore, setShowMore] = useState(false)
 
@@ -434,11 +434,11 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
                 )}
               </button>
 
-              {!isProUser && monthlyLimit !== Infinity && (
+              {monthlyLimit !== Infinity && (
                 <div className={`text-center text-[10px] ${canAnalyze ? 'text-muted-foreground' : 'text-destructive font-medium'}`}>
                   {canAnalyze
                     ? `이번 달 ${monthlyUsage}/${monthlyLimit}회 사용`
-                    : `무료 분석 ${monthlyLimit}회 소진 · Pro 업그레이드로 무제한 이용`
+                    : `월 ${monthlyLimit}회 소진 · ${plan === 'pro' ? 'Enterprise' : 'Pro'} 업그레이드로 더 많은 분석`
                   }
                 </div>
               )}
