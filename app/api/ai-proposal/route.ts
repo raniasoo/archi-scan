@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
+export const maxDuration = 60
+
 export async function POST(req: NextRequest) {
   try {
     if (!OPENAI_API_KEY) {

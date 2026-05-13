@@ -189,6 +189,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [answer, setAnswer] = useState<string|null>(null)
   const [proposal, setProposal] = useState<string|null>(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [renderProgress, setRenderProgress] = useState<string|null>(null)
 
   const styleName = STYLES.find(s => s.id === style)?.label || INTERIOR_STYLES.find(s => s.id === style)?.label || '모던 럭셔리'
 
@@ -200,10 +201,14 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   // #5: 재시도 로직 + Gemini/Flux 엔진 라우팅
   const doRender = async (retry = 0) => {
     setLoading(true); setError(null); setRetryCount(retry); setMultiImages(null)
+    setRenderProgress(retry > 0 ? `재시도 중 (${retry}/2)...` : 'AI 이미지 생성 중...')
     trackAiRenderStart(angle || 'exterior')
 
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 120_000) // 2분 클라이언트 타임아웃
+
     try {
-      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
         prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
         style, address:input.address, layoutName:input.layoutName,
         floors:input.floors, units:input.units, siteArea:input.siteArea,
@@ -219,30 +224,41 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         regulation: input.regulation,
         referenceImage: useReference && previousRenderImage ? previousRenderImage : undefined,
       }) })
+      clearTimeout(timeout)
       const d = await safeJson(r)
       if (d.success && d.image) {
         setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(angle || 'exterior')
-      } else if (retry < 2) {
-        // 재시도 (최대 2회)
+      } else if (retry < 2 && !d.error?.includes('시간 초과')) {
+        // 재시도 (최대 2회, 타임아웃은 재시도 안 함)
         await new Promise(r => setTimeout(r, 1500))
         return doRender(retry + 1)
       } else {
         setError(d.error||'렌더링 실패'); setRetryCount(0)
       }
     } catch(e) {
-      if (retry < 2) {
+      clearTimeout(timeout)
+      const msg = e instanceof Error ? e.message : '오류'
+      if (msg.includes('abort') || msg.includes('timeout')) {
+        setError('⏳ 이미지 생성 시간 초과 — 잠시 후 다시 시도해주세요'); setRetryCount(0)
+      } else if (retry < 2) {
         await new Promise(r => setTimeout(r, 1500))
         return doRender(retry + 1)
+      } else {
+        setError(msg); setRetryCount(0)
       }
-      setError(e instanceof Error ? e.message : '오류'); setRetryCount(0)
-    } finally { setLoading(false) }
+    } finally { setLoading(false); setRenderProgress(null) }
   }
 
   // #9: 멀티앵글 일괄 생성
   const doMultiRender = async () => {
     setLoading(true); setError(null); setMultiImages(null)
+    setRenderProgress('🎨 4장 렌더링 중 — 약 2~3분 소요...')
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 280_000) // 4분 40초 클라이언트 타임아웃
+
     try {
-      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+      const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
         prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
         style, address:input.address, layoutName:input.layoutName,
         floors:input.floors, units:input.units, siteArea:input.siteArea,
@@ -257,15 +273,24 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         regulation: input.regulation,
         multiAngle: true,
       }) })
+      clearTimeout(timeout)
       const d = await safeJson(r)
       if (d.success && d.images) {
         setMultiImages(d.images)
         onMultiImagesComplete?.(d.images)
         const first = d.images.find((i: any) => i.image)
         if (first) onRenderComplete?.(first.image)
+        const successCount = d.images.filter((i: any) => i.image).length
+        toast.success(`멀티앵글 ${successCount}/${d.images.length}장 생성 완료`)
         trackAiRenderComplete('multi-angle')
       } else setError(d.error || '멀티앵글 생성 실패')
-    } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
+    } catch(e) {
+      clearTimeout(timeout)
+      const msg = e instanceof Error ? e.message : '오류'
+      if (msg.includes('abort') || msg.includes('timeout')) {
+        setError('⏳ 멀티앵글 생성 시간 초과 — 단일 앵글로 먼저 시도해보세요')
+      } else setError(msg)
+    } finally { setLoading(false); setRenderProgress(null) }
   }
 
   // 인테리어 3안 비교 생성
@@ -507,6 +532,8 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                 {loading && interiorComp !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '🛋️ 3안'}
               </button>
             </div>
+            {/* 렌더링 진행 상태 */}
+            {loading && renderProgress && <div className="flex items-center justify-center gap-2 py-2 text-xs text-violet-300 animate-pulse"><Loader2 className="h-3.5 w-3.5 animate-spin" />{renderProgress}</div>}
             {/* #7: 위성사진 참조 표시 */}
             {(input.satelliteUrl || input.cadastralMapUrl) && <p className="text-[9px] text-emerald-400/60 text-center">🛰️ 위성사진 + 지적도가 AI 참조 이미지로 전달됩니다</p>}
             {/* 단일 렌더링 결과 */}

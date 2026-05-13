@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resvg } from '@resvg/resvg-js'
 
+// ━━━ Vercel 타임아웃 확장 (기본 60초 → 최대 300초) ━━━
+export const maxDuration = 300  // 5분 — Gemini 이미지 생성은 최대 90초/건
+export const dynamic = 'force-dynamic'
+
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY
+const GEMINI_TIMEOUT = 90_000  // 개별 Gemini 호출 타임아웃 (90초)
 
 // SVG → PNG 변환 (Gemini는 SVG 미지원, PNG만 가능)
 function svgToPngBase64(svgString: string, width = 600): string {
@@ -473,8 +478,8 @@ export async function POST(req: NextRequest) {
       let firstImageBase64: string | null = null
       let firstImageMime: string = 'image/png'
       
-      for (let ai = 0; ai < angles.length; ai++) {
-        const a = angles[ai]
+      // ━━━ 헬퍼: 단일 앵글 Gemini 호출 ━━━
+      const generateAngle = async (ai: number, a: typeof angles[0]): Promise<{ angle: string; image: string | null; error?: string; base64?: string; mime?: string }> => {
         const aPrompt = buildArchitecturePrompt({
           prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, userBuildingCount, regulation
         })
@@ -494,16 +499,9 @@ export async function POST(req: NextRequest) {
           }
         } else if (firstImageBase64) {
           // ★ 2,3번: 참조 이미지 순서 변경 — 눈높이 이미지를 마지막에 배치
-          // 이유: Gemini는 마지막에 본 이미지에 가장 강하게 영향받음
-          // Before: [눈높이] → [위성/지적도/거리뷰] → 생성 (눈높이가 희석됨)
-          // After: [프롬프트] → [위성만] → [눈높이 + "이 건물 복사"] → 생성
-
-          // Step 1: 프롬프트 먼저
           parts.push({ text: aPrompt })
 
-          // Step 2: 사이트 참조 이미지 (조감도: 위성만, 입구: 없음)
           if (a.angle === 'birds-eye') {
-            // 조감도는 위성사진만 (거리뷰/지적도는 건물 외형을 흐림)
             const satOnly = refImages.filter(r => r.label === 'satellite')
             for (const img of satOnly) {
               parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
@@ -513,7 +511,6 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Step 3: 눈높이 이미지를 마지막에 — 가장 강한 컨텍스트
           parts.push({ inlineData: { mimeType: firstImageMime, data: firstImageBase64 } })
           if (a.angle === 'birds-eye') {
             parts.push({ text: `⚠️ CRITICAL — BUILDING IDENTITY LOCK:
@@ -545,44 +542,62 @@ Show a CLOSE-UP of the entrance area of THIS EXACT building.
 The entrance must use the SAME materials and style visible in the street-level image.` })
           }
         } else {
-          // 1번 이미지 실패 시 — 독립 생성 (참조 없이)
           console.warn(`[GEMINI] Multi-angle: first image failed, generating ${a.angle} independently`)
           parts.push({ text: aPrompt })
         }
-        
-        // 참조 이미지 — 1번(눈높이)은 거리뷰 참조 제거
-        // 이유: 경사지(평창동 등)의 Google 거리뷰가 높은 위치에서 촬영되어
-        //       Gemini가 그 elevated 시점을 복제 → 정면이 조감도처럼 나옴
-        // 해결: 프롬프트의 카메라 지시만으로 1.6m 시점 강제
-        // 2,3번: 참조 이미지는 위 else if (firstImageBase64) 블록에서 이미 처리됨
 
         try {
           const r = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_AI_API_KEY}`,
             { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              signal: AbortSignal.timeout(GEMINI_TIMEOUT),
               body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } }) }
           )
           if (r.ok) {
             const d = await r.json()
             const imgPart = d?.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.mimeType?.startsWith('image/'))
             if (imgPart) {
-              images.push({ angle: a.angle, image: `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}` })
-              // ★ 첫 번째 이미지 저장 → 후속 렌더링 참조용
-              if (ai === 0) {
-                firstImageBase64 = imgPart.inlineData.data
-                firstImageMime = imgPart.inlineData.mimeType
-              }
+              return { angle: a.angle, image: `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`, base64: imgPart.inlineData.data, mime: imgPart.inlineData.mimeType }
             } else {
-              images.push({ angle: a.angle, image: null })
+              return { angle: a.angle, image: null }
             }
           } else {
-            images.push({ angle: a.angle, image: null, error: `${r.status}` })
+            return { angle: a.angle, image: null, error: `${r.status}` }
           }
         } catch (e) {
-          images.push({ angle: a.angle, image: null, error: 'timeout' })
+          const msg = e instanceof Error ? e.message : 'unknown'
+          console.warn(`[GEMINI] ${a.angle} failed: ${msg}`)
+          return { angle: a.angle, image: null, error: msg.includes('abort') || msg.includes('timeout') ? 'timeout' : msg }
         }
-        // rate limit 대응 (프롬프트 길어졌으므로 1.5초)
-        await new Promise(r => setTimeout(r, 1500))
+      }
+
+      // ━━━ Step 1: 첫 번째 이미지 (눈높이) 순차 생성 ━━━
+      console.log(`[GEMINI] Multi-angle: generating eye-level first...`)
+      const firstResult = await generateAngle(0, angles[0])
+      images.push({ angle: firstResult.angle, image: firstResult.image, error: firstResult.error })
+      if (firstResult.base64) {
+        firstImageBase64 = firstResult.base64
+        firstImageMime = firstResult.mime || 'image/png'
+      }
+      
+      // ━━━ Step 2: 나머지 3장 병렬 생성 (rate limit 분산 딜레이 포함) ━━━
+      console.log(`[GEMINI] Multi-angle: generating remaining 3 angles in parallel...`)
+      const remainingResults = await Promise.allSettled(
+        angles.slice(1).map((a, idx) => 
+          // 각 요청에 0.5초씩 시차 → rate limit 회피
+          new Promise<typeof firstResult>(async (resolve) => {
+            await new Promise(r => setTimeout(r, idx * 500))
+            resolve(await generateAngle(idx + 1, a))
+          })
+        )
+      )
+      
+      for (const result of remainingResults) {
+        if (result.status === 'fulfilled') {
+          images.push({ angle: result.value.angle, image: result.value.image, error: result.value.error })
+        } else {
+          images.push({ angle: 'unknown', image: null, error: 'generation-failed' })
+        }
       }
       
       return NextResponse.json({ success: true, multiAngle: true, images, model: 'gemini-2.5-flash-image' })
@@ -650,6 +665,7 @@ The rendering MUST reflect what is shown in these reference images. Do NOT ignor
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(GEMINI_TIMEOUT),
             body: JSON.stringify({
               contents: [{ parts }],
               generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
