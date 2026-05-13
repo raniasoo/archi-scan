@@ -1,7 +1,7 @@
 "use client"
 
 import { type Dispatch, type SetStateAction } from "react"
-import { trackPdfDownload } from "@/components/google-analytics"
+import { trackPdfDownload, trackShareLink } from "@/components/google-analytics"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -308,6 +308,7 @@ export function ReportStep(props: ReportStepProps) {
                   onClick={async () => {
                     if (!selectedLayoutData || !feasibilityResult) return
                     try {
+                      trackShareLink()
                       toast.loading('공유 링크 생성 중...', { id: 'share' })
                       const res = await fetch('/api/share', {
                         method: 'POST',

@@ -8,6 +8,7 @@ import {
   Building2, Mail, Eye, EyeOff, ArrowLeft,
   Loader2, CheckCircle2, AlertCircle
 } from "lucide-react"
+import { trackLogin, trackSignUp } from "@/components/google-analytics"
 
 function LoginForm() {
   const searchParams = useSearchParams()
@@ -58,6 +59,7 @@ function LoginForm() {
         },
       })
       if (error) throw error
+      trackLogin(provider)
     } catch (err: any) {
       setError(err.message || "소셜 로그인 중 오류가 발생했습니다")
       setSocialLoading(null)
@@ -68,6 +70,7 @@ function LoginForm() {
     setSocialLoading("naver")
     setError("")
     // 네이버는 Supabase 기본 제공이 아니므로 커스텀 OAuth 라우트 사용
+    trackLogin("naver")
     window.location.href = "/api/auth/naver"
   }
 
@@ -94,6 +97,7 @@ function LoginForm() {
           },
         })
         if (error) throw error
+        trackSignUp("email")
         setSuccess("확인 이메일을 발송했습니다. 메일함을 확인해 주세요.")
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -103,6 +107,7 @@ function LoginForm() {
           }
           throw error
         }
+        trackLogin("email")
         router.push("/")
       }
     } catch (err: any) {

@@ -111,7 +111,7 @@ const loadExportFunctions = () => import("@/lib/report-export")
 const loadDxfGenerator = () => import("@/lib/dxf-generator")
 const loadLayoutOptimizer = () => import("@/lib/layout-optimizer")
 import type { OptimizationReport } from "@/lib/layout-optimizer"
-import { trackStepChange, trackDetailedAnalysisStart, trackPdfDownload } from "@/components/google-analytics"
+import { trackStepChange, trackDetailedAnalysisStart, trackPdfDownload, trackShareLink } from "@/components/google-analytics"
 
 export interface LayoutOption {
   id: number
@@ -2669,7 +2669,7 @@ export default function ArchiScanPage() {
                 <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => {
                   const text = layouts.map((l, i) => `${l.name}: ${l.floors}층 ${l.units}세대 ROI ${(fins[i]?.roi||0).toFixed(1)}% 수익 ${((fins[i]?.profit||0)/1e8).toFixed(1)}억`).join('\n')
                   const summary = `[Archi-Scan 비교분석]\n${address}\n대지면적 ${siteAreaNum.toLocaleString()}㎡\n\n${text}`
-                  if (navigator.share) { navigator.share({ title: '배치안 비교', text: summary }) }
+                  if (navigator.share) { trackShareLink(); navigator.share({ title: '배치안 비교', text: summary }) }
                   else { navigator.clipboard.writeText(summary); toast.success('비교 내용 복사 완료') }
                 }}>
                   <Share2 className="h-3.5 w-3.5" />공유

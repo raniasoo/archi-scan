@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Sparkles, Copy, Check, Loader2, X, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
+import { trackAiRenderStart, trackAiRenderComplete } from "@/components/google-analytics"
 
 interface ConceptInput {
   address: string; zoneType: string; zoneName: string; siteArea: number
@@ -174,6 +175,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   // #5: 재시도 로직 + Gemini/Flux 엔진 라우팅
   const doRender = async (retry = 0) => {
     setLoading(true); setError(null); setRetryCount(retry); setMultiImages(null)
+    trackAiRenderStart(viewType || 'exterior')
 
     try {
       const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
@@ -194,7 +196,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
       }) })
       const d = await r.json()
       if (d.success && d.image) {
-        setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0)
+        setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(viewType || 'exterior')
       } else if (retry < 2) {
         // 재시도 (최대 2회)
         await new Promise(r => setTimeout(r, 1500))
@@ -236,6 +238,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         onMultiImagesComplete?.(d.images)
         const first = d.images.find((i: any) => i.image)
         if (first) onRenderComplete?.(first.image)
+        trackAiRenderComplete('multi-angle')
       } else setError(d.error || '멀티앵글 생성 실패')
     } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
   }
