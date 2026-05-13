@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "crypto"
 
 // ━━━ 관리자 인증 (환경변수 또는 기본값) ━━━
 const ADMIN_ID = process.env.ADMIN_ID || "admin"
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "archiscan2026!"
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "7777"
 
 // 토큰 생성 (HMAC 기반)
 function generateToken(): string {
