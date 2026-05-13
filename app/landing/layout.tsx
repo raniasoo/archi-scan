@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Archi-Scan | AI 건축 사전기획 플랫폼 — 5분 안에 사업성 분석',
-  description: '주소 입력만으로 법규 검토, AI 배치안 설계, 사업성 분석까지. 국토부 실데이터 기반 건축 사전기획 플랫폼. 카카오·네이버로 간편 가입.',
+  description: '주소 입력만으로 법규 검토, AI 배치안 설계, 사업성 분석까지. 국토부 실데이터 기반 건축 사전기획 플랫폼. 12종 인테리어 렌더링, 멀티앵글 4장 자동 생성. 카카오·네이버로 간편 가입.',
+  keywords: ['건축설계', '사전기획', 'AI건축', '배치안', '사업성검토', '법규검토', 'ROI분석', '용적률', '건폐율', '건축물대장', '인테리어렌더링', '분양마케팅', '건축AI', '개발사업분석'],
   alternates: {
     canonical: 'https://www.archiscan.kr',
   },

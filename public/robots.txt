@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /auth/callback
+Disallow: /payment/
+Disallow: /dashboard
+
+Sitemap: https://www.archiscan.kr/sitemap.xml

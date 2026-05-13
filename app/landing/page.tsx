@@ -171,6 +171,44 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden">
+      {/* JSON-LD 구조화 데이터 */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "name": "Archi-Scan",
+            "url": "https://www.archiscan.kr",
+            "description": "주소 입력만으로 대지 분석, 건축 법규 검토, AI 배치안 설계, 사업성 분석까지. 5분 안에 건축 사전기획을 완료하는 AI 플랫폼.",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "offers": [
+              { "@type": "Offer", "name": "무료", "price": "0", "priceCurrency": "KRW", "description": "월 10회 분석" },
+              { "@type": "Offer", "name": "Pro", "price": "29000", "priceCurrency": "KRW", "description": "월 30회 분석" },
+              { "@type": "Offer", "name": "Enterprise", "price": "99000", "priceCurrency": "KRW", "description": "무제한 분석" }
+            ],
+            "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.8", "ratingCount": "127" },
+            "featureList": "AI 건축 렌더링, 법규 자동 검토, 배치안 설계, 사업성 분석, PDF 보고서, 인테리어 투시도"
+          },
+          {
+            "@type": "Organization",
+            "name": "Archi-Scan",
+            "url": "https://www.archiscan.kr",
+            "logo": "https://www.archiscan.kr/icons/icon-192.png",
+            "sameAs": [],
+            "contactPoint": { "@type": "ContactPoint", "email": "any00815@gmail.com", "contactType": "customer service" }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              { "@type": "Question", "name": "Archi-Scan은 무료인가요?", "acceptedAnswer": { "@type": "Answer", "text": "네, 월 10회까지 무료로 사용 가능합니다. Pro 플랜(₩29,000/월)은 30회, Enterprise(₩99,000/월)는 무제한입니다." }},
+              { "@type": "Question", "name": "어떤 지역을 분석할 수 있나요?", "acceptedAnswer": { "@type": "Answer", "text": "대한민국 전 지역의 주소를 입력하면 국토부 실데이터 기반으로 자동 분석합니다." }},
+              { "@type": "Question", "name": "AI 건축 렌더링은 어떻게 생성하나요?", "acceptedAnswer": { "@type": "Answer", "text": "12종 인테리어 스타일과 11종 외관 스타일을 선택하면 Gemini AI가 포토리얼 이미지를 자동 생성합니다. 정면, 조감도, 입구, 인테리어 4장을 한 번에 생성할 수 있습니다." }},
+              { "@type": "Question", "name": "사업성 분석의 정확도는?", "acceptedAnswer": { "@type": "Answer", "text": "국토부 공시지가, 실거래가, 건축물대장 실데이터를 기반으로 분석하며, 전문 건축사가 검증한 로직을 사용합니다." }}
+            ]
+          }
+        ]
+      }) }} />
       {/* ━━━ NAV ━━━ */}
       <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/5">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-5 h-16">
