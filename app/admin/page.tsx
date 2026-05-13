@@ -266,65 +266,103 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* Stats Cards */}
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        {/* ━━━ 1. 플랜별 사용자 카드 ━━━ */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-2">
+            <div className="rounded-xl border bg-card p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-muted-foreground">전체</span>
+                <Users className="h-3.5 w-3.5 text-blue-500" />
+              </div>
+              <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            </div>
+            <div className="rounded-xl border bg-card p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-muted-foreground">무료</span>
+              </div>
+              <div className="text-2xl font-bold text-muted-foreground">{stats.freeUsers}</div>
+            </div>
+            <div className="rounded-xl border bg-card p-3 border-yellow-500/20">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-yellow-500">Pro</span>
+                <Crown className="h-3.5 w-3.5 text-yellow-500" />
+              </div>
+              <div className="text-2xl font-bold text-yellow-500">{stats.proUsers - stats.enterpriseUsers}</div>
+            </div>
+            <div className="rounded-xl border bg-card p-3 border-violet-500/20">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-violet-400">Enterprise</span>
+                <span className="text-sm">💎</span>
+              </div>
+              <div className="text-2xl font-bold text-violet-400">{stats.enterpriseUsers}</div>
+            </div>
+          </div>
+        )}
+
+        {/* ━━━ 2. 플랜 비율 바 ━━━ */}
+        {stats && stats.totalUsers > 0 && (
+          <div className="rounded-lg border bg-card p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] text-muted-foreground">플랜 분포</span>
+              <div className="flex-1" />
+              {stats.freeUsers > 0 && <span className="text-[9px] text-muted-foreground">무료 {Math.round(stats.freeUsers/stats.totalUsers*100)}%</span>}
+              {(stats.proUsers - stats.enterpriseUsers) > 0 && <span className="text-[9px] text-yellow-500">Pro {Math.round((stats.proUsers - stats.enterpriseUsers)/stats.totalUsers*100)}%</span>}
+              {stats.enterpriseUsers > 0 && <span className="text-[9px] text-violet-400">Ent {Math.round(stats.enterpriseUsers/stats.totalUsers*100)}%</span>}
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden flex">
+              {stats.freeUsers > 0 && <div className="bg-gray-500 h-full" style={{ width: `${stats.freeUsers/stats.totalUsers*100}%` }} />}
+              {(stats.proUsers - stats.enterpriseUsers) > 0 && <div className="bg-yellow-500 h-full" style={{ width: `${(stats.proUsers - stats.enterpriseUsers)/stats.totalUsers*100}%` }} />}
+              {stats.enterpriseUsers > 0 && <div className="bg-violet-500 h-full" style={{ width: `${stats.enterpriseUsers/stats.totalUsers*100}%` }} />}
+            </div>
+          </div>
+        )}
+
+        {/* ━━━ 3. 활동 요약 (0값 축소) ━━━ */}
+        {stats && (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
             {[
-              { label: "전체 사용자", value: stats.totalUsers, icon: Users, color: "text-blue-500" },
-              { label: "Pro 사용자", value: stats.proUsers, icon: Crown, color: "text-yellow-500" },
-              { label: "이번 달 가입", value: stats.monthlySignups, icon: Calendar, color: "text-emerald-500" },
-              { label: "총 매출", value: `₩${stats.totalRevenue.toLocaleString()}`, icon: CreditCard, color: "text-violet-500" },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl border bg-card p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-muted-foreground">{s.label}</span>
-                  <s.icon className={`h-4 w-4 ${s.color}`} />
+              { label: "이달 가입", value: stats.monthlySignups, icon: "📅" },
+              { label: "총 매출", value: `₩${stats.totalRevenue.toLocaleString()}`, icon: "💰" },
+              { label: "분석", value: stats.totalAnalyses, icon: "🔍" },
+              { label: "보고서", value: stats.totalReports, icon: "📄" },
+              { label: "렌더링", value: stats.totalRenders, icon: "🎨" },
+              { label: "오늘 가입", value: stats.todaySignups, icon: "🆕" },
+            ].filter(s => s.value !== 0 && s.value !== "₩0").map((s) => (
+              <div key={s.label} className="flex-shrink-0 rounded-lg border bg-card px-3 py-2 flex items-center gap-2">
+                <span className="text-sm">{s.icon}</span>
+                <div>
+                  <div className="text-sm font-bold leading-tight">{s.value}</div>
+                  <div className="text-[9px] text-muted-foreground">{s.label}</div>
                 </div>
-                <div className="text-2xl font-bold">{s.value}</div>
               </div>
             ))}
+            {/* 모두 0이면 메시지 표시 */}
+            {stats.totalAnalyses === 0 && stats.totalReports === 0 && stats.totalRenders === 0 && stats.monthlySignups === 0 && (
+              <div className="text-xs text-muted-foreground py-2">아직 활동 데이터가 없습니다</div>
+            )}
           </div>
         )}
 
-        {/* Secondary Stats */}
-        {stats && (
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-            {[
-              { label: "Enterprise", value: stats.enterpriseUsers, color: "text-violet-400" },
-              { label: "무료 사용자", value: stats.freeUsers },
-              { label: "오늘 가입", value: stats.todaySignups },
-              { label: "분석 횟수", value: stats.totalAnalyses },
-              { label: "보고서", value: stats.totalReports },
-              { label: "AI 렌더링", value: stats.totalRenders },
-            ].map((s) => (
-              <div key={s.label} className="rounded-lg border bg-card p-3 text-center">
-                <div className={`text-lg font-bold ${'color' in s && s.color ? s.color : ''}`}>{s.value}</div>
-                <div className="text-[10px] text-muted-foreground">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="flex gap-1 border-b">
+        {/* ━━━ 4. 탭 — 아이콘 + 가로 스크롤 ━━━ */}
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide border-b">
           {([
-            { key: "users", label: "사용자", icon: Users },
-            { key: "activity", label: "활동 로그", icon: BarChart3 },
-            { key: "payments", label: "결제 내역", icon: CreditCard },
-            { key: "inquiries", label: `문의 ${stats?.newInquiries ? `(${stats.newInquiries})` : ""}`, icon: MessageSquare },
-            { key: "notices", label: `공지 (${notices.length})`, icon: FileText },
+            { key: "users", label: "사용자", icon: "👥" },
+            { key: "activity", label: "활동", icon: "📊" },
+            { key: "payments", label: "결제", icon: "💳" },
+            { key: "inquiries", label: `문의${stats?.newInquiries ? ` (${stats.newInquiries})` : ""}`, icon: "💬" },
+            { key: "notices", label: `공지 (${notices.length})`, icon: "📢" },
           ] as const).map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
                 tab === t.key
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              <t.icon className="h-4 w-4" />
+              <span className="text-sm">{t.icon}</span>
               {t.label}
             </button>
           ))}
