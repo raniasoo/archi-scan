@@ -159,7 +159,7 @@ function getOptimalSettings(input: ConceptInput): { style: string; angle: string
   return { style, angle, scene, material, reason }
 }
 
-export function AIHub({ input, onRenderComplete, previousRenderImage, savedMultiImages, onMultiImagesComplete }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void; previousRenderImage?: string | null; savedMultiImages?: {angle:string; image:string|null}[] | null; onMultiImagesComplete?: (images: {angle:string; image:string|null}[]) => void }) {
+export function AIHub({ input, onRenderComplete, previousRenderImage, savedMultiImages, onMultiImagesComplete, onInteriorComparisonComplete }: { input: ConceptInput; onRenderComplete?: (imageData: string) => void; previousRenderImage?: string | null; savedMultiImages?: {angle:string; image:string|null}[] | null; onMultiImagesComplete?: (images: {angle:string; image:string|null}[]) => void; onInteriorComparisonComplete?: (images: {style:string; label:string; image:string}[]) => void }) {
   let optimal = { style: 'modern-luxury', angle: 'eye-level', scene: 'afternoon', material: null as string | null, reason: '' }
   try { optimal = getOptimalSettings(input) } catch (e) { console.warn('[AIHub] getOptimalSettings error:', e) }
   const [isOpen, setIsOpen] = useState(false)
@@ -256,6 +256,40 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         if (first) onRenderComplete?.(first.image)
         trackAiRenderComplete('multi-angle')
       } else setError(d.error || '멀티앵글 생성 실패')
+    } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
+  }
+
+  // 인테리어 3안 비교 생성
+  const [interiorComp, setInteriorComp] = useState<{style:string; label:string; image:string}[] | null>(null)
+  const COMPARE_STYLES = [
+    { id: 'int-modern-luxury', label: '모던 럭셔리' },
+    { id: 'int-warm-wood', label: '화이트우드' },
+    { id: 'int-natural', label: '내추럴모던' },
+  ]
+  const doInteriorCompare = async () => {
+    setLoading(true); setError(null); setInteriorComp(null)
+    try {
+      const results: {style:string; label:string; image:string}[] = []
+      for (const cs of COMPARE_STYLES) {
+        const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+          prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
+          style: cs.id, address:input.address, layoutName:input.layoutName,
+          floors:input.floors, units:input.units, siteArea:input.siteArea,
+          buildingType:input.buildingType, coverage:input.buildingCoverageRatio,
+          cameraAngle: 'interior', sceneMode: 'afternoon',
+          regulation: input.regulation,
+        }) })
+        const d = await r.json()
+        if (d.success && d.image) {
+          results.push({ style: cs.id, label: cs.label, image: d.image })
+        }
+        await new Promise(r => setTimeout(r, 1000))
+      }
+      if (results.length > 0) {
+        setInteriorComp(results)
+        onInteriorComparisonComplete?.(results)
+        toast.success(`인테리어 ${results.length}안 비교 완료`)
+      } else setError('인테리어 생성 실패')
     } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
   }
 
@@ -460,6 +494,9 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1" title="정면+조감+입구+인테리어 4장">
                 {loading && multiImages !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '📐 4장'}
               </button>
+              <button onClick={doInteriorCompare} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1" title="인테리어 3안 비교">
+                {loading && interiorComp !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '🛋️ 3안'}
+              </button>
             </div>
             {/* #7: 위성사진 참조 표시 */}
             {(input.satelliteUrl || input.cadastralMapUrl) && <p className="text-[9px] text-emerald-400/60 text-center">🛰️ 위성사진 + 지적도가 AI 참조 이미지로 전달됩니다</p>}
@@ -486,6 +523,26 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                 ))}
               </div>
             </div>}
+          </div>}
+
+          {/* 인테리어 3안 비교 결과 */}
+          {tab === 'render' && interiorComp && interiorComp.length > 0 && <div className="space-y-2">
+            <p className="text-[10px] text-amber-400 font-medium text-center">🛋️ 인테리어 스타일 비교 ({interiorComp.length}안)</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {interiorComp.map((ic, idx) => (
+                <div key={idx} className="space-y-1">
+                  <img src={ic.image} alt={ic.label} className="w-full rounded-lg border border-border" />
+                  <p className="text-[9px] text-center font-semibold text-amber-300">{ic.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {interiorComp.map((ic, idx) => (
+                <a key={idx} href={ic.image} download={`interior-${ic.style}-${Date.now()}.png`} onClick={() => toast.success('다운로드 시작')} className="text-center text-[10px] text-amber-400 py-1 rounded bg-amber-500/10 border border-amber-500/20">
+                  <Download className="h-3 w-3 inline" /> {ic.label}
+                </a>
+              ))}
+            </div>
           </div>}
 
           {/* 상담 */}

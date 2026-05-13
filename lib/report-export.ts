@@ -365,6 +365,7 @@ export interface ExportData {
   };
   aiRenderImage?: string | null;
   aiMultiImages?: {angle: string; image: string | null}[] | null;
+  aiInteriorComparison?: {style: string; label: string; image: string}[] | null;
 }
 
 // ExportData를 ReportDataV250으로 변환
@@ -1694,6 +1695,23 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     }
     return ''
   })()}
+  ${(() => {
+    const interiorImages = data.aiInteriorComparison?.filter(i => i.image) || []
+    if (interiorImages.length === 0) return ''
+    return `<div style="margin: 0 30px; padding: 20px 0;">
+      <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">&#128715; 추천 인테리어 스타일 비교</div>
+      <p style="font-size: 9px; color: #94a3b8; margin-bottom: 12px;">동일 세대에 3가지 인테리어 스타일을 적용한 AI 렌더링입니다. 분양 마케팅 및 입주자 맞춤 옵션으로 활용하세요.</p>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        ${interiorImages.map(i => `<div style="border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+          <img src="${i.image}" alt="${i.label}" style="width: 100%; height: auto; display: block;" />
+          <div style="padding: 6px 10px; background: #f8fafc; text-align: center;">
+            <span style="font-size: 10px; font-weight: 700; color: #1e293b;">${i.label}</span>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div style="text-align: right; margin-top: 4px; font-size: 8px; color: #94a3b8;">Powered by Gemini</div>
+    </div>`
+  })()}
   <!-- Executive Summary -->
   <div class="page" style="padding: 40px 30px;">
       <div style="text-align: center; margin-bottom: 24px;">
@@ -2528,6 +2546,31 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
       // Powered by Gemini
       pdf.setFontSize(6); pdf.setTextColor(148,163,184);
       pdf.text('Powered by Gemini', pdfWidth - sideMargin - 25, aiY + 2);
+      pdf.addPage();
+    }
+    
+    // ━━━ 인테리어 스타일 비교 직접 삽입 ━━━
+    const interiorComp = data.aiInteriorComparison?.filter(i => i.image) || [];
+    if (interiorComp.length >= 2) {
+      let icY = topMargin + 6;
+      const icGap = 3;
+      const icW = (contentWidth - icGap * (interiorComp.length - 1)) / interiorComp.length;
+      
+      for (let ci = 0; ci < interiorComp.length; ci++) {
+        const ic = interiorComp[ci];
+        try {
+          const imgEl = new Image();
+          imgEl.src = ic.image;
+          await new Promise<void>((res) => { imgEl.onload = () => res(); imgEl.onerror = () => res(); setTimeout(res, 3000); });
+          const iw = imgEl.naturalWidth || 800, ih = imgEl.naturalHeight || 600;
+          const icH = (ih / iw) * icW;
+          const x = sideMargin + ci * (icW + icGap);
+          pdf.addImage(ic.image, ic.image.includes('image/jpeg') ? 'JPEG' : 'PNG', x, icY, icW, icH);
+          // label
+          pdf.setFontSize(6); pdf.setFont('helvetica','bold'); pdf.setTextColor(30,41,59);
+          pdf.text(ic.style, x + icW / 2, icY + icH + 3, { align: 'center' });
+        } catch {}
+      }
       pdf.addPage();
     }
     

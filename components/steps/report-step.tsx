@@ -55,6 +55,7 @@ export interface ReportStepProps {
   loadExportFunctions: () => Promise<any>
   aiRenderImage?: string | null
   aiMultiImages?: {angle: string; image: string | null}[] | null
+  aiInteriorComparison?: {style: string; label: string; image: string}[] | null
   sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
 }
 
@@ -73,7 +74,7 @@ export function ReportStep(props: ReportStepProps) {
     address, siteAreaNum, branding, selectedLayoutData, layouts,
     feasibilityResult, marketPrice, regionalPricing, landPriceData,
     regulation, molitSupplementData, strategy, userValues,
-    aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages,
+    aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison,
   })
 
   return (
@@ -137,7 +138,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison });
                       const { downloadPdf } = await loadExportFunctions(); const result = await downloadPdf(exportData);
                       if (!result.success) {
                         toast.error('PDF 생성 실패', { id: 'pdf-dl', description: result.error })
@@ -186,7 +187,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison });
                       const { downloadHtml } = await loadExportFunctions(); const result = downloadHtml(exportData);
                       if (!result.success) {
                         toast.error('HTML 생성 실패', { id: 'html-dl', description: result.error })
@@ -235,7 +236,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison });
                       const { downloadExcel } = await loadExportFunctions(); const result = downloadExcel(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || '엑셀 다운로드 중 오류가 발생했습니다.');
@@ -281,7 +282,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison });
                       const { openPrintPreview } = await loadExportFunctions(); const result = openPrintPreview(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || '인쇄 준비 중 오류가 발생했습니다.');

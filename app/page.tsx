@@ -604,6 +604,7 @@ export default function ArchiScanPage() {
   const [siteVisuals, setSiteVisuals] = useState<SiteVisualsConfig>(EMPTY_SITE_VISUALS)
   const [aiRenderImage, setAiRenderImage] = useState<string | null>(null)
   const [aiMultiImages, setAiMultiImages] = useState<{angle:string; image:string|null}[] | null>(null)
+  const [aiInteriorComparison, setAiInteriorComparison] = useState<{style:string; label:string; image:string}[] | null>(null)
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
   const [optimizationResult, setOptimizationResult] = useState<OptimizationReport | null>(null)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -2537,6 +2538,7 @@ export default function ArchiScanPage() {
               previousRenderImage={aiRenderImage}
               savedMultiImages={aiMultiImages}
               onMultiImagesComplete={setAiMultiImages}
+              onInteriorComparisonComplete={setAiInteriorComparison}
             />
 
             {/* 하단 CTA — 평면도 → 사업성 */}
@@ -2629,6 +2631,7 @@ export default function ArchiScanPage() {
             loadExportFunctions={loadExportFunctions}
             aiRenderImage={aiRenderImage}
             aiMultiImages={aiMultiImages}
+            aiInteriorComparison={aiInteriorComparison}
             sitePolygon={sitePolygon}
           />
         )}
