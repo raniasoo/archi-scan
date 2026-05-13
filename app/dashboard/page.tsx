@@ -11,6 +11,7 @@ import {
   MessageSquare, Send, Loader2, CheckCircle2, BookOpen
 } from "lucide-react"
 import { trackContactSubmit } from "@/components/google-analytics"
+import { useSubscription } from "@/components/subscription-provider"
 
 interface UserInfo {
   id: string
@@ -42,6 +43,7 @@ export default function DashboardPage() {
   const [contactMessage, setContactMessage] = useState("")
   const [contactSending, setContactSending] = useState(false)
   const [contactSent, setContactSent] = useState(false)
+  const { plan, monthlyUsage, monthlyLimit, isProUser, setShowPricingModal } = useSubscription()
 
   useEffect(() => {
     // URL 파라미터로 탭 설정
@@ -169,73 +171,167 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* 프로필 카드 */}
-        <div className="flex items-center gap-4">
-          {user?.avatar ? (
-            <img src={user.avatar} alt="" className="w-14 h-14 rounded-full border-2 border-primary/30" />
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+        {/* ━━━ 프로필 + 플랜 배지 ━━━ */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {user?.avatar ? (
+              <img src={user.avatar} alt="" className="w-12 h-12 rounded-full border-2 border-primary/30" />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <UserIcon className="h-5 w-5 text-primary" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-base font-bold text-foreground">{user?.name}</h1>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowPricingModal(true)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              plan === 'enterprise' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+              plan === 'pro' ? 'bg-primary/20 text-primary border border-primary/30' :
+              'bg-muted text-muted-foreground border border-border hover:bg-primary/10 hover:text-primary hover:border-primary/30'
+            }`}
+          >
+            {plan === 'enterprise' ? '✦ Enterprise' : plan === 'pro' ? '★ Pro' : '무료 플랜 · 업그레이드'}
+          </button>
+        </div>
+
+        {/* ━━━ 사용량 프로그레스 바 ━━━ */}
+        <div className="bg-card rounded-xl p-4 border border-border/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-muted-foreground">이번 달 사용량</span>
+            <span className="text-xs font-bold text-foreground">
+              {monthlyLimit === Infinity ? `${monthlyUsage}회 사용` : `${monthlyUsage} / ${monthlyLimit}회`}
+            </span>
+          </div>
+          {monthlyLimit !== Infinity ? (
+            <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  monthlyUsage / monthlyLimit > 0.8 ? 'bg-red-500' :
+                  monthlyUsage / monthlyLimit > 0.5 ? 'bg-amber-500' : 'bg-primary'
+                }`}
+                style={{ width: `${Math.min(100, (monthlyUsage / monthlyLimit) * 100)}%` }}
+              />
+            </div>
           ) : (
-            <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
-              <UserIcon className="h-6 w-6 text-primary" />
+            <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
+              <div className="h-full rounded-full bg-primary/40 w-full" />
             </div>
           )}
-          <div>
-            <h1 className="text-lg font-bold text-foreground">{user?.name}</h1>
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
-          </div>
+          {monthlyLimit !== Infinity && monthlyUsage / monthlyLimit > 0.7 && (
+            <p className="text-[10px] text-amber-400 mt-1.5">
+              {monthlyLimit - monthlyUsage}회 남음 · {plan === 'pro' ? 'Enterprise' : 'Pro'}로 업그레이드하면 더 많은 분석 가능
+            </p>
+          )}
         </div>
 
-        {/* 통계 카드 */}
+        {/* ━━━ 통계 카드 ━━━ */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-card rounded-xl p-4 border border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <FolderOpen className="h-4 w-4 text-primary" />
-              <span className="text-xs text-muted-foreground">프로젝트</span>
+          <div className="bg-card rounded-xl p-3.5 border border-border/50">
+            <div className="flex items-center gap-1.5 mb-1">
+              <FolderOpen className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] text-muted-foreground">프로젝트</span>
             </div>
-            <p className="text-2xl font-bold text-foreground">{totalProjects}</p>
+            <p className="text-xl font-bold text-foreground">{totalProjects}</p>
           </div>
-          <div className="bg-card rounded-xl p-4 border border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="h-4 w-4 text-emerald-500" />
-              <span className="text-xs text-muted-foreground">평균 ROI</span>
+          <div className="bg-card rounded-xl p-3.5 border border-border/50">
+            <div className="flex items-center gap-1.5 mb-1">
+              <BarChart3 className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="text-[10px] text-muted-foreground">평균 ROI</span>
             </div>
-            <p className="text-2xl font-bold text-foreground">{avgRoi > 0 ? `${avgRoi.toFixed(1)}%` : '-'}</p>
+            <p className="text-xl font-bold text-foreground">{avgRoi > 0 ? `${avgRoi.toFixed(1)}%` : '-'}</p>
           </div>
-          <div className="bg-card rounded-xl p-4 border border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-4 w-4 text-amber-500" />
-              <span className="text-xs text-muted-foreground">클라우드</span>
+          <div className="bg-card rounded-xl p-3.5 border border-border/50">
+            <div className="flex items-center gap-1.5 mb-1">
+              <TrendingUp className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-[10px] text-muted-foreground">클라우드</span>
             </div>
-            <p className="text-2xl font-bold text-foreground">{cloudProjects.length}</p>
+            <p className="text-xl font-bold text-foreground">{cloudProjects.length}</p>
           </div>
         </div>
 
-        {/* 빠른 액션 */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => router.push('/')}
-            className="flex items-center gap-3 p-4 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl hover:from-primary/20 hover:to-primary/10 transition-all text-left"
-          >
-            <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-              <Plus className="h-5 w-5 text-primary" />
+        {/* ━━━ ROI 트렌드 (프로젝트 2개 이상) ━━━ */}
+        {cloudProjects.length >= 2 && (() => {
+          const roiData = cloudProjects.slice(0, 6).map(p => ({
+            name: p.address?.split(' ').slice(-1)[0] || '?',
+            roi: p.snapshotData?.feasibility?.roi ?? p.snapshotData?.roi ?? 0,
+          })).reverse()
+          const maxRoi = Math.max(...roiData.map(d => d.roi), 1)
+          return (
+            <div className="bg-card rounded-xl p-4 border border-border/50">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-foreground">최근 분석 ROI 비교</span>
+              </div>
+              <div className="flex items-end gap-2 h-20">
+                {roiData.map((d, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-bold text-foreground">{d.roi > 0 ? `${d.roi.toFixed(0)}%` : '-'}</span>
+                    <div
+                      className={`w-full rounded-t-md transition-all ${
+                        d.roi > 15 ? 'bg-emerald-500/60' : d.roi > 0 ? 'bg-amber-500/60' : 'bg-red-500/40'
+                      }`}
+                      style={{ height: `${Math.max(4, (d.roi / maxRoi) * 56)}px` }}
+                    />
+                    <span className="text-[8px] text-muted-foreground truncate w-full text-center">{d.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">새 프로젝트</p>
-              <p className="text-xs text-muted-foreground">주소 입력으로 시작</p>
+          )
+        })()}
+
+        {/* ━━━ 빠른 액션 ━━━ */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => router.push('/')}
+              className="flex items-center gap-3 p-4 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl hover:from-primary/20 hover:to-primary/10 transition-all text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                <Plus className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">새 프로젝트</p>
+                <p className="text-xs text-muted-foreground">주소 입력으로 시작</p>
+              </div>
+            </button>
+            <button
+              onClick={() => router.push('/guide')}
+              className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-xl hover:bg-secondary/30 transition-all text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                <BookOpen className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">사용 가이드</p>
+                <p className="text-xs text-muted-foreground">단계별 사용법</p>
+              </div>
+            </button>
+          </div>
+
+          {/* 빠른 재분석 — 최근 주소 3개 */}
+          {cloudProjects.length > 0 && (
+            <div className="bg-card rounded-xl p-3 border border-border/50">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-2">⚡ 빠른 재분석</p>
+              <div className="flex flex-wrap gap-2">
+                {cloudProjects.slice(0, 3).map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => { localStorage.setItem('archi-scan-reanalyze', p.address); router.push('/') }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/50 hover:bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <MapPin className="h-3 w-3" />
+                    <span className="truncate max-w-[140px]">{p.address?.split(' ').slice(-2).join(' ') || p.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </button>
-          <button
-            onClick={() => router.push('/guide')}
-            className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-xl hover:bg-secondary/30 transition-all text-left"
-          >
-            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-              <BookOpen className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">사용 가이드</p>
-              <p className="text-xs text-muted-foreground">단계별 사용법</p>
-            </div>
-          </button>
+          )}
         </div>
 
         {/* 프로젝트 목록 */}
