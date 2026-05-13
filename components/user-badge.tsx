@@ -5,7 +5,18 @@ import { Crown } from "lucide-react"
 import { useSubscription } from "@/components/subscription-provider"
 
 export function UserBadge() {
-  const { isProUser, setShowPricingModal } = useSubscription()
+  const { isProUser, isEnterprise, setShowPricingModal } = useSubscription()
+
+  if (isEnterprise) {
+    return (
+      <Badge 
+        variant="outline" 
+        className="gap-1 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-violet-500/30 text-violet-400"
+      >
+        💎 엔터프라이즈
+      </Badge>
+    )
+  }
 
   if (isProUser) {
     return (
