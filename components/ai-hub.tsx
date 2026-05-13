@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { Sparkles, Copy, Check, Loader2, X, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
 import { trackAiRenderStart, trackAiRenderComplete } from "@/components/google-analytics"
@@ -191,7 +191,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [retryCount, setRetryCount] = useState(0)
   const [renderProgress, setRenderProgress] = useState<string|null>(null)
   const [compareSet, setCompareSet] = useState<string[]>([]) // 3안 비교용 멀티 선택 (최대 3)
-  const longPressedRef = useRef(false) // 길게 누르기 후 onClick 방지
+  const [selectMode, setSelectMode] = useState<'single' | 'compare'>('single') // 단일 vs 3안 선택 모드
 
   const styleName = STYLES.find(s => s.id === style)?.label || INTERIOR_STYLES.find(s => s.id === style)?.label || '모던 럭셔리'
 
@@ -441,23 +441,49 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
             <div className="space-y-2">
               {angle === 'interior' ? (
                 <>
-                  <p className="text-[9px] text-teal-400/70 font-medium">🛋️ 인테리어 스타일 <span className="text-muted-foreground">(탭: 단일 렌더링 / 길게 누르기: 3안 추가)</span></p>
-                  {compareSet.length > 0 && <p className="text-[9px] text-amber-400">📋 3안 선택: {compareSet.map(id => INTERIOR_STYLES.find(s => s.id === id)?.label).join(' → ')} ({compareSet.length}/3)</p>}
+                  {/* 모드 전환 버튼 */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { setSelectMode('single'); setCompareSet([]) }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${selectMode === 'single' ? 'bg-teal-500/20 text-teal-300 border border-teal-400' : 'bg-card/30 text-muted-foreground border border-border/50'}`}
+                    >
+                      🎨 단일 렌더링
+                    </button>
+                    <button
+                      onClick={() => setSelectMode('compare')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${selectMode === 'compare' ? 'bg-amber-500/20 text-amber-300 border border-amber-400' : 'bg-card/30 text-muted-foreground border border-border/50'}`}
+                    >
+                      📋 3안 선택 {compareSet.length > 0 ? `(${compareSet.length}/3)` : ''}
+                    </button>
+                    {compareSet.length > 0 && (
+                      <button onClick={() => setCompareSet([])} className="text-[9px] text-muted-foreground hover:text-foreground">↺ 초기화</button>
+                    )}
+                  </div>
+
+                  {/* 선택 안내 */}
+                  {selectMode === 'compare' && (
+                    <p className="text-[9px] text-amber-400">
+                      {compareSet.length === 0 ? '비교할 스타일을 3개까지 탭하세요' : 
+                       `선택: ${compareSet.map(id => INTERIOR_STYLES.find(s => s.id === id)?.label).join(' → ')}`}
+                    </p>
+                  )}
+
+                  <p className="text-[9px] text-teal-400/70 font-medium">🛋️ 인테리어 스타일</p>
                   <div className="grid grid-cols-4 gap-1.5">
                     {INTERIOR_STYLES.slice(0, 8).map(s => {
                       const cIdx = compareSet.indexOf(s.id)
+                      const isSelected = selectMode === 'single' ? style === s.id : cIdx >= 0
                       return (
                       <button key={s.id}
-                        onClick={() => { if (longPressedRef.current) { longPressedRef.current = false; return } setStyle(s.id) }}
-                        onContextMenu={(e) => { e.preventDefault(); toggleCompare(s.id) }}
-                        onTouchStart={() => {
-                          longPressedRef.current = false
-                          const timer = setTimeout(() => { longPressedRef.current = true; toggleCompare(s.id) }, 500)
-                          const clear = () => clearTimeout(timer)
-                          document.addEventListener('touchend', clear, { once: true })
-                          document.addEventListener('touchmove', clear, { once: true })
+                        onClick={() => {
+                          if (selectMode === 'compare') { toggleCompare(s.id) }
+                          else { setStyle(s.id) }
                         }}
-                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all relative ${style === s.id ? 'bg-teal-500/20 border-2 border-teal-400 font-semibold' : 'bg-card/30 border border-border/50 hover:border-teal-300'}`}>
+                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all relative ${
+                          isSelected
+                            ? selectMode === 'compare' ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-teal-500/20 border-2 border-teal-400 font-semibold'
+                            : 'bg-card/30 border border-border/50 hover:border-teal-300'
+                        }`}>
                         {cIdx >= 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-[8px] font-bold text-white flex items-center justify-center">{cIdx + 1}</span>}
                         <span className="text-base block">{s.emoji}</span>{s.label}
                       </button>
@@ -467,24 +493,23 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                   <div className="grid grid-cols-4 gap-1.5">
                     {INTERIOR_STYLES.slice(8).map(s => {
                       const cIdx = compareSet.indexOf(s.id)
+                      const isSelected = selectMode === 'compare' ? cIdx >= 0 : style === s.id
                       return (
                       <button key={s.id}
-                        onClick={() => { if (longPressedRef.current) { longPressedRef.current = false; return } setStyle(s.id) }}
-                        onContextMenu={(e) => { e.preventDefault(); toggleCompare(s.id) }}
-                        onTouchStart={() => {
-                          longPressedRef.current = false
-                          const timer = setTimeout(() => { longPressedRef.current = true; toggleCompare(s.id) }, 500)
-                          const clear = () => clearTimeout(timer)
-                          document.addEventListener('touchend', clear, { once: true })
-                          document.addEventListener('touchmove', clear, { once: true })
+                        onClick={() => {
+                          if (selectMode === 'compare') { toggleCompare(s.id) }
+                          else { setStyle(s.id) }
                         }}
-                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all relative ${style === s.id ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-card/30 border border-amber-900/30 hover:border-amber-400'}`}>
+                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all relative ${
+                          isSelected
+                            ? selectMode === 'compare' ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-amber-500/20 border-2 border-amber-400 font-semibold'
+                            : 'bg-card/30 border border-amber-900/30 hover:border-amber-400'
+                        }`}>
                         {cIdx >= 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-[8px] font-bold text-white flex items-center justify-center">{cIdx + 1}</span>}
                         <span className="text-base block">{s.emoji}</span>{s.label}
                       </button>
                     )})}
                   </div>
-                  {compareSet.length > 0 && <button onClick={() => setCompareSet([])} className="text-[9px] text-muted-foreground hover:text-foreground">↺ 3안 선택 초기화</button>}
                 </>
               ) : (
                 <>
