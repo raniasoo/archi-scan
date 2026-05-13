@@ -408,6 +408,90 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ━━━ INTERIOR SHOWCASE ━━━ */}
+      <section className="py-20 md:py-28">
+        <div className="max-w-5xl mx-auto px-5">
+          <div className="text-center mb-14">
+            <span className="text-xs text-teal-400 font-semibold tracking-widest uppercase">Interior Rendering</span>
+            <h2 className="text-3xl md:text-4xl font-extrabold mt-3">
+              <span className="bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent">12종 인테리어</span> 스타일
+            </h2>
+            <p className="text-sm text-white/40 mt-3 max-w-lg mx-auto">외관 렌더링 + 인테리어 투시도를 한 번에 생성합니다. 분양 마케팅에 즉시 활용 가능한 이미지를 5분 안에 받아보세요.</p>
+          </div>
+
+          {/* 스타일 그리드 */}
+          <div className="grid grid-cols-4 md:grid-cols-6 gap-3 mb-10">
+            {[
+              { emoji: '✨', label: '모던 럭셔리', color: 'from-violet-500/20 to-purple-500/20 border-violet-500/30' },
+              { emoji: '🪵', label: '화이트우드', color: 'from-amber-500/20 to-yellow-500/20 border-amber-500/30' },
+              { emoji: '🏨', label: '호텔리어', color: 'from-stone-500/20 to-neutral-500/20 border-stone-500/30' },
+              { emoji: '🌿', label: '내추럴모던', color: 'from-green-500/20 to-emerald-500/20 border-green-500/30' },
+              { emoji: '🎨', label: '뉴트로', color: 'from-pink-500/20 to-rose-500/20 border-pink-500/30' },
+              { emoji: '◻️', label: '미니멀', color: 'from-gray-500/20 to-slate-500/20 border-gray-500/30' },
+              { emoji: '🏝️', label: '제주 감성', color: 'from-cyan-500/20 to-sky-500/20 border-cyan-500/30' },
+              { emoji: '🪞', label: '클래식', color: 'from-indigo-500/20 to-blue-500/20 border-indigo-500/30' },
+              { emoji: '🏯', label: '한옥 모던', color: 'from-red-500/20 to-orange-500/20 border-red-500/30' },
+              { emoji: '🏢', label: '프리미엄 아파트', color: 'from-teal-500/20 to-emerald-500/20 border-teal-500/30' },
+              { emoji: '💑', label: '신혼집', color: 'from-pink-400/20 to-fuchsia-400/20 border-pink-400/30' },
+              { emoji: '💎', label: '강남 럭셔리', color: 'from-yellow-400/20 to-amber-400/20 border-yellow-400/30' },
+            ].map(s => (
+              <div key={s.label} className={`rounded-xl bg-gradient-to-br ${s.color} border p-3 text-center hover:scale-105 transition-transform`}>
+                <span className="text-2xl block mb-1">{s.emoji}</span>
+                <span className="text-[10px] md:text-xs font-semibold text-white/80">{s.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* 멀티앵글 4장 강조 */}
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-white/[0.01] p-6 md:p-8">
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold mb-4">
+                  📐 멀티앵글 4장 자동 생성
+                </div>
+                <h3 className="text-xl md:text-2xl font-bold mb-3">분양 홍보 이미지<br/><span className="text-teal-400">원클릭 완성</span></h3>
+                <p className="text-sm text-white/50 leading-relaxed mb-4">
+                  정면 · 조감도 · 입구 · 인테리어 4장을 한 번에 생성합니다. 
+                  분양사무소, 홍보 브로셔, SNS 마케팅에 바로 활용할 수 있는 포토리얼 이미지입니다.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {['👁️ 정면 시점','🦅 조감도','🚪 입구 클로즈업','🛋️ 인테리어'].map(t => (
+                    <span key={t} className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-white/60">{t}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: '정면 · 보행자', bg: 'from-blue-500/20 to-indigo-500/10' },
+                  { label: '조감도 · 드론', bg: 'from-emerald-500/20 to-teal-500/10' },
+                  { label: '입구 · 클로즈업', bg: 'from-amber-500/20 to-orange-500/10' },
+                  { label: '인테리어 · 실내', bg: 'from-violet-500/20 to-purple-500/10' },
+                ].map(v => (
+                  <div key={v.label} className={`aspect-[4/3] rounded-xl bg-gradient-to-br ${v.bg} border border-white/10 flex items-end p-3`}>
+                    <span className="text-[10px] font-semibold text-white/70">{v.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 타겟 메시지 */}
+          <div className="grid md:grid-cols-3 gap-4 mt-8">
+            {[
+              { icon: '🏗️', title: '시행사 · 디벨로퍼', desc: '사업성 분석부터 분양 이미지까지 원스톱으로 준비' },
+              { icon: '📊', title: '분양대행사', desc: '12종 스타일로 잠재 수분양자 취향에 맞는 이미지 제공' },
+              { icon: '🎨', title: '인테리어 업체', desc: '시공 전 고객에게 완성 이미지를 미리 보여주는 상담 도구' },
+            ].map(t => (
+              <div key={t.title} className="rounded-xl bg-white/[0.03] border border-white/5 p-5 text-center">
+                <span className="text-2xl block mb-2">{t.icon}</span>
+                <h4 className="text-sm font-bold text-white mb-1">{t.title}</h4>
+                <p className="text-xs text-white/40 leading-relaxed">{t.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ━━━ CASES ━━━ */}
       <section id="cases" className="py-20 md:py-28">
         <div className="max-w-5xl mx-auto px-5">
