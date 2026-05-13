@@ -370,6 +370,9 @@ export default function LandingPage() {
               { img: "/screenshots/blueprints.jpg", title: "설계 도면 자동 생성", desc: "평면도, 배치도, 단면도, 아이소메트릭을 자동 생성" },
               { img: "/screenshots/scenario-compare.jpg", title: "사업 시나리오 비교", desc: "재건축·리모델링·통매각 시나리오별 분담금과 기간 비교" },
               { img: "/screenshots/market-price.jpg", title: "실거래가 시세 분석", desc: "인근 실거래 데이터 기반 분양가 추천과 시뮬레이션" },
+              { img: "/screenshots/3d-terrain.jpg", title: "3D 지형 & 경사도 분석", desc: "대상지 3D 지적도와 경사도를 자동 분석하여 설계에 반영" },
+              { img: "/screenshots/ai-hub.jpg", title: "AI 렌더링 허브", desc: "11종 건축 스타일, 시점·계절·재질을 선택해 포토리얼 이미지 생성" },
+              { img: "/screenshots/legal-checklist.jpg", title: "법규 준수 체크리스트", desc: "접도·건폐율·용적률·주차·높이·조경·지구단위계획 자동 검토" },
             ].map((item) => (
               <div key={item.title} className="group rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden hover:border-teal-500/20 transition-all">
                 <div className="aspect-[9/16] overflow-hidden bg-black/20 max-h-[320px]">
