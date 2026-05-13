@@ -95,6 +95,7 @@ export async function GET(req: NextRequest) {
       stats: {
         totalUsers,
         proUsers,
+        enterpriseUsers,
         freeUsers,
         todaySignups,
         monthlySignups,

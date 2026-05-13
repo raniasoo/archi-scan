@@ -12,6 +12,7 @@ import {
 interface Stats {
   totalUsers: number
   proUsers: number
+  enterpriseUsers: number
   freeUsers: number
   todaySignups: number
   monthlySignups: number
@@ -288,8 +289,9 @@ export default function AdminPage() {
 
         {/* Secondary Stats */}
         {stats && (
-          <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {[
+              { label: "Enterprise", value: stats.enterpriseUsers, color: "text-violet-400" },
               { label: "무료 사용자", value: stats.freeUsers },
               { label: "오늘 가입", value: stats.todaySignups },
               { label: "분석 횟수", value: stats.totalAnalyses },
@@ -297,7 +299,7 @@ export default function AdminPage() {
               { label: "AI 렌더링", value: stats.totalRenders },
             ].map((s) => (
               <div key={s.label} className="rounded-lg border bg-card p-3 text-center">
-                <div className="text-lg font-bold">{s.value}</div>
+                <div className={`text-lg font-bold ${'color' in s && s.color ? s.color : ''}`}>{s.value}</div>
                 <div className="text-[10px] text-muted-foreground">{s.label}</div>
               </div>
             ))}
