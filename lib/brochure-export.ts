@@ -301,19 +301,48 @@ export async function downloadBrochurePdf(data: BrochureData, style: BrochureSty
     const container = document.createElement('div')
     container.style.cssText = 'position:fixed;top:-99999px;left:-99999px;z-index:-1;'
     
-    // oklch() 색상 함수 호환성 — html2canvas가 oklch를 지원하지 않으므로 hex fallback
+    // oklch() 완전 차단 — html2canvas가 oklch를 지원하지 않으므로 모든 CSS 변수를 hex로 강제 전환
     const styleOverride = document.createElement('style')
     styleOverride.textContent = `
+      :root, *, *::before, *::after,
       .br-container, .br-container * {
         --background: #ffffff !important;
         --foreground: #0a0a0a !important;
+        --card: #ffffff !important;
+        --card-foreground: #0a0a0a !important;
+        --popover: #ffffff !important;
+        --popover-foreground: #0a0a0a !important;
         --primary: #171717 !important;
+        --primary-foreground: #fafafa !important;
+        --secondary: #f5f5f5 !important;
+        --secondary-foreground: #171717 !important;
         --muted: #f5f5f5 !important;
+        --muted-foreground: #737373 !important;
+        --accent: #f5f5f5 !important;
+        --accent-foreground: #171717 !important;
+        --destructive: #dc2626 !important;
+        --destructive-foreground: #fafafa !important;
         --border: #e5e5e5 !important;
+        --input: #e5e5e5 !important;
+        --ring: #171717 !important;
+        --chart-1: #2db89c !important;
+        --chart-2: #42c2ac !important;
+        --chart-3: #82c8c8 !important;
+        --chart-4: #bfa040 !important;
+        --chart-5: #d06040 !important;
+        --sidebar: #fafafa !important;
+        --sidebar-foreground: #0a0a0a !important;
+        --sidebar-primary: #171717 !important;
+        --sidebar-primary-foreground: #fafafa !important;
+        --sidebar-accent: #f5f5f5 !important;
+        --sidebar-accent-foreground: #171717 !important;
+        --sidebar-border: #e5e5e5 !important;
+        --sidebar-ring: #171717 !important;
+        --radius: 0.5rem !important;
         color-scheme: light !important;
       }
     `
-    container.appendChild(styleOverride)
+    document.head.appendChild(styleOverride)
     
     const contentDiv = document.createElement('div')
     contentDiv.className = 'br-container'
@@ -351,8 +380,12 @@ export async function downloadBrochurePdf(data: BrochureData, style: BrochureSty
 
     // 정리
     document.body.removeChild(container)
+    try { document.head.removeChild(styleOverride) } catch {}
     return { success: true }
   } catch (e) {
+    // 에러 시에도 정리
+    try { document.body.removeChild(container) } catch {}
+    try { document.head.removeChild(styleOverride) } catch {}
     console.error('[Brochure] PDF generation failed:', e)
     return { success: false, error: e instanceof Error ? e.message : 'PDF 생성 실패' }
   }
