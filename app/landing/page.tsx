@@ -463,13 +463,16 @@ export default function LandingPage() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: '정면 · 보행자', bg: 'from-blue-500/20 to-indigo-500/10' },
-                  { label: '조감도 · 드론', bg: 'from-emerald-500/20 to-teal-500/10' },
-                  { label: '입구 · 클로즈업', bg: 'from-amber-500/20 to-orange-500/10' },
-                  { label: '인테리어 · 실내', bg: 'from-violet-500/20 to-purple-500/10' },
+                  { label: '정면 · 보행자', img: '/screenshots/render-front.jpg' },
+                  { label: '조감도 · 드론', img: '/screenshots/render-bird.jpg' },
+                  { label: '입구 · 클로즈업', img: '/screenshots/render-entrance.jpg' },
+                  { label: '인테리어 · 실내', img: '/screenshots/render-interior.jpg' },
                 ].map(v => (
-                  <div key={v.label} className={`aspect-[4/3] rounded-xl bg-gradient-to-br ${v.bg} border border-white/10 flex items-end p-3`}>
-                    <span className="text-[10px] font-semibold text-white/70">{v.label}</span>
+                  <div key={v.label} className="rounded-xl overflow-hidden border border-white/10 relative group">
+                    <img src={v.img} alt={v.label} className="w-full aspect-[4/3] object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2.5">
+                      <span className="text-[10px] font-semibold text-white/90">{v.label}</span>
+                    </div>
                   </div>
                 ))}
               </div>
