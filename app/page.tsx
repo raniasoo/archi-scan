@@ -113,6 +113,7 @@ const loadDxfGenerator = () => import("@/lib/dxf-generator")
 const loadLayoutOptimizer = () => import("@/lib/layout-optimizer")
 import type { OptimizationReport } from "@/lib/layout-optimizer"
 import { trackStepChange, trackDetailedAnalysisStart, trackPdfDownload, trackShareLink } from "@/components/google-analytics"
+import { NoticeBanner } from "@/components/notice-banner"
 
 export interface LayoutOption {
   id: number
@@ -1935,6 +1936,8 @@ export default function ArchiScanPage() {
   return (
     <ErrorBoundary>
     <div className="min-h-screen bg-background">
+      {/* 공지사항 배너 */}
+      <NoticeBanner />
       {/* 인앱 브라우저 안내 배너 */}
       {inAppBrowser && (
         <div className="bg-amber-500/90 text-white text-center py-2 px-4 text-xs flex items-center justify-center gap-2 z-50 relative">

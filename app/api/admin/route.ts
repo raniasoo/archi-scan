@@ -110,6 +110,7 @@ export async function GET(req: NextRequest) {
       recentLogs: recentLogs || [],
       paymentLogs: paymentLogs || [],
       inquiries: inquiries || [],
+      notices: (rpcData?.notices || []),
     })
   } catch (err: any) {
     console.error("[ADMIN] Error:", err.message)
@@ -184,6 +185,23 @@ export async function PATCH(req: NextRequest) {
 
       if (error) return NextResponse.json({ error: error.message }, { status: 400 })
       return NextResponse.json({ success: true })
+    }
+
+    // ── 공지사항 관리 ──
+    if (type === "notice_create" || type === "notice_update" || type === "notice_delete" || type === "notice_toggle") {
+      const action = type.replace("notice_", "")
+      const { data, error } = await supabase.rpc('admin_manage_notice', {
+        admin_secret: 'archiscan-admin-2026',
+        action,
+        notice_id: body.noticeId || null,
+        notice_title: body.title || null,
+        notice_content: body.content || null,
+        notice_type: body.noticeType || 'info',
+        notice_active: body.isActive ?? true,
+        notice_pinned: body.isPinned ?? false,
+      })
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+      return NextResponse.json(data || { success: true })
     }
 
     // ── 문의 상태 업데이트 ──

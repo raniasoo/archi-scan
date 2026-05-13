@@ -64,7 +64,8 @@ export default function AdminPage() {
   const [recentLogs, setRecentLogs] = useState<LogEntry[]>([])
   const [paymentLogs, setPaymentLogs] = useState<LogEntry[]>([])
   const [inquiries, setInquiries] = useState<Inquiry[]>([])
-  const [tab, setTab] = useState<"users" | "activity" | "payments" | "inquiries">("users")
+  const [notices, setNotices] = useState<any[]>([])
+  const [tab, setTab] = useState<"users" | "activity" | "payments" | "inquiries" | "notices">("users")
   const [search, setSearch] = useState("")
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
   const [expandedInquiry, setExpandedInquiry] = useState<string | null>(null)
@@ -139,6 +140,7 @@ export default function AdminPage() {
       setRecentLogs(data.recentLogs)
       setPaymentLogs(data.paymentLogs)
       setInquiries(data.inquiries || [])
+      setNotices(data.notices || [])
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -309,6 +311,7 @@ export default function AdminPage() {
             { key: "activity", label: "활동 로그", icon: BarChart3 },
             { key: "payments", label: "결제 내역", icon: CreditCard },
             { key: "inquiries", label: `문의 ${stats?.newInquiries ? `(${stats.newInquiries})` : ""}`, icon: MessageSquare },
+            { key: "notices", label: `공지 (${notices.length})`, icon: FileText },
           ] as const).map((t) => (
             <button
               key={t.key}
@@ -658,6 +661,101 @@ export default function AdminPage() {
                         </div>
                       </div>
                     )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Notices Tab */}
+        {tab === "notices" && (
+          <div className="space-y-4">
+            {/* New Notice Form */}
+            <div className="rounded-xl border bg-card p-4 space-y-3">
+              <h3 className="text-sm font-bold">📝 새 공지 작성</h3>
+              <input
+                id="notice-title"
+                placeholder="제목"
+                className="w-full px-3 py-2 rounded-lg bg-background border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <textarea
+                id="notice-content"
+                placeholder="내용"
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg bg-background border text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              />
+              <div className="flex gap-2 items-center">
+                <select id="notice-type" className="px-3 py-2 rounded-lg bg-background border text-sm">
+                  <option value="info">ℹ️ 안내</option>
+                  <option value="update">🆕 업데이트</option>
+                  <option value="maintenance">🔧 점검</option>
+                  <option value="promo">🎉 프로모션</option>
+                </select>
+                <label className="flex items-center gap-1 text-xs">
+                  <input type="checkbox" id="notice-pinned" /> 📌 고정
+                </label>
+                <button
+                  onClick={async () => {
+                    const title = (document.getElementById("notice-title") as HTMLInputElement)?.value
+                    const content = (document.getElementById("notice-content") as HTMLTextAreaElement)?.value
+                    const noticeType = (document.getElementById("notice-type") as HTMLSelectElement)?.value
+                    const isPinned = (document.getElementById("notice-pinned") as HTMLInputElement)?.checked
+                    if (!title || !content) return
+                    await adminFetch("PATCH", { type: "notice_create", title, content, noticeType, isPinned })
+                    ;(document.getElementById("notice-title") as HTMLInputElement).value = ""
+                    ;(document.getElementById("notice-content") as HTMLTextAreaElement).value = ""
+                    fetchData()
+                  }}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
+                >
+                  등록
+                </button>
+              </div>
+            </div>
+
+            {/* Notice List */}
+            <div className="rounded-xl border bg-card overflow-hidden">
+              {notices.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">등록된 공지 없음</div>
+              ) : (
+                notices.map((n: any) => (
+                  <div key={n.id} className={`px-4 py-3 border-b last:border-0 ${!n.is_active ? 'opacity-40' : ''}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-sm">
+                          {n.type === 'update' ? '🆕' : n.type === 'maintenance' ? '🔧' : n.type === 'promo' ? '🎉' : 'ℹ️'}
+                        </span>
+                        {n.is_pinned && <span className="text-[10px]">📌</span>}
+                        <span className="text-sm font-medium truncate">{n.title}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${n.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
+                          {n.is_active ? '활성' : '비활성'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={async () => {
+                            await adminFetch("PATCH", { type: "notice_toggle", noticeId: n.id })
+                            fetchData()
+                          }}
+                          className="px-2 py-1 rounded text-[10px] bg-muted hover:bg-muted/80"
+                        >
+                          {n.is_active ? '숨기기' : '표시'}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('이 공지를 삭제하시겠습니까?')) return
+                            await adminFetch("PATCH", { type: "notice_delete", noticeId: n.id })
+                            fetchData()
+                          }}
+                          className="px-2 py-1 rounded text-[10px] text-red-400 bg-red-500/10 hover:bg-red-500/20"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.content}</p>
+                    <p className="text-[10px] text-muted-foreground/50 mt-1">{new Date(n.created_at).toLocaleDateString('ko-KR')}</p>
                   </div>
                 ))
               )}
