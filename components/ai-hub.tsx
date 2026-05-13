@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Sparkles, Copy, Check, Loader2, X, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
 import { trackAiRenderStart, trackAiRenderComplete } from "@/components/google-analytics"
@@ -191,6 +191,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [retryCount, setRetryCount] = useState(0)
   const [renderProgress, setRenderProgress] = useState<string|null>(null)
   const [compareSet, setCompareSet] = useState<string[]>([]) // 3안 비교용 멀티 선택 (최대 3)
+  const longPressedRef = useRef(false) // 길게 누르기 후 onClick 방지
 
   const styleName = STYLES.find(s => s.id === style)?.label || INTERIOR_STYLES.find(s => s.id === style)?.label || '모던 럭셔리'
 
@@ -339,29 +340,46 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const doInteriorCompare = async () => {
     setLoading(true); setError(null); setInteriorComp(null)
     const compareStyles = getCompareStyles()
-    setRenderProgress(`🛋️ 인테리어 ${compareStyles.map(s => s.label).join(' / ')} 생성 중...`)
     try {
       const results: {style:string; label:string; image:string}[] = []
-      for (const cs of compareStyles) {
-        const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-          prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
-          style: cs.id, address:input.address, layoutName:input.layoutName,
-          floors:input.floors, units:input.units, siteArea:input.siteArea,
-          buildingType:input.buildingType, coverage:input.buildingCoverageRatio,
-          cameraAngle: 'interior', sceneMode: 'afternoon',
-          regulation: input.regulation,
-        }) })
-        const d = await safeJson(r)
-        if (d.success && d.image) {
-          results.push({ style: cs.id, label: cs.label, image: d.image })
+      for (let idx = 0; idx < compareStyles.length; idx++) {
+        const cs = compareStyles[idx]
+        setRenderProgress(`🛋️ ${cs.label} 생성 중... (${idx + 1}/${compareStyles.length})`)
+        try {
+          const controller = new AbortController()
+          const timer = setTimeout(() => controller.abort(), 120000) // 2분 타임아웃
+          const r = await fetch('/api/ai-render', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            signal: controller.signal,
+            body:JSON.stringify({
+              prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
+              style: cs.id, address:input.address, layoutName:input.layoutName,
+              floors:input.floors, units:input.units, siteArea:input.siteArea,
+              buildingType:input.buildingType, buildingCount:input.buildingCount,
+              coverage:input.buildingCoverageRatio, strategy:input.strategy,
+              values:input.values, patterns:input.patterns,
+              surroundingContext:input.surroundingContext,
+              cameraAngle: 'interior', sceneMode: 'afternoon',
+              regulation: input.regulation,
+            })
+          })
+          clearTimeout(timer)
+          const d = await safeJson(r)
+          if (d.success && d.image) {
+            results.push({ style: cs.id, label: cs.label, image: d.image })
+          }
+        } catch (e) {
+          console.warn(`[AIHub] Interior ${cs.label} failed:`, e)
+          // 개별 실패는 무시, 나머지 계속 진행
         }
-        await new Promise(r => setTimeout(r, 1000))
+        if (idx < compareStyles.length - 1) await new Promise(r => setTimeout(r, 1000))
       }
       if (results.length > 0) {
         setInteriorComp(results)
         onInteriorComparisonComplete?.(results)
         toast.success(`인테리어 ${results.length}안 비교 완료`)
-      } else setError('인테리어 생성 실패')
+      } else setError('인테리어 생성 실패 — 잠시 후 다시 시도해주세요')
     } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false); setRenderProgress(null) }
   }
 
@@ -430,14 +448,14 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                       const cIdx = compareSet.indexOf(s.id)
                       return (
                       <button key={s.id}
-                        onClick={() => setStyle(s.id)}
+                        onClick={() => { if (longPressedRef.current) { longPressedRef.current = false; return } setStyle(s.id) }}
                         onContextMenu={(e) => { e.preventDefault(); toggleCompare(s.id) }}
-                        onTouchStart={(e) => {
-                          const timer = setTimeout(() => { toggleCompare(s.id) }, 500)
-                          const el = e.currentTarget
-                          const clear = () => { clearTimeout(timer); el.removeEventListener('touchend', clear); el.removeEventListener('touchmove', clear) }
-                          el.addEventListener('touchend', clear, { once: true })
-                          el.addEventListener('touchmove', clear, { once: true })
+                        onTouchStart={() => {
+                          longPressedRef.current = false
+                          const timer = setTimeout(() => { longPressedRef.current = true; toggleCompare(s.id) }, 500)
+                          const clear = () => clearTimeout(timer)
+                          document.addEventListener('touchend', clear, { once: true })
+                          document.addEventListener('touchmove', clear, { once: true })
                         }}
                         className={`p-1.5 rounded-lg text-center text-[10px] transition-all relative ${style === s.id ? 'bg-teal-500/20 border-2 border-teal-400 font-semibold' : 'bg-card/30 border border-border/50 hover:border-teal-300'}`}>
                         {cIdx >= 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-[8px] font-bold text-white flex items-center justify-center">{cIdx + 1}</span>}
@@ -451,14 +469,14 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                       const cIdx = compareSet.indexOf(s.id)
                       return (
                       <button key={s.id}
-                        onClick={() => setStyle(s.id)}
+                        onClick={() => { if (longPressedRef.current) { longPressedRef.current = false; return } setStyle(s.id) }}
                         onContextMenu={(e) => { e.preventDefault(); toggleCompare(s.id) }}
-                        onTouchStart={(e) => {
-                          const timer = setTimeout(() => { toggleCompare(s.id) }, 500)
-                          const el = e.currentTarget
-                          const clear = () => { clearTimeout(timer); el.removeEventListener('touchend', clear); el.removeEventListener('touchmove', clear) }
-                          el.addEventListener('touchend', clear, { once: true })
-                          el.addEventListener('touchmove', clear, { once: true })
+                        onTouchStart={() => {
+                          longPressedRef.current = false
+                          const timer = setTimeout(() => { longPressedRef.current = true; toggleCompare(s.id) }, 500)
+                          const clear = () => clearTimeout(timer)
+                          document.addEventListener('touchend', clear, { once: true })
+                          document.addEventListener('touchmove', clear, { once: true })
                         }}
                         className={`p-1.5 rounded-lg text-center text-[10px] transition-all relative ${style === s.id ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-card/30 border border-amber-900/30 hover:border-amber-400'}`}>
                         {cIdx >= 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-[8px] font-bold text-white flex items-center justify-center">{cIdx + 1}</span>}
