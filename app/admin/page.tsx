@@ -70,13 +70,55 @@ export default function AdminPage() {
   const [expandedInquiry, setExpandedInquiry] = useState<string | null>(null)
   const [replyNote, setReplyNote] = useState("")
 
+  // ━━━ 관리자 로그인 ━━━
+  const [adminAuth, setAdminAuth] = useState(false)
+  const [adminId, setAdminId] = useState("")
+  const [adminPw, setAdminPw] = useState("")
+  const [loginError, setLoginError] = useState("")
+  const [loginLoading, setLoginLoading] = useState(false)
+
+  // 세션 복원
+  useEffect(() => {
+    const token = sessionStorage.getItem("admin_token")
+    if (token) setAdminAuth(true)
+  }, [])
+
+  const handleAdminLogin = async () => {
+    setLoginLoading(true); setLoginError("")
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: adminId, password: adminPw }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        sessionStorage.setItem("admin_token", data.token)
+        setAdminAuth(true)
+      } else {
+        setLoginError(data.error || "로그인 실패")
+      }
+    } catch { setLoginError("서버 연결 실패") }
+    finally { setLoginLoading(false) }
+  }
+
+  const handleAdminLogout = () => {
+    sessionStorage.removeItem("admin_token")
+    setAdminAuth(false)
+    setStats(null)
+    setProfiles([])
+  }
+
   const fetchData = async () => {
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/api/admin")
+      const token = sessionStorage.getItem("admin_token") || ""
+      const res = await fetch("/api/admin", { headers: { "X-Admin-Token": token } })
       if (res.status === 403) {
         setError("관리자 권한이 필요합니다")
+        sessionStorage.removeItem("admin_token")
+        setAdminAuth(false)
         setLoading(false)
         return
       }
@@ -94,7 +136,7 @@ export default function AdminPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { if (adminAuth) fetchData() }, [adminAuth])
 
   const filteredProfiles = profiles.filter(p =>
     !search || 
@@ -119,6 +161,51 @@ export default function AdminPage() {
     ai_render: "AI렌더링",
     pdf_export: "PDF",
     payment: "결제",
+  }
+
+  // ━━━ 로그인 전: 로그인 폼 표시 ━━━
+  if (!adminAuth) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-5">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="text-center">
+            <Building2 className="h-10 w-10 text-primary mx-auto mb-3" />
+            <h1 className="text-xl font-bold">Archi-Scan Admin</h1>
+            <p className="text-sm text-muted-foreground mt-1">관리자 로그인</p>
+          </div>
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="관리자 ID"
+              value={adminId}
+              onChange={e => setAdminId(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+              className="w-full px-4 py-3 rounded-lg bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <input
+              type="password"
+              placeholder="비밀번호"
+              value={adminPw}
+              onChange={e => setAdminPw(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+              className="w-full px-4 py-3 rounded-lg bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {loginError && <p className="text-xs text-destructive">{loginError}</p>}
+            <button
+              onClick={handleAdminLogin}
+              disabled={loginLoading || !adminId || !adminPw}
+              className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loginLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              로그인
+            </button>
+          </div>
+          <button onClick={() => router.push("/")} className="w-full text-center text-xs text-muted-foreground hover:underline">
+            ← 앱으로 돌아가기
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -159,6 +246,9 @@ export default function AdminPage() {
           <button onClick={fetchData} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
             <RefreshCw className="h-3.5 w-3.5" />
             새로고침
+          </button>
+          <button onClick={handleAdminLogout} className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 ml-3">
+            로그아웃
           </button>
         </div>
       </header>

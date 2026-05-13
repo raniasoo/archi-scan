@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { verifyAdminToken } from "./login/route"
 
 // 간단한 관리자 이메일 체크 (추후 roles 테이블로 확장 가능)
 const ADMIN_EMAILS = [
@@ -9,14 +10,31 @@ const ADMIN_EMAILS = [
   "dev@archiscan.app",
 ]
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    // ━━━ 인증: Admin Token 또는 Supabase 세션 ━━━
+    const adminToken = req.headers.get("X-Admin-Token") || ""
+    let isAuthorized = false
 
-    if (!user || !ADMIN_EMAILS.includes(user.email || "")) {
+    // 1차: Admin Token 확인
+    if (adminToken && verifyAdminToken(adminToken)) {
+      isAuthorized = true
+    }
+
+    // 2차: Supabase 세션 + 이메일 확인 (fallback)
+    if (!isAuthorized) {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && ADMIN_EMAILS.includes(user.email || "")) {
+        isAuthorized = true
+      }
+    }
+
+    if (!isAuthorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
+
+    const supabase = await createClient()
 
     // 1. 전체 프로필 목록
     const { data: profiles } = await supabase
