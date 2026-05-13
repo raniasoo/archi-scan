@@ -5,6 +5,15 @@ import { Sparkles, Copy, Check, Loader2, X, Download, ChevronDown, ChevronUp } f
 import { toast } from "sonner"
 import { trackAiRenderStart, trackAiRenderComplete } from "@/components/google-analytics"
 
+// API 응답 안전 파싱 (504 타임아웃 등 HTML 에러 대응)
+const safeJson = async (r: Response) => {
+  if (!r.ok) {
+    const text = await r.text().catch(() => '')
+    return { success: false, error: r.status === 504 ? '서버 시간 초과 — 잠시 후 다시 시도해주세요' : `서버 오류 (${r.status})${text.slice(0, 50)}` }
+  }
+  try { return await r.json() } catch { return { success: false, error: '응답 파싱 실패 — 잠시 후 다시 시도해주세요' } }
+}
+
 interface ConceptInput {
   address: string; zoneType: string; zoneName: string; siteArea: number
   layoutName: string; floors: number; units: number
@@ -210,7 +219,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         regulation: input.regulation,
         referenceImage: useReference && previousRenderImage ? previousRenderImage : undefined,
       }) })
-      const d = await r.json()
+      const d = await safeJson(r)
       if (d.success && d.image) {
         setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(angle || 'exterior')
       } else if (retry < 2) {
@@ -248,7 +257,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         regulation: input.regulation,
         multiAngle: true,
       }) })
-      const d = await r.json()
+      const d = await safeJson(r)
       if (d.success && d.images) {
         setMultiImages(d.images)
         onMultiImagesComplete?.(d.images)
@@ -279,7 +288,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
           cameraAngle: 'interior', sceneMode: 'afternoon',
           regulation: input.regulation,
         }) })
-        const d = await r.json()
+        const d = await safeJson(r)
         if (d.success && d.image) {
           results.push({ style: cs.id, label: cs.label, image: d.image })
         }
@@ -297,7 +306,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
     if (!question.trim()) return; setLoading(true); setError(null)
     try {
       const r = await fetch('/api/ai-consult', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ question, context:{ address:input.address, siteArea:input.siteArea, layoutName:input.layoutName, floors:input.floors, units:input.units, coverage:input.buildingCoverageRatio, zoneType:input.zoneType, roi:input.roi }}) })
-      const d = await r.json()
+      const d = await safeJson(r)
       if (d.success) setAnswer(d.answer); else setError(d.error||'상담 실패')
     } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
   }
@@ -306,7 +315,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
     setLoading(true); setError(null)
     try {
       const r = await fetch('/api/ai-proposal', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ type, context:{ projectName:`${input.address} 개발사업`, address:input.address, siteArea:`${input.siteArea}㎡`, layoutName:input.layoutName, floors:`지상 ${input.floors}층`, units:`${input.units}세대`, coverage:`${input.buildingCoverageRatio}%`, roi:`${input.roi.toFixed(1)}%`, totalCost:`${(input.totalProjectCost/100000000).toFixed(1)}억원` }}) })
-      const d = await r.json()
+      const d = await safeJson(r)
       if (d.success) setProposal(d.content); else setError(d.error||'제안서 실패')
     } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
   }
