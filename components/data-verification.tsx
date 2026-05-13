@@ -21,6 +21,7 @@ interface Props {
   regulation: any
   selectedLayout: any
   analysisRawData: any
+  feasibilityResult?: any
   aiRenderImage?: string | null
   aiMultiImages?: any[] | null
   aiInteriorComparison?: any[] | null
@@ -28,7 +29,7 @@ interface Props {
   onFixValue: (field: string, value: any) => void
 }
 
-export function DataVerification({ address, siteArea, regulation, selectedLayout, analysisRawData, aiRenderImage, aiMultiImages, aiInteriorComparison, onVerificationComplete, onFixValue }: Props) {
+export function DataVerification({ address, siteArea, regulation, selectedLayout, analysisRawData, feasibilityResult, aiRenderImage, aiMultiImages, aiInteriorComparison, onVerificationComplete, onFixValue }: Props) {
   const [items, setItems] = useState<VerificationItem[]>([])
   const [expanded, setExpanded] = useState(true)
   const [checking, setChecking] = useState(true)
@@ -130,7 +131,59 @@ export function DataVerification({ address, siteArea, regulation, selectedLayout
       }
     }
 
-    // ━━━ 8. 이미지 생성 여부 ━━━
+    // ━━━ 8. 수치 정합성 — 건폐율 계산값 vs 표시값 ━━━
+    if (selectedLayout && siteArea > 0) {
+      const displayCoverage = selectedLayout.buildingCoverage || 0
+      const buildingArea = selectedLayout.buildingArea || (siteArea * displayCoverage / 100)
+      const calcCoverage = (buildingArea / siteArea) * 100
+      if (buildingArea > 0 && Math.abs(calcCoverage - displayCoverage) > 1) {
+        results.push({ id: 'calc-coverage', category: '정합성', label: '건폐율 계산', status: 'warn', current: `표시: ${displayCoverage.toFixed(1)}%`, expected: `계산: ${calcCoverage.toFixed(1)}% (건축면적 ${buildingArea.toFixed(0)}㎡ ÷ 대지 ${siteArea}㎡)`, message: '표시값과 계산값이 다릅니다' })
+      } else {
+        results.push({ id: 'calc-coverage', category: '정합성', label: '건폐율 계산', status: 'pass', current: `${displayCoverage.toFixed(1)}%`, message: '계산값과 표시값 일치' })
+      }
+
+      // 용적률 정합성
+      const displayFar = selectedLayout.floorAreaRatio || 0
+      const gfa = selectedLayout.gfa || 0
+      if (gfa > 0) {
+        const calcFar = (gfa / siteArea) * 100
+        if (Math.abs(calcFar - displayFar) > 2) {
+          results.push({ id: 'calc-far', category: '정합성', label: '용적률 계산', status: 'warn', current: `표시: ${displayFar.toFixed(1)}%`, expected: `계산: ${calcFar.toFixed(1)}% (연면적 ${gfa.toFixed(0)}㎡ ÷ 대지 ${siteArea}㎡)`, message: '표시값과 계산값이 다릅니다' })
+        } else {
+          results.push({ id: 'calc-far', category: '정합성', label: '용적률 계산', status: 'pass', current: `${displayFar.toFixed(1)}%`, message: '계산값과 표시값 일치' })
+        }
+      }
+    }
+
+    // ━━━ 9. 손익분기 분양률 ━━━
+    const breakEven = feasibilityResult?.breakEvenRate || selectedLayout?.breakEvenRate
+    if (breakEven !== undefined) {
+      if (breakEven > 100) {
+        results.push({ id: 'breakeven', category: '사업성', label: '손익분기 분양률', status: 'fail', current: `${breakEven.toFixed(1)}%`, message: '100% 초과 — 전 세대 분양해도 손실 발생' })
+      } else if (breakEven > 85) {
+        results.push({ id: 'breakeven', category: '사업성', label: '손익분기 분양률', status: 'warn', current: `${breakEven.toFixed(1)}%`, message: '분양률 여유가 적습니다 — 미분양 리스크 주의' })
+      } else {
+        results.push({ id: 'breakeven', category: '사업성', label: '손익분기 분양률', status: 'pass', current: `${breakEven.toFixed(1)}%`, message: breakEven < 70 ? '안정적 수준' : '보통 수준' })
+      }
+    }
+
+    // ━━━ 10. 필수 입력 누락 ━━━
+    if (!address || address.trim().length < 5) {
+      results.push({ id: 'addr', category: '입력', label: '주소', status: 'fail', current: address || '(없음)', message: '주소가 입력되지 않았습니다' })
+    } else {
+      results.push({ id: 'addr', category: '입력', label: '주소', status: 'pass', current: address, message: '입력 완료' })
+    }
+    if (!siteArea || siteArea <= 0) {
+      results.push({ id: 'area-input', category: '입력', label: '대지면적', status: 'fail', current: `${siteArea || 0}㎡`, message: '대지면적이 0입니다' })
+    }
+    if (!selectedLayout?.floors || selectedLayout.floors <= 0) {
+      results.push({ id: 'floors-input', category: '입력', label: '층수', status: 'fail', current: `${selectedLayout?.floors || 0}층`, message: '층수가 설정되지 않았습니다' })
+    }
+    if (!selectedLayout?.units || selectedLayout.units <= 0) {
+      results.push({ id: 'units-input', category: '입력', label: '세대수', status: 'fail', current: `${selectedLayout?.units || 0}세대`, message: '세대수가 설정되지 않았습니다' })
+    }
+
+    // ━━━ 11. 이미지 생성 여부 ━━━
     const renderCount = (aiMultiImages?.filter(i => i?.image)?.length || 0) + ((!aiMultiImages && aiRenderImage) ? 1 : 0)
     if (renderCount >= 4) {
       results.push({ id: 'render', category: '이미지', label: 'AI 렌더링', status: 'pass', current: `${renderCount}장 생성`, message: '멀티앵글 완료' })

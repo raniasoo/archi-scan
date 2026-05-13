@@ -2622,6 +2622,7 @@ export default function ArchiScanPage() {
             regulation={regulation}
             selectedLayout={selectedLayoutData}
             analysisRawData={analysisRawData}
+            feasibilityResult={feasibilityResult}
             aiRenderImage={aiRenderImage}
             aiMultiImages={aiMultiImages}
             aiInteriorComparison={aiInteriorComparison}
