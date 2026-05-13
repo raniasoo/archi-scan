@@ -841,11 +841,7 @@ export function SiteInputForm({
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-xl">대상지 정보</CardTitle>
-        <CardDescription>대지 정보를 입력하여 배치안을 생성하세요</CardDescription>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="flex flex-col gap-4 sm:gap-5">
           {/* Host Mismatch Warning - Development only */}
           {process.env.NODE_ENV !== 'production' && typeof window !== 'undefined' && !window.location.host.includes('t-generator') && (
