@@ -62,9 +62,23 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     renderer.shadowMap.enabled = true
 
     // 표고 데이터 (12x12 = 144개 — URL 길이 제한 내)
-    // 표고 데이터
-    const RANGE = 0.0006 // ~66m 반경
+    // 표고 데이터 — 필지 크기에 따라 RANGE 동적 조절
+    let RANGE = 0.0006 // ~66m 반경 (기본값: 소규모 필지)
     const cosLat = Math.cos(lat * Math.PI / 180) // 위도 보정 (37.6°: ~0.793)
+    
+    // 필지 폴리곤이 있으면 폴리곤 범위에 맞춰 RANGE 확장
+    if (sitePolygon?.coords?.length > 2) {
+      let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
+      for (const c of sitePolygon.coords) {
+        if (c[1] < minLat) minLat = c[1]; if (c[1] > maxLat) maxLat = c[1]
+        if (c[0] < minLng) minLng = c[0]; if (c[0] > maxLng) maxLng = c[0]
+      }
+      const latSpan = (maxLat - minLat) / 2
+      const lngSpan = (maxLng - minLng) / 2 * cosLat // 경도→위도 기준 정규화
+      const polyRange = Math.max(latSpan, lngSpan) * 1.5 // 필지 + 50% 여백
+      RANGE = Math.max(RANGE, polyRange)
+    }
+    
     const RANGE_LNG = RANGE / cosLat // 경도는 위도보다 좁으므로 보정
     const DATA_GRID = 10
     const MESH_GRID = 40
