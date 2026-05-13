@@ -182,6 +182,7 @@ export default function LandingPage() {
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-white/60">
             <a href="#features" className="hover:text-white transition">기능</a>
+            <a href="#interior" className="hover:text-white transition">인테리어</a>
             <a href="#cases" className="hover:text-white transition">사례</a>
             <a href="#pricing" className="hover:text-white transition">요금제</a>
           </div>
@@ -409,7 +410,7 @@ export default function LandingPage() {
       </section>
 
       {/* ━━━ INTERIOR SHOWCASE ━━━ */}
-      <section className="py-20 md:py-28">
+      <section id="interior" className="py-20 md:py-28 bg-white/[0.02] border-y border-white/5">
         <div className="max-w-5xl mx-auto px-5">
           <div className="text-center mb-14">
             <span className="text-xs text-teal-400 font-semibold tracking-widest uppercase">Interior Rendering</span>
@@ -488,6 +489,14 @@ export default function LandingPage() {
                 <p className="text-xs text-white/40 leading-relaxed">{t.desc}</p>
               </div>
             ))}
+          </div>
+
+          {/* CTA */}
+          <div className="text-center mt-10">
+            <a href="/auth/login" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-sm hover:from-teal-400 hover:to-emerald-400 transition-all shadow-lg shadow-teal-500/25">
+              🛋️ 인테리어 렌더링 체험하기
+            </a>
+            <p className="text-xs text-white/30 mt-2">무료 10회 · 가입 즉시 사용</p>
           </div>
         </div>
       </section>
