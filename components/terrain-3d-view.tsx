@@ -379,7 +379,36 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     lastMouse.current = { x: e.clientX, y: e.clientY }
   }
   const onPU = () => { isDragging.current = false }
-  const onW = (e: React.WheelEvent) => { zoomRef.current = Math.max(0.3, Math.min(3, zoomRef.current - e.deltaY * 0.001)) }
+  const onW = (e: React.WheelEvent) => { zoomRef.current = Math.max(0.15, Math.min(6, zoomRef.current - e.deltaY * 0.002)) }
+
+  // 핀치 줌 (모바일)
+  const lastPinchDist = useRef(0)
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      lastPinchDist.current = Math.sqrt(dx * dx + dy * dy)
+    } else if (e.touches.length === 1) {
+      isDragging.current = true
+      lastMouse.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault()
+    if (e.touches.length === 2 && lastPinchDist.current > 0) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const delta = (dist - lastPinchDist.current) * 0.01
+      zoomRef.current = Math.max(0.15, Math.min(6, zoomRef.current + delta))
+      lastPinchDist.current = dist
+    } else if (e.touches.length === 1 && isDragging.current) {
+      rotationRef.current.y += (e.touches[0].clientX - lastMouse.current.x) * 0.008
+      rotationRef.current.x += (e.touches[0].clientY - lastMouse.current.y) * 0.008
+      lastMouse.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+  }
+  const onTouchEnd = () => { isDragging.current = false; lastPinchDist.current = 0 }
 
   return (
     <div className={`rounded-xl border border-border/60 bg-card overflow-hidden ${className}`}>
@@ -396,8 +425,10 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
       <div className={`relative ${expanded ? 'h-[400px] sm:h-[500px]' : 'h-[260px] sm:h-[320px]'} transition-all`}>
         <canvas
           ref={canvasRef}
-          className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
+          className="w-full h-full cursor-grab active:cursor-grabbing"
+          style={{ touchAction: 'none' }}
           onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU} onWheel={onW}
+          onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
         />
         {/* 나침반 — 모델 회전에 연동 */}
         <div className="absolute top-2 right-2 pointer-events-none">
