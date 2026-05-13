@@ -175,7 +175,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   // #5: 재시도 로직 + Gemini/Flux 엔진 라우팅
   const doRender = async (retry = 0) => {
     setLoading(true); setError(null); setRetryCount(retry); setMultiImages(null)
-    trackAiRenderStart(viewType || 'exterior')
+    trackAiRenderStart(angle || 'exterior')
 
     try {
       const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
@@ -196,7 +196,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
       }) })
       const d = await r.json()
       if (d.success && d.image) {
-        setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(viewType || 'exterior')
+        setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(angle || 'exterior')
       } else if (retry < 2) {
         // 재시도 (최대 2회)
         await new Promise(r => setTimeout(r, 1500))

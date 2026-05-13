@@ -998,6 +998,63 @@ FORBIDDEN: Do NOT show the building exterior. Do NOT show empty/unfurnished room
   }
   const patternHints = (patterns || []).map(p => patternElements[p]).filter(Boolean)
 
+  // ━━━ 인테리어 전용 프롬프트 (외관 정보 제외) ━━━
+  if (cameraAngle === 'interior') {
+    const interiorStyle = style === 'warm-natural' ? 'Warm Scandinavian — light oak wood tones, linen textures, soft beige/cream palette, rounded organic furniture shapes'
+      : style === 'modern-minimal' ? 'Modern Minimalist — monochromatic whites/grays, clean lines, hidden storage, matte surfaces, minimal decoration'
+      : style === 'industrial' ? 'Industrial Modern — exposed concrete accents, black metal frames, Edison bulbs, raw textures with warm wood balance'
+      : style === 'classic' ? 'Neo-Classic Korean — dark walnut wood, marble accents, crown molding, traditional Korean design elements with modern twist'
+      : 'Modern Luxury — premium finishes, marble/stone accents, warm wood tones, designer furniture, gallery-like clean walls'
+
+    return `Generate a photorealistic INTERIOR perspective rendering of a Korean residential apartment unit.
+
+INTERIOR DESIGN STYLE:
+${interiorStyle}
+
+APARTMENT INFO:
+- Building: ${layoutName || '주거 건물'} in ${address || 'Seoul, South Korea'}
+- ${f}-story building, ${units} units total
+- Unit type: Modern Korean apartment (approx 84-110㎡ unit)
+
+${cameraDesc}
+
+SCENE: ${sceneText}
+
+INTERIOR MUST-HAVES:
+- Floor: Wood-tone LVT or engineered hardwood flooring (ondol-compatible flat surface)
+- Walls: White or warm gray paint, clean and smooth
+- Ceiling: 2.4-2.5m height, recessed LED downlights, no exposed ductwork
+- Windows: Large floor-to-ceiling or balcony sliding doors with natural light streaming in
+- Living room: Modern sofa (3-seater), coffee table, TV unit/wall-mounted TV, area rug
+- Dining: Table for 4-6 visible in background or adjacent area
+- Kitchen: Open-plan or semi-open, light wood cabinets, stone countertop visible in background
+- View through window: Urban/suburban Korean neighborhood glimpse, daylight
+- Details: Built-in shoe cabinet near entrance hint, clean baseboards, outlet plates
+
+ATMOSPHERE:
+- Primary light: Natural afternoon sunlight through windows (warm, directional)
+- Secondary: Warm-tone recessed ceiling lights
+- Mood: Bright, airy, inviting — model home presentation quality
+- Photography style: Interior architecture magazine, wide-angle lens (24-28mm equivalent)
+
+AVOID:
+- Building exterior views (this is INSIDE the apartment)
+- Empty/unfurnished rooms
+- Overly luxurious hotel-lobby style (this is a realistic HOME)
+- Cluttered or messy spaces
+- Dark or moody lighting (keep bright and welcoming)
+- Unrealistic furniture scale
+- Visible construction or unfinished elements
+- Text, watermarks, or labels
+
+FINAL COMPOSITION CHECK — INTERIOR PERSPECTIVE:
+Before generating, verify: Am I INSIDE the apartment unit? Can I see the living room with furniture? Is natural light coming through windows? Is the ceiling height ~2.5m? Does it feel like a real Korean residential interior? Is there a view through the window suggesting an urban setting? If I can see the building exterior facade, I am in the WRONG position — move INSIDE.
+
+${prompt}
+
+Generate ONE high-quality photorealistic interior image.`
+  }
+
   return `Generate a photorealistic architectural exterior rendering.
 
 BUILDING FORM:
