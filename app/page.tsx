@@ -104,6 +104,7 @@ const StrategyStep = dynamic(() => import("@/components/steps/strategy-step").th
 const RegulationStep = dynamic(() => import("@/components/steps/regulation-step").then(m => ({ default: m.RegulationStep })), { loading: LoadingBox })
 const FinancialStep = dynamic(() => import("@/components/steps/financial-step").then(m => ({ default: m.FinancialStep })), { loading: LoadingBox })
 const ReportStep = dynamic(() => import("@/components/steps/report-step").then(m => ({ default: m.ReportStep })), { loading: LoadingBox })
+const DataVerification = dynamic(() => import("@/components/data-verification").then(m => ({ default: m.DataVerification })), { loading: LoadingBox })
 const AIHub = dynamic(() => import("@/components/ai-hub").then(m => ({ default: m.AIHub })), { loading: LoadingBox })
 
 // ── 동적 임포트: 내보내기 함수 (사용 시에만 로드) ──
@@ -511,7 +512,7 @@ export default function ArchiScanPage() {
   const [currentStep, setCurrentStep] = useState<AppStep>("input")
   
   // ━━━ GA 단계 변경 추적 ━━━
-  useEffect(() => { if (currentStep !== 'input') trackStepChange(currentStep) }, [currentStep])
+  useEffect(() => { if (currentStep !== 'input') trackStepChange(currentStep); if (currentStep !== 'report') setReportVerified(false) }, [currentStep])
 
   // ━━━ 변경 감지 + 무효화 시스템 ━━━
   // 상위 단계 변경 시 하위 단계를 무효화 (stale)
@@ -605,6 +606,7 @@ export default function ArchiScanPage() {
   const [aiRenderImage, setAiRenderImage] = useState<string | null>(null)
   const [aiMultiImages, setAiMultiImages] = useState<{angle:string; image:string|null}[] | null>(null)
   const [aiInteriorComparison, setAiInteriorComparison] = useState<{style:string; label:string; image:string}[] | null>(null)
+  const [reportVerified, setReportVerified] = useState(false)
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
   const [optimizationResult, setOptimizationResult] = useState<OptimizationReport | null>(null)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -2613,7 +2615,23 @@ export default function ArchiScanPage() {
         </>)}
 
         {/* Step: Report */}
-        {currentStep === "report" && selectedLayoutData && (
+        {currentStep === "report" && selectedLayoutData && !reportVerified && (
+          <DataVerification
+            address={address}
+            siteArea={siteAreaNum}
+            regulation={regulation}
+            selectedLayout={selectedLayoutData}
+            analysisRawData={analysisRawData}
+            aiRenderImage={aiRenderImage}
+            aiMultiImages={aiMultiImages}
+            aiInteriorComparison={aiInteriorComparison}
+            onVerificationComplete={() => setReportVerified(true)}
+            onFixValue={(field, value) => {
+              if (field === 'siteArea') { setSiteArea(String(value)); setSiteAreaNum(value) }
+            }}
+          />
+        )}
+        {currentStep === "report" && selectedLayoutData && reportVerified && (
           <ReportStep
             selectedLayoutData={selectedLayoutData}
             address={address} siteArea={siteArea} siteAreaNum={siteAreaNum} gfa={gfa}
