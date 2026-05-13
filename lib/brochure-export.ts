@@ -300,13 +300,31 @@ export async function downloadBrochurePdf(data: BrochureData, style: BrochureSty
     // 숨김 컨테이너 생성
     const container = document.createElement('div')
     container.style.cssText = 'position:fixed;top:-99999px;left:-99999px;z-index:-1;'
-    container.innerHTML = generateBrochureHtml(data, style)
+    
+    // oklch() 색상 함수 호환성 — html2canvas가 oklch를 지원하지 않으므로 hex fallback
+    const styleOverride = document.createElement('style')
+    styleOverride.textContent = `
+      .br-container, .br-container * {
+        --background: #ffffff !important;
+        --foreground: #0a0a0a !important;
+        --primary: #171717 !important;
+        --muted: #f5f5f5 !important;
+        --border: #e5e5e5 !important;
+        color-scheme: light !important;
+      }
+    `
+    container.appendChild(styleOverride)
+    
+    const contentDiv = document.createElement('div')
+    contentDiv.className = 'br-container'
+    contentDiv.innerHTML = generateBrochureHtml(data, style)
+    container.appendChild(contentDiv)
     document.body.appendChild(container)
 
     // 폰트 로딩 대기
     await new Promise(r => setTimeout(r, 500))
 
-    const pages = container.querySelectorAll('.br-page')
+    const pages = contentDiv.querySelectorAll('.br-page')
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
     const pdfW = 297, pdfH = 210
 
