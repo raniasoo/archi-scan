@@ -406,44 +406,49 @@ export function ReportStep(props: ReportStepProps) {
                   <Share2 className="h-4 w-4" />
                   공유
                 </Button>
-                {/* ━━━ 분양 브로셔 드롭다운 ━━━ */}
-                <div className="relative flex-shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 whitespace-nowrap bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30 text-amber-400 hover:text-amber-300"
-                    disabled={brochureLoading}
-                    onClick={() => setBrochureOpen(!brochureOpen)}
-                  >
-                    {brochureLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>📋</span>}
-                    브로셔
-                  </Button>
-                  {brochureOpen && (
-                    <div className="absolute top-full right-0 mt-1 w-56 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
-                      <div className="px-3 py-2 text-[10px] text-muted-foreground border-b border-border">분양 브로셔 스타일 선택</div>
-                      {[
-                        { id: 'dark-luxury', emoji: '🖤', name: '다크 럭셔리', sub: '고급 주거' },
-                        { id: 'white-minimal', emoji: '🤍', name: '화이트 미니멀', sub: '신혼·오피스텔' },
-                        { id: 'nature-green', emoji: '🌿', name: '네이처 그린', sub: '전원·타운하우스' },
-                        { id: 'urban-modern', emoji: '🏙️', name: '어반 모던', sub: '역세권·주상복합' },
-                        { id: 'hanok-classic', emoji: '🏯', name: '한옥 클래식', sub: '한옥·전통 지구' },
-                      ].map(s => (
-                        <button
-                          key={s.id}
-                          onClick={() => handleBrochure(s.id)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent/10 transition-colors"
-                        >
-                          <span className="text-base">{s.emoji}</span>
-                          <div>
-                            <div className="text-xs font-medium">{s.name}</div>
-                            <div className="text-[10px] text-muted-foreground">{s.sub}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* ━━━ 분양 브로셔 ━━━ */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 whitespace-nowrap flex-shrink-0 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30 text-amber-400 hover:text-amber-300"
+                  disabled={brochureLoading}
+                  onClick={() => setBrochureOpen(true)}
+                >
+                  {brochureLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>📋</span>}
+                  브로셔
+                </Button>
               </div>
+              {/* 브로셔 스타일 선택 오버레이 (overflow 부모 밖에 렌더링) */}
+              {brochureOpen && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setBrochureOpen(false)}>
+                  <div className="w-full max-w-sm bg-card border border-border rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4" onClick={e => e.stopPropagation()}>
+                    <div className="px-4 py-3 border-b border-border flex justify-between items-center">
+                      <span className="text-sm font-bold">📋 분양 브로셔 스타일</span>
+                      <button onClick={() => setBrochureOpen(false)} className="text-muted-foreground text-lg">✕</button>
+                    </div>
+                    {[
+                      { id: 'dark-luxury', emoji: '🖤', name: '다크 럭셔리', sub: '고급 주거 · 펜트하우스' },
+                      { id: 'white-minimal', emoji: '🤍', name: '화이트 미니멀', sub: '신혼 · 오피스텔' },
+                      { id: 'nature-green', emoji: '🌿', name: '네이처 그린', sub: '전원주택 · 타운하우스' },
+                      { id: 'urban-modern', emoji: '🏙️', name: '어반 모던', sub: '역세권 · 주상복합' },
+                      { id: 'hanok-classic', emoji: '🏯', name: '한옥 클래식', sub: '한옥 · 전통 지구' },
+                    ].map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleBrochure(s.id)}
+                        className="w-full flex items-center gap-4 px-4 py-3.5 text-left hover:bg-accent/10 active:bg-accent/20 transition-colors border-b border-border/50 last:border-0"
+                      >
+                        <span className="text-xl">{s.emoji}</span>
+                        <div>
+                          <div className="text-sm font-medium">{s.name}</div>
+                          <div className="text-xs text-muted-foreground">{s.sub}</div>
+                        </div>
+                      </button>
+                    ))}
+                    <div className="px-4 py-2 text-[10px] text-muted-foreground text-center">A4 가로 · 5페이지 · AI 렌더링 자동 반영</div>
+                  </div>
+                </div>
+              )}
               
               <TabsContent value="summary">
                 <ReportSummary 

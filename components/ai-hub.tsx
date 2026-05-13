@@ -295,16 +295,33 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
 
   // 인테리어 3안 비교 생성
   const [interiorComp, setInteriorComp] = useState<{style:string; label:string; image:string}[] | null>(null)
-  const COMPARE_STYLES = [
-    { id: 'int-modern-luxury', label: '모던 럭셔리' },
-    { id: 'int-warm-wood', label: '화이트우드' },
-    { id: 'int-natural', label: '내추럴모던' },
-  ]
+  // 선택된 인테리어 스타일 기반으로 3안 동적 구성
+  const getCompareStyles = () => {
+    const allInt = INTERIOR_STYLES
+    const selectedInt = allInt.find(s => s.id === style)
+    // 기본 3종 (선택된 스타일이 아닌 것 중에서)
+    const defaults = [
+      { id: 'int-modern-luxury', label: '모던 럭셔리' },
+      { id: 'int-warm-wood', label: '화이트우드' },
+      { id: 'int-natural', label: '내추럴모던' },
+    ]
+    if (!selectedInt || defaults.some(d => d.id === style)) {
+      // 선택된 스타일이 기본 3종 중 하나면 그대로 사용
+      return defaults
+    }
+    // 선택된 스타일을 첫 번째로, 나머지 2개는 기본에서
+    return [
+      { id: selectedInt.id, label: selectedInt.label },
+      ...defaults.filter(d => d.id !== selectedInt.id).slice(0, 2),
+    ]
+  }
   const doInteriorCompare = async () => {
     setLoading(true); setError(null); setInteriorComp(null)
+    const compareStyles = getCompareStyles()
+    setRenderProgress(`🛋️ 인테리어 ${compareStyles.map(s => s.label).join(' / ')} 생성 중...`)
     try {
       const results: {style:string; label:string; image:string}[] = []
-      for (const cs of COMPARE_STYLES) {
+      for (const cs of compareStyles) {
         const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
           prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
           style: cs.id, address:input.address, layoutName:input.layoutName,
@@ -324,7 +341,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         onInteriorComparisonComplete?.(results)
         toast.success(`인테리어 ${results.length}안 비교 완료`)
       } else setError('인테리어 생성 실패')
-    } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false) }
+    } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false); setRenderProgress(null) }
   }
 
   const doConsult = async () => {
