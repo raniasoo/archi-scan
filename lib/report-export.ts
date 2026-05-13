@@ -1668,12 +1668,12 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 
 
   ${(() => {
-    const angleLabels: Record<string, string> = { 'eye-level': '정면 · 보행자 시점', 'birds-eye': '조감도 · 드론 시점', 'entrance': '입구 · 클로즈업' }
+    const angleLabels: Record<string, string> = { 'eye-level': '정면 · 보행자 시점', 'birds-eye': '조감도 · 드론 시점', 'entrance': '입구 · 클로즈업', 'interior': '인테리어 · 실내 투시도' }
     const images = data.aiMultiImages?.filter(m => m.image) || []
     if (images.length > 0) {
       return `<div style="margin: 0 30px; padding: 20px 0;">
         <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 12px;">&#10024; AI 건축 렌더링</div>
-        <div style="display: grid; grid-template-columns: ${images.length === 1 ? '1fr' : images.length === 2 ? '1fr 1fr' : '1fr 1fr'}; gap: 10px;">
+        <div style="display: grid; grid-template-columns: ${images.length === 1 ? '1fr' : '1fr 1fr'}; gap: 10px;">
           ${images.map((m, i) => `<div style="border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;${images.length === 3 && i === 0 ? ' grid-column: 1 / -1;' : ''}">
             <img src="${m.image}" alt="${angleLabels[m.angle] || m.angle}" style="width: 100%; height: auto; display: block;" />
             <div style="padding: 5px 10px; background: #f8fafc; font-size: 9px; color: #64748b;">${angleLabels[m.angle] || m.angle}</div>
@@ -2183,11 +2183,11 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality);
     
     // AI 렌더링 이미지 삽입 (멀티앵글 우선, 단일 이미지 fallback)
-    const _aL: Record<string,string> = {'eye-level':'정면','birds-eye':'조감도','entrance':'입구'}
+    const _aL: Record<string,string> = {'eye-level':'정면','birds-eye':'조감도','entrance':'입구','interior':'인테리어'}
     const _mI = data.aiMultiImages?.filter(m => m.image) || []
     if (_mI.length > 0) {
       // AI 이미지는 html2canvas 대신 jsPDF.addImage()로 직접 삽입 (placeholder만 HTML에 삽입)
-      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div><div style="font-size:9px;color:#94a3b8">3장의 AI 렌더링 이미지가 아래에 표시됩니다</div></div>';
+      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div><div style="font-size:9px;color:#94a3b8">AI 렌더링 이미지가 아래에 표시됩니다</div></div>';
       htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- AI_IMAGES_PLACEHOLDER -->' + '<!-- Executive Summary -->');
     } else if (data.aiRenderImage) {
       const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div></div>';
@@ -2462,35 +2462,68 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
     // ━━━ AI 렌더링 이미지 직접 삽입 (html2canvas 우회) ━━━
     const aiImages = data.aiMultiImages?.filter(m => m.image) || (data.aiRenderImage ? [{ angle: 'eye-level', image: data.aiRenderImage }] : []);
     if (aiImages.length > 0) {
-      const aiLabels: Record<string,string> = {'eye-level':'정면 · 보행자 시점','birds-eye':'조감도 · 드론 시점','entrance':'입구 · 클로즈업'};
+      const aiLabels: Record<string,string> = {'eye-level':'eye-level','birds-eye':'birds-eye','entrance':'entrance','interior':'interior'};
       let aiY = topMargin;
-      // 제목
-      pdf.setFontSize(11); pdf.setFont('helvetica','bold'); pdf.setTextColor(30,41,59);
-      pdf.text('✨ AI 건축 렌더링', sideMargin, aiY + 4); aiY += 8;
+      // 제목은 HTML placeholder 블록에서 html2canvas로 처리하므로 여기선 생략 (Helvetica 한글 미지원)
+      aiY += 4;
       
-      for (const aiImg of aiImages) {
-        try {
-          const imgEl = new Image();
-          imgEl.src = aiImg.image!;
-          await new Promise<void>((res) => { imgEl.onload = () => res(); imgEl.onerror = () => res(); setTimeout(res, 3000); });
+      if (aiImages.length >= 4) {
+        // 2x2 그리드 배치
+        const gridGap = 4;
+        const imgW = (contentWidth - gridGap) / 2;
+        for (let gi = 0; gi < aiImages.length; gi += 2) {
+          const row = aiImages.slice(gi, gi + 2);
+          let maxH = 0;
+          const rowData: { img: typeof aiImages[0]; h: number }[] = [];
           
-          const iw = imgEl.naturalWidth || 800, ih = imgEl.naturalHeight || 600;
-          const imgWidth = contentWidth;
-          const imgHeight = (ih / iw) * imgWidth;
-          
-          // 페이지 넘침 체크
-          if (aiY + imgHeight + 8 > pdfHeight - bottomMargin) {
-            pdf.addPage(); aiY = topMargin;
+          for (const aiImg of row) {
+            try {
+              const imgEl = new Image();
+              imgEl.src = aiImg.image!;
+              await new Promise<void>((res) => { imgEl.onload = () => res(); imgEl.onerror = () => res(); setTimeout(res, 3000); });
+              const iw = imgEl.naturalWidth || 800, ih = imgEl.naturalHeight || 600;
+              const imgH = (ih / iw) * imgW;
+              rowData.push({ img: aiImg, h: imgH });
+              if (imgH > maxH) maxH = imgH;
+            } catch { rowData.push({ img: aiImg, h: imgW * 0.6 }); maxH = Math.max(maxH, imgW * 0.6); }
           }
           
-          pdf.addImage(aiImg.image!, aiImg.image!.includes('image/jpeg') ? 'JPEG' : 'PNG', sideMargin, aiY, imgWidth, imgHeight);
-          aiY += imgHeight + 1;
+          if (aiY + maxH + 10 > pdfHeight - bottomMargin) { pdf.addPage(); aiY = topMargin; }
           
-          // 캡션
+          rowData.forEach((rd, ci) => {
+            const x = sideMargin + ci * (imgW + gridGap);
+            try {
+              pdf.addImage(rd.img.image!, rd.img.image!.includes('image/jpeg') ? 'JPEG' : 'PNG', x, aiY, imgW, rd.h);
+            } catch {}
+          });
+          aiY += maxH + 1;
+          
+          // 캡션 — 앵글 영문 라벨 (jsPDF Helvetica 한글 미지원)
           pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(100,116,139);
-          pdf.text(aiLabels[aiImg.angle] || aiImg.angle, sideMargin + 2, aiY + 3);
-          aiY += 6;
-        } catch (e) { console.warn('[PDF] AI 이미지 삽입 실패:', e); }
+          rowData.forEach((rd, ci) => {
+            const x = sideMargin + ci * (imgW + gridGap) + 2;
+            pdf.text(rd.img.angle, x, aiY + 3);
+          });
+          aiY += 8;
+        }
+      } else {
+        // 1~3장: 세로 배치
+        for (const aiImg of aiImages) {
+          try {
+            const imgEl = new Image();
+            imgEl.src = aiImg.image!;
+            await new Promise<void>((res) => { imgEl.onload = () => res(); imgEl.onerror = () => res(); setTimeout(res, 3000); });
+            const iw = imgEl.naturalWidth || 800, ih = imgEl.naturalHeight || 600;
+            const imgWidth = contentWidth;
+            const imgHeight = (ih / iw) * imgWidth;
+            if (aiY + imgHeight + 8 > pdfHeight - bottomMargin) { pdf.addPage(); aiY = topMargin; }
+            pdf.addImage(aiImg.image!, aiImg.image!.includes('image/jpeg') ? 'JPEG' : 'PNG', sideMargin, aiY, imgWidth, imgHeight);
+            aiY += imgHeight + 1;
+            pdf.setFontSize(7); pdf.setFont('helvetica','normal'); pdf.setTextColor(100,116,139);
+            pdf.text(aiImg.angle, sideMargin + 2, aiY + 3);
+            aiY += 6;
+          } catch (e) { console.warn('[PDF] AI image error:', e); }
+        }
       }
       // Powered by Gemini
       pdf.setFontSize(6); pdf.setTextColor(148,163,184);
@@ -2615,11 +2648,11 @@ export function openPrintPreview(data: ExportData): { success: boolean; error?: 
     let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality);
     
     // AI 렌더링 이미지 삽입 (멀티앵글 우선, 단일 이미지 fallback)
-    const _aL: Record<string,string> = {'eye-level':'정면','birds-eye':'조감도','entrance':'입구'}
+    const _aL: Record<string,string> = {'eye-level':'정면','birds-eye':'조감도','entrance':'입구','interior':'인테리어'}
     const _mI = data.aiMultiImages?.filter(m => m.image) || []
     if (_mI.length > 0) {
       // AI 이미지는 html2canvas 대신 jsPDF.addImage()로 직접 삽입 (placeholder만 HTML에 삽입)
-      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div><div style="font-size:9px;color:#94a3b8">3장의 AI 렌더링 이미지가 아래에 표시됩니다</div></div>';
+      const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div><div style="font-size:9px;color:#94a3b8">AI 렌더링 이미지가 아래에 표시됩니다</div></div>';
       htmlContent = htmlContent.replace('<!-- Executive Summary -->', aiBlock + '<!-- AI_IMAGES_PLACEHOLDER -->' + '<!-- Executive Summary -->');
     } else if (data.aiRenderImage) {
       const aiBlock = '<div class="pdf-section" style="margin:0 30px;padding:20px 0 8px"><div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">&#10024; AI 건축 렌더링</div></div>';
