@@ -1,6 +1,6 @@
 "use client"
 
-import { type Dispatch, type SetStateAction } from "react"
+import { type Dispatch, type SetStateAction, useState } from "react"
 import { trackPdfDownload, trackShareLink } from "@/components/google-analytics"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
@@ -76,6 +76,55 @@ export function ReportStep(props: ReportStepProps) {
     regulation, molitSupplementData, strategy, userValues,
     aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison,
   })
+
+  // ━━━ 분양 브로셔 ━━━
+  const [brochureOpen, setBrochureOpen] = useState(false)
+  const [brochureLoading, setBrochureLoading] = useState(false)
+
+  const handleBrochure = async (styleId: string) => {
+    setBrochureLoading(true)
+    setBrochureOpen(false)
+    toast.loading('분양 브로셔 PDF 생성 중...', { id: 'brochure' })
+    try {
+      const { BROCHURE_STYLES, downloadBrochurePdf } = await import('@/lib/brochure-export')
+      const style = BROCHURE_STYLES.find(s => s.id === styleId)!
+      const multiImgs = props.aiMultiImages?.filter(m => m.image) || []
+      const brData = {
+        address,
+        siteArea: siteAreaNum,
+        buildingArea: selectedLayoutData ? Math.round(siteAreaNum * selectedLayoutData.coverage / 100) : undefined,
+        gfa: selectedLayoutData?.gfa,
+        floors: selectedLayoutData?.floors || 5,
+        units: selectedLayoutData?.units || 10,
+        parking: selectedLayoutData?.parking,
+        far: selectedLayoutData ? Math.round((selectedLayoutData.gfa / siteAreaNum) * 100) : undefined,
+        coverage: selectedLayoutData?.coverage,
+        zoneType: regulation?.zoneType,
+        maxHeight: regulation?.maxHeight,
+        layoutName: selectedLayoutData?.name,
+        layoutType: selectedLayoutData?.type,
+        roi: feasibilityResult?.roi,
+        totalCost: feasibilityResult?.totalCost,
+        expectedProfit: feasibilityResult?.profit,
+        contact: branding ? { phone: branding.phone, email: branding.email, site: branding.website } : undefined,
+        eyeLevelImage: multiImgs.find(m => m.angle === 'eye-level')?.image || props.aiRenderImage || null,
+        birdsEyeImage: multiImgs.find(m => m.angle === 'birds-eye')?.image || null,
+        entranceImage: multiImgs.find(m => m.angle === 'entrance')?.image || null,
+        interiorImage: multiImgs.find(m => m.angle === 'interior')?.image || null,
+        interiorComparison: props.aiInteriorComparison?.filter(c => c.image).map(c => ({ label: c.label, image: c.image })),
+      }
+      const result = await downloadBrochurePdf(brData, style)
+      if (result.success) {
+        toast.success(`${style.name} 브로셔 다운로드 완료`, { id: 'brochure' })
+      } else {
+        toast.error('브로셔 생성 실패', { id: 'brochure', description: result.error })
+      }
+    } catch (e) {
+      toast.error('브로셔 생성 실패', { id: 'brochure', description: e instanceof Error ? e.message : '오류' })
+    } finally {
+      setBrochureLoading(false)
+    }
+  }
 
   return (
           <div className="flex flex-col gap-6">
@@ -357,6 +406,43 @@ export function ReportStep(props: ReportStepProps) {
                   <Share2 className="h-4 w-4" />
                   공유
                 </Button>
+                {/* ━━━ 분양 브로셔 드롭다운 ━━━ */}
+                <div className="relative flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 whitespace-nowrap bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30 text-amber-400 hover:text-amber-300"
+                    disabled={brochureLoading}
+                    onClick={() => setBrochureOpen(!brochureOpen)}
+                  >
+                    {brochureLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>📋</span>}
+                    브로셔
+                  </Button>
+                  {brochureOpen && (
+                    <div className="absolute top-full right-0 mt-1 w-56 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
+                      <div className="px-3 py-2 text-[10px] text-muted-foreground border-b border-border">분양 브로셔 스타일 선택</div>
+                      {[
+                        { id: 'dark-luxury', emoji: '🖤', name: '다크 럭셔리', sub: '고급 주거' },
+                        { id: 'white-minimal', emoji: '🤍', name: '화이트 미니멀', sub: '신혼·오피스텔' },
+                        { id: 'nature-green', emoji: '🌿', name: '네이처 그린', sub: '전원·타운하우스' },
+                        { id: 'urban-modern', emoji: '🏙️', name: '어반 모던', sub: '역세권·주상복합' },
+                        { id: 'hanok-classic', emoji: '🏯', name: '한옥 클래식', sub: '한옥·전통 지구' },
+                      ].map(s => (
+                        <button
+                          key={s.id}
+                          onClick={() => handleBrochure(s.id)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent/10 transition-colors"
+                        >
+                          <span className="text-base">{s.emoji}</span>
+                          <div>
+                            <div className="text-xs font-medium">{s.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{s.sub}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               
               <TabsContent value="summary">
