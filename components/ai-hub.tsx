@@ -190,6 +190,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [proposal, setProposal] = useState<string|null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const [renderProgress, setRenderProgress] = useState<string|null>(null)
+  const [compareSet, setCompareSet] = useState<string[]>([]) // 3안 비교용 멀티 선택 (최대 3)
 
   const styleName = STYLES.find(s => s.id === style)?.label || INTERIOR_STYLES.find(s => s.id === style)?.label || '모던 럭셔리'
 
@@ -298,22 +299,42 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   // 선택된 인테리어 스타일 기반으로 3안 동적 구성
   const getCompareStyles = () => {
     const allInt = INTERIOR_STYLES
-    const selectedInt = allInt.find(s => s.id === style)
-    // 기본 3종 (선택된 스타일이 아닌 것 중에서)
     const defaults = [
       { id: 'int-modern-luxury', label: '모던 럭셔리' },
       { id: 'int-warm-wood', label: '화이트우드' },
       { id: 'int-natural', label: '내추럴모던' },
     ]
-    if (!selectedInt || defaults.some(d => d.id === style)) {
-      // 선택된 스타일이 기본 3종 중 하나면 그대로 사용
-      return defaults
+    
+    if (compareSet.length === 0) {
+      // 멀티 선택 없으면 현재 단일 선택 기반
+      const selectedInt = allInt.find(s => s.id === style)
+      if (!selectedInt || defaults.some(d => d.id === style)) return defaults
+      return [
+        { id: selectedInt.id, label: selectedInt.label },
+        ...defaults.filter(d => d.id !== selectedInt.id).slice(0, 2),
+      ]
     }
-    // 선택된 스타일을 첫 번째로, 나머지 2개는 기본에서
-    return [
-      { id: selectedInt.id, label: selectedInt.label },
-      ...defaults.filter(d => d.id !== selectedInt.id).slice(0, 2),
-    ]
+    
+    // 멀티 선택된 스타일 사용 + 부족분은 기본값으로 채움
+    const selected = compareSet.map(id => {
+      const found = allInt.find(s => s.id === id)
+      return found ? { id: found.id, label: found.label } : null
+    }).filter(Boolean) as { id: string; label: string }[]
+    
+    if (selected.length >= 3) return selected.slice(0, 3)
+    
+    // 부족분 기본값으로 채움
+    const remaining = defaults.filter(d => !selected.some(s => s.id === d.id))
+    return [...selected, ...remaining].slice(0, 3)
+  }
+  
+  // 3안 멀티 선택 토글
+  const toggleCompare = (styleId: string) => {
+    setCompareSet(prev => {
+      if (prev.includes(styleId)) return prev.filter(id => id !== styleId)
+      if (prev.length >= 3) return prev // 최대 3개
+      return [...prev, styleId]
+    })
   }
   const doInteriorCompare = async () => {
     setLoading(true); setError(null); setInteriorComp(null)
@@ -402,24 +423,50 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
             <div className="space-y-2">
               {angle === 'interior' ? (
                 <>
-                  <p className="text-[9px] text-teal-400/70 font-medium">🛋️ 인테리어 스타일</p>
+                  <p className="text-[9px] text-teal-400/70 font-medium">🛋️ 인테리어 스타일 <span className="text-muted-foreground">(탭: 단일 렌더링 / 길게 누르기: 3안 추가)</span></p>
+                  {compareSet.length > 0 && <p className="text-[9px] text-amber-400">📋 3안 선택: {compareSet.map(id => INTERIOR_STYLES.find(s => s.id === id)?.label).join(' → ')} ({compareSet.length}/3)</p>}
                   <div className="grid grid-cols-4 gap-1.5">
-                    {INTERIOR_STYLES.slice(0, 8).map(s => (
-                      <button key={s.id} onClick={() => setStyle(s.id)}
-                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-teal-500/20 border-2 border-teal-400 font-semibold' : 'bg-card/30 border border-border/50 hover:border-teal-300'}`}>
+                    {INTERIOR_STYLES.slice(0, 8).map(s => {
+                      const cIdx = compareSet.indexOf(s.id)
+                      return (
+                      <button key={s.id}
+                        onClick={() => setStyle(s.id)}
+                        onContextMenu={(e) => { e.preventDefault(); toggleCompare(s.id) }}
+                        onTouchStart={(e) => {
+                          const timer = setTimeout(() => { toggleCompare(s.id) }, 500)
+                          const el = e.currentTarget
+                          const clear = () => { clearTimeout(timer); el.removeEventListener('touchend', clear); el.removeEventListener('touchmove', clear) }
+                          el.addEventListener('touchend', clear, { once: true })
+                          el.addEventListener('touchmove', clear, { once: true })
+                        }}
+                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all relative ${style === s.id ? 'bg-teal-500/20 border-2 border-teal-400 font-semibold' : 'bg-card/30 border border-border/50 hover:border-teal-300'}`}>
+                        {cIdx >= 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-[8px] font-bold text-white flex items-center justify-center">{cIdx + 1}</span>}
                         <span className="text-base block">{s.emoji}</span>{s.label}
                       </button>
-                    ))}
+                    )})}
                   </div>
                   <p className="text-[9px] text-amber-400/70 font-medium">🇰🇷 한국 인테리어</p>
                   <div className="grid grid-cols-4 gap-1.5">
-                    {INTERIOR_STYLES.slice(8).map(s => (
-                      <button key={s.id} onClick={() => setStyle(s.id)}
-                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all ${style === s.id ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-card/30 border border-amber-900/30 hover:border-amber-400'}`}>
+                    {INTERIOR_STYLES.slice(8).map(s => {
+                      const cIdx = compareSet.indexOf(s.id)
+                      return (
+                      <button key={s.id}
+                        onClick={() => setStyle(s.id)}
+                        onContextMenu={(e) => { e.preventDefault(); toggleCompare(s.id) }}
+                        onTouchStart={(e) => {
+                          const timer = setTimeout(() => { toggleCompare(s.id) }, 500)
+                          const el = e.currentTarget
+                          const clear = () => { clearTimeout(timer); el.removeEventListener('touchend', clear); el.removeEventListener('touchmove', clear) }
+                          el.addEventListener('touchend', clear, { once: true })
+                          el.addEventListener('touchmove', clear, { once: true })
+                        }}
+                        className={`p-1.5 rounded-lg text-center text-[10px] transition-all relative ${style === s.id ? 'bg-amber-500/20 border-2 border-amber-400 font-semibold' : 'bg-card/30 border border-amber-900/30 hover:border-amber-400'}`}>
+                        {cIdx >= 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-[8px] font-bold text-white flex items-center justify-center">{cIdx + 1}</span>}
                         <span className="text-base block">{s.emoji}</span>{s.label}
                       </button>
-                    ))}
+                    )})}
                   </div>
+                  {compareSet.length > 0 && <button onClick={() => setCompareSet([])} className="text-[9px] text-muted-foreground hover:text-foreground">↺ 3안 선택 초기화</button>}
                 </>
               ) : (
                 <>
@@ -545,8 +592,9 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1" title="정면+조감+입구+인테리어 4장">
                 {loading && multiImages !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '📐 4장'}
               </button>
-              <button onClick={doInteriorCompare} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1" title="인테리어 3안 비교">
+              <button onClick={doInteriorCompare} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1 relative" title="인테리어 3안 비교">
                 {loading && interiorComp !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '🛋️ 3안'}
+                {compareSet.length > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-white text-amber-600 text-[8px] font-bold flex items-center justify-center">{compareSet.length}</span>}
               </button>
             </div>
             {/* 렌더링 진행 상태 */}
