@@ -65,7 +65,8 @@ export async function GET(req: NextRequest) {
     // 5. 통계 계산
     const allProfiles = profiles || []
     const totalUsers = allProfiles.length
-    const proUsers = allProfiles.filter(p => p.plan === "pro").length
+    const proUsers = allProfiles.filter(p => p.plan === "pro" || p.plan === "enterprise").length
+    const enterpriseUsers = allProfiles.filter(p => p.plan === "enterprise").length
     const freeUsers = totalUsers - proUsers
 
     // 오늘 가입

@@ -368,7 +368,11 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div className="hidden md:block">
-                        {p.plan === "pro" ? (
+                        {p.plan === "enterprise" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 text-xs font-medium">
+                            💎 Enterprise
+                          </span>
+                        ) : p.plan === "pro" ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-600 text-xs font-medium">
                             <Crown className="h-3 w-3" /> Pro
                           </span>
@@ -390,7 +394,7 @@ export default function AdminPage() {
                       <div className="px-4 pb-3 pt-2 border-t bg-muted/10 space-y-3">
                         {/* Mobile info */}
                         <div className="md:hidden grid grid-cols-3 gap-2 text-xs">
-                          <div><span className="text-muted-foreground">플랜:</span> <span className="font-medium">{p.plan === "pro" ? "Pro" : "무료"}</span></div>
+                          <div><span className="text-muted-foreground">플랜:</span> <span className="font-medium">{p.plan === "enterprise" ? "Enterprise" : p.plan === "pro" ? "Pro" : "무료"}</span></div>
                           <div><span className="text-muted-foreground">사용량:</span> <span className="font-medium">{p.monthly_usage || 0}회</span></div>
                           <div><span className="text-muted-foreground">가입:</span> <span className="font-medium">{p.provider || "email"}</span></div>
                           <div className="col-span-3"><span className="text-muted-foreground">가입일:</span> <span className="font-medium">{fmtFullDate(p.created_at)}</span></div>
@@ -398,27 +402,31 @@ export default function AdminPage() {
                         {/* Plan actions */}
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs text-muted-foreground mr-1">플랜 변경:</span>
-                          {p.plan !== "pro" ? (
-                            <button
-                              onClick={async () => {
-                                if (!confirm(`${p.name || p.email}을(를) Pro로 업그레이드하시겠습니까?`)) return
-                                await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "pro" })
-                                fetchData()
-                              }}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20"
-                            >
-                              <Crown className="h-3 w-3" /> Pro 업그레이드
+                          {p.plan !== "free" && (
+                            <button onClick={async () => {
+                              if (!confirm(`${p.name || p.email}을(를) 무료로 변경하시겠습니까?`)) return
+                              await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "free" })
+                              fetchData()
+                            }} className="px-2.5 py-1 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80">
+                              무료
                             </button>
-                          ) : (
-                            <button
-                              onClick={async () => {
-                                if (!confirm(`${p.name || p.email}을(를) 무료로 다운그레이드하시겠습니까?`)) return
-                                await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "free" })
-                                fetchData()
-                              }}
-                              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80"
-                            >
-                              무료로 변경
+                          )}
+                          {p.plan !== "pro" && (
+                            <button onClick={async () => {
+                              if (!confirm(`${p.name || p.email}을(를) Pro로 변경하시겠습니까?`)) return
+                              await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "pro" })
+                              fetchData()
+                            }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
+                              <Crown className="h-3 w-3" /> Pro
+                            </button>
+                          )}
+                          {p.plan !== "enterprise" && (
+                            <button onClick={async () => {
+                              if (!confirm(`${p.name || p.email}을(를) Enterprise로 변경하시겠습니까?`)) return
+                              await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "enterprise" })
+                              fetchData()
+                            }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-violet-500/10 text-violet-400 hover:bg-violet-500/20">
+                              💎 Enterprise
                             </button>
                           )}
                           <button
