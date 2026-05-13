@@ -72,7 +72,7 @@ export function DataVerification({ address, siteArea, regulation, selectedLayout
 
     // ━━━ 3. 건폐율 초과 검증 ━━━
     if (selectedLayout && regulation) {
-      const coverage = selectedLayout.buildingCoverage || 0
+      const coverage = selectedLayout.coverage || selectedLayout.buildingCoverage || 0
       const maxCoverage = regulation.maxCoverageRatio || 60
       if (coverage > maxCoverage) {
         results.push({ id: 'coverage', category: '법규', label: '건폐율', status: 'fail', current: `${coverage.toFixed(1)}%`, expected: `≤ ${maxCoverage}%`, message: `건폐율 한도 초과 (${(coverage - maxCoverage).toFixed(1)}%p)` })
@@ -84,7 +84,8 @@ export function DataVerification({ address, siteArea, regulation, selectedLayout
 
     // ━━━ 4. 용적률 초과 검증 ━━━
     if (selectedLayout && regulation) {
-      const far = selectedLayout.floorAreaRatio || 0
+      const gfaVal = selectedLayout.gfa || 0
+      const far = selectedLayout.floorAreaRatio || (gfaVal > 0 && siteArea > 0 ? (gfaVal / siteArea) * 100 : 0)
       const maxFar = regulation.maxFloorAreaRatio || 200
       if (far > maxFar) {
         results.push({ id: 'far', category: '법규', label: '용적률', status: 'fail', current: `${far.toFixed(1)}%`, expected: `≤ ${maxFar}%`, message: `용적률 한도 초과 (${(far - maxFar).toFixed(1)}%p)` })
@@ -133,9 +134,9 @@ export function DataVerification({ address, siteArea, regulation, selectedLayout
 
     // ━━━ 8. 수치 정합성 — 건폐율 계산값 vs 표시값 ━━━
     if (selectedLayout && siteArea > 0) {
-      const displayCoverage = selectedLayout.buildingCoverage || 0
+      const displayCoverage = selectedLayout.coverage || selectedLayout.buildingCoverage || 0
       const buildingArea = selectedLayout.buildingArea || (siteArea * displayCoverage / 100)
-      const calcCoverage = (buildingArea / siteArea) * 100
+      const calcCoverage = buildingArea > 0 ? (buildingArea / siteArea) * 100 : displayCoverage
       if (buildingArea > 0 && Math.abs(calcCoverage - displayCoverage) > 1) {
         results.push({ id: 'calc-coverage', category: '정합성', label: '건폐율 계산', status: 'warn', current: `표시: ${displayCoverage.toFixed(1)}%`, expected: `계산: ${calcCoverage.toFixed(1)}% (건축면적 ${buildingArea.toFixed(0)}㎡ ÷ 대지 ${siteArea}㎡)`, message: '표시값과 계산값이 다릅니다' })
       } else {
@@ -143,8 +144,8 @@ export function DataVerification({ address, siteArea, regulation, selectedLayout
       }
 
       // 용적률 정합성
-      const displayFar = selectedLayout.floorAreaRatio || 0
       const gfa = selectedLayout.gfa || 0
+      const displayFar = selectedLayout.floorAreaRatio || (gfa > 0 && siteArea > 0 ? (gfa / siteArea) * 100 : 0)
       if (gfa > 0) {
         const calcFar = (gfa / siteArea) * 100
         if (Math.abs(calcFar - displayFar) > 2) {
