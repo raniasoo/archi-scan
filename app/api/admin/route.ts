@@ -36,33 +36,31 @@ export async function GET(req: NextRequest) {
 
     const supabase = await createClient()
 
-    // 1. 전체 프로필 목록
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false })
+    // ━━━ 데이터 조회: RPC 함수로 RLS 우회 (Admin 토큰 로그인 대응) ━━━
+    let profiles: any[] = []
+    let recentLogs: any[] = []
+    let paymentLogs: any[] = []
+    let inquiries: any[] = []
 
-    // 2. 최근 사용 로그 (최근 100건)
-    const { data: recentLogs } = await supabase
-      .from("usage_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(100)
-
-    // 3. 결제 로그
-    const { data: paymentLogs } = await supabase
-      .from("usage_logs")
-      .select("*")
-      .eq("action", "payment")
-      .order("created_at", { ascending: false })
-      .limit(50)
-
-    // 4. 문의 목록
-    const { data: inquiries } = await supabase
-      .from("inquiries")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(100)
+    // 1차: RPC 함수 시도 (RLS 우회 — Admin 토큰 로그인 시 필수)
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_admin_data', { admin_secret: 'archiscan-admin-2026' })
+    
+    if (!rpcError && rpcData && !rpcData.error) {
+      profiles = rpcData.profiles || []
+      recentLogs = rpcData.usage_logs || []
+      paymentLogs = rpcData.payment_logs || []
+      inquiries = rpcData.inquiries || []
+    } else {
+      // 2차 fallback: 직접 쿼리 (Supabase 세션 로그인 시 — RLS 적용됨)
+      const { data: p } = await supabase.from("profiles").select("*").order("created_at", { ascending: false })
+      const { data: u } = await supabase.from("usage_logs").select("*").order("created_at", { ascending: false }).limit(100)
+      const { data: pl } = await supabase.from("usage_logs").select("*").eq("action", "payment").order("created_at", { ascending: false }).limit(50)
+      const { data: i } = await supabase.from("inquiries").select("*").order("created_at", { ascending: false }).limit(100)
+      profiles = p || []
+      recentLogs = u || []
+      paymentLogs = pl || []
+      inquiries = i || []
+    }
 
     // 5. 통계 계산
     const allProfiles = profiles || []
