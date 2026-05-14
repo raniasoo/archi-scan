@@ -112,6 +112,7 @@ export async function GET(req: NextRequest) {
       paymentLogs: paymentLogs || [],
       inquiries: inquiries || [],
       notices: (rpcData?.notices || []),
+      feedback: (rpcData?.feedback || []),
     })
   } catch (err: any) {
     console.error("[ADMIN] Error:", err.message)
