@@ -479,6 +479,107 @@ export function BuildingVolume3D({
 
       /* ── 건물 (PBR + 창문 텍스처) ── */
 
+      // ━━━ L자형/중정형: 단일 연결 지오메트리 (100% 형태 일치) ━━━
+      const isSingleShape = layoutType !== 'cluster' && (layoutType === 'lshape' || layoutType === 'courtyard')
+      
+      if (isSingleShape) {
+        const tH = floors * floorHeight
+        const fp = Math.max(coverage, 20) / 100
+        const wt = layoutType === 'lshape' ? Math.sqrt(fp) * 0.42 * S : Math.sqrt(fp) * 0.33 * S
+
+        const shape = new THREE.Shape()
+        
+        if (layoutType === 'lshape') {
+          // ㄱ자형: 단일 L 지오메트리
+          const H = 0.4 * fp * S * S / wt   // 가로 날개 길이
+          const V = 0.6 * fp * S * S / wt + wt // 세로 날개 길이 (코너 포함)
+          // CCW path (ㄱ = 상단 가로 + 우측 세로)
+          shape.moveTo(-H/2, V/2 - wt)         // 가로날개 좌하
+          shape.lineTo(H/2 - wt, V/2 - wt)     // 내부 코너
+          shape.lineTo(H/2 - wt, -V/2)          // 세로날개 우하 내측
+          shape.lineTo(H/2, -V/2)               // 세로날개 우하 외측
+          shape.lineTo(H/2, V/2)                // 우상
+          shape.lineTo(-H/2, V/2)               // 좌상
+          shape.closePath()
+          info.push({ label: 'ㄱ자형', floors })
+        } else {
+          // 중정형: 단일 ㄷ자 지오메트리 (개방면=남쪽)
+          const totalW = 0.36 * fp * S * S / wt  // 상단 바 폭
+          const totalD = 0.32 * fp * S * S / wt + wt // 측면 날개 깊이
+          // CCW path (ㄷ = 상단 바 + 좌우 날개, 하단 개방)
+          shape.moveTo(-totalW/2, -totalD/2)         // 좌하 외측
+          shape.lineTo(-totalW/2 + wt, -totalD/2)    // 좌하 내측
+          shape.lineTo(-totalW/2 + wt, totalD/2 - wt) // 좌측 내상
+          shape.lineTo(totalW/2 - wt, totalD/2 - wt)  // 우측 내상
+          shape.lineTo(totalW/2 - wt, -totalD/2)      // 우하 내측
+          shape.lineTo(totalW/2, -totalD/2)            // 우하 외측
+          shape.lineTo(totalW/2, totalD/2)             // 우상
+          shape.lineTo(-totalW/2, totalD/2)            // 좌상
+          shape.closePath()
+          info.push({ label: '중정형', floors })
+        }
+
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: tH, bevelEnabled: false })
+        geo.rotateX(-Math.PI / 2)
+
+        const wCols = Math.max(4, Math.round(S * 0.3 / 3.5))
+        const wTex = new THREE.CanvasTexture(makeWindowTex(floors, wCols))
+        wTex.wrapS = wTex.wrapT = THREE.RepeatWrapping
+
+        const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+          map: wTex, roughness: 0.25, metalness: 0.15,
+          color: 0xe0e5ec, envMapIntensity: 1.0, side: THREE.DoubleSide,
+        }))
+        mesh.castShadow = true; mesh.receiveShadow = true
+        scene.add(mesh)
+
+        // 에지
+        scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),
+          new THREE.LineBasicMaterial({ color: 0x8aa8c8, transparent: true, opacity: 0.25 })))
+
+        // 최상층 하이라이트 라인
+        const topShape = shape.getPoints()
+        const topPts = topShape.map((p: { x: number; y: number }) => new THREE.Vector3(p.x, tH, -p.y))
+        topPts.push(topPts[0].clone())
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(topPts), new THREE.LineBasicMaterial({ color: 0x34d399 })))
+
+        // 옥상
+        const roofShape = new THREE.ShapeGeometry(shape)
+        roofShape.rotateX(-Math.PI / 2)
+        const roofC2 = document.createElement('canvas')
+        roofC2.width = roofC2.height = 128
+        const rg2 = roofC2.getContext('2d')!
+        rg2.fillStyle = '#3a4550'; rg2.fillRect(0, 0, 128, 128)
+        rg2.strokeStyle = '#4a5560'; rg2.lineWidth = 0.5
+        for (let i = 0; i < 128; i += 12) { rg2.beginPath(); rg2.moveTo(i, 0); rg2.lineTo(i, 128); rg2.stroke() }
+        const roofMesh = new THREE.Mesh(roofShape,
+          new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(roofC2), roughness: 0.7 }))
+        roofMesh.position.set(0, tH + 0.05, 0); roofMesh.receiveShadow = true
+        scene.add(roofMesh)
+
+        // 중정형 정원 (ㄷ자 내부)
+        if (layoutType === 'courtyard') {
+          const totalW2 = 0.36 * fp * S * S / wt
+          const totalD2 = 0.32 * fp * S * S / wt + wt
+          const gardenW = totalW2 - 2 * wt - 2
+          const gardenD = totalD2 - wt - 2
+          if (gardenW > 2 && gardenD > 2) {
+            const garden = new THREE.Mesh(new THREE.PlaneGeometry(gardenW, gardenD),
+              new THREE.MeshStandardMaterial({ color: 0x2d5a1e, roughness: 0.9 }))
+            garden.rotation.x = -Math.PI / 2
+            garden.position.set(0, 0.1, -((totalD2/2 - wt) / 2 - 1))
+            scene.add(garden)
+          }
+        }
+
+        // 엔트런스 캐노피
+        const canopy = new THREE.Mesh(new THREE.BoxGeometry(3, 0.12, 1.5),
+          new THREE.MeshStandardMaterial({ color: 0x607080, metalness: 0.3, roughness: 0.4 }))
+        canopy.position.set(0, floorHeight * 0.82, S * 0.3)
+        canopy.castShadow = true; scene.add(canopy)
+
+      } else {
+      // ━━━ 타워/판상/클러스터: 블록 기반 (기존 로직) ━━━
       blocks.forEach((blk, idx) => {
         const bF = getBlockFloors(idx, floors, layoutType)
         const tH = bF * floorHeight
@@ -550,6 +651,7 @@ export function BuildingVolume3D({
         canopy.position.set(bX, floorHeight * 0.82, bZ + bD / 2 + 0.8); canopy.castShadow = true
         scene.add(canopy)
       })
+      } // end else (tower/linear/cluster block-based)
 
       /* ── 조경/도로/디테일 (Phase 2/3) — 실패해도 기본 건물은 표시 ── */
       try {
