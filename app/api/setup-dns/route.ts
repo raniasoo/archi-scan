@@ -47,12 +47,12 @@ export async function GET(req: NextRequest) {
         name: rec.name || '',
         type: rec.type?.toUpperCase() || 'TXT',
         value: rec.value || '',
-        ttl: rec.ttl || 60,
+        ttl: typeof rec.ttl === 'number' ? rec.ttl : 60,
       }
       
       // MX 레코드는 priority 필요
-      if (rec.type?.toUpperCase() === 'MX' && rec.priority) {
-        dnsRecord.mxPriority = rec.priority
+      if (rec.type?.toUpperCase() === 'MX') {
+        dnsRecord.mxPriority = typeof rec.priority === 'number' ? rec.priority : 10
       }
 
       try {
