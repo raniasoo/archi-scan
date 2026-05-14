@@ -1,17 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sendWelcomeEmail } from '@/lib/email'
 
-// GET: RESEND_API_KEY 설정 여부 확인 (테스트용)
-export async function GET() {
-  const hasKey = !!process.env.RESEND_API_KEY
-  const keyPrefix = process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.slice(0, 6) + '...' : 'NOT SET'
-  return NextResponse.json({ 
-    resendKeySet: hasKey, 
-    keyPrefix,
-    status: hasKey ? '✅ RESEND_API_KEY 설정됨' : '❌ RESEND_API_KEY 미설정 — Vercel 환경변수에 추가 필요'
-  })
-}
-
 export async function POST(request: Request) {
   try {
     const { email, userName } = await request.json()
