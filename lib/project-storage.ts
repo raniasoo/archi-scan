@@ -120,8 +120,25 @@ export interface ProjectListItem {
 // Constants
 // ============================================================================
 
-const STORAGE_KEY = 'archiscan_saved_projects'
+const BASE_STORAGE_KEY = 'archiscan_saved_projects'
+const USER_KEY = 'archiscan_current_user_id'
 const MAX_RECENT_PROJECTS = 10
+
+// 현재 로그인 사용자 ID 설정/조회
+export function setStorageUserId(userId: string | null): void {
+  if (typeof window === 'undefined') return
+  if (userId) {
+    localStorage.setItem(USER_KEY, userId)
+  } else {
+    localStorage.removeItem(USER_KEY)
+  }
+}
+
+function getStorageKey(): string {
+  if (typeof window === 'undefined') return BASE_STORAGE_KEY
+  const userId = localStorage.getItem(USER_KEY)
+  return userId ? `${BASE_STORAGE_KEY}_${userId}` : BASE_STORAGE_KEY
+}
 
 // ============================================================================
 // Storage Functions
@@ -131,7 +148,7 @@ function getStoredProjects(): SavedProject[] {
   if (typeof window === 'undefined') return []
   
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = localStorage.getItem(getStorageKey())
     if (!stored) return []
     return JSON.parse(stored)
   } catch {
@@ -144,9 +161,45 @@ function setStoredProjects(projects: SavedProject[]): void {
   if (typeof window === 'undefined') return
   
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
+    localStorage.setItem(getStorageKey(), JSON.stringify(projects))
   } catch (error) {
     console.error('[v0] Failed to save projects to localStorage:', error)
+  }
+}
+
+// 비로그인 프로젝트를 현재 사용자 키로 마이그레이션
+export function migrateUnscopedProjects(): number {
+  if (typeof window === 'undefined') return 0
+  const userId = localStorage.getItem(USER_KEY)
+  if (!userId) return 0
+  
+  try {
+    const unscopedRaw = localStorage.getItem(BASE_STORAGE_KEY)
+    if (!unscopedRaw) return 0
+    const unscopedProjects: SavedProject[] = JSON.parse(unscopedRaw)
+    if (unscopedProjects.length === 0) return 0
+    
+    // 현재 사용자 프로젝트에 병합
+    const userProjects = getStoredProjects()
+    const existingIds = new Set(userProjects.map(p => p.id))
+    let migrated = 0
+    
+    for (const p of unscopedProjects) {
+      if (!existingIds.has(p.id)) {
+        userProjects.push(p)
+        migrated++
+      }
+    }
+    
+    if (migrated > 0) {
+      setStoredProjects(userProjects)
+      // 비로그인 키 비우기
+      localStorage.removeItem(BASE_STORAGE_KEY)
+      console.log(`[project-storage] ${migrated}개 프로젝트 마이그레이션 완료`)
+    }
+    return migrated
+  } catch {
+    return 0
   }
 }
 

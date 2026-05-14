@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
 import { trackLogin, trackSignUp } from "@/components/google-analytics"
+import { setStorageUserId, migrateUnscopedProjects } from "@/lib/project-storage"
 
 export interface UsageInfo {
   plan: string
@@ -22,6 +23,14 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
+
+      // localStorage 프로젝트를 사용자별로 분리
+      if (session?.user) {
+        setStorageUserId(session.user.id)
+        migrateUnscopedProjects() // 비로그인 상태 프로젝트를 현재 사용자로 이전
+      } else {
+        setStorageUserId(null)
+      }
 
       // 신규 가입 감지 → 환영 이메일 발송
       if (event === 'SIGNED_IN' && session?.user) {
@@ -135,6 +144,7 @@ export function useAuth() {
   }, [])
 
   const signOut = useCallback(async () => {
+    setStorageUserId(null) // 프로젝트 격리 해제
     await supabase.auth.signOut()
     setUser(null)
     setUsage(null)
