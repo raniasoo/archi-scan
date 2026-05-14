@@ -488,8 +488,29 @@ export async function POST(req: NextRequest) {
         
         // ★ 앵글별 참조 전략
         if (ai === 0) {
-          // 1번 눈높이: 독립 생성 (거리뷰만 참조, 위성사진 제외)
+          // 1번 눈높이: 거리뷰 + 지적도/형상 참조 (위성사진 제외)
           parts.push({ text: aPrompt })
+          
+          // 거리뷰, 지적도, 형상/높이 참조 추가 (위성사진은 눈높이에 부적합하므로 제외)
+          const eyeLevelRefs = refImages.filter(r => 
+            r.label !== 'satellite' && r.mimeType !== 'image/svg+xml'
+          )
+          if (eyeLevelRefs.length > 0) {
+            for (const img of eyeLevelRefs) {
+              parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
+            }
+            parts.push({ text: `REFERENCE IMAGES (${eyeLevelRefs.length}):
+${eyeLevelRefs.map((r, i) => `Image ${i+1}: ${
+  r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' :
+  r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows building footprints (orange shapes). Match these shapes EXACTLY.' :
+  r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — Eye-level photo of the ACTUAL neighborhood. Match styles, materials, road width, atmosphere.` :
+  r.label === 'height-reference' ? `HEIGHT REFERENCE — Building is EXACTLY ${floors || 3} floors (${((floors || 3) * 3.3).toFixed(1)}m). Match this height.` :
+  r.label === 'shape-reference' ? `BUILDING SHAPE REFERENCE — Orange shapes show exact building footprints. Match these shapes.` :
+  r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Match this style, materials, colors.' :
+  r.label
+}`).join('\n')}
+Use these references to ensure accurate rendering.` })
+          }
         } else if (a.angle === 'interior') {
           // 4번 인테리어: 참조이미지 없이 독립 생성 (실내는 외관과 무관)
           parts.push({ text: aPrompt })
