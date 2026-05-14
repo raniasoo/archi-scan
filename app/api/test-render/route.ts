@@ -64,13 +64,12 @@ ${type === 'courtyard' ? 'CRITICAL: Building MUST form a U-shape around a visibl
     // ━━━ 2. Gemini 이미지 생성 ━━━
     console.log(`[TEST-RENDER] Generating: ${type} ${floors}F ${units}units ${buildingCount}bldg...`)
 
-    const genUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_AI_API_KEY}`
+    const genUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_AI_API_KEY}`
     
     const genBody = {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         responseModalities: ["TEXT", "IMAGE"],
-        temperature: 0.4,
       },
     }
 
@@ -128,7 +127,7 @@ Extract these properties from the image:
 Respond ONLY with valid JSON, no markdown, no explanation:
 {"floor_count":5,"building_shape":"tower","building_count":1,"has_garden":false,"height_impression":"mid-rise","material":"concrete","confidence":80}`
 
-    const analysisUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_AI_API_KEY}`
+    const analysisUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`
     
     const analysisBody = {
       contents: [{
