@@ -734,6 +734,12 @@ export default function ArchiScanPage() {
           if (s.currentStep && s.currentStep !== 'input') setCurrentStep(s.currentStep)
           if (s.selectedLayout != null) setSelectedLayout(s.selectedLayout)
         }
+        // 복원 알림
+        if (s.address) {
+          setTimeout(() => {
+            toast.success(`이전 작업을 이어합니다: ${s.address.split(' ').slice(-2).join(' ')}`, { duration: 3000 })
+          }, 1500)
+        }
       }
     } catch {}
   }, [])

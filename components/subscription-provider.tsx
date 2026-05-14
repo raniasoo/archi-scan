@@ -65,6 +65,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         setMonthlyUsage(checkData.monthly_usage)
         setCanAnalyze(false)
         setShowUpgradeModal(true)
+        const { toast } = await import('sonner')
+        toast.error(`이번 달 분석 횟수를 모두 사용했습니다 (${checkData.monthly_usage}/${checkData.monthly_limit ?? 10}회)`, { duration: 5000 })
         return false
       }
       const trackRes = await fetch("/api/usage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "analysis" }) })
@@ -75,7 +77,16 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
       const trackData = await trackRes.json()
       setMonthlyUsage(trackData.monthly_usage ?? checkData.monthly_usage + 1)
-      if (trackData.monthly_usage >= (checkData.monthly_limit ?? 10)) setCanAnalyze(false)
+      const currentUsage = trackData.monthly_usage ?? checkData.monthly_usage + 1
+      const limit = checkData.monthly_limit ?? 10
+      
+      if (currentUsage >= limit) {
+        setCanAnalyze(false)
+      } else if (currentUsage === Math.ceil(limit * 0.8)) {
+        // 80% 사용 알림
+        const { toast } = await import('sonner')
+        toast.warning(`이번 달 분석 ${currentUsage}/${limit}회 사용 — 잔여 ${limit - currentUsage}회`, { duration: 5000 })
+      }
       return true
     } catch { return true }
   }, [plan])
