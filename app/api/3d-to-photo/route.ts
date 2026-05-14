@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 3D-First Pipeline v2 — Depth Map + 극강 프롬프트 + Auto-Select
-// Three.js 스크린샷 + 깊이맵 → Gemini → 100% 형태 보존 포토리얼
+// 3D-First Pipeline v4 — 5방향 캡처 + Depth Map + Multi-shot Auto-Select
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const GEMINI_URL = (key: string) =>
+const GEMINI_IMG = (key: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`
+const GEMINI_TXT = (key: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`
 
-async function callGemini(key: string, parts: any[]) {
-  const res = await fetch(GEMINI_URL(key), {
+async function callGemini(url: string, parts: any[]) {
+  const isImg = url.includes('flash-image')
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts }],
-      generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+      ...(isImg ? { generationConfig: { responseModalities: ["TEXT", "IMAGE"] } } : {}),
     }),
     signal: AbortSignal.timeout(120000),
   })
   if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
-  const resParts = data?.candidates?.[0]?.content?.parts || []
+  const rParts = data?.candidates?.[0]?.content?.parts || []
   let image = '', text = ''
-  for (const p of resParts) {
+  for (const p of rParts) {
     if (p.inlineData?.data) image = `data:${p.inlineData.mimeType || 'image/png'};base64,${p.inlineData.data}`
     if (p.text) text = p.text
   }
@@ -31,69 +33,87 @@ async function callGemini(key: string, parts: any[]) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { screenshot, depthMap, layoutName, floors, units, type, buildingCount, address, angle } = await req.json()
-    if (!screenshot) return NextResponse.json({ error: 'screenshot required' }, { status: 400 })
+    const body = await req.json()
+    const { multiAngle, layoutName, floors, units, type, buildingCount, address } = body
     
     const KEY = process.env.GOOGLE_AI_API_KEY
     if (!KEY) return NextResponse.json({ error: 'API key not set' }, { status: 500 })
+
+    // 5방향 이미지 추출
+    const angles: { angle: string; image: string }[] = multiAngle || []
+    if (angles.length === 0 && body.screenshot) {
+      angles.push({ angle: 'bird-eye', image: body.screenshot })
+      if (body.depthMap) angles.push({ angle: 'depth-map', image: body.depthMap })
+    }
     
-    const base64 = screenshot.replace(/^data:image\/\w+;base64,/, '')
-    const depthBase64 = depthMap?.replace(/^data:image\/\w+;base64,/, '')
-
-    // ━━━ 극강 프롬프트 (층수 5회 반복, 네거티브 지시) ━━━
-    const floorText = `${floors || 2}`
-    const typeText = type === 'lshape' ? 'L-shaped (ㄱ자형)' : type === 'courtyard' ? 'U-shaped (ㄷ자형)' : type === 'tower' ? 'tower (타워형)' : type === 'linear' ? 'linear slab (판상형)' : type === 'cluster' ? `${buildingCount || 3} separate buildings (클러스터)` : type
+    if (angles.length === 0) return NextResponse.json({ error: 'No images' }, { status: 400 })
     
-    const prompt = `You are a world-class architectural visualization artist. Transform this 3D building model into a photorealistic rendering.
+    const fl = `${floors || 2}`
+    const typeText = type === 'lshape' ? 'L-shaped (ㄱ자형)' : type === 'courtyard' ? 'U-shaped (ㄷ자형)' : type === 'tower' ? 'tower' : type === 'linear' ? 'linear slab' : `${buildingCount || 1} buildings (cluster)`
 
-═══ ABSOLUTE RULES (VIOLATION = FAILURE) ═══
+    // ━━━ 5방향 설명 + 극강 프롬프트 ━━━
+    const angleDesc = angles.map(a => {
+      if (a.angle === 'bird-eye') return 'Image: BIRD-EYE VIEW (45° aerial) — shows overall building shape and site context'
+      if (a.angle === 'front') return 'Image: FRONT VIEW — shows EXACT floor count. Count the horizontal slabs carefully.'
+      if (a.angle === 'side') return 'Image: SIDE VIEW — shows building depth and height profile'
+      if (a.angle === 'top-down') return 'Image: TOP-DOWN VIEW — shows EXACT building footprint shape (L/U/rectangle). This is the ground truth for the shape.'
+      if (a.angle === 'depth-map') return 'Image: DEPTH MAP (white=building, black=background) — the EXACT building silhouette. Match this PRECISELY.'
+      return `Image: ${a.angle}`
+    }).join('\n')
 
-RULE 1 — FLOOR COUNT: This building has EXACTLY ${floorText} floors. NOT ${parseInt(floorText)+1}. NOT ${parseInt(floorText)+2}. EXACTLY ${floorText} FLOORS.
-Count the horizontal slab lines in the 3D model — there are EXACTLY ${floorText} floor slabs. Reproduce EXACTLY ${floorText} floor slabs.
-DO NOT add extra floors. DO NOT add rooftop structures. DO NOT add penthouses. DO NOT add mechanical rooms on the roof.
-The rooftop must be FLAT with only a simple railing. No structures above the ${floorText}th floor.
+    const prompt = `You are a world-class architectural visualization artist.
 
-RULE 2 — BUILDING SHAPE: The building is ${typeText}. PRESERVE THIS EXACT SHAPE.
-Do not change the footprint. Do not add wings. Do not merge wings. Do not make it rectangular if it's L-shaped.
-${depthBase64 ? 'The second image is the DEPTH MAP showing the exact building silhouette. Match it PRECISELY.' : ''}
+I am providing ${angles.length} REFERENCE IMAGES of the SAME building from different angles:
 
-RULE 3 — SCALE: This is a SMALL ${floorText}-story ${units || 5}-unit residential villa, NOT a large apartment complex.
-It should look modest and intimate, like a Korean 빌라/다세대주택.
+${angleDesc}
 
-RULE 4 — PRESERVE CAMERA ANGLE AND POSITION exactly as shown.
+═══ ABSOLUTE RULES ═══
 
-═══ WHAT TO ADD (enhancement only) ═══
-- Warm natural stone facade (베이지/크림 Korean villa style)
-- Windows with frames + AC outdoor units on each floor
-- Glass balcony railings with potted plants
-- Cherry blossom trees (벚꽃) and green landscaping
-- Children's playground in the garden area
-- Realistic road with lane markings
+FLOOR COUNT: EXACTLY ${fl} floors. The FRONT VIEW shows exactly ${fl} horizontal floor slabs.
+- NOT ${parseInt(fl)+1} floors. NOT ${parseInt(fl)+2} floors.
+- NO rooftop structures. NO penthouses. NO mechanical rooms above the roof.
+- The roof is FLAT with only a simple railing.
+
+BUILDING SHAPE: ${typeText}. Look at the TOP-DOWN VIEW — it shows the EXACT footprint.
+- Reproduce this EXACT footprint shape. Do not simplify. Do not add wings.
+
+SCALE: This is a SMALL ${fl}-story ${units || 5}-unit Korean residential villa (빌라/다세대).
+- It must look intimate and modest, NOT like a large apartment complex.
+
+CAMERA: Generate from the BIRD-EYE VIEW angle (45° aerial, same as the first image).
+
+═══ ENHANCEMENTS (add photorealism only) ═══
+- Warm natural stone facade (베이지/크림 톤)
+- Windows with frames, AC outdoor units per floor
+- Glass balcony railings with plants
+- Cherry blossom trees (벚꽃) + landscaped garden
+- Children's playground in open areas
+- Realistic road, sidewalk, street lights
 - Golden hour sky with soft clouds
-- Walking paths with stepping stones
-- A few people walking (small scale)
-- Neighboring buildings in far background (blurred)
+- Neighboring buildings in blurred background
+- A few people walking
 
-═══ FINAL CHECK ═══
-Before generating: count the floors in your output. Is it EXACTLY ${floorText}? If not, regenerate.
-Building info: ${layoutName || type} · ${floorText}층 ${units || 5}세대 · ${address || '서울'}
+═══ FINAL SELF-CHECK ═══
+Count floors in your output: is it EXACTLY ${fl}? 
+Check footprint shape: does it match the TOP-DOWN VIEW?
+If not, regenerate.
 
-Output: ONE photorealistic image only.`
+Building: ${layoutName || type} · ${fl}층 ${units || 5}세대
+Output: ONE photorealistic image.`
 
-    // ━━━ 이미지 파트 구성 ━━━
-    const imgParts: any[] = [
-      { inlineData: { mimeType: 'image/png', data: base64 } },
-    ]
-    if (depthBase64) {
-      imgParts.push({ inlineData: { mimeType: 'image/png', data: depthBase64 } })
+    // ━━━ 이미지 파트 구성 (최대 5장) ━━━
+    const imgParts: any[] = []
+    for (const a of angles) {
+      const b64 = a.image.replace(/^data:image\/\w+;base64,/, '')
+      imgParts.push({ inlineData: { mimeType: 'image/png', data: b64 } })
     }
     imgParts.push({ text: prompt })
 
     // ━━━ Multi-shot: 2장 동시 생성 ━━━
-    console.log('[3D-PHOTO-V2] Generating 2 variants...')
+    console.log(`[3D-PHOTO-V4] ${angles.length} angles, generating 2 variants...`)
     const [r1, r2] = await Promise.allSettled([
-      callGemini(KEY, imgParts),
-      callGemini(KEY, imgParts),
+      callGemini(GEMINI_IMG(KEY), imgParts),
+      callGemini(GEMINI_IMG(KEY), imgParts),
     ])
     
     const results = [
@@ -102,56 +122,51 @@ Output: ONE photorealistic image only.`
     ].filter(r => r?.image)
 
     if (results.length === 0) {
-      return NextResponse.json({ success: false, error: 'Both generations failed' })
+      const err1 = r1.status === 'rejected' ? r1.reason?.message : ''
+      const err2 = r2.status === 'rejected' ? r2.reason?.message : ''
+      return NextResponse.json({ success: false, error: `Both failed: ${err1} / ${err2}` })
     }
     
     if (results.length === 1) {
-      console.log('[3D-PHOTO-V2] 1/2 succeeded')
-      return NextResponse.json({ success: true, image: results[0]!.image, score: 'N/A (single result)' })
+      return NextResponse.json({ success: true, image: results[0]!.image, score: 'N/A', angles: angles.length })
     }
 
-    // ━━━ Auto-Select: Gemini Vision으로 일치도 점수 매기기 ━━━
-    console.log('[3D-PHOTO-V2] Scoring 2 variants...')
-    const scorePrompt = `You are judging architectural rendering consistency.
+    // ━━━ Auto-Select: Gemini Vision 점수 매기기 ━━━
+    const birdEye = angles.find(a => a.angle === 'bird-eye')
+    const topDown = angles.find(a => a.angle === 'top-down')
+    const refB64 = (birdEye || angles[0]).image.replace(/^data:image\/\w+;base64,/, '')
+    
+    const scorePrompt = `Score this architectural rendering's consistency with the reference 3D model.
 
-The REFERENCE is a 3D model of a ${floorText}-story ${typeText} building with ${units || 5} units.
+Reference: ${fl}-story ${typeText} building with ${units || 5} units.
+${topDown ? 'The top-down view shows the EXACT footprint shape.' : ''}
 
-Score this photorealistic rendering on a scale of 0-100:
-- Floor count accuracy (0-40): Does it show EXACTLY ${floorText} floors? (Not ${parseInt(floorText)+1}, not ${parseInt(floorText)+2})
-- Shape accuracy (0-30): Does the building footprint match ${typeText}?
-- Scale accuracy (0-20): Does it look like a small ${units || 5}-unit villa?
-- Overall quality (0-10): Photorealistic quality
+Score 0-100:
+- Floor count (0-40): EXACTLY ${fl} floors?
+- Shape (0-30): Matches ${typeText}?
+- Scale (0-20): Small ${units || 5}-unit villa?
+- Quality (0-10): Photorealistic?
 
-Respond with ONLY a JSON object: {"score": NUMBER, "floors_detected": NUMBER, "shape_match": "yes"|"partial"|"no"}
-No other text.`
+Respond ONLY: {"score":N,"floors_detected":N,"shape_match":"yes"|"partial"|"no"}`
 
     const scoreResults = await Promise.allSettled(
       results.map(async (r, i) => {
         try {
-          const sRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${KEY}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{
-                  parts: [
-                    { inlineData: { mimeType: 'image/png', data: base64 } },
-                    { inlineData: { mimeType: 'image/png', data: r!.image!.replace(/^data:image\/\w+;base64,/, '') } },
-                    { text: scorePrompt },
-                  ]
-                }],
-              }),
-              signal: AbortSignal.timeout(30000),
-            }
-          )
-          const sData = await sRes.json()
-          const sText = sData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-          const jsonMatch = sText.match(/\{[^}]+\}/)
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0])
-            console.log(`[3D-PHOTO-V2] Variant ${i+1} score: ${parsed.score}, floors: ${parsed.floors_detected}, shape: ${parsed.shape_match}`)
-            return { index: i, ...parsed }
+          const scoreParts: any[] = [
+            { inlineData: { mimeType: 'image/png', data: refB64 } },
+          ]
+          if (topDown) {
+            scoreParts.push({ inlineData: { mimeType: 'image/png', data: topDown.image.replace(/^data:image\/\w+;base64,/, '') } })
+          }
+          scoreParts.push({ inlineData: { mimeType: 'image/png', data: r!.image!.replace(/^data:image\/\w+;base64,/, '') } })
+          scoreParts.push({ text: scorePrompt })
+          
+          const sr = await callGemini(GEMINI_TXT(KEY), scoreParts)
+          const m = sr.text.match(/\{[^}]+\}/)
+          if (m) {
+            const p = JSON.parse(m[0])
+            console.log(`[V4] Variant ${i+1}: score=${p.score}, floors=${p.floors_detected}, shape=${p.shape_match}`)
+            return { index: i, ...p }
           }
           return { index: i, score: 50 }
         } catch { return { index: i, score: 50 } }
@@ -161,25 +176,22 @@ No other text.`
     const scores = scoreResults
       .filter(r => r.status === 'fulfilled')
       .map(r => (r as PromiseFulfilledResult<any>).value)
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
     
-    scores.sort((a, b) => (b.score || 0) - (a.score || 0))
-    const bestIdx = scores[0]?.index ?? 0
-    const bestScore = scores[0]?.score ?? 'N/A'
-    const bestFloors = scores[0]?.floors_detected ?? '?'
-    const bestShape = scores[0]?.shape_match ?? '?'
-    
-    console.log(`[3D-PHOTO-V2] Selected variant ${bestIdx+1} (score: ${bestScore}, floors: ${bestFloors}, shape: ${bestShape})`)
+    const best = scores[0] || { index: 0, score: 'N/A' }
+    console.log(`[V4] Selected variant ${best.index+1} (score: ${best.score})`)
 
     return NextResponse.json({
       success: true,
-      image: results[bestIdx]!.image,
-      score: bestScore,
-      floorsDetected: bestFloors,
-      shapeMatch: bestShape,
+      image: results[best.index]!.image,
+      score: best.score,
+      floorsDetected: best.floors_detected,
+      shapeMatch: best.shape_match,
       totalVariants: results.length,
+      anglesUsed: angles.length,
     })
   } catch (e: any) {
-    console.error('[3D-PHOTO-V2] Error:', e.message)
+    console.error('[3D-PHOTO-V4] Error:', e.message)
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

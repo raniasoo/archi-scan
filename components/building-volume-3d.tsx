@@ -156,7 +156,7 @@ export function BuildingVolume3D({
   const [photoLoading, setPhotoLoading] = useState(false)
   const [photoScore, setPhotoScore] = useState('')
 
-  // Three.js 캡처 → Gemini 포토리얼 변환 (v3: Depth Map + 극강 프롬프트 + Auto-Select)
+  // Three.js 5방향 캡처 → Gemini 포토리얼 변환
   const captureAndConvert = async () => {
     const canvas = canvasRef.current
     const renderer = rendererRef.current
@@ -166,71 +166,84 @@ export function BuildingVolume3D({
     setPhotoLoading(true)
     setPhotoResult(null)
     setPhotoScore('')
+    
     try {
-      // ━━━ 1. 일반 스크린샷 캡처 ━━━
-      renderer.render(scene, camera)
-      const screenshot = canvas.toDataURL('image/png')
+      const THREE = await import('three')
+      const S = Math.sqrt(siteArea)
+      const bH = floors * (floorHeight || 3.3)
       
-      // ━━━ 2. Depth Map (건물 실루엣) 캡처 ━━━
-      let depthMap = ''
+      // 원본 카메라 상태 저장
+      const origPos = camera.position.clone()
+      const origRot = camera.quaternion.clone()
+      const origFov = camera.fov
+      
+      const captures: { angle: string; data: string }[] = []
+      
+      const captureFrom = (name: string, px: number, py: number, pz: number, lx: number, ly: number, lz: number) => {
+        camera.position.set(px, py, pz)
+        camera.lookAt(lx, ly, lz)
+        camera.updateProjectionMatrix()
+        renderer.render(scene, camera)
+        captures.push({ angle: name, data: canvas.toDataURL('image/png') })
+      }
+      
+      // ━━━ 5방향 캡처 ━━━
+      // ① 조감도 (bird-eye 45°) — 기본 뷰
+      captureFrom('bird-eye', S * 0.8, S * 0.9, S * 0.8, 0, bH * 0.3, 0)
+      // ② 정면 (front) — 층수 확인용
+      captureFrom('front', 0, bH * 0.6, S * 1.2, 0, bH * 0.35, 0)
+      // ③ 측면 (side) — 깊이 확인용
+      captureFrom('side', S * 1.2, bH * 0.6, 0, 0, bH * 0.35, 0)
+      // ④ 평면 (top-down) — 형태 확인용 (L자/ㄷ자 명확)
+      captureFrom('top-down', 0.1, S * 1.5, 0.1, 0, 0, 0)
+      
+      // ⑤ Depth Map (건물 실루엣)
       try {
-        // 원본 저장
         const origBg = scene.background
         const origMats: Map<any, any> = new Map()
-        const whiteMat = new (await import('three')).MeshBasicMaterial({ color: 0xffffff })
-        const blackMat = new (await import('three')).MeshBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.3 })
-
-        // 모든 메쉬의 재질을 흰색으로 (건물만 보이게)
+        const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff })
+        const blackMat = new THREE.MeshBasicMaterial({ color: 0x222222 })
         scene.traverse((obj: any) => {
           if (obj.isMesh && obj.material) {
             origMats.set(obj, obj.material)
-            // 건물 메쉬는 흰색, 지면/도로/기타는 어두운색
-            const isBuilding = obj.castShadow || (obj.geometry?.parameters?.depth > 1)
-            obj.material = isBuilding ? whiteMat : blackMat
+            obj.material = obj.castShadow ? whiteMat : blackMat
           }
-          if (obj.isLine || obj.isLineSegments) obj.visible = false
-          if (obj.isSprite) obj.visible = false
+          if (obj.isLine || obj.isLineSegments || obj.isSprite) obj.visible = false
         })
-        // 배경 검정
-        scene.background = new (await import('three')).Color(0x000000)
-        
-        // 렌더 + 캡처
+        scene.background = new THREE.Color(0x000000)
+        // bird-eye 각도로 depth map
+        camera.position.set(S * 0.8, S * 0.9, S * 0.8)
+        camera.lookAt(0, bH * 0.3, 0)
+        camera.updateProjectionMatrix()
         renderer.render(scene, camera)
-        depthMap = canvas.toDataURL('image/png')
-        
-        // 원본 복원
+        captures.push({ angle: 'depth-map', data: canvas.toDataURL('image/png') })
+        // 복원
         origMats.forEach((mat, obj) => { obj.material = mat })
         scene.traverse((obj: any) => {
-          if (obj.isLine || obj.isLineSegments) obj.visible = true
-          if (obj.isSprite) obj.visible = true
+          if (obj.isLine || obj.isLineSegments || obj.isSprite) obj.visible = true
         })
         scene.background = origBg
-        
-        // 복원 렌더
-        renderer.render(scene, camera)
-        
-        whiteMat.dispose()
-        blackMat.dispose()
-        console.log('[3D-PHOTO] Depth map captured')
-      } catch (e) {
-        console.warn('[3D-PHOTO] Depth map capture failed, proceeding without:', e)
-        depthMap = ''
-      }
+        whiteMat.dispose(); blackMat.dispose()
+      } catch (e) { console.warn('[DEPTH] failed:', e) }
       
-      // ━━━ 3. API 호출 ━━━
+      // 카메라 복원
+      camera.position.copy(origPos)
+      camera.quaternion.copy(origRot)
+      camera.fov = origFov
+      camera.updateProjectionMatrix()
+      renderer.render(scene, camera)
+      
+      console.log(`[3D-PHOTO] ${captures.length}방향 캡처 완료`)
+      
+      // ━━━ API 호출 ━━━
       const res = await fetch('/api/3d-to-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          screenshot,
-          depthMap: depthMap || undefined,
-          layoutName,
-          floors,
-          units,
-          type: layoutType,
+          multiAngle: captures.map(c => ({ angle: c.angle, image: c.data })),
+          layoutName, floors, units, type: layoutType,
           buildingCount: buildingCount || 1,
-          address: '',
-          angle: 'bird-eye 45° aerial view',
+          address: '', angle: 'bird-eye',
         }),
       })
       const data = await res.json()
@@ -1220,7 +1233,7 @@ export function BuildingVolume3D({
         <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-30">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
           <p className="text-white text-sm font-medium">3D → 포토리얼 변환 중...</p>
-          <p className="text-white/50 text-xs mt-1">2장 동시 생성 → 자동 점수 매기기 → 최적 선별 (40~90초)</p>
+          <p className="text-white/50 text-xs mt-1">5방향 캡처 → 2장 동시 생성 → 자동 점수 → 최적 선별 (40~90초)</p>
         </div>
       )}
 
