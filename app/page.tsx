@@ -2008,7 +2008,7 @@ export default function ArchiScanPage() {
           sitePolygon={sitePolygon}
           terrain={analysisRawData?.terrain}
           siteCoords={siteCoords}
-          regulation={{ frontSetback: regulation?.setbackFront ?? 3, sideSetback: regulation?.setbackSide ?? 1.5, rearSetback: regulation?.setbackRear ?? 2, roadWidth: regulation?.roadWidth || 8 }}
+          regulation={{ frontSetback: regulation?.setbackFront ?? 3, sideSetback: regulation?.setbackSide ?? 1.5, rearSetback: regulation?.setbackRear ?? 2, roadWidth: regulation?.roadWidth || 8, maxHeight: regulation?.maxHeight || 30, setbackAngle: regulation?.setbackAngle ?? 45, northShadow: regulation?.setbackType === 'north' || regulation?.setbackType === 'both' }}
           onClose={() => setShow3DVolume(false)}
         />
       )}

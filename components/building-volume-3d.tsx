@@ -17,7 +17,7 @@ interface BuildingVolume3DProps {
   sitePolygon?: { coords: [number, number][], centroid: [number, number] } | null
   terrain?: { elevationDiff?: number; avgSlope?: number; slopeDirection?: string } | null
   siteCoords?: { lng: number; lat: number } | null
-  regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number; roadWidth?: number } | null
+  regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number; roadWidth?: number; maxHeight?: number; setbackAngle?: number; northShadow?: boolean } | null
   onClose: () => void
 }
 
@@ -495,6 +495,10 @@ export function BuildingVolume3D({
 
       /* ── 건물 (PBR + 창문 텍스처) ── */
 
+      // 건물 배치 오프셋: 이격선 내부 중앙에 정확히 배치
+      const buildableOffsetX = 0 // 좌우 이격 대칭
+      const buildableOffsetZ = (rearSB - frontSB) / 2 // 전면/후면 이격 차이만큼 이동
+
       // ━━━ L자형/중정형: 단일 연결 지오메트리 (100% 형태 일치) ━━━
       const isSingleShape = layoutType !== 'cluster' && (layoutType === 'lshape' || layoutType === 'courtyard')
       
@@ -548,6 +552,7 @@ export function BuildingVolume3D({
           map: wTex, roughness: 0.25, metalness: 0.15,
           color: 0xe0e5ec, envMapIntensity: 1.0, side: THREE.DoubleSide,
         }))
+        mesh.position.set(buildableOffsetX, 0, buildableOffsetZ)
         mesh.castShadow = true; mesh.receiveShadow = true
         scene.add(mesh)
 
@@ -625,7 +630,7 @@ export function BuildingVolume3D({
           map: wTex, roughness: 0.25, metalness: 0.15,
           color: 0xe0e5ec, envMapIntensity: 1.0, side: THREE.DoubleSide,
         }))
-        mesh.position.set(bX, 0, bZ); mesh.castShadow = true; mesh.receiveShadow = true
+        mesh.position.set(bX + buildableOffsetX, 0, bZ + buildableOffsetZ); mesh.castShadow = true; mesh.receiveShadow = true
         scene.add(mesh)
 
         // 에지
@@ -672,6 +677,85 @@ export function BuildingVolume3D({
         scene.add(canopy)
       })
       } // end else (tower/linear/cluster block-based)
+
+      // ━━━ 일조권 사선제한 (북측 경계에서 45° 사선) ━━━
+      if (regulation?.northShadow !== false) {
+        const angle = (regulation?.setbackAngle ?? 45) * Math.PI / 180
+        const maxH = regulation?.maxHeight ?? (floors * floorHeight)
+        const shadowReach = maxH / Math.tan(angle) // 사선이 도달하는 거리
+        const northEdge = -S / 2 + rearSB // 북측 이격선
+        // 사선 경사면 (반투명 빨간색)
+        const shadowGeo = new THREE.BufferGeometry()
+        const hw = (S - 2 * sideSB) / 2
+        const verts = new Float32Array([
+          -hw, 0, northEdge,          // 좌하 (지면, 북측 이격선)
+           hw, 0, northEdge,          // 우하
+           hw, maxH, northEdge + shadowReach, // 우상 (최대높이, 남쪽으로)
+          -hw, 0, northEdge,          // 좌하
+           hw, maxH, northEdge + shadowReach, // 우상
+          -hw, maxH, northEdge + shadowReach, // 좌상
+        ])
+        shadowGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3))
+        shadowGeo.computeVertexNormals()
+        const shadowPlane = new THREE.Mesh(shadowGeo,
+          new THREE.MeshBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.08, side: THREE.DoubleSide }))
+        scene.add(shadowPlane)
+        // 사선 경계 라인 (빨간 점선)
+        const slPts = [
+          new THREE.Vector3(-hw, 0, northEdge),
+          new THREE.Vector3(-hw, maxH, northEdge + shadowReach),
+          new THREE.Vector3(hw, maxH, northEdge + shadowReach),
+          new THREE.Vector3(hw, 0, northEdge),
+        ]
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(slPts),
+          new THREE.LineBasicMaterial({ color: 0xff6666, transparent: true, opacity: 0.5 })))
+        // 라벨
+        const nsC = document.createElement('canvas'); nsC.width = 160; nsC.height = 32
+        const nsG = nsC.getContext('2d')!
+        nsG.fillStyle = 'rgba(0,0,0,0.5)'; nsG.fillRect(0, 0, 160, 32)
+        nsG.fillStyle = '#ff6666'; nsG.font = 'bold 13px sans-serif'; nsG.textAlign = 'center'
+        nsG.fillText(`일조권 사선 ${regulation?.setbackAngle ?? 45}°`, 80, 22)
+        const nsLbl = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2),
+          new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(nsC), transparent: true }))
+        nsLbl.position.set(0, maxH * 0.6, northEdge + shadowReach * 0.5)
+        nsLbl.lookAt(new THREE.Vector3(0, maxH * 0.6, northEdge + shadowReach * 0.5 + 10))
+        scene.add(nsLbl)
+      }
+
+      // ━━━ 도로사선 높이 제한선 ━━━
+      if (regulation?.roadWidth) {
+        const rw = regulation.roadWidth
+        const angle = (regulation?.setbackAngle ?? 45) * Math.PI / 180
+        const roadShadowH = rw * Math.tan(angle) + frontSB // 도로폭 × tan(각도) + 전면이격
+        const roadEdge = S / 2 // 대지 전면 경계
+        const hw2 = (S - 2 * sideSB) / 2
+        // 높이 제한 수평선 (주황색)
+        const rhPts = [
+          new THREE.Vector3(-hw2, roadShadowH, roadEdge),
+          new THREE.Vector3(hw2, roadShadowH, roadEdge),
+        ]
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rhPts),
+          new THREE.LineDashedMaterial({ color: 0xff8800, dashSize: 1.5, gapSize: 1 })))
+        // 사선 (도로 중심 → 건물 상단)
+        const rdCenter = roadEdge + 2 + rw / 2 // 인도 + 도로 중심
+        const rsPts = [
+          new THREE.Vector3(0, 0, rdCenter),
+          new THREE.Vector3(0, roadShadowH, roadEdge),
+        ]
+        const rsLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(rsPts),
+          new THREE.LineDashedMaterial({ color: 0xff8800, dashSize: 1, gapSize: 0.8, transparent: true, opacity: 0.6 }))
+        rsLine.computeLineDistances(); scene.add(rsLine)
+        // 라벨
+        const rsC = document.createElement('canvas'); rsC.width = 160; rsC.height = 32
+        const rsCtx = rsC.getContext('2d')!
+        rsCtx.fillStyle = 'rgba(0,0,0,0.5)'; rsCtx.fillRect(0, 0, 160, 32)
+        rsCtx.fillStyle = '#ff8800'; rsCtx.font = 'bold 13px sans-serif'; rsCtx.textAlign = 'center'
+        rsCtx.fillText(`도로사선 ${roadShadowH.toFixed(1)}m`, 80, 22)
+        const rsLbl = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2),
+          new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(rsC), transparent: true }))
+        rsLbl.position.set(hw2 + 2, roadShadowH, roadEdge)
+        scene.add(rsLbl)
+      }
 
       /* ── 조경/도로/디테일 (Phase 2/3) — 실패해도 기본 건물은 표시 ── */
       try {
@@ -801,35 +885,46 @@ export function BuildingVolume3D({
       addLamppost(0, halfS + 6)
       addLamppost(S * 0.35, halfS + 6)
 
-      /* ── 도로 Phase 2 (인도, 횡단보도, 연석) ── */
-      const roadW = S * 1.2, roadD = 6
+      /* ── 도로 Phase 2 (regulation.roadWidth 기반) ── */
+      const roadW = S * 1.2
+      const roadD = regulation?.roadWidth || 8 // 실제 도로 폭 (m)
+      const roadZ = S / 2 + 2 + roadD / 2 // 인도(2m) + 도로 중심
       // 차도
       const road = new THREE.Mesh(new THREE.PlaneGeometry(roadW, roadD),
         new THREE.MeshStandardMaterial({ color: 0x2a3038, roughness: 0.85 }))
-      road.rotation.x = -Math.PI / 2; road.position.set(0, 0.04, S / 2 + roadD / 2 + 4); road.receiveShadow = true
+      road.rotation.x = -Math.PI / 2; road.position.set(0, 0.04, roadZ); road.receiveShadow = true
       scene.add(road)
-      // 중앙선 (노란색)
+      // 도로폭 라벨
+      const rdLblC = document.createElement('canvas'); rdLblC.width = 128; rdLblC.height = 32
+      const rdG = rdLblC.getContext('2d')!
+      rdG.fillStyle = 'rgba(0,0,0,0.5)'; rdG.fillRect(0, 0, 128, 32)
+      rdG.fillStyle = '#94a3b8'; rdG.font = 'bold 14px sans-serif'; rdG.textAlign = 'center'
+      rdG.fillText(`도로 ${roadD}m`, 64, 22)
+      const rdLbl = new THREE.Mesh(new THREE.PlaneGeometry(4, 1),
+        new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(rdLblC), transparent: true }))
+      rdLbl.rotation.x = -Math.PI / 2; rdLbl.position.set(S * 0.4, 0.15, roadZ); scene.add(rdLbl)
+      // 중앙선
       const cl = new THREE.Mesh(new THREE.PlaneGeometry(roadW * 0.85, 0.12),
         new THREE.MeshBasicMaterial({ color: 0xcccc00 }))
-      cl.rotation.x = -Math.PI / 2; cl.position.set(0, 0.07, S / 2 + roadD / 2 + 4)
+      cl.rotation.x = -Math.PI / 2; cl.position.set(0, 0.07, roadZ)
       scene.add(cl)
-      // 차선 (흰색 점선)
+      // 차선 (점선)
       for (let i = -5; i <= 5; i++) {
         const dash = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 0.08),
           new THREE.MeshBasicMaterial({ color: 0xdddddd }))
         dash.rotation.x = -Math.PI / 2
-        dash.position.set(i * S * 0.1, 0.07, S / 2 + roadD / 2 + 4 + roadD * 0.22)
+        dash.position.set(i * S * 0.1, 0.07, roadZ + roadD * 0.22)
         scene.add(dash)
       }
-      // 인도 (양쪽)
+      // 인도 (대지쪽 + 반대편)
       const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x8a8078, roughness: 0.75, metalness: 0.05 })
       const swNear = new THREE.Mesh(new THREE.PlaneGeometry(roadW, 2), sidewalkMat)
-      swNear.rotation.x = -Math.PI / 2; swNear.position.set(0, 0.06, S / 2 + 2)
+      swNear.rotation.x = -Math.PI / 2; swNear.position.set(0, 0.06, S / 2 + 1)
       swNear.receiveShadow = true; scene.add(swNear)
       const swFar = new THREE.Mesh(new THREE.PlaneGeometry(roadW, 2), sidewalkMat)
-      swFar.rotation.x = -Math.PI / 2; swFar.position.set(0, 0.06, S / 2 + roadD + 5)
+      swFar.rotation.x = -Math.PI / 2; swFar.position.set(0, 0.06, roadZ + roadD / 2 + 1)
       swFar.receiveShadow = true; scene.add(swFar)
-      // 연석 (커브)
+      // 연석
       const curbMat = new THREE.MeshStandardMaterial({ color: 0x6a6a6a, roughness: 0.6 })
       const curbNear = new THREE.Mesh(new THREE.BoxGeometry(roadW, 0.15, 0.15), curbMat)
       curbNear.position.set(0, 0.1, S / 2 + 3); scene.add(curbNear)
@@ -1136,6 +1231,9 @@ export function BuildingVolume3D({
           <div className="flex flex-wrap gap-3 text-[10px] text-white/50">
             <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-blue-400 inline-block rounded"/>대지</span>
             <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-amber-400 inline-block rounded"/>이격거리</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-red-400 inline-block rounded"/>일조사선</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-orange-400 inline-block rounded"/>도로사선</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-indigo-400 inline-block rounded"/>지하주차</span>
             <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-emerald-400 inline-block rounded"/>최상층</span>
             <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-cyan-400 inline-block rounded"/>5층 단위</span>
             {(layoutType === 'courtyard' || layoutType === 'cluster') && (
