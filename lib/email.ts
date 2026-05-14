@@ -27,7 +27,7 @@ export async function sendPaymentReceipt(data: ReceiptData) {
 
   try {
     const result = await resend.emails.send({
-      from: 'Archi-Scan <onboarding@resend.dev>',
+      from: 'Archi-Scan <noreply@archiscan.kr>',
       to: [to],
       subject: `[Archi-Scan] ${planLabel} 플랜 결제 완료 — ${formattedAmount}`,
       html: `
