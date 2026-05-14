@@ -437,6 +437,8 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       .no-print { display: none !important; }
       /* 표지 print */
       .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-after: always; }
+      .cover-accent-top { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .cover-footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       /* 고아 줄 방지 */
       p { orphans: 3; widows: 3; }
       /* 테이블 행 분할 방지 */
@@ -449,14 +451,17 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     @media screen and (max-width: 600px) {
       body { padding: 8px; font-size: 9.5pt; }
       /* 표지 - 잘림 완전 방지 */
-      .cover { padding: 16px 10px; min-height: auto; overflow: visible; }
-      .cover h1 { font-size: 13pt; word-break: keep-all; overflow-wrap: break-word; line-height: 1.3; max-width: 100%; white-space: normal; }
-      .cover .address { font-size: 10pt; word-break: break-all; max-width: 100%; line-height: 1.4; }
-      .cover .meta { flex-direction: column; gap: 6px; }
-      .cover .meta-item { padding: 6px 8px; }
-      .cover .subtitle { font-size: 8pt; }
+      .cover { min-height: auto; overflow: visible; }
+      .cover-inner { padding: 24px 16px 20px; }
+      .cover h1 { font-size: 18pt; word-break: keep-all; overflow-wrap: break-word; line-height: 1.3; max-width: 100%; white-space: normal; }
+      .cover .address { font-size: 11pt; word-break: break-all; max-width: 100%; line-height: 1.4; }
+      .cover .meta { flex-direction: column; gap: 0; }
+      .cover .meta-item { padding: 10px 8px; }
+      .cover .meta-item:not(:last-child) { border-right: none; border-bottom: 1px solid #e8e4de; }
+      .cover .subtitle { font-size: 7pt; letter-spacing: 3px; }
       .cover .project-type { font-size: 9pt; }
-      .cover .doc-number { font-size: 7pt; }
+      .cover-brand-bar { margin-bottom: 24px; }
+      .cover-footer { padding: 10px 16px; flex-direction: column; gap: 4px; text-align: center; }
       /* 그리드 - 모바일 2열 */
       .grid-2 { grid-template-columns: 1fr 1fr; gap: 5px; }
       .risk-grid { grid-template-columns: 1fr; gap: 6px; }
@@ -490,15 +495,25 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
       /* 도면 이미지 모바일 축소 */
       .drawing-grid img { max-height: 120px; }
     }
-    .cover { text-align: center; padding: 60px 20px; margin-bottom: 40px; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; border-radius: 8px; }
-    .cover h1 { font-size: 24pt; font-weight: 700; margin-bottom: 8px; }
-    .cover .subtitle { font-size: 10pt; letter-spacing: 3px; color: #94a3b8; margin-bottom: 20px; }
-    .cover .address { font-size: 14pt; font-weight: 500; margin-bottom: 8px; }
-    .cover .project-type { font-size: 10pt; color: #cbd5e1; }
-    .cover .meta { display: flex; justify-content: center; gap: 40px; margin-top: 30px; }
-    .cover .meta-item { text-align: center; }
-    .cover .meta-label { font-size: 9pt; color: #94a3b8; margin-bottom: 4px; }
-    .cover .meta-value { font-size: 11pt; font-weight: 500; }
+    .cover { position: relative; text-align: center; padding: 0; margin-bottom: 40px; background: #ffffff; color: #1a1a1a; border-radius: 0; overflow: hidden; min-height: 520px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #e8e4de; }
+    .cover-accent-top { height: 6px; background: linear-gradient(90deg, #2F6B4F 0%, #3d8b68 50%, #2F6B4F 100%); }
+    .cover-inner { padding: 50px 40px 40px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .cover-brand-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; padding-bottom: 16px; border-bottom: 1px solid #e8e4de; }
+    .cover-brand-bar .brand-logo { font-size: 11pt; font-weight: 700; letter-spacing: 2px; color: #2F6B4F; }
+    .cover-brand-bar .brand-tagline { font-size: 8pt; color: #8a8075; letter-spacing: 1px; }
+    .cover .subtitle { font-size: 8.5pt; letter-spacing: 5px; text-transform: uppercase; color: #2F6B4F; margin-bottom: 12px; font-weight: 500; }
+    .cover h1 { font-size: 28pt; font-weight: 300; margin-bottom: 6px; color: #1a1a1a; letter-spacing: -0.5px; line-height: 1.2; }
+    .cover .title-accent { width: 40px; height: 2px; background: #2F6B4F; margin: 20px auto; }
+    .cover .address { font-size: 13pt; font-weight: 400; margin-bottom: 6px; color: #3a3632; letter-spacing: 0.5px; }
+    .cover .project-type { font-size: 10pt; color: #8a8075; font-weight: 300; }
+    .cover .meta { display: flex; justify-content: center; gap: 0; margin-top: 36px; border-top: 1px solid #e8e4de; border-bottom: 1px solid #e8e4de; padding: 0; }
+    .cover .meta-item { text-align: center; flex: 1; padding: 16px 12px; }
+    .cover .meta-item:not(:last-child) { border-right: 1px solid #e8e4de; }
+    .cover .meta-label { font-size: 7.5pt; color: #8a8075; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 500; }
+    .cover .meta-value { font-size: 11pt; font-weight: 600; color: #2a2520; }
+    .cover-footer { padding: 14px 40px; background: #faf9f7; border-top: 1px solid #e8e4de; display: flex; align-items: center; justify-content: space-between; }
+    .cover-footer .footer-contact { font-size: 8pt; color: #8a8075; }
+    .cover-footer .footer-doc { font-size: 7.5pt; color: #b0a99e; font-family: 'Courier New', monospace; }
     .doc-number { font-size: 9pt; color: #64748b; margin-bottom: 16px; }
     .section { margin-bottom: 18px; }
     .section-header { page-break-after: avoid; break-after: avoid; }
@@ -538,9 +553,11 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
     .conclusion-neutral .conclusion-title { color: #0369a1; }
     .conclusion-caution .conclusion-title { color: #92400e; }
     .conclusion p { font-size: 10pt; color: #475569; line-height: 1.7; }
-    .disclaimer { text-align: center; padding: 20px; background: #f8fafc; border-radius: 6px; margin-top: 40px; border: 1px solid #e2e8f0; }
-    .disclaimer p { font-size: 9pt; color: #64748b; line-height: 1.6; }
-    .disclaimer .brand { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 10pt; color: #94a3b8; }
+    .disclaimer { text-align: center; padding: 0; background: #ffffff; margin-top: 40px; border: 1px solid #e8e4de; overflow: hidden; }
+    .disclaimer-inner { padding: 24px 32px; }
+    .disclaimer p { font-size: 9pt; color: #8a8075; line-height: 1.6; }
+    .disclaimer .brand { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e8e4de; font-size: 10pt; color: #3a3632; }
+    .disclaimer .brand-accent { height: 4px; background: linear-gradient(90deg, #2F6B4F 0%, #3d8b68 50%, #2F6B4F 100%); }
     .feature-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .feature-tag { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #f1f5f9; border-radius: 4px; font-size: 9pt; color: #475569; }
     .total-row { background: #f1f5f9 !important; font-weight: 700; }
@@ -549,25 +566,41 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
 </head>
 <body>
   <div class="cover">
-    <div class="doc-number">문서번호: ${docNumber}</div>
-    <div class="subtitle">PRELIMINARY FEASIBILITY REVIEW</div>
-    <h1>개발사업 사전검토 보고서</h1>
-    <div style="width: 60px; height: 1px; background: #64748b; margin: 20px auto;"></div>
-    <div class="address">${address}</div>
-    <div class="project-type">공동주택 신축사업</div>
-    <div class="meta">
-      <div class="meta-item">
-        <div class="meta-label">대지면적</div>
-        <div class="meta-value">${siteArea.toLocaleString()}㎡</div>
+    <div class="cover-accent-top"></div>
+    <div class="cover-inner">
+      <div class="cover-brand-bar">
+        <div>
+          <div class="brand-logo">ARCHI-SCAN</div>
+          <div class="brand-tagline">${brandConfig.brandTagline || '건축기획 분석 시스템'}</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 7.5pt; color: #8a8075; letter-spacing: 1px;">DOCUMENT</div>
+          <div style="font-size: 8pt; color: #b0a99e; font-family: 'Courier New', monospace;">${docNumber}</div>
+        </div>
       </div>
-<div class="meta-item">
-  <div class="meta-label">최종 반영 배치안</div>
-  <div class="meta-value">${layout.name}</div>
-  </div>
-      <div class="meta-item">
-        <div class="meta-label">작성일자</div>
-        <div class="meta-value">${dateStr}</div>
+      <div class="subtitle">PRELIMINARY FEASIBILITY REVIEW</div>
+      <h1>개발사업<br/>사전검토 보고서</h1>
+      <div class="title-accent"></div>
+      <div class="address">${address}</div>
+      <div class="project-type">공동주택 신축사업</div>
+      <div class="meta">
+        <div class="meta-item">
+          <div class="meta-label">대지면적</div>
+          <div class="meta-value">${siteArea.toLocaleString()}㎡</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">배치안</div>
+          <div class="meta-value">${layout.name}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">작성일</div>
+          <div class="meta-value">${dateStr}</div>
+        </div>
       </div>
+    </div>
+    <div class="cover-footer">
+      <div class="footer-contact">${formatBrandFullName(brandConfig)} · ${brandConfig.phone} · ${brandConfig.email}</div>
+      <div class="footer-doc">${brandConfig.address}</div>
     </div>
   </div>
 
@@ -1044,15 +1077,17 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="disclaimer">
-    <p>
-      본 보고서는 사전 검토용 참고자료입니다. 최종 의사결정 전 건축사, 감정평가사 등 전문가 검토를 권장합니다.
-    </p>
-    <div class="brand">
-      <strong>${brandConfig.brandName}</strong>${brandConfig.brandTagline ? ` | ${brandConfig.brandTagline}` : ''}<br/>
-      <span style="font-size: 9pt;">${brandConfig.representativeName}${brandConfig.representativeTitle ? ` ${brandConfig.representativeTitle}` : ''} · ${brandConfig.phone} · ${brandConfig.email}</span><br/>
-      <span style="font-size: 9pt;">${brandConfig.address}</span><br/>
-      <span style="font-size: 8pt; color: #888;">본 보고서는 ${dateStr}에 생성되었습니다</span>
+    <div class="disclaimer-inner">
+      <p>
+        본 보고서는 사전 검토용 참고자료입니다. 최종 의사결정 전 건축사, 감정평가사 등 전문가 검토를 권장합니다.
+      </p>
+      <div class="brand">
+        <strong>${brandConfig.brandName}</strong>${brandConfig.brandTagline ? ` · ${brandConfig.brandTagline}` : ''}<br/>
+        <span style="font-size: 9pt; color: #8a8075;">${brandConfig.representativeName}${brandConfig.representativeTitle ? ` ${brandConfig.representativeTitle}` : ''} · ${brandConfig.phone} · ${brandConfig.email}</span><br/>
+        <span style="font-size: 9pt; color: #b0a99e;">${brandConfig.address}</span>
+      </div>
     </div>
+    <div class="brand-accent"></div>
   </div>
 </body>
 </html>`
@@ -2399,50 +2434,67 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         className="flex flex-col gap-3 sm:gap-5 print:bg-white print:gap-0 print:block"
         style={{ fontFamily: "'Noto Sans KR', 'Malgun Gothic', sans-serif" }}
       >
-        {/* Report Cover - Sand Beige & Forest Green Premium */}
-        <div className="report-cover-compact overflow-hidden print:mb-4 avoid-break" id="rpt-cover">
-          <div className="flex flex-col gap-3 pt-2">
-            {/* Header Row */}
-            <div className="flex items-center justify-between">
+        {/* Report Cover - Premium Architectural */}
+        <div className="overflow-hidden print:mb-4 avoid-break" id="rpt-cover"
+          style={{ border: '1px solid #e8e4de', background: '#ffffff' }}>
+          {/* Green accent bar */}
+          <div style={{ height: '5px', background: 'linear-gradient(90deg, #2F6B4F 0%, #3d8b68 50%, #2F6B4F 100%)' }} />
+          
+          <div className="px-4 sm:px-8 pt-5 sm:pt-8 pb-4 sm:pb-6 flex flex-col">
+            {/* Brand bar */}
+            <div className="flex items-center justify-between pb-3 mb-5 sm:mb-8" style={{ borderBottom: '1px solid #e8e4de' }}>
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" style={{ color: '#2F6B4F' }} />
-                <p className="text-[11px] tracking-wider font-semibold" style={{ color: '#2F2A24' }}>Archi-Scan</p>
+                <div>
+                  <p className="text-[11px] tracking-[3px] font-bold" style={{ color: '#2F6B4F' }}>ARCHI-SCAN</p>
+                  <p className="text-[8px] tracking-wider" style={{ color: '#8a8075' }}>{brandConfig.brandTagline || '건축기획 분석 시스템'}</p>
+                </div>
               </div>
-              <p className="text-[10px] font-mono" style={{ color: '#746B5E' }}>{docNumber}</p>
+              <div className="text-right">
+                <p className="text-[7px] tracking-wider" style={{ color: '#8a8075' }}>DOCUMENT</p>
+                <p className="text-[8px] font-mono" style={{ color: '#b0a99e' }}>{docNumber}</p>
+              </div>
             </div>
             
             {/* Main Title */}
-            <div className="text-center py-4">
-              <p className="text-[10px] tracking-widest uppercase mb-2" style={{ color: '#2F6B4F' }}>Preliminary Feasibility Review</p>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-2" style={{ color: '#2F2A24' }}>
-                개발사업 사전검토 보고서
+            <div className="text-center py-3 sm:py-6">
+              <p className="text-[8px] sm:text-[9px] tracking-[4px] sm:tracking-[5px] uppercase mb-3" style={{ color: '#2F6B4F', fontWeight: 500 }}>Preliminary Feasibility Review</p>
+              <h1 className="text-2xl sm:text-3xl font-light tracking-tight leading-tight mb-0" style={{ color: '#1a1a1a' }}>
+                개발사업
               </h1>
-              <p className="text-sm font-medium" style={{ color: '#2F2A24' }}>{address}</p>
-              <p className="text-xs mt-2" style={{ color: '#746B5E' }}>공동주택 신축사업 | {dateStr}</p>
+              <h1 className="text-2xl sm:text-3xl font-light tracking-tight leading-tight mb-0" style={{ color: '#1a1a1a' }}>
+                사전검토 보고서
+              </h1>
+              <div className="mx-auto my-4 sm:my-5" style={{ width: '40px', height: '2px', background: '#2F6B4F' }} />
+              <p className="text-sm sm:text-base font-normal tracking-wide" style={{ color: '#3a3632' }}>{address}</p>
+              <p className="text-[10px] sm:text-xs mt-1.5" style={{ color: '#8a8075', fontWeight: 300 }}>공동주택 신축사업</p>
             </div>
             
             {/* Key Info Row */}
-            <div className="grid grid-cols-3 gap-2 py-2" style={{ borderTop: '1px solid #DED6C8' }}>
-              <div className="text-center">
-                <p className="text-[9px] mb-0.5" style={{ color: '#746B5E' }}>대지면적</p>
-                <p className="text-xs font-semibold" style={{ color: '#2F2A24' }}>{siteArea.toLocaleString()}㎡</p>
+            <div className="flex mt-2 sm:mt-4" style={{ borderTop: '1px solid #e8e4de', borderBottom: '1px solid #e8e4de' }}>
+              <div className="flex-1 text-center py-3 sm:py-4">
+                <p className="text-[7px] sm:text-[8px] tracking-[1.5px] uppercase mb-1" style={{ color: '#8a8075', fontWeight: 500 }}>대지면적</p>
+                <p className="text-xs sm:text-sm font-semibold" style={{ color: '#2a2520' }}>{siteArea.toLocaleString()}㎡</p>
               </div>
-              <div className="text-center" style={{ borderLeft: '1px solid #DED6C8', borderRight: '1px solid #DED6C8' }}>
-                <p className="text-[9px] mb-0.5" style={{ color: '#746B5E' }}>배치안</p>
-                <p className="text-xs font-semibold" style={{ color: '#2F2A24' }}>{layout.name}</p>
+              <div className="flex-1 text-center py-3 sm:py-4" style={{ borderLeft: '1px solid #e8e4de', borderRight: '1px solid #e8e4de' }}>
+                <p className="text-[7px] sm:text-[8px] tracking-[1.5px] uppercase mb-1" style={{ color: '#8a8075', fontWeight: 500 }}>배치안</p>
+                <p className="text-xs sm:text-sm font-semibold" style={{ color: '#2a2520' }}>{layout.name}</p>
               </div>
-              <div className="text-center">
-                <p className="text-[9px] mb-0.5" style={{ color: '#746B5E' }}>작성일</p>
-                <p className="text-xs font-semibold" style={{ color: '#2F2A24' }}>{dateStr}</p>
+              <div className="flex-1 text-center py-3 sm:py-4">
+                <p className="text-[7px] sm:text-[8px] tracking-[1.5px] uppercase mb-1" style={{ color: '#8a8075', fontWeight: 500 }}>작성일</p>
+                <p className="text-xs sm:text-sm font-semibold" style={{ color: '#2a2520' }}>{dateStr}</p>
               </div>
             </div>
-            
-            {/* Branding Footer */}
-            <div className="text-center pt-2" style={{ borderTop: '1px solid #DED6C8' }}>
-              <p className="text-[10px]" style={{ color: '#746B5E' }}>
-                {formatBrandFullName(brandConfig)} | {brandConfig.phone}
-              </p>
-            </div>
+          </div>
+          
+          {/* Branding Footer */}
+          <div className="px-4 sm:px-8 py-2.5 sm:py-3 flex items-center justify-between" style={{ background: '#faf9f7', borderTop: '1px solid #e8e4de' }}>
+            <p className="text-[8px] sm:text-[9px]" style={{ color: '#8a8075' }}>
+              {formatBrandFullName(brandConfig)} · {brandConfig.phone}
+            </p>
+            <p className="text-[7px] sm:text-[8px]" style={{ color: '#b0a99e' }}>
+              {brandConfig.address}
+            </p>
           </div>
         </div>
 
@@ -3392,18 +3444,26 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         </div>
 
         {/* Footer - Professional */}
-        <div className="report-footer">
-          <p className="text-[11px] leading-relaxed mb-2" style={{ color: '#5C534A' }}>
-            본 보고서는 사전 검토용 참고자료입니다. 최종 의사결정 전 건축사, 감정평가사 등 전문가 검토를 권장합니다.
-          </p>
-          <div className="pt-2" style={{ borderTop: '1px solid #DED6C8' }}>
-            <p className="text-[10px] font-medium" style={{ color: '#5C534A' }}>
-              {formatBrandFullName(brandConfig)} | {brandConfig.phone}
+        <div className="overflow-hidden avoid-break" style={{ border: '1px solid #e8e4de', background: '#ffffff' }}>
+          <div className="px-4 sm:px-8 py-4 sm:py-6">
+            <p className="text-[10px] sm:text-[11px] leading-relaxed mb-3" style={{ color: '#8a8075' }}>
+              본 보고서는 사전 검토용 참고자료입니다. 최종 의사결정 전 건축사, 감정평가사 등 전문가 검토를 권장합니다.
             </p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#8C8478' }}>
-              &copy; 2026 Archi-Scan. All rights reserved.
-            </p>
+            <div className="pt-3 flex items-center justify-between" style={{ borderTop: '1px solid #e8e4de' }}>
+              <div>
+                <p className="text-[10px] font-medium" style={{ color: '#3a3632' }}>
+                  {formatBrandFullName(brandConfig)}
+                </p>
+                <p className="text-[8px] mt-0.5" style={{ color: '#8a8075' }}>
+                  {brandConfig.phone} · {brandConfig.email}
+                </p>
+              </div>
+              <p className="text-[8px]" style={{ color: '#b0a99e' }}>
+                &copy; 2026 Archi-Scan
+              </p>
+            </div>
           </div>
+          <div style={{ height: '4px', background: 'linear-gradient(90deg, #2F6B4F 0%, #3d8b68 50%, #2F6B4F 100%)' }} />
         </div>
       </div>
 
