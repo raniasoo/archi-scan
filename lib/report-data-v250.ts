@@ -68,6 +68,8 @@ export interface ReportCover {
   selectedLayoutName: string;
   createdDate: string;
   companyName: string;
+  brandTagline: string;
+  companyAddress: string;
   website: string;
   contact: string;
 }
@@ -426,6 +428,8 @@ export function buildReportDataV250(input: BuildReportDataInput): ReportDataV250
       selectedLayoutName: selectedLayout.name,
       createdDate: createdDate,
       companyName: input.branding?.brandName || 'Archi-Scan',
+      brandTagline: input.branding?.brandTagline || '건축기획 분석 시스템',
+      companyAddress: input.branding?.address || '',
       website: input.branding?.website || '',
       contact: input.branding?.phone 
         ? `${input.branding.representativeName || ''} ${input.branding.representativeTitle || ''} · ${input.branding.phone} · ${input.branding.email || ''}`
