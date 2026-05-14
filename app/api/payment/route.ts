@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sendPaymentReceipt } from '@/lib/email'
 
 // 토스페이먼츠 키 (테스트 키 → 라이브 전환 시 교체)
 const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY || 'test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R'
@@ -89,6 +90,20 @@ export async function POST(req: NextRequest) {
             approvedAt: tossData.approvedAt,
           },
         })
+
+        // 영수증 이메일 발송 (비동기 — 실패해도 결제는 성공)
+        if (user.email) {
+          sendPaymentReceipt({
+            to: user.email,
+            customerName: user.user_metadata?.full_name || user.email.split('@')[0],
+            orderId: tossData.orderId || orderId,
+            amount: tossData.totalAmount || PRO_PRICE,
+            plan: 'pro',
+            paymentMethod: tossData.method,
+            approvedAt: tossData.approvedAt,
+            expiresAt,
+          }).catch(e => console.error('[PAYMENT] Email failed:', e))
+        }
       }
 
       return NextResponse.json({
