@@ -34,14 +34,10 @@ function getLayoutBlocks(type: string, coverage: number = 50, buildingCount?: nu
       return [{ x: 0, z: 0, w, d, label: 'TOWER' }]
     }
     case 'linear': {
-      // 판상형: 최소 종횡비 2.8:1 보장
+      // 판상형: 자연스러운 종횡비 (면적 100% 보존 우선)
       const targetRatio = 3.2
-      let w = Math.sqrt(fp * targetRatio)
-      // 대지 대비 최대 92%, 최소 종횡비 2.8 보장
-      w = Math.min(0.92, w)
-      let d = fp / w
-      // 종횡비가 2.8 미만이면 강제 보정
-      if (w / d < 2.8) { d = w / 2.8; /* 면적 약간 줄어도 형태 우선 */ }
+      const w = Math.min(0.92, Math.sqrt(fp * targetRatio))
+      const d = fp / w
       return [{ x: 0, z: 0, w, d, label: 'SLAB' }]
     }
     case 'lshape': {
