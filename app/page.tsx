@@ -2001,11 +2001,14 @@ export default function ArchiScanPage() {
           originalType={selectedLayoutData._originalType}
           buildingCount={selectedLayoutData.buildingCount}
           floors={selectedLayoutData.floors}
+          units={selectedLayoutData.units}
+          parking={selectedLayoutData.parking}
           siteArea={siteAreaNum}
           coverage={selectedLayoutData.coverage}
           sitePolygon={sitePolygon}
           terrain={analysisRawData?.terrain}
           siteCoords={siteCoords}
+          regulation={{ frontSetback: regulation?.hasDistrictPlan ? 2 : 1.5, sideSetback: 0.5, rearSetback: 1, roadWidth: regulation?.roadWidth || 8 }}
           onClose={() => setShow3DVolume(false)}
         />
       )}

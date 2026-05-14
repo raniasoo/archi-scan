@@ -9,80 +9,97 @@ interface BuildingVolume3DProps {
   originalType?: string
   buildingCount?: number
   floors: number
+  units?: number
+  parking?: number
   siteArea: number
   coverage: number
   floorHeight?: number
   sitePolygon?: { coords: [number, number][], centroid: [number, number] } | null
   terrain?: { elevationDiff?: number; avgSlope?: number; slopeDirection?: string } | null
   siteCoords?: { lng: number; lat: number } | null
+  regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number; roadWidth?: number } | null
   onClose: () => void
 }
 
 type Block = { x: number; z: number; w: number; d: number; label?: string }
 
-function getLayoutBlocks(type: string, coverage: number = 50): Block[] {
-  // coverage 기반 동적 계산 — 배치안 건축면적과 100% 일치
-  // w, d는 대지 한 변(√siteArea) 대비 비율
-  const fp = Math.max(coverage, 20) / 100 // 건폐율을 비율로
+function getLayoutBlocks(type: string, coverage: number = 50, buildingCount?: number): Block[] {
+  const fp = Math.max(coverage, 20) / 100
 
   switch (type) {
     case 'tower': {
-      // 타워: 약간 직사각형 (1.2:1)
       const ratio = 1.2
       const w = Math.sqrt(fp * ratio)
       const d = fp / w
       return [{ x: 0, z: 0, w, d, label: 'TOWER' }]
     }
     case 'linear': {
-      // 판상형: 가로가 긴 직사각형 (3.2:1)
-      const ratio = 3.2
-      const w = Math.min(0.92, Math.sqrt(fp * ratio)) // 대지 너비 92% 상한
-      const d = fp / w
+      // 판상형: 최소 종횡비 2.8:1 보장
+      const targetRatio = 3.2
+      let w = Math.sqrt(fp * targetRatio)
+      // 대지 대비 최대 92%, 최소 종횡비 2.8 보장
+      w = Math.min(0.92, w)
+      let d = fp / w
+      // 종횡비가 2.8 미만이면 강제 보정
+      if (w / d < 2.8) { d = w / 2.8; /* 면적 약간 줄어도 형태 우선 */ }
       return [{ x: 0, z: 0, w, d, label: 'SLAB' }]
     }
     case 'lshape': {
-      // ㄱ자형: 두 날개로 L자 형성
-      // 날개 두께 = 전체 건축면적의 비율로 계산
-      const wingThick = Math.sqrt(fp) * 0.45 // 날개 두께
-      const longLen = fp * 0.6 / wingThick   // 긴 날개 길이 (면적 60%)
-      const shortLen = fp * 0.4 / wingThick  // 짧은 날개 길이 (면적 40%)
-      // 긴 날개 (세로) — 좌측
-      // 짧은 날개 (가로) — 상단에서 우측으로
-      const longCx = -longLen / 2 + wingThick / 2
-      const longCz = 0
-      const shortCx = wingThick / 2 + shortLen / 2 - wingThick / 2
-      const shortCz = -longLen / 2 + wingThick / 2
+      // ㄱ자형: 두 블록이 코너에서 접합 (시각적으로 L자)
+      const wingThick = Math.sqrt(fp) * 0.42
+      const longLen = fp * 0.6 / wingThick
+      const shortLen = fp * 0.4 / wingThick
+      // 긴 날개 (세로) — 우측에 배치
+      const longX = shortLen / 2 - wingThick / 2
+      // 짧은 날개 (가로) — 상단에 배치, 긴 날개 상단에 접합
+      const shortZ = -(longLen / 2 - wingThick / 2)
       return [
-        { x: longCx, z: longCz, w: wingThick, d: longLen, label: 'A동' },
-        { x: shortCx, z: shortCz, w: shortLen, d: wingThick, label: 'B동' },
+        { x: longX, z: 0, w: wingThick, d: longLen, label: '' },
+        { x: 0, z: shortZ, w: shortLen, d: wingThick, label: 'ㄱ자형' },
       ]
     }
     case 'courtyard': {
-      // 중정형: 3면 ㄷ자 (상단 가로 + 좌우 세로)
-      const wingThick = Math.sqrt(fp) * 0.35 // 날개 두께
-      const topFrac = 0.36, sideFrac = 0.32 // 상단 36%, 좌우 각 32%
+      // 중정형: 3블록이 ㄷ자로 접합 (개방면 = 남쪽)
+      const wingThick = Math.sqrt(fp) * 0.33
+      const topFrac = 0.36, sideFrac = 0.32
       const topW = fp * topFrac / wingThick
       const sideD = fp * sideFrac / wingThick
       const halfW = topW / 2
+      // 상단 바 — 가장 뒤쪽(북쪽)
+      const topZ = -(sideD / 2)
+      // 좌우 날개 — 상단 바에서 남쪽으로 연장, 코너 접합
+      const sideZ = topZ + wingThick / 2 + sideD / 2
       return [
-        { x: 0, z: -sideD / 2 + wingThick / 2, w: topW, d: wingThick, label: '북동' },
-        { x: -halfW + wingThick / 2, z: wingThick / 2, w: wingThick, d: sideD, label: '서동' },
-        { x:  halfW - wingThick / 2, z: wingThick / 2, w: wingThick, d: sideD, label: '동동' },
+        { x: 0, z: topZ, w: topW, d: wingThick, label: '북동' },
+        { x: -(halfW - wingThick / 2), z: sideZ, w: wingThick, d: sideD, label: '서동' },
+        { x:  (halfW - wingThick / 2), z: sideZ, w: wingThick, d: sideD, label: '동동' },
       ]
     }
     case 'cluster': {
-      // 클러스터 기본형 (6동) — 실제로는 동적 계산으로 대체됨
-      const each = fp / 6
+      // 클러스터: buildingCount 기반 동적 생성
+      const n = buildingCount || 4
+      const each = fp / n
       const w = Math.sqrt(each * 1.3)
       const d = each / w
-      return [
-        { x:-0.28, z:-0.20, w, d, label: 'A동' },
-        { x: 0.00, z:-0.20, w, d, label: 'B동' },
-        { x: 0.28, z:-0.20, w, d, label: 'C동' },
-        { x:-0.18, z: 0.12, w, d, label: 'D동' },
-        { x: 0.10, z: 0.12, w, d, label: 'E동' },
-        { x: 0.34, z: 0.14, w, d, label: 'F동' },
-      ]
+      const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
+      const rows = Math.ceil(n / cols)
+      const gapX = 0.10, gapZ = 0.12
+      const totalW = cols * w + (cols - 1) * gapX
+      const totalD = rows * d + (rows - 1) * gapZ
+      const result: Block[] = []
+      let cnt = 0
+      for (let r = 0; r < rows && cnt < n; r++) {
+        for (let c = 0; c < cols && cnt < n; c++) {
+          result.push({
+            x: -totalW / 2 + w / 2 + c * (w + gapX),
+            z: -totalD / 2 + d / 2 + r * (d + gapZ),
+            w, d,
+            label: `${String.fromCharCode(65 + cnt)}동`
+          })
+          cnt++
+        }
+      }
+      return result
     }
     default: {
       const s = Math.sqrt(fp)
@@ -91,10 +108,8 @@ function getLayoutBlocks(type: string, coverage: number = 50): Block[] {
   }
 }
 
-function getBlockFloors(idx: number, total: number, type: string): number {
-  if (type === 'lshape')    return idx === 0 ? total : Math.max(3, Math.floor(total * 0.65))
-  if (type === 'courtyard') return idx === 0 ? total : Math.max(4, Math.floor(total * 0.75))
-  if (type === 'cluster')   return Math.max(2, Math.floor(total * ([1, 0.85, 0.9, 1, 0.85, 0.9][idx] ?? 0.85)))
+function getBlockFloors(_idx: number, total: number, _type: string): number {
+  // 배치안 연면적과 100% 일치: 모든 블록이 동일 층수
   return total
 }
 
@@ -206,7 +221,7 @@ function makeWindowTex(floorCount: number, winCols: number): HTMLCanvasElement {
 }
 
 export function BuildingVolume3D({
-  layoutName, layoutType, originalType, buildingCount, floors, siteArea, coverage, floorHeight = 3.3, sitePolygon, terrain, siteCoords, onClose
+  layoutName, layoutType, originalType, buildingCount, floors, units, parking, siteArea, coverage, floorHeight = 3.3, sitePolygon, terrain, siteCoords, regulation, onClose
 }: BuildingVolume3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
@@ -276,7 +291,7 @@ export function BuildingVolume3D({
           }
           return result
         }
-        return getLayoutBlocks(layoutType, coverage)
+        return getLayoutBlocks(layoutType, coverage, buildingCount)
       })()
       const info: { label: string; floors: number }[] = []
       
@@ -447,9 +462,21 @@ export function BuildingVolume3D({
         : [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a, b]) => new THREE.Vector3(a * S / 2, 0.3, b * S / 2))
       scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(bpts), new THREE.LineBasicMaterial({ color: 0x60a5fa })))
 
-      // 이격거리
-      const sh = S / 2 - S * 0.04
-      const sbPts = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a, b]) => new THREE.Vector3(a * sh, 0.15, b * sh))
+      // 이격거리 (regulation 기반 실제 값)
+      const frontSB = regulation?.frontSetback || 2  // 전면 이격 (도로쪽, +Z)
+      const sideSB = regulation?.sideSetback || 0.5  // 측면 이격 (좌우)
+      const rearSB = regulation?.rearSetback || 1    // 후면 이격 (-Z)
+      const sbLeft = -S / 2 + sideSB
+      const sbRight = S / 2 - sideSB
+      const sbFront = S / 2 - frontSB   // 도로쪽 (하단/+Z)
+      const sbRear = -S / 2 + rearSB    // 후면 (상단/-Z)
+      const sbPts = [
+        new THREE.Vector3(sbLeft, 0.15, sbRear),
+        new THREE.Vector3(sbRight, 0.15, sbRear),
+        new THREE.Vector3(sbRight, 0.15, sbFront),
+        new THREE.Vector3(sbLeft, 0.15, sbFront),
+        new THREE.Vector3(sbLeft, 0.15, sbRear),
+      ]
       const sbLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(sbPts),
         new THREE.LineDashedMaterial({ color: 0xf59e0b, dashSize: 1.5, gapSize: 1.2, opacity: 0.6, transparent: true }))
       sbLine.computeLineDistances(); scene.add(sbLine)
@@ -470,8 +497,10 @@ export function BuildingVolume3D({
         const geo = new THREE.ExtrudeGeometry(shape, { depth: tH, bevelEnabled: false })
         geo.rotateX(-Math.PI / 2)
 
-        // 창문 텍스처
-        const wCols = Math.max(3, Math.round(bW / 3.5))
+        // 창문 텍스처 — 세대수 기반 창문 개수
+        const resFloors = Math.max(bF - 1, 1)
+        const unitsPerFloor = units ? Math.max(1, Math.ceil((units || 1) / resFloors / Math.max(blocks.length, 1))) : Math.max(3, Math.round(bW / 3.5))
+        const wCols = Math.max(3, Math.min(unitsPerFloor * 2, Math.round(bW / 2)))
         const wTex = new THREE.CanvasTexture(makeWindowTex(bF, wCols))
         wTex.wrapS = wTex.wrapT = THREE.RepeatWrapping
 
@@ -734,22 +763,32 @@ export function BuildingVolume3D({
         scene.add(benchGrp)
       }
 
-      // 지하주차 출입구 (대지 전면)
-      const parkRamp = new THREE.Mesh(new THREE.BoxGeometry(5, 0.15, 4),
+      // 지하주차 출입구 (대지 전면) — 주차대수에 비례한 규모
+      const pkCount = parking || Math.ceil((units || 10) * 0.7)
+      const rampW = Math.min(8, 4 + pkCount * 0.05) // 주차대수에 비례한 램프 폭
+      const parkRamp = new THREE.Mesh(new THREE.BoxGeometry(rampW, 0.15, 4),
         new THREE.MeshStandardMaterial({ color: 0x353d45, roughness: 0.7 }))
       parkRamp.position.set(-S * 0.25, 0.08, S / 2 - 0.5); scene.add(parkRamp)
-      // 경사로 (어두운 색)
-      const ramp = new THREE.Mesh(new THREE.BoxGeometry(4, 0.05, 3),
+      const ramp = new THREE.Mesh(new THREE.BoxGeometry(rampW - 1, 0.05, 3),
         new THREE.MeshStandardMaterial({ color: 0x252d35, roughness: 0.8 }))
       ramp.position.set(-S * 0.25, 0.05, S / 2 - 2); scene.add(ramp)
-      // 출입구 캐노피
-      const pCanopy = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.1, 1),
+      const pCanopy = new THREE.Mesh(new THREE.BoxGeometry(rampW + 0.5, 0.1, 1),
         new THREE.MeshStandardMaterial({ color: 0x606870, metalness: 0.4, roughness: 0.3 }))
       pCanopy.position.set(-S * 0.25, 2.8, S / 2 + 0.5); scene.add(pCanopy)
-      // "주차" 표시 (작은 사각형)
       const pSign = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5),
         new THREE.MeshBasicMaterial({ color: 0x2266ff }))
       pSign.position.set(-S * 0.25, 2.2, S / 2 + 0.01); scene.add(pSign)
+      // 주차대수 표시 (지면에 P + 대수)
+      const pkCanvas = document.createElement('canvas')
+      pkCanvas.width = 128; pkCanvas.height = 64
+      const pkCtx = pkCanvas.getContext('2d')!
+      pkCtx.fillStyle = '#1a1a2e'; pkCtx.fillRect(0, 0, 128, 64)
+      pkCtx.fillStyle = '#60a5fa'; pkCtx.font = 'bold 28px sans-serif'; pkCtx.textAlign = 'center'
+      pkCtx.fillText(`P ${pkCount}대`, 64, 42)
+      const pkLabel = new THREE.Mesh(new THREE.PlaneGeometry(rampW, rampW * 0.5),
+        new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(pkCanvas), transparent: true }))
+      pkLabel.rotation.x = -Math.PI / 2; pkLabel.position.set(-S * 0.25, 0.2, S / 2 - 4)
+      scene.add(pkLabel)
 
       // 경계 관목 (대지 앞쪽 + 측면)
       for (let i = -4; i <= 4; i++) {
@@ -886,7 +925,7 @@ export function BuildingVolume3D({
     }
     const tid = setTimeout(tryInit, 50)
     return () => { mounted = false; clearTimeout(tid); cancelAnimationFrame(animId); rendererRef.current?.dispose() }
-  }, [siteArea, floors, floorHeight, coverage, sitePolygon, layoutType])
+  }, [siteArea, floors, floorHeight, coverage, sitePolygon, layoutType, units, parking, regulation, buildingCount])
 
   const onPD = (e: React.PointerEvent) => { isDragging.current = true; lastMouse.current = { x: e.clientX, y: e.clientY } }
   const onPM = (e: React.PointerEvent) => {
@@ -905,7 +944,7 @@ export function BuildingVolume3D({
         <div className="flex items-center gap-3">
           <div>
             <p className="text-sm font-bold text-white">{layoutName}</p>
-            <p className="text-[10px] text-blue-300/80">{LABELS[layoutType]} · {floors}층 · {siteArea.toLocaleString()}㎡</p>
+            <p className="text-[10px] text-blue-300/80">{LABELS[layoutType]} · {floors}층 {units ? `${units}세대` : ''} · {siteArea.toLocaleString()}㎡{parking ? ` · P${parking}대` : ''}</p>
           </div>
           {blockInfo.length > 1 && (
             <div className="hidden sm:flex gap-1.5">
