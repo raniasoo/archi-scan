@@ -20,28 +20,74 @@ interface BuildingVolume3DProps {
 
 type Block = { x: number; z: number; w: number; d: number; label?: string }
 
-function getLayoutBlocks(type: string): Block[] {
+function getLayoutBlocks(type: string, coverage: number = 50): Block[] {
+  // coverage 기반 동적 계산 — 배치안 건축면적과 100% 일치
+  // w, d는 대지 한 변(√siteArea) 대비 비율
+  const fp = Math.max(coverage, 20) / 100 // 건폐율을 비율로
+
   switch (type) {
-    case 'tower':   return [{ x: 0, z: 0, w: 0.45, d: 0.45, label: 'TOWER' }]
-    case 'linear':  return [{ x: 0, z: 0, w: 0.85, d: 0.30, label: 'SLAB' }]
-    case 'lshape':  return [
-      { x: -0.21, z: 0,    w: 0.42, d: 0.75, label: 'A동' },
-      { x:  0.21, z:-0.18, w: 0.42, d: 0.40, label: 'B동' },
-    ]
-    case 'courtyard': return [
-      { x:  0,     z:-0.27, w: 0.76, d: 0.22, label: '북동' },
-      { x: -0.27,  z: 0.10, w: 0.22, d: 0.48, label: '서동' },
-      { x:  0.27,  z: 0.10, w: 0.22, d: 0.48, label: '동동' },
-    ]
-    case 'cluster': return [
-      { x:-0.28, z:-0.25, w: 0.22, d: 0.20, label: 'A동' },
-      { x: 0.00, z:-0.25, w: 0.22, d: 0.20, label: 'B동' },
-      { x: 0.28, z:-0.25, w: 0.22, d: 0.20, label: 'C동' },
-      { x:-0.20, z: 0.08, w: 0.22, d: 0.20, label: 'D동' },
-      { x: 0.08, z: 0.08, w: 0.22, d: 0.20, label: 'E동' },
-      { x: 0.32, z: 0.10, w: 0.22, d: 0.20, label: 'F동' },
-    ]
-    default: return [{ x: 0, z: 0, w: 0.55, d: 0.55 }]
+    case 'tower': {
+      // 타워: 약간 직사각형 (1.2:1)
+      const ratio = 1.2
+      const w = Math.sqrt(fp * ratio)
+      const d = fp / w
+      return [{ x: 0, z: 0, w, d, label: 'TOWER' }]
+    }
+    case 'linear': {
+      // 판상형: 가로가 긴 직사각형 (3.2:1)
+      const ratio = 3.2
+      const w = Math.min(0.92, Math.sqrt(fp * ratio)) // 대지 너비 92% 상한
+      const d = fp / w
+      return [{ x: 0, z: 0, w, d, label: 'SLAB' }]
+    }
+    case 'lshape': {
+      // ㄱ자형: 두 날개로 L자 형성
+      // 날개 두께 = 전체 건축면적의 비율로 계산
+      const wingThick = Math.sqrt(fp) * 0.45 // 날개 두께
+      const longLen = fp * 0.6 / wingThick   // 긴 날개 길이 (면적 60%)
+      const shortLen = fp * 0.4 / wingThick  // 짧은 날개 길이 (면적 40%)
+      // 긴 날개 (세로) — 좌측
+      // 짧은 날개 (가로) — 상단에서 우측으로
+      const longCx = -longLen / 2 + wingThick / 2
+      const longCz = 0
+      const shortCx = wingThick / 2 + shortLen / 2 - wingThick / 2
+      const shortCz = -longLen / 2 + wingThick / 2
+      return [
+        { x: longCx, z: longCz, w: wingThick, d: longLen, label: 'A동' },
+        { x: shortCx, z: shortCz, w: shortLen, d: wingThick, label: 'B동' },
+      ]
+    }
+    case 'courtyard': {
+      // 중정형: 3면 ㄷ자 (상단 가로 + 좌우 세로)
+      const wingThick = Math.sqrt(fp) * 0.35 // 날개 두께
+      const topFrac = 0.36, sideFrac = 0.32 // 상단 36%, 좌우 각 32%
+      const topW = fp * topFrac / wingThick
+      const sideD = fp * sideFrac / wingThick
+      const halfW = topW / 2
+      return [
+        { x: 0, z: -sideD / 2 + wingThick / 2, w: topW, d: wingThick, label: '북동' },
+        { x: -halfW + wingThick / 2, z: wingThick / 2, w: wingThick, d: sideD, label: '서동' },
+        { x:  halfW - wingThick / 2, z: wingThick / 2, w: wingThick, d: sideD, label: '동동' },
+      ]
+    }
+    case 'cluster': {
+      // 클러스터 기본형 (6동) — 실제로는 동적 계산으로 대체됨
+      const each = fp / 6
+      const w = Math.sqrt(each * 1.3)
+      const d = each / w
+      return [
+        { x:-0.28, z:-0.20, w, d, label: 'A동' },
+        { x: 0.00, z:-0.20, w, d, label: 'B동' },
+        { x: 0.28, z:-0.20, w, d, label: 'C동' },
+        { x:-0.18, z: 0.12, w, d, label: 'D동' },
+        { x: 0.10, z: 0.12, w, d, label: 'E동' },
+        { x: 0.34, z: 0.14, w, d, label: 'F동' },
+      ]
+    }
+    default: {
+      const s = Math.sqrt(fp)
+      return [{ x: 0, z: 0, w: s, d: s }]
+    }
   }
 }
 
@@ -230,7 +276,7 @@ export function BuildingVolume3D({
           }
           return result
         }
-        return getLayoutBlocks(layoutType)
+        return getLayoutBlocks(layoutType, coverage)
       })()
       const info: { label: string; floors: number }[] = []
       
