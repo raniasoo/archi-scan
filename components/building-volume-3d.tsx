@@ -143,6 +143,7 @@ export function BuildingVolume3D({
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const rendererRef  = useRef<any>(null)
   const cameraRef    = useRef<any>(null)
+  const sceneRef     = useRef<any>(null)
   const isDragging   = useRef(false)
   const lastMouse    = useRef({ x: 0, y: 0 })
   const rotation     = useRef({ x: 0.45, y: 0.6 })
@@ -155,20 +156,74 @@ export function BuildingVolume3D({
   const [photoLoading, setPhotoLoading] = useState(false)
   const [photoScore, setPhotoScore] = useState('')
 
-  // Three.js 캡처 → Gemini 포토리얼 변환 (v2: depth map + multi-shot + auto-select)
+  // Three.js 캡처 → Gemini 포토리얼 변환 (v3: Depth Map + 극강 프롬프트 + Auto-Select)
   const captureAndConvert = async () => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    const renderer = rendererRef.current
+    const camera = cameraRef.current
+    const scene = sceneRef.current
+    if (!canvas || !renderer || !camera || !scene) return
     setPhotoLoading(true)
     setPhotoResult(null)
+    setPhotoScore('')
     try {
+      // ━━━ 1. 일반 스크린샷 캡처 ━━━
+      renderer.render(scene, camera)
       const screenshot = canvas.toDataURL('image/png')
       
+      // ━━━ 2. Depth Map (건물 실루엣) 캡처 ━━━
+      let depthMap = ''
+      try {
+        // 원본 저장
+        const origBg = scene.background
+        const origMats: Map<any, any> = new Map()
+        const whiteMat = new (await import('three')).MeshBasicMaterial({ color: 0xffffff })
+        const blackMat = new (await import('three')).MeshBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.3 })
+
+        // 모든 메쉬의 재질을 흰색으로 (건물만 보이게)
+        scene.traverse((obj: any) => {
+          if (obj.isMesh && obj.material) {
+            origMats.set(obj, obj.material)
+            // 건물 메쉬는 흰색, 지면/도로/기타는 어두운색
+            const isBuilding = obj.castShadow || (obj.geometry?.parameters?.depth > 1)
+            obj.material = isBuilding ? whiteMat : blackMat
+          }
+          if (obj.isLine || obj.isLineSegments) obj.visible = false
+          if (obj.isSprite) obj.visible = false
+        })
+        // 배경 검정
+        scene.background = new (await import('three')).Color(0x000000)
+        
+        // 렌더 + 캡처
+        renderer.render(scene, camera)
+        depthMap = canvas.toDataURL('image/png')
+        
+        // 원본 복원
+        origMats.forEach((mat, obj) => { obj.material = mat })
+        scene.traverse((obj: any) => {
+          if (obj.isLine || obj.isLineSegments) obj.visible = true
+          if (obj.isSprite) obj.visible = true
+        })
+        scene.background = origBg
+        
+        // 복원 렌더
+        renderer.render(scene, camera)
+        
+        whiteMat.dispose()
+        blackMat.dispose()
+        console.log('[3D-PHOTO] Depth map captured')
+      } catch (e) {
+        console.warn('[3D-PHOTO] Depth map capture failed, proceeding without:', e)
+        depthMap = ''
+      }
+      
+      // ━━━ 3. API 호출 ━━━
       const res = await fetch('/api/3d-to-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           screenshot,
+          depthMap: depthMap || undefined,
           layoutName,
           floors,
           units,
@@ -183,7 +238,7 @@ export function BuildingVolume3D({
         setPhotoResult(data.image)
         setPhotoScore(data.score ? `${data.score}점 (${data.floorsDetected}층 감지, 형태 ${data.shapeMatch})` : '')
       } else {
-        console.error('[3D-PHOTO]', data.error || data.textResponse)
+        console.error('[3D-PHOTO]', data.error)
       }
     } catch (e: any) {
       console.error('[3D-PHOTO] Error:', e.message)
@@ -252,6 +307,7 @@ export function BuildingVolume3D({
 
       /* ── Scene (그라데이션 하늘) ── */
       const scene = new THREE.Scene()
+      sceneRef.current = scene
       const skyC = document.createElement('canvas')
       skyC.width = 2; skyC.height = 512
       const skyG = skyC.getContext('2d')!
