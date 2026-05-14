@@ -97,11 +97,12 @@ Height: EXACTLY ${f} stories (${Math.round(f * 3.3)}m tall). DO NOT make taller.
 Style: Modern Korean residential, clean concrete and glass facade.
 Camera: Eye-level view from across the street.
 Lighting: Golden hour, warm tones.
-DO NOT generate round or cylindrical buildings.`
+DO NOT generate round or cylindrical buildings.
+Output: Generate ONE photorealistic image only.`
 
   try {
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -111,6 +112,7 @@ DO NOT generate round or cylindrical buildings.`
             responseModalities: ["TEXT", "IMAGE"],
           },
         }),
+        signal: AbortSignal.timeout(90000),
       }
     )
     
@@ -123,19 +125,67 @@ DO NOT generate round or cylindrical buildings.`
     const parts = data?.candidates?.[0]?.content?.parts || []
     
     let imageBase64 = ''
+    let imageMimeType = 'image/png'
     let textResponse = ''
     for (const part of parts) {
-      if (part.inlineData?.data) imageBase64 = part.inlineData.data.slice(0, 100) + '...(truncated)'
-      if (part.text) textResponse = part.text.slice(0, 300)
+      if (part.inlineData?.data) {
+        imageBase64 = part.inlineData.data
+        imageMimeType = part.inlineData.mimeType || 'image/png'
+      }
+      if (part.text) textResponse = part.text
     }
+    
+    if (!imageBase64) {
+      return NextResponse.json({ success: true, mode: 'render', hasImage: false, textResponse: textResponse.slice(0, 300), promptUsed: prompt.slice(0, 500), ...meta })
+    }
+    
+    // ━━━ Step 2: Gemini Vision으로 생성 이미지 역분석 ━━━
+    let analysis = { detectedFloors: 0, detectedType: '', detectedCount: 0, confidence: 0, rawText: '' }
+    try {
+      const analyzeRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [
+              { inlineData: { mimeType: imageMimeType, data: imageBase64 } },
+              { text: `Analyze this architectural rendering. Answer in JSON only, no other text:
+{"floors": <number of visible floors/stories>, "buildingType": "<tower|courtyard|lshape|linear|cluster>", "buildingCount": <number of separate buildings>, "heightEstimate": "<low-rise 1-3F|mid-rise 4-7F|high-rise 8F+>", "shapeDescription": "<brief shape description>"}` }
+            ] }],
+            generationConfig: { responseMimeType: 'application/json' },
+          }),
+          signal: AbortSignal.timeout(30000),
+        }
+      )
+      if (analyzeRes.ok) {
+        const analyzeData = await analyzeRes.json()
+        const analyzeText = analyzeData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        analysis.rawText = analyzeText.slice(0, 500)
+        try {
+          const parsed = JSON.parse(analyzeText)
+          analysis.detectedFloors = parsed.floors || 0
+          analysis.detectedType = parsed.buildingType || ''
+          analysis.detectedCount = parsed.buildingCount || 0
+        } catch { /* parse fail */ }
+      }
+    } catch { /* analysis fail */ }
+    
+    // ━━━ Step 3: 일치율 계산 ━━━
+    const floorMatch = analysis.detectedFloors > 0 ? Math.max(0, 100 - Math.abs(f - analysis.detectedFloors) * 20) : -1
+    const typeMatch = analysis.detectedType === bt ? 100 : (analysis.detectedType && bt === 'tower' && analysis.detectedType === 'tower') ? 100 : 30
+    const countMatch = analysis.detectedCount > 0 ? (analysis.detectedCount === actualBldgCount ? 100 : Math.max(0, 100 - Math.abs(actualBldgCount - analysis.detectedCount) * 30)) : -1
+    const overallMatch = [floorMatch, typeMatch, countMatch].filter(v => v >= 0)
+    const avgMatch = overallMatch.length > 0 ? Math.round(overallMatch.reduce((a, b) => a + b, 0) / overallMatch.length) : -1
     
     return NextResponse.json({
       success: true,
       mode: 'render',
-      hasImage: !!imageBase64,
-      imagePreview: imageBase64,
-      textResponse,
-      promptUsed: prompt.slice(0, 500),
+      hasImage: true,
+      imageSize: Math.round(imageBase64.length / 1024) + 'KB',
+      promptUsed: prompt.slice(0, 300),
+      analysis,
+      matchScores: { floorMatch, typeMatch, countMatch, overall: avgMatch },
       ...meta,
     })
   } catch (e: any) {
