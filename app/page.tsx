@@ -618,11 +618,39 @@ export default function ArchiScanPage() {
   const [showProjectComparison, setShowProjectComparison] = useState(false)
   const [showAllProjectsList, setShowAllProjectsList] = useState(false)
   
-  // 최근 프로젝트 목록 로드
+  // 최근 프로젝트 목록 로드 (localStorage + 클라우드 동기화)
   useEffect(() => {
-    if (mounted) {
-      try { setRecentProjects(getRecentProjects(10)) } catch {}
+    if (!mounted) return
+    // 1) 로컬 먼저 표시
+    try { setRecentProjects(getRecentProjects(10)) } catch {}
+    
+    // 2) 클라우드에서 가져와 로컬에 없는 것 복원
+    const syncCloud = async () => {
+      try {
+        const { getCloudProjects } = await import('@/lib/cloud-storage')
+        const cloudProjects = await getCloudProjects(20)
+        if (cloudProjects.length === 0) return
+        
+        const localProjects = getRecentProjects(50)
+        const localIds = new Set(localProjects.map(p => p.id))
+        let restoredCount = 0
+        
+        for (const cp of cloudProjects) {
+          if (!localIds.has(cp.id) && cp.snapshotData) {
+            try {
+              saveProjectToStorage(cp.snapshotData, cp.id, cp.name || cp.address)
+              restoredCount++
+            } catch {}
+          }
+        }
+        
+        if (restoredCount > 0) {
+          console.log(`[cloud-sync] ${restoredCount}개 프로젝트 클라우드에서 복원`)
+          setRecentProjects(getRecentProjects(10))
+        }
+      } catch {}
     }
+    syncCloud()
   }, [mounted, currentProjectId])
   
   // 자동 저장 — 배치안 생성 완료 시 (localStorage + Cloud)
