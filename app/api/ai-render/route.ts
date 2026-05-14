@@ -1041,7 +1041,82 @@ FORBIDDEN: Do NOT show the building exterior. Do NOT show empty/unfurnished room
     'private-terrace': 'Each unit has a small private terrace or garden',
     'earth-connect': 'Ground floor units connect directly to garden/earth',
   }
-  const patternHints = (patterns || []).map(p => patternElements[p]).filter(Boolean)
+  // ━━━ 알렉산더 패턴 자동 추출 (배치안 타입 기반) ━━━
+  // 사용자 선택 패턴 + 배치안에서 자동 도출된 패턴 합산
+  const autoPatterns: string[] = []
+  const bt = buildingType || ''
+  const openSpaceRatio = 100 - (coverage || 50)
+
+  // 배치안 타입별 자동 패턴
+  if (bt === 'courtyard' || bt === 'ㅁ-shape') {
+    autoPatterns.push('courtyard', 'neighbors', 'quiet-entry')
+  }
+  if (bt === 'l-shape' || bt === 'ㄱ-shape') {
+    autoPatterns.push('quiet-entry', 'garden-wall', 'outdoor-room')
+  }
+  if (bt === 'linear' || bt === 'bar') {
+    autoPatterns.push('south-light', 'two-light', 'walk-safe')
+  }
+  if (bt === 'tower') {
+    autoPatterns.push('balcony', 'main-entrance')
+  }
+  if (bt === 'cluster') {
+    autoPatterns.push('neighbors', 'accessible-green', 'walk-safe')
+  }
+
+  // 층수 기반
+  if (f <= 3) autoPatterns.push('earth-connect', 'private-terrace', 'visible-roof')
+  else if (f <= 5) autoPatterns.push('tree-view', 'balcony')
+  else if (f > 10) autoPatterns.push('rooftop')
+
+  // 건폐율/여유공간 기반
+  if (openSpaceRatio > 50) autoPatterns.push('accessible-green', 'tree-view')
+  if (openSpaceRatio > 35 && openSpaceRatio <= 50) autoPatterns.push('garden-wall')
+
+  // 전략 기반
+  if (strategy === 'quality') autoPatterns.push('window-place', 'ceiling-height')
+  if (strategy === 'parking-efficient') autoPatterns.push('small-parking', 'walk-safe')
+
+  // 사용자 선택 + 자동 도출 합치기 (중복 제거)
+  const mergedPatterns = [...new Set([...(patterns || []), ...autoPatterns])]
+  const patternHints = mergedPatterns.map(p => patternElements[p]).filter(Boolean)
+
+  // ━━━ 15가지 근본 속성 → 분위기 지시 (The Nature of Order) ━━━
+  const livingAtmosphere: string[] = []
+  const isCourtyard = bt === 'courtyard' || bt === 'ㅁ-shape'
+  const isLShape = bt === 'l-shape' || bt === 'ㄱ-shape'
+
+  // Strong Centers — 중심성
+  if (isCourtyard) livingAtmosphere.push('The courtyard is the clear spatial CENTER of the composition — all buildings face inward toward it, creating a sense of gathering and belonging')
+  else if (isLShape) livingAtmosphere.push('The L-shaped corner creates a semi-enclosed outdoor space that acts as a natural gathering point')
+
+  // Boundaries — 두꺼운 경계
+  if (f <= 5 || isCourtyard) livingAtmosphere.push('Show THICK BOUNDARIES between public and private: hedges, low walls with planters, covered walkways, entrance canopies — not just hard lines but inhabitable transition zones')
+
+  // Positive Space — 양의 공간
+  if (isCourtyard || openSpaceRatio > 45) livingAtmosphere.push('The outdoor spaces between buildings should feel SHAPED and INTENTIONAL — not leftover void, but positive outdoor rooms with clear edges defined by building walls and landscaping')
+
+  // The Void — 여백
+  if (openSpaceRatio > 50) livingAtmosphere.push('Include generous EMPTY SPACE — an open lawn, a quiet garden with nothing but grass and one tree — breathing room that gives the composition calmness')
+
+  // Roughness — 거침 (저층일수록 강조)
+  if (f <= 3) livingAtmosphere.push('Show NATURAL IMPERFECTION: slightly weathered wood, hand-laid stone paths, irregularly shaped planting beds, visible wood grain — the beauty of handcrafted textures, not machine-perfect surfaces')
+  else if (f <= 5) livingAtmosphere.push('Include some natural texture variation: exposed aggregate concrete, natural stone accent walls, wood-grain details on balcony rails')
+
+  // Not-Separateness — 비분리 (주변과의 조화)
+  if (f <= 5) livingAtmosphere.push('The building should feel like it BELONGS to its neighborhood — matching the scale of surrounding houses, using similar materials, with trees and fences that connect to the street fabric rather than creating a fortress')
+
+  // Deep Interlock — 깊은 맞물림
+  if (isCourtyard || isLShape) livingAtmosphere.push('Show INTERLOCKING of inside and outside: deep balconies with plants spilling over, ground-floor rooms opening directly to garden, covered outdoor dining areas that are neither fully inside nor outside')
+
+  // Gradients — 점진적 변이
+  livingAtmosphere.push('Show a GRADIENT from public to private: street → sidewalk → front garden → entrance porch → lobby/hallway → unit door — each step slightly more intimate than the last')
+
+  // Echoes — 반향 (반복 모티브)
+  if (f <= 5) livingAtmosphere.push('Repeat a consistent MOTIF throughout: the same window proportion, the same wood tone, the same planter style — creating visual rhythm and unity')
+
+  // Levels of Scale — 스케일의 단계
+  livingAtmosphere.push('Show MULTIPLE SCALES of detail: the overall building mass, then window groupings, then individual balconies, then flower pots and handrails — richness at every zoom level')
 
   // ━━━ 인테리어 전용 프롬프트 (외관 정보 제외) ━━━
   if (cameraAngle === 'interior') {
@@ -1092,6 +1167,15 @@ ATMOSPHERE:
 - Mood: Bright, airy, inviting — model home presentation quality
 - Photography style: Interior architecture magazine, wide-angle lens (24-28mm equivalent)
 
+SPATIAL QUALITY — THE NATURE OF ORDER (makes interiors feel ALIVE, not staged):
+${f <= 3 ? '- LIGHT ON TWO SIDES: Show windows on two walls — corner unit with cross-ventilation, light creating depth and shadow play' : '- Show generous natural light from large windows, balcony door casting warm light across the floor'}
+- INTIMACY GRADIENT: The space should flow from public (entrance) → semi-public (living/dining) → private (bedroom glimpse in background) — a visible journey from social to intimate
+- WINDOW PLACE: Near the window, show a cozy reading corner or window seat with a cushion — a place where someone would naturally sit and look outside
+${f <= 5 ? '- CONNECTION TO EARTH: Through the window, show garden greenery at close range — trees, plants, the sense of living close to nature' : '- Through the window, show an expansive view that gives a sense of openness and light'}
+- ECHOES: Repeat a consistent design motif — the same wood tone in flooring, shelving, and table; the same curve in a lamp and a vase — visual harmony through subtle repetition
+- ROUGHNESS: Include one imperfect, human touch — a handmade ceramic bowl, a linen throw with visible weave, a slightly asymmetric plant arrangement — warmth through imperfection
+${patternHints.length > 0 ? `\nUSER-SELECTED ELEMENTS:\n${patternHints.filter(h => h.includes('Window') || h.includes('terrace') || h.includes('ceiling') || h.includes('light')).map(h => `- ${h}`).join('\\n')}` : ''}
+
 AVOID:
 - Building exterior views (this is INSIDE the apartment)
 - Empty/unfurnished rooms
@@ -1129,7 +1213,8 @@ DESIGN DIRECTION:
 ${strategyStyle || 'Modern residential design'}
 ${materialHint ? `\nMATERIALS AND FINISH:\n${materialHint}` : ''}
 ${atmosphereHints.length > 0 ? `\nATMOSPHERE:\n${atmosphereHints.map(h => `- ${h}`).join('\n')}` : ''}
-${patternHints.length > 0 ? `\nMUST INCLUDE THESE ELEMENTS:\n${patternHints.map(h => `- ${h}`).join('\n')}` : ''}
+${patternHints.length > 0 ? `\nMUST INCLUDE THESE ELEMENTS (Christopher Alexander's Pattern Language):\n${patternHints.map(h => `- ${h}`).join('\n')}` : ''}
+${livingAtmosphere.length > 0 ? `\nSPATIAL QUALITY — THE NATURE OF ORDER (architectural philosophy that makes spaces feel ALIVE):\n${livingAtmosphere.map(h => `- ${h}`).join('\n')}` : ''}
 
 CONTEXT:
 - Location: ${address || 'Seoul, South Korea'}
