@@ -1136,6 +1136,73 @@ FORBIDDEN: Do NOT show the building exterior. Do NOT show empty/unfurnished room
     }
     const interiorStyle = interiorStyleMap[style] || interiorStyleMap['int-modern-luxury']
 
+    // ━━━ 1. 실제 세대 면적 계산 ━━━
+    const unitArea = (siteArea && coverage && f && u) ? Math.round((siteArea * (coverage / 100) * f) / u) : 84
+    const unitSizeDesc = unitArea <= 35 ? 'compact studio/1-room (≈35㎡), open-plan living+sleeping, mini kitchen'
+      : unitArea <= 59 ? 'efficient 2-room apartment (≈59㎡), separate bedroom, open kitchen-living'
+      : unitArea <= 84 ? 'standard 3-room apartment (≈84㎡), living room, kitchen, master + second bedroom'
+      : unitArea <= 115 ? 'spacious 4-room apartment (≈110㎡), wide living room, kitchen island, master suite + 2 bedrooms, separate entrance foyer'
+      : 'luxury large unit (120㎡+), generous living room with alpha room/study, walk-in closet, double-sink master bath'
+
+    // ━━━ 2. 창밖 풍경 = 실제 건물 컨텍스트 ━━━
+    const windowViewByType: Record<string, string> = {
+      'courtyard': `INWARD COURTYARD VIEW: Through the window, show the building's inner courtyard — a shared garden with a mature tree, a wooden bench, children's tricycle parked, the opposite wing's warm-lit windows visible across the yard. Intimate community feeling, not a city panorama.`,
+      'ㅁ-shape': `INWARD COURTYARD VIEW: Through the window, show the building's enclosed inner courtyard — shared garden, mature tree, bench, opposite wing windows visible. Enclosed, intimate village feeling.`,
+      'l-shape': `SEMI-ENCLOSED GARDEN VIEW: Through the window, show the L-shaped building's private garden pocket — a small lawn with stepping stones, low hedge border, neighbor's tiled roof peeking above the garden wall. Quiet, protected outdoor room feeling.`,
+      'ㄱ-shape': `SEMI-ENCLOSED GARDEN VIEW: Through the window, show the ㄱ-shaped building's corner garden — stepping stones, low plantings, neighbor's roof above garden wall. Protected, intimate.`,
+      'linear': `PARALLEL BLOCK VIEW: Through the window, show the view between parallel residential blocks — manicured landscaping strip, walking path, the next building's balconies with laundry and plants, mature street trees. Typical Korean apartment complex rhythm.`,
+      'bar': `SOUTH-FACING OPEN VIEW: Through the window (south side), show an open vista — distant tree line, neighborhood rooftops, blue sky. Bright, generous southern light flooding in. The balcony railing with a few potted herbs visible.`,
+      'tower': f > 10 ? `HIGH-RISE PANORAMA: Through floor-to-ceiling windows, show a sweeping city/mountain panoramic view — distant Seoul cityscape or mountain ridgeline, clouds at eye level, tiny rooftops below. The height creates drama and openness.`
+        : `MID-RISE URBAN VIEW: Through the window, show the surrounding neighborhood from above — nearby building rooftops, street trees, a glimpse of a park or school playground. Urban but comfortable height.`,
+      'cluster': `VILLAGE-LIKE VIEW: Through the window, show the adjacent small building in the cluster — its pitched roof, shared courtyard path between buildings, garden plantings. Like looking out in a small village, not an apartment complex.`,
+    }
+    const windowView = windowViewByType[bt] || (f <= 3
+      ? `LOW-RISE GARDEN VIEW: Through the window, show close garden greenery — tree branches at window level, flowering shrubs, a stone garden path. Living close to the earth.`
+      : f <= 5
+      ? `MID-RISE NEIGHBORHOOD VIEW: Through the window, show nearby treetops, neighboring rooftops, a quiet residential street. Warm community setting.`
+      : `UPPER FLOOR VIEW: Through the window, show an expansive urban view — distant buildings, sky, mountain silhouette on the horizon.`)
+
+    // ━━━ 3. 15속성 → 구체적 인테리어 오브젝트 ━━━
+    const alexanderObjects: string[] = []
+
+    // Roughness — 거침: 구체적 수공예 오브점트
+    if (f <= 5) {
+      alexanderObjects.push('ROUGHNESS objects: a hand-thrown matte ceramic bowl on the coffee table, linen curtains with visible weave texture hanging loosely, a reclaimed-wood floating shelf with natural edge grain — beauty in imperfection')
+    } else {
+      alexanderObjects.push('ROUGHNESS touch: a textured woven throw blanket draped over the sofa armrest, a hand-glazed pottery vase with dried pampas grass — subtle warmth against clean modern surfaces')
+    }
+
+    // Echoes — 반향: 동일 소재 반복 지정
+    alexanderObjects.push('ECHOES (material repetition): the SAME warm walnut tone must appear in exactly these items: the floor planks, the window frame inner edge, the coffee table legs, and one bookshelf — creating unconscious visual harmony through one repeated material thread')
+
+    // Void — 여백: 빈 벽면
+    alexanderObjects.push('THE VOID: one wall section is deliberately LEFT EMPTY — a white/cream plaster wall with just a single small framed botanical watercolor print (10×15cm), surrounded by generous blank space. This emptiness is not a mistake — it gives the room breathing space and calm')
+
+    // Boundaries — 두꺼운 경계: 현관 전이
+    alexanderObjects.push('BOUNDARIES (entrance threshold): the entrance area has a subtle step-down or material change — a dark stone tile genkan-style entry zone (30cm deep) with a built-in wood shoe cabinet, clearly separating the "outside world" from the "home interior." A small tray for keys and a single coat hook visible')
+
+    // Contrast — 대비
+    alexanderObjects.push('CONTRAST: one accent wall or surface is noticeably DARKER than the rest — a charcoal gray or deep forest green painted wall behind the TV, or a dark walnut built-in bookshelf — creating visual depth against the light floor and white walls')
+
+    // Deep Interlock — 내외부 맞물림
+    if (f <= 5 || isCourtyard || isLShape) {
+      alexanderObjects.push('DEEP INTERLOCK (inside-outside merge): the balcony or terrace door is OPEN or ajar, with a small outdoor chair and potted plant visible just outside the glass — the interior and exterior spaces flow into each other, blurring the boundary')
+    }
+
+    // Strong Centers — 공간의 중심
+    alexanderObjects.push('STRONG CENTER: the living room has ONE clear focal point — a well-composed coffee table arrangement (a few books, a candle, a small plant) that anchors the entire room. Everything else radiates outward from this center')
+
+    // Gradients — 카메라 구도로 친밀도 기울기 표현
+    alexanderObjects.push('INTIMACY GRADIENT (camera composition): Foreground shows the living room (most public) → middle ground shows the dining area or kitchen counter → background shows a hallway leading to a bedroom door slightly ajar with soft light — each zone progressively more intimate, creating spatial depth and a sense of home journey')
+
+    // Levels of Scale — 디테일의 단계
+    alexanderObjects.push('LEVELS OF SCALE: Show detail at every zoom level — the room layout (large), furniture grouping (medium), cushion textures and book spines (small), a visible wood grain on the table surface (tiny) — richness that rewards close looking')
+
+    // Simplicity — 단순함
+    if (unitArea <= 59) {
+      alexanderObjects.push('SIMPLICITY: small unit — every object earns its place. No decorative clutter. Clean surfaces with only essential items. The beauty comes from carefully chosen few objects, not abundance')
+    }
+
     return `Generate a photorealistic INTERIOR perspective rendering of a Korean residential apartment unit.
 
 INTERIOR DESIGN STYLE:
@@ -1143,8 +1210,9 @@ ${interiorStyle}
 
 APARTMENT INFO:
 - Building: ${layoutName || '주거 건물'} in ${address || 'Seoul, South Korea'}
-- ${f}-story building, ${units} units total
-- Unit type: Modern Korean apartment (approx 84-110㎡ unit)
+- ${f}-story ${bt ? bt + ' type' : ''} building, ${u} units total
+- Unit size: ${unitSizeDesc}
+- Approximate unit area: ${unitArea}㎡ (${Math.round(unitArea * 0.3025)}평)
 
 ${cameraDesc}
 
@@ -1153,41 +1221,44 @@ SCENE: ${sceneText}
 INTERIOR MUST-HAVES:
 - Floor: Wood-tone LVT or engineered hardwood flooring (ondol-compatible flat surface)
 - Walls: White or warm gray paint, clean and smooth
-- Ceiling: 2.4-2.5m height, recessed LED downlights, no exposed ductwork
-- Windows: Large floor-to-ceiling or balcony sliding doors with natural light streaming in
-- Living room: Modern sofa (3-seater), coffee table, TV unit/wall-mounted TV, area rug
-- Dining: Table for 4-6 visible in background or adjacent area
-- Kitchen: Open-plan or semi-open, light wood cabinets, stone countertop visible in background
-- View through window: Urban/suburban Korean neighborhood glimpse, daylight
-- Details: Built-in shoe cabinet near entrance hint, clean baseboards, outlet plates
+- Ceiling: ${f <= 3 ? '2.6-2.8m height (low-rise generous ceiling)' : '2.4-2.5m height'}, recessed LED downlights, no exposed ductwork
+- Windows: ${f <= 3 ? 'Large windows with garden-level views, possibly floor-to-garden sliding doors' : 'Large floor-to-ceiling or balcony sliding doors with natural light streaming in'}
+${unitArea <= 59
+  ? `- Living area: Compact but well-organized — 2-seater sofa, small coffee table, wall-mounted TV, foldable dining for 2-4
+- Kitchen: Galley or L-shaped, efficient use of wall storage`
+  : unitArea <= 84
+  ? `- Living room: Modern sofa (3-seater), coffee table, TV unit, area rug
+- Dining: Table for 4 visible in background
+- Kitchen: Open-plan or semi-open, light wood cabinets, stone countertop`
+  : `- Living room: Generous L-shaped or sectional sofa, large coffee table, art on walls, spacious area rug
+- Dining: Table for 6 with statement lighting above
+- Kitchen: Island kitchen with bar stools, premium appliances visible`}
+- Details: Built-in shoe cabinet near entrance, clean baseboards
+
+WINDOW VIEW (CRITICAL — must match this building type):
+${windowView}
+
+SPATIAL QUALITY — CHRISTOPHER ALEXANDER'S NATURE OF ORDER:
+These specific objects and arrangements make the space feel ALIVE, like a real home, not a sterile model unit:
+${alexanderObjects.map(h => `- ${h}`).join('\n')}
+${patternHints.length > 0 ? `\nUSER-SELECTED PATTERN ELEMENTS:\n${patternHints.filter(h => h.toLowerCase().includes('window') || h.toLowerCase().includes('terrace') || h.toLowerCase().includes('ceiling') || h.toLowerCase().includes('light') || h.toLowerCase().includes('garden') || h.toLowerCase().includes('earth')).map(h => `- ${h}`).join('\n')}` : ''}
 
 ATMOSPHERE:
-- Primary light: Natural afternoon sunlight through windows (warm, directional)
-- Secondary: Warm-tone recessed ceiling lights
-- Mood: Bright, airy, inviting — model home presentation quality
-- Photography style: Interior architecture magazine, wide-angle lens (24-28mm equivalent)
-
-SPATIAL QUALITY — THE NATURE OF ORDER (makes interiors feel ALIVE, not staged):
-${f <= 3 ? '- LIGHT ON TWO SIDES: Show windows on two walls — corner unit with cross-ventilation, light creating depth and shadow play' : '- Show generous natural light from large windows, balcony door casting warm light across the floor'}
-- INTIMACY GRADIENT: The space should flow from public (entrance) → semi-public (living/dining) → private (bedroom glimpse in background) — a visible journey from social to intimate
-- WINDOW PLACE: Near the window, show a cozy reading corner or window seat with a cushion — a place where someone would naturally sit and look outside
-${f <= 5 ? '- CONNECTION TO EARTH: Through the window, show garden greenery at close range — trees, plants, the sense of living close to nature' : '- Through the window, show an expansive view that gives a sense of openness and light'}
-- ECHOES: Repeat a consistent design motif — the same wood tone in flooring, shelving, and table; the same curve in a lamp and a vase — visual harmony through subtle repetition
-- ROUGHNESS: Include one imperfect, human touch — a handmade ceramic bowl, a linen throw with visible weave, a slightly asymmetric plant arrangement — warmth through imperfection
-${patternHints.length > 0 ? `\nUSER-SELECTED ELEMENTS:\n${patternHints.filter(h => h.includes('Window') || h.includes('terrace') || h.includes('ceiling') || h.includes('light')).map(h => `- ${h}`).join('\\n')}` : ''}
+- Primary light: Natural afternoon sunlight through windows (warm, directional, casting long shadows across the floor)
+- Secondary: Warm-tone recessed ceiling lights (2700-3000K)
+- Mood: Bright yet WARM — like visiting a friend's well-kept home, not a furniture showroom
+- Photography style: Interior architecture magazine, wide-angle lens (24-28mm equivalent), slightly low camera position (seated eye level, ~110cm) to feel intimate
 
 AVOID:
-- Building exterior views (this is INSIDE the apartment)
+- Generic "urban view" through windows — use the SPECIFIC window view described above
+- Sterile model-home perfection — this should feel LIVED IN (a book left open, a mug on the table)
 - Empty/unfurnished rooms
-- Overly luxurious hotel-lobby style (this is a realistic HOME)
-- Cluttered or messy spaces
-- Dark or moody lighting (keep bright and welcoming)
+- Dark or moody lighting
 - Unrealistic furniture scale
-- Visible construction or unfinished elements
 - Text, watermarks, or labels
 
-FINAL COMPOSITION CHECK — INTERIOR PERSPECTIVE:
-Before generating, verify: Am I INSIDE the apartment unit? Can I see the living room with furniture? Is natural light coming through windows? Is the ceiling height ~2.5m? Does it feel like a real Korean residential interior? Is there a view through the window suggesting an urban setting? If I can see the building exterior facade, I am in the WRONG position — move INSIDE.
+FINAL COMPOSITION CHECK:
+Before generating, verify: Am I INSIDE the apartment? Is the window view matching the ${bt || 'residential'} building type? Can I count at least 3 Alexander "objects" (ceramic bowl, linen throw, empty wall, dark accent, walnut echo)? Does the space flow from public to private? Does it feel like someone actually LIVES here? If it looks like a furniture catalog, add more human touches.
 
 ${prompt}
 
