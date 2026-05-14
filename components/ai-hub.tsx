@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Sparkles, Copy, Check, Loader2, X, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
+import { captureBuilding3D } from "@/lib/offscreen-3d-capture"
 import { trackAiRenderStart, trackAiRenderComplete } from "@/components/google-analytics"
 import { useSubscription } from "@/components/subscription-provider"
 
@@ -205,13 +206,32 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   // #5: 재시도 로직 + Gemini/Flux 엔진 라우팅
   const doRender = async (retry = 0) => {
     setLoading(true); setError(null); setRetryCount(retry); setMultiImages(null)
-    setRenderProgress(retry > 0 ? `재시도 중 (${retry}/2)...` : 'AI 이미지 생성 중...')
+    setRenderProgress(retry > 0 ? `재시도 중 (${retry}/2)...` : '3D 모델 캡처 + AI 렌더링 중...')
     trackAiRenderStart(angle || 'exterior')
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 120_000) // 2분 클라이언트 타임아웃
+    const timeout = setTimeout(() => controller.abort(), 120_000)
 
     try {
+      // ━━━ 3D-First: 오프스크린 Three.js 5방향 자동 캡처 ━━━
+      let threeJsCaptures: { angle: string; image: string }[] | undefined
+      try {
+        if (input.buildingType && input.siteArea && input.floors) {
+          setRenderProgress('🧊 3D 모델 생성 + 5방향 캡처 중...')
+          threeJsCaptures = await captureBuilding3D({
+            type: input.buildingType,
+            coverage: input.buildingCoverageRatio || 50,
+            siteArea: input.siteArea,
+            floors: input.floors,
+            buildingCount: input.buildingCount,
+            originalType: (input as any)._originalType || (input as any).originalType || input.buildingType,
+          })
+          setRenderProgress('🎨 AI 포토리얼 변환 중...')
+        }
+      } catch (e) {
+        console.warn('[AI-HUB] 3D capture failed, falling back to text-only:', e)
+      }
+
       const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
         prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
         style, address:input.address, layoutName:input.layoutName,
@@ -227,6 +247,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         material: materialId ? { type: materialId } : undefined,
         regulation: input.regulation,
         referenceImage: useReference && previousRenderImage ? previousRenderImage : undefined,
+        threeJsCaptures: threeJsCaptures || undefined,
       }) })
       clearTimeout(timeout)
       const d = await safeJson(r)

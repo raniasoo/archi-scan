@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, buildingCount: userBuildingCount, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation, terrainInfo, referenceImage } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, buildingCount: userBuildingCount, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation, terrainInfo, referenceImage, threeJsCaptures } = await req.json()
     const ti = terrainInfo as { slopeDirection?: string; elevationDiff?: number; avgSlope?: number } | undefined
 
     if (!prompt) {
@@ -461,6 +461,17 @@ export async function POST(req: NextRequest) {
         }
       } catch { /* ignore */ }
     }
+
+    // ━━━ 3D-First Pipeline: Three.js 5방향 캡처를 최우선 참조로 추가 ━━━
+    if (threeJsCaptures && Array.isArray(threeJsCaptures) && threeJsCaptures.length > 0) {
+      for (const cap of threeJsCaptures) {
+        const match = cap.image?.match(/^data:(image\/[^;]+);base64,(.+)$/)
+        if (match) {
+          refImages.unshift({ base64: match[2], mimeType: match[1], label: `3d-${cap.angle}` })
+        }
+      }
+      console.log(`[GEMINI] 3D-First: ${threeJsCaptures.length} Three.js captures added as primary references`)
+    }
     
     console.log(`[GEMINI] Reference images: ${refImages.length} loaded (${refImages.map(r => r.label).join(', ')})`)
 
@@ -505,6 +516,11 @@ ${eyeLevelRefs.map((r, i) => `Image ${i+1}: ${
   r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows building footprints (orange shapes). Match these shapes EXACTLY.' :
   r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — Eye-level photo of the ACTUAL neighborhood. Match styles, materials, road width, atmosphere.` :
   r.label === 'height-reference' ? `HEIGHT REFERENCE — Building is EXACTLY ${floors || 3} floors (${((floors || 3) * 3.3).toFixed(1)}m). Match this height.` :
+  r.label === '3d-bird-eye' ? `★★★ 3D MODEL (BIRD-EYE VIEW) — This 3D model shows the EXACT building shape, position, and floor count. MATCH THIS PRECISELY.` :
+  r.label === '3d-front' ? `★★★ 3D MODEL (FRONT VIEW) — Count the floor slabs: EXACTLY ${floors || 3} floors. DO NOT add more floors.` :
+  r.label === '3d-side' ? `3D MODEL (SIDE VIEW) — Shows building depth and height. Match this profile.` :
+  r.label === '3d-top-down' ? `★★★ 3D MODEL (TOP-DOWN) — Shows the EXACT building footprint shape. This is GROUND TRUTH for the shape.` :
+  r.label === '3d-depth-map' ? `3D DEPTH MAP — White=building, Black=background. Match this silhouette PRECISELY.` :
   r.label === 'shape-reference' ? `BUILDING SHAPE REFERENCE — Orange shapes show exact building footprints. Match these shapes.` :
   r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Match this style, materials, colors.' :
   r.label
@@ -677,7 +693,7 @@ The entrance must use the SAME materials and style visible in the street-level i
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
           parts.push({ text: `REFERENCE IMAGES (${refImages.length}):
-${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows the exact lot boundary (blue), setback line (orange dashed), AND the BUILDING FOOTPRINTS (orange filled shapes). The ORANGE SHAPES show EXACTLY where and what shape the buildings must be. The rendered buildings MUST match these orange footprint shapes — same position, same shape (L-shaped, linear, U-shaped, etc.), same number of buildings. This is the MOST IMPORTANT reference image.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label === 'height-reference' ? `★★★ HEIGHT REFERENCE DIAGRAM — This diagram shows the EXACT correct height of the building. The building has EXACTLY ${floors || 3} floors and is ${((floors || 3) * 3.3).toFixed(1)}m tall. Compare with the person (1.7m) and tree. The building is ${(floors || 3) <= 3 ? 'SHORTER than nearby trees — it is a LOW building' : 'about the same height as trees'}. DO NOT generate a taller building. COUNT THE FLOORS in this diagram and match them EXACTLY.` : r.label === 'shape-reference' ? `★★★ BUILDING SHAPE REFERENCE — THIS IS THE MOST CRITICAL IMAGE. The ORANGE shapes show the EXACT footprint of each building as seen from ABOVE (bird's eye). Your rendered buildings MUST match these shapes EXACTLY. ${buildingType === 'lshape' ? 'Each building is L-SHAPED (ㄱ자형) — two wings meeting at 90°. If your buildings look like simple rectangles from above, they are WRONG.' : buildingType === 'linear' ? 'Each building is a LONG HORIZONTAL BAR. If your buildings look square from above, they are WRONG.' : buildingType === 'courtyard' ? 'Each building forms a U-SHAPE around a central garden. The garden MUST be visible from above.' : ''} Check your output against this reference before finalizing.` : r.label}`).join('\n')}
+${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows the exact lot boundary (blue), setback line (orange dashed), AND the BUILDING FOOTPRINTS (orange filled shapes). The ORANGE SHAPES show EXACTLY where and what shape the buildings must be. The rendered buildings MUST match these orange footprint shapes — same position, same shape (L-shaped, linear, U-shaped, etc.), same number of buildings. This is the MOST IMPORTANT reference image.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label === 'height-reference' ? `★★★ HEIGHT REFERENCE DIAGRAM — This diagram shows the EXACT correct height of the building. The building has EXACTLY ${floors || 3} floors and is ${((floors || 3) * 3.3).toFixed(1)}m tall. Compare with the person (1.7m) and tree. The building is ${(floors || 3) <= 3 ? 'SHORTER than nearby trees — it is a LOW building' : 'about the same height as trees'}. DO NOT generate a taller building. COUNT THE FLOORS in this diagram and match them EXACTLY.` : r.label === '3d-bird-eye' ? `★★★ 3D MODEL BIRD-EYE — EXACT building shape/position/floors. MATCH PRECISELY. Building has EXACTLY ${floors || 3} floors.` : r.label === '3d-front' ? `★★★ 3D MODEL FRONT — Count floor slabs: EXACTLY ${floors || 3}. NO rooftop structures.` : r.label === '3d-side' ? `3D MODEL SIDE — Building depth/height profile.` : r.label === '3d-top-down' ? `★★★ 3D MODEL TOP-DOWN — EXACT footprint. THIS IS GROUND TRUTH for the building shape.` : r.label === '3d-depth-map' ? `3D DEPTH MAP — White=building silhouette. Match PRECISELY.` : r.label === 'shape-reference' ? `★★★ BUILDING SHAPE REFERENCE — THIS IS THE MOST CRITICAL IMAGE. The ORANGE shapes show the EXACT footprint of each building as seen from ABOVE (bird's eye). Your rendered buildings MUST match these shapes EXACTLY. ${buildingType === 'lshape' ? 'Each building is L-SHAPED (ㄱ자형) — two wings meeting at 90°. If your buildings look like simple rectangles from above, they are WRONG.' : buildingType === 'linear' ? 'Each building is a LONG HORIZONTAL BAR. If your buildings look square from above, they are WRONG.' : buildingType === 'courtyard' ? 'Each building forms a U-SHAPE around a central garden. The garden MUST be visible from above.' : ''} Check your output against this reference before finalizing.` : r.label}`).join('\n')}
 The rendering MUST reflect what is shown in these reference images. Do NOT ignore them.` })
         }
         
@@ -1134,7 +1150,7 @@ FORBIDDEN: Do NOT show the building exterior. Do NOT show empty/unfurnished room
       'int-sinbon': 'Korean Newlywed Apartment (신혼집) — bright white walls with soft pink/beige accent cushions, cozy compact living room, IKEA-style functional modern furniture, warm string lights or indirect lighting, small dining table for two, pastel-colored kitchenware visible, photo frames on shelf, romantic but practical and budget-conscious Korean young couple apartment',
       'int-gangnam': 'Gangnam Ultra-Luxury Penthouse — floor-to-ceiling windows with panoramic Han River or city skyline view, Italian Calacatta marble floors, Poliform or Bulthaup kitchen, B&B Italia or Minotti sofa, wine cellar or bar corner, contemporary art on walls, double-height ceiling in living room, crystal chandelier, Korean chaebol-level luxury residence, penthouse interior design magazine quality',
     }
-    const interiorStyle = interiorStyleMap[style] || interiorStyleMap['int-modern-luxury']
+    const interiorStyle = interiorStyleMap[style || 'int-modern-luxury'] || interiorStyleMap['int-modern-luxury']
 
     // ━━━ 1. 실제 세대 면적 계산 ━━━
     const unitArea = (siteArea && coverage && f && u) ? Math.round((siteArea * (coverage / 100) * f) / u) : 84
