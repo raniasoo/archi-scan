@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Sparkles, Copy, Check, Loader2, X, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
 import { trackAiRenderStart, trackAiRenderComplete } from "@/components/google-analytics"
+import { useSubscription } from "@/components/subscription-provider"
 
 // API 응답 안전 파싱 (504 타임아웃 등 HTML 에러 대응)
 const safeJson = async (r: Response) => {
@@ -174,6 +175,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [isOpen, setIsOpen] = useState(false)
   const [tab, setTab] = useState<'render'|'consult'|'proposal'|'prompt'>('render')
   const [style, setStyle] = useState(optimal.style)
+  const { requireFeature, canUseFeature } = useSubscription()
   const [angle, setAngle] = useState(optimal.angle)
   const [scene, setScene] = useState(optimal.scene)
   const [materialId, setMaterialId] = useState<string | null>(optimal.material)
@@ -253,6 +255,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
 
   // #9: 멀티앵글 일괄 생성
   const doMultiRender = async () => {
+    if (!requireFeature('multi-angle')) return
     setLoading(true); setError(null); setMultiImages(null)
     setRenderProgress('🎨 4장 렌더링 중 — 약 2~3분 소요...')
 
@@ -338,6 +341,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
     })
   }
   const doInteriorCompare = async () => {
+    if (!requireFeature('interior-compare')) return
     setLoading(true); setError(null); setInteriorComp(null)
     const compareStyles = getCompareStyles()
     try {
@@ -632,12 +636,14 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               <button onClick={() => doRender(0)} disabled={loading} className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
                 {loading && !multiImages ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2` : '생성 중'}</> : '🎨 렌더링'}
               </button>
-              <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1" title="정면+조감+입구+인테리어 4장">
+              <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1 relative" title="정면+조감+입구+인테리어 4장">
                 {loading && multiImages !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '📐 4장'}
+                {!canUseFeature('multi-angle') && <span className="absolute -top-1.5 -right-1.5 text-[7px] bg-yellow-500 text-black px-1 rounded-full font-bold">PRO</span>}
               </button>
               <button onClick={doInteriorCompare} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1 relative" title="인테리어 3안 비교">
                 {loading && interiorComp !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '🛋️ 3안'}
                 {compareSet.length > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-white text-amber-600 text-[8px] font-bold flex items-center justify-center">{compareSet.length}</span>}
+                {!canUseFeature('interior-compare') && compareSet.length === 0 && <span className="absolute -top-1.5 -right-1.5 text-[7px] bg-yellow-500 text-black px-1 rounded-full font-bold">PRO</span>}
               </button>
             </div>
             {/* 렌더링 진행 상태 */}

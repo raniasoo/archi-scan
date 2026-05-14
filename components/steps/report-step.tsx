@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FileText, Code, Table, Printer, Loader2, RotateCcw, Settings2, Share2 } from "lucide-react"
 import { toast } from "sonner"
 import type { LayoutOption } from "@/app/page"
+import { useSubscription } from "@/components/subscription-provider"
 import type { ZoningRegulation } from "@/lib/regulation-types"
 import type { DesignStrategy } from "@/lib/design-strategy"
 import type { FeasibilityResult } from "@/lib/project-analysis-state"
@@ -80,11 +81,13 @@ export function ReportStep(props: ReportStepProps) {
   // ━━━ 분양 브로셔 ━━━
   const [brochureOpen, setBrochureOpen] = useState(false)
   const [brochureLoading, setBrochureLoading] = useState(false)
+  const { requireFeature, canUseFeature } = useSubscription()
 
   const handleBrochure = async (styleId: string) => {
     setBrochureLoading(true)
     setBrochureOpen(false)
     toast.loading('분양 브로셔 PDF 생성 중...', { id: 'brochure' })
+    if (!requireFeature('brochure')) { toast.dismiss('brochure'); setBrochureLoading(false); return }
     try {
       const { BROCHURE_STYLES, downloadBrochurePdf } = await import('@/lib/brochure-export')
       const style = BROCHURE_STYLES.find(s => s.id === styleId)!
@@ -276,6 +279,7 @@ export function ReportStep(props: ReportStepProps) {
                   className="gap-1.5 whitespace-nowrap flex-shrink-0"
                   disabled={downloadingExcel}
                   onClick={async () => {
+                    if (!requireFeature('excel')) return
                     setDownloadingExcel(true);
                     setDownloadError(null);
                     try {

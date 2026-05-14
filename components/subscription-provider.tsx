@@ -4,6 +4,23 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { createClient } from "@/lib/supabase/client"
 
 type Plan = "free" | "pro" | "enterprise"
+type Feature = "multi-angle" | "brochure" | "interior-compare" | "excel" | "cloud-save" | "custom-branding"
+
+// 플랜별 기능 접근 권한
+const PLAN_FEATURES: Record<Plan, Feature[]> = {
+  free: [],
+  pro: ["multi-angle", "brochure", "interior-compare", "excel", "cloud-save"],
+  enterprise: ["multi-angle", "brochure", "interior-compare", "excel", "cloud-save", "custom-branding"],
+}
+
+const FEATURE_LABELS: Record<Feature, string> = {
+  "multi-angle": "멀티앵글 4장 렌더링",
+  "brochure": "분양 브로셔 PDF",
+  "interior-compare": "인테리어 3안 비교",
+  "excel": "엑셀 내보내기",
+  "cloud-save": "클라우드 저장",
+  "custom-branding": "커스텀 브랜딩",
+}
 
 interface SubscriptionContextType {
   plan: Plan
@@ -23,6 +40,8 @@ interface SubscriptionContextType {
   monthlyLimit: number
   checkAndTrackUsage: () => Promise<boolean>
   refreshUsage: () => Promise<void>
+  canUseFeature: (feature: Feature) => boolean
+  requireFeature: (feature: Feature) => boolean // true = 사용 가능, false = 업그레이드 모달 표시
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined)
@@ -125,11 +144,28 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const downgradeToFree = () => { setPlan("free"); setMonthlyLimit(10); localStorage.removeItem('archi-scan-plan') }
   const handlePayment = async () => { setShowUpgradeModal(true) }
 
+  const canUseFeature = useCallback((feature: Feature) => {
+    return PLAN_FEATURES[plan].includes(feature)
+  }, [plan])
+
+  const requireFeature = useCallback((feature: Feature) => {
+    if (PLAN_FEATURES[plan].includes(feature)) return true
+    // Pro 기능을 사용하려 할 때 업그레이드 안내
+    import('sonner').then(({ toast }) => {
+      toast.error(`${FEATURE_LABELS[feature]}은(는) Pro 플랜 전용 기능입니다`, {
+        action: { label: '업그레이드', onClick: () => setShowPricingModal(true) },
+        duration: 5000,
+      })
+    })
+    return false
+  }, [plan])
+
   return (
     <SubscriptionContext.Provider value={{
       plan, isProUser, isEnterprise, showUpgradeModal, setShowUpgradeModal, showPricingModal, setShowPricingModal,
       upgradeToPro, downgradeToFree, handlePayment, isPaymentLoading, refreshPlan,
       canAnalyze, monthlyUsage, monthlyLimit, checkAndTrackUsage, refreshUsage,
+      canUseFeature, requireFeature,
     }}>
       {children}
     </SubscriptionContext.Provider>
