@@ -8,8 +8,10 @@ const TEAM_ID = 'team_FHVE6yFVkT7HTOsnRzV9UZnr'
 
 export async function GET(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get('secret')
-  if (secret !== 'setup-dns-2026') {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 403 })
+  const resendKey = req.nextUrl.searchParams.get('rk') || process.env.RESEND_API_KEY || ''
+  const vercelToken = req.nextUrl.searchParams.get('vt') || process.env.VERCEL_DNS_TOKEN || ''
+  if (secret !== 'setup-dns-2026' || !resendKey || !vercelToken) {
+    return NextResponse.json({ error: 'unauthorized or missing keys' }, { status: 403 })
   }
 
   const results: any[] = []
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest) {
   try {
     // 1. Resend에서 도메인 DNS 레코드 가져오기
     const resendRes = await fetch('https://api.resend.com/domains', {
-      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` },
+      headers: { 'Authorization': `Bearer ${resendKey}` },
     })
     const resendData = await resendRes.json()
     
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
 
     // 도메인 상세 정보 (DNS 레코드 포함)
     const detailRes = await fetch(`https://api.resend.com/domains/${domain.id}`, {
-      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` },
+      headers: { 'Authorization': `Bearer ${resendKey}` },
     })
     const detail = await detailRes.json()
     
@@ -59,7 +61,7 @@ export async function GET(req: NextRequest) {
           {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${VERCEL_TOKEN}`,
+              'Authorization': `Bearer ${vercelToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(dnsRecord),
@@ -86,7 +88,7 @@ export async function GET(req: NextRequest) {
     try {
       const verifyRes = await fetch(`https://api.resend.com/domains/${domain.id}/verify`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` },
+        headers: { 'Authorization': `Bearer ${resendKey}` },
       })
       results.push({ step: 'resend_verify', status: verifyRes.status })
     } catch {}
