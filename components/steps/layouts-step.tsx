@@ -101,6 +101,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
 
   const [showDetails, setShowDetails] = useState(false)
   const [showComparison, setShowComparison] = useState(false)
+  const [cardOrCompare, setCardOrCompare] = useState<"card" | "compare">("card")
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // 배치안이 있지만 선택되지 않았을 때 자동 선택
@@ -191,14 +192,26 @@ export function LayoutsStep(props: LayoutsStepProps) {
         )
       })()}
 
-      {/* ━━━ 2. 배치안 카드 (가로 스와이프) ━━━ */}
+      {/* ━━━ 2. 카드/비교 뷰 전환 ━━━ */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs text-muted-foreground">← 스와이프하여 배치안 비교 →</p>
-          <button onClick={() => setShowComparison(!showComparison)} className="text-[11px] text-primary flex items-center gap-1">
-            <Table className="h-3 w-3" /> 비교표
+        <div className="flex items-center gap-1 mb-2 p-0.5 bg-secondary/30 rounded-lg">
+          <button
+            onClick={() => setCardOrCompare("card")}
+            className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${cardOrCompare === "card" ? "bg-card shadow text-foreground" : "text-muted-foreground"}`}
+          >
+            카드뷰
+          </button>
+          <button
+            onClick={() => setCardOrCompare("compare")}
+            className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors flex items-center justify-center gap-1 ${cardOrCompare === "compare" ? "bg-card shadow text-foreground" : "text-muted-foreground"}`}
+          >
+            <Table className="h-3 w-3" /> 비교분석
           </button>
         </div>
+
+        {cardOrCompare === "card" ? (
+          <>
+            <p className="text-[10px] text-muted-foreground mb-1.5">← 스와이프하여 배치안 비교 →</p>
 
         <div ref={scrollRef} className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {layouts.map((layout, idx) => {
@@ -279,15 +292,27 @@ export function LayoutsStep(props: LayoutsStepProps) {
             )
           })}
         </div>
+          </>
+        ) : (
+          /* 비교분석 뷰 */
+          <LayoutComparison
+            layouts={layouts}
+            siteArea={siteAreaNum}
+            selectedLayout={selectedLayout}
+            recommendedLayoutId={recommendedLayout?.id}
+            landPricePerM2={landPriceData.pricePerM2 || 5000000}
+            salesPricePerM2={salesPrice}
+            constructionCostPerM2={constructionCost}
+            onSelect={(id) => handleSelectLayout(id)}
+          />
+        )}
       </div>
-
-      {/* ━━━ ROI 마이너스 안내 ━━━ */}
       {allNegativeROI && (
         <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
           <p className="text-[11px] text-amber-400 leading-relaxed">
             💡 이 지역은 토지비 대비 분양수익이 낮아 수익형 개발이 어렵습니다. 
             <strong> 실거주·프리미엄 목적</strong>이라면 상품성({displayScore(recommendedLayout?.scores?.marketability)})과 
-            법규적합성({displayScore(recommendedLayout?.scores?.legalCompliance)})이 핵심 지표입니다.
+            법규적합성({displayScore(recommendedLayout?.scores?.regulationCompliance)})이 핵심 지표입니다.
           </p>
         </div>
       )}
@@ -391,7 +416,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
           siteArea: safeNumber(siteArea, 660),
           strategy,
         }, userValues)
-        const strategyFit = selectedLayoutData.recommendation?.strategyMatch ?? selectedLayoutData.scores?.strategyFit ?? 0
+        const strategyFit = selectedLayoutData.recommendation?.strategyMatch ?? 0
         const inlineF = calculateFeasibility({
           siteArea: siteAreaNum || 1,
           grossFloorArea: selectedLayoutData.gfa || 1,
@@ -455,19 +480,6 @@ export function LayoutsStep(props: LayoutsStepProps) {
         </Button>
       )}
 
-      {/* ━━━ 비교표 (접기/펼치기) ━━━ */}
-      {showComparison && layouts.length > 0 && (
-        <LayoutComparison
-          layouts={layouts}
-          siteArea={siteAreaNum}
-          selectedLayout={selectedLayout}
-          recommendedLayoutId={recommendedLayout?.id}
-          landPricePerM2={landPriceData.pricePerM2 || 5000000}
-          salesPricePerM2={salesPrice}
-          constructionCostPerM2={constructionCost}
-          onSelect={(id) => handleSelectLayout(id)}
-        />
-      )}
 
       {/* ━━━ 5. 상세 정보 (접기/펼치기) ━━━ */}
       {showDetails && selectedLayoutData && (
