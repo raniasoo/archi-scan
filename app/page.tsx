@@ -114,6 +114,7 @@ const loadLayoutOptimizer = () => import("@/lib/layout-optimizer")
 import type { OptimizationReport } from "@/lib/layout-optimizer"
 import { trackStepChange, trackDetailedAnalysisStart, trackPdfDownload, trackShareLink } from "@/components/google-analytics"
 import { NoticeBanner } from "@/components/notice-banner"
+import { FeedbackWidget } from "@/components/feedback-widget"
 
 export interface LayoutOption {
   id: number
@@ -2813,6 +2814,7 @@ export default function ArchiScanPage() {
         onOpenChange={setShowPricingModal} 
       />
     </div>
+    <FeedbackWidget />
     </ErrorBoundary>
   )
 }

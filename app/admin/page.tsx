@@ -66,7 +66,8 @@ export default function AdminPage() {
   const [paymentLogs, setPaymentLogs] = useState<LogEntry[]>([])
   const [inquiries, setInquiries] = useState<Inquiry[]>([])
   const [notices, setNotices] = useState<any[]>([])
-  const [tab, setTab] = useState<"users" | "activity" | "payments" | "inquiries" | "notices">("users")
+  const [feedbackList, setFeedbackList] = useState<any[]>([])
+  const [tab, setTab] = useState<"users" | "activity" | "payments" | "inquiries" | "notices" | "feedback">("users")
   const [search, setSearch] = useState("")
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
   const [expandedInquiry, setExpandedInquiry] = useState<string | null>(null)
@@ -142,6 +143,7 @@ export default function AdminPage() {
       setPaymentLogs(data.paymentLogs)
       setInquiries(data.inquiries || [])
       setNotices(data.notices || [])
+      setFeedbackList(data.feedback || [])
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -352,6 +354,7 @@ export default function AdminPage() {
             { key: "payments", label: "결제", icon: "💳" },
             { key: "inquiries", label: `문의${stats?.newInquiries ? ` (${stats.newInquiries})` : ""}`, icon: "💬" },
             { key: "notices", label: `공지 (${notices.length})`, icon: "📢" },
+            { key: "feedback", label: `피드백 (${feedbackList.length})`, icon: "⭐" },
           ] as const).map((t) => (
             <button
               key={t.key}
@@ -796,6 +799,49 @@ export default function AdminPage() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.content}</p>
                     <p className="text-[10px] text-muted-foreground/50 mt-1">{new Date(n.created_at).toLocaleDateString('ko-KR')}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Feedback Tab */}
+        {tab === "feedback" && (
+          <div className="space-y-4">
+            {/* 평균 평점 */}
+            {feedbackList.length > 0 && (
+              <div className="rounded-xl border bg-card p-4 flex items-center gap-4">
+                <div className="text-3xl font-bold text-yellow-500">
+                  {(feedbackList.reduce((s: number, f: any) => s + (f.rating || 0), 0) / feedbackList.length).toFixed(1)}
+                </div>
+                <div>
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4,5].map(n => (
+                      <span key={n} className="text-sm">{n <= Math.round(feedbackList.reduce((s: number, f: any) => s + (f.rating || 0), 0) / feedbackList.length) ? '⭐' : '☆'}</span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{feedbackList.length}건의 피드백</p>
+                </div>
+              </div>
+            )}
+
+            {/* 피드백 목록 */}
+            <div className="rounded-xl border bg-card overflow-hidden">
+              {feedbackList.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">접수된 피드백 없음</div>
+              ) : (
+                feedbackList.map((f: any) => (
+                  <div key={f.id} className="px-4 py-3 border-b last:border-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{'⭐'.repeat(f.rating || 0)}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{f.category || 'general'}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{new Date(f.created_at).toLocaleDateString('ko-KR')}</span>
+                    </div>
+                    {f.message && <p className="text-xs mt-1.5">{f.message}</p>}
+                    <p className="text-[10px] text-muted-foreground/50 mt-1">{f.email || f.name || '익명'}</p>
                   </div>
                 ))
               )}
