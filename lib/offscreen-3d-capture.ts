@@ -10,6 +10,7 @@ interface CaptureParams {
   coverage: number
   siteArea: number
   floors: number
+  units?: number
   buildingCount?: number
   originalType?: string
   floorHeight?: number
@@ -17,7 +18,7 @@ interface CaptureParams {
 
 export async function captureBuilding3D(params: CaptureParams): Promise<{ angle: string; image: string }[]> {
   const THREE = await import('three')
-  const { type, coverage, siteArea, floors, buildingCount, originalType, floorHeight = 3.3 } = params
+  const { type, coverage, siteArea, floors, units, buildingCount, originalType, floorHeight = 3.3 } = params
   const geo = getBuildingGeometry({ type, coverage, siteArea, floors, buildingCount, originalType, floorHeight })
   const S = geo.siteWidth
   const bH = geo.buildingHeight
@@ -112,6 +113,69 @@ export async function captureBuilding3D(params: CaptureParams): Promise<{ angle:
   const road = new THREE.Mesh(roadGeo, roadMat)
   road.rotation.x = -Math.PI / 2; road.position.set(0, 0.05, S / 2 + 5)
   scene.add(road)
+
+  // ━━━ 층수 라벨 (건물 정면에 "1F" "2F" 표시 → Gemini 층수 강제) ━━━
+  const fH = floorHeight
+  for (let f = 0; f < floors; f++) {
+    const floorCanvas = document.createElement('canvas')
+    floorCanvas.width = 64; floorCanvas.height = 32
+    const fCtx = floorCanvas.getContext('2d')!
+    fCtx.fillStyle = 'rgba(0,0,0,0.7)'; fCtx.fillRect(0, 0, 64, 32)
+    fCtx.fillStyle = '#ffffff'; fCtx.font = 'bold 22px sans-serif'; fCtx.textAlign = 'center'
+    fCtx.fillText(`${f + 1}F`, 32, 24)
+    const fLabel = new THREE.Mesh(
+      new THREE.PlaneGeometry(fH * 0.8, fH * 0.4),
+      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(floorCanvas), transparent: true })
+    )
+    // 정면(+Z 방향)에 라벨 배치
+    const blk0 = geo.blocks[0]
+    fLabel.position.set(S * (blk0?.x || 0) - S * (blk0?.w || 0.3) * 0.3, f * fH + fH * 0.5, S * 0.4)
+    scene.add(fLabel)
+  }
+
+  // ━━━ "TOTAL: 2F" 큰 라벨 (건물 위에 표시) ━━━
+  const totalCanvas = document.createElement('canvas')
+  totalCanvas.width = 160; totalCanvas.height = 40
+  const tCtx = totalCanvas.getContext('2d')!
+  tCtx.fillStyle = 'rgba(255,50,50,0.85)'; tCtx.fillRect(0, 0, 160, 40)
+  tCtx.fillStyle = '#ffffff'; tCtx.font = 'bold 28px sans-serif'; tCtx.textAlign = 'center'
+  tCtx.fillText(`TOTAL: ${floors}F ONLY`, 80, 30)
+  const totalLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(bH * 1.5, bH * 0.35),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(totalCanvas), transparent: true })
+  )
+  totalLabel.position.set(0, bH + bH * 0.3, 0)
+  totalLabel.lookAt(new THREE.Vector3(S, bH + bH * 0.3, S))
+  scene.add(totalLabel)
+
+  // ━━━ 인체 스케일 (1.7m 사람 → Gemini 규모 강제) ━━━
+  // 캡슐형 사람 (머리 + 몸통)
+  const personBody = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.25, 1.3, 8),
+    new THREE.MeshStandardMaterial({ color: 0x4466aa })
+  )
+  personBody.position.set(S * 0.35, 0.65, S * 0.4)
+  scene.add(personBody)
+  const personHead = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 8, 8),
+    new THREE.MeshStandardMaterial({ color: 0xddbb99 })
+  )
+  personHead.position.set(S * 0.35, 1.5, S * 0.4)
+  scene.add(personHead)
+
+  // ━━━ 세대수 표시 (건물 옆에) ━━━
+  const unitCanvas = document.createElement('canvas')
+  unitCanvas.width = 128; unitCanvas.height = 32
+  const uCtx = unitCanvas.getContext('2d')!
+  uCtx.fillStyle = 'rgba(0,100,0,0.8)'; uCtx.fillRect(0, 0, 128, 32)
+  uCtx.fillStyle = '#ffffff'; uCtx.font = 'bold 18px sans-serif'; uCtx.textAlign = 'center'
+  uCtx.fillText(`${params.floors}층 ${units || 1}세대`, 64, 24)
+  const unitLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(bH * 1.2, bH * 0.3),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(unitCanvas), transparent: true })
+  )
+  unitLabel.position.set(-S * 0.35, bH * 0.5, S * 0.4)
+  scene.add(unitLabel)
 
   // ━━━ 5방향 캡처 ━━━
   const captures: { angle: string; image: string }[] = []

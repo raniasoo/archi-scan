@@ -77,8 +77,9 @@ FLOOR COUNT: EXACTLY ${fl} floors. The FRONT VIEW shows exactly ${fl} horizontal
 BUILDING SHAPE: ${typeText}. Look at the TOP-DOWN VIEW — it shows the EXACT footprint.
 - Reproduce this EXACT footprint shape. Do not simplify. Do not add wings.
 
-SCALE: This is a SMALL ${fl}-story ${units || 5}-unit Korean residential villa (빌라/다세대).
-- It must look intimate and modest, NOT like a large apartment complex.
+SCALE: This is a SMALL ${fl}-story building with ONLY ${units || 1} residential unit(s). 
+${(units || 1) <= 2 ? `This is a SINGLE-FAMILY or DUPLEX house — NOT an apartment building. It should have very FEW windows (only ${units || 1} unit worth). Do NOT make it look like a multi-unit apartment.` : `This is a small villa with ${units || 5} units — a modest Korean 빌라/다세대.`}
+The 3D model shows the EXACT building size — do NOT make it larger.
 
 CAMERA: Generate from the BIRD-EYE VIEW angle (45° aerial, same as the first image).
 
@@ -113,9 +114,10 @@ Output: ONE photorealistic image.`
     }
     imgParts.push({ text: prompt })
 
-    // ━━━ Multi-shot: 2장 동시 생성 ━━━
-    console.log(`[3D-PHOTO-V4] ${angles.length} angles, generating 2 variants...`)
-    const [r1, r2] = await Promise.allSettled([
+    // ━━━ Multi-shot: 3장 동시 생성 ━━━
+    console.log(`[3D-PHOTO-V4] ${angles.length} angles, generating 3 variants...`)
+    const [r1, r2, r3] = await Promise.allSettled([
+      callGemini(GEMINI_IMG(KEY), imgParts),
       callGemini(GEMINI_IMG(KEY), imgParts),
       callGemini(GEMINI_IMG(KEY), imgParts),
     ])
@@ -123,6 +125,7 @@ Output: ONE photorealistic image.`
     const results = [
       r1.status === 'fulfilled' ? r1.value : null,
       r2.status === 'fulfilled' ? r2.value : null,
+      r3.status === 'fulfilled' ? r3.value : null,
     ].filter(r => r?.image)
 
     if (results.length === 0) {
@@ -142,13 +145,13 @@ Output: ONE photorealistic image.`
     
     const scorePrompt = `Score this architectural rendering's consistency with the reference 3D model.
 
-Reference: ${fl}-story ${typeText} building with ${units || 5} units.
+Reference: ${fl}-story ${typeText} building with EXACTLY ${units || 1} unit(s).
 ${topDown ? 'The top-down view shows the EXACT footprint shape.' : ''}
 
-Score 0-100:
-- Floor count (0-40): EXACTLY ${fl} floors?
-- Shape (0-30): Matches ${typeText}?
-- Scale (0-20): Small ${units || 5}-unit villa?
+CRITICAL SCORING:
+- Floor count (0-50): EXACTLY ${fl} floors? Each extra floor = -25 points. Rooftop structures count as extra.
+- Shape (0-25): Matches ${typeText} footprint?
+- Scale (0-15): Looks like ${(units || 1) <= 2 ? 'a single house' : `a small ${units}-unit villa`}? Too many windows = penalty.
 - Quality (0-10): Photorealistic?
 
 Respond ONLY: {"score":N,"floors_detected":N,"shape_match":"yes"|"partial"|"no"}`

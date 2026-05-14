@@ -223,6 +223,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
             coverage: input.buildingCoverageRatio || 50,
             siteArea: input.siteArea,
             floors: input.floors,
+            units: input.units,
             buildingCount: input.buildingCount,
             originalType: (input as any)._originalType || (input as any).originalType || input.buildingType,
           })
@@ -234,7 +235,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
 
       // ━━━ 3D 캡처 있으면 → 전체 파이프라인 (5방향 + Multi-shot + Auto-select) ━━━
       if (threeJsCaptures && threeJsCaptures.length > 0) {
-        setRenderProgress('🎨 5방향 참조 + 2장 생성 + 자동 선별 중...')
+        setRenderProgress('🎨 5방향 참조 + 3장 생성 + 자동 선별 중...')
         const styleData = STYLES.find(s => s.id === style)
         const r = await fetch('/api/3d-to-photo', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
           multiAngle: threeJsCaptures,
