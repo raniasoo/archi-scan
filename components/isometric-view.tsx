@@ -1,4 +1,5 @@
 "use client"
+import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
 
 import React from "react"
 
@@ -92,12 +93,13 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, build
   const W = 520, H = 440
   const cx = W / 2, cy = H * 0.62
 
-  // 건물 크기 (고정 큰 값으로 설정)
+  // 건물 크기 (공유 유틸리티 — Three.js와 동일 계산)
   const baseSize = 200
   const siteW = baseSize, siteD = baseSize * 0.8
   const floorH = Math.min(14, Math.max(8, 180 / Math.max(floors, 2)))
   const buildH = floors * floorH
-  const bldRatio = Math.sqrt(buildingCoverage / 100) * 0.9
+  const geo = getBuildingDimensionsInMeters({ type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType })
+  const bldRatio = Math.sqrt(geo.totalFootprint / siteArea) * 0.9
 
   // viewBox 동적 계산: 건물 영역에 맞게 줌
   const projW = (siteW * bldRatio + siteD * bldRatio * 0.8) * 0.866 + 60

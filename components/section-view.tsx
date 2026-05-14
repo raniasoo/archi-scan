@@ -1,4 +1,5 @@
 "use client"
+import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
 
 import React from "react"
 
@@ -30,6 +31,7 @@ export function SectionView({
   const gfHeight = 4.5      // 1층 층고 (m)
   const basementHeight = 3.2 // 지하 층고 (m)
   const basementFloors = Math.max(1, Math.ceil(parking / (siteArea * buildingCoverage / 100 / 30)))
+  const geo = getBuildingDimensionsInMeters({ type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType })
 
   const totalHeight = gfHeight + (floors - 1) * floorHeight
   const basementTotalH = basementFloors * basementHeight
@@ -46,7 +48,7 @@ export function SectionView({
   const siteX = (W - siteSvgW) / 2
 
   // 건물 폭
-  const bldRatio = Math.sqrt(buildingCoverage / 100) * 0.85
+  const bldRatio = Math.sqrt(geo.totalFootprint / siteArea) * 0.85
   let bldW = siteSvgW * bldRatio
   // 클러스터: 개별 동 크기 (AI 렌더링 일치)
   if (type === 'cluster') {

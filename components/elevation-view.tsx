@@ -1,4 +1,5 @@
 "use client"
+import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
 
 import React, { useState } from "react"
 
@@ -35,13 +36,11 @@ export function ElevationView({
   const vScale = maxBldH / (totalH + mechH + 4)
 
   // 건물 폭 — AI 렌더링과 동일한 공식
-  const buildingArea = siteArea * (buildingCoverage / 100)
-  const effectiveBldgCount = (type === 'cluster' && buildingCount) ? buildingCount : 1
-  const eachFP = buildingArea / effectiveBldgCount
-  const ot = (type === 'cluster' && originalType) ? originalType : type
-  const linearR = ot === 'linear' ? 3.5 : ot === 'lshape' ? 1.8 : ot === 'courtyard' ? 1.5 : 1.4
-  let bldRealW = Math.round(Math.sqrt(eachFP * linearR))
-  let bldRealD = Math.round(eachFP / bldRealW)
+  const geo = getBuildingDimensionsInMeters({ type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType })
+  const effectiveBldgCount = geo.effectiveBuildingCount
+  const firstBlock = geo.blocksInMeters[0]
+  let bldRealW = Math.round(firstBlock?.widthM || 10)
+  let bldRealD = Math.round(firstBlock?.depthM || 10)
 
   const faceW = face === "front" ? bldRealW : bldRealD
   const hScale = Math.min((W - PAD * 2 - 40) / faceW, vScale)

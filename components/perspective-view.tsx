@@ -1,4 +1,5 @@
 "use client"
+import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
 
 import React from "react"
 
@@ -99,13 +100,12 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, bui
   const realTotalH = realGfH + (floors - 1) * realFloorH // 실제 미터 단위
 
   // 건물 크기 — AI 렌더링과 동일한 공식
-  const buildingArea = siteArea * (buildingCoverage / 100)
-  const effectiveBldgCount = (type === 'cluster' && buildingCount) ? buildingCount : 1
-  const eachFootprint = buildingArea / effectiveBldgCount
-  const linearR = (originalType || type) === 'linear' ? 3.5 : (originalType || type) === 'lshape' ? 1.8 : 1.4
-  const realBldgW = Math.round(Math.sqrt(eachFootprint * linearR))
-  const realBldgD = Math.round(eachFootprint / realBldgW)
-  const sideM = realBldgW // 개별 동 폭 표시
+  const geo = getBuildingDimensionsInMeters({ type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType })
+  const effectiveBldgCount = geo.effectiveBuildingCount
+  const firstBlock = geo.blocksInMeters[0]
+  const realBldgW = Math.round(firstBlock?.widthM || 10)
+  const realBldgD = Math.round(firstBlock?.depthM || 10)
+  const sideM = realBldgW
 
   // VP_X=200이므로 건물폭은 좌우로 140px씩 = 280px
   const bw = 280

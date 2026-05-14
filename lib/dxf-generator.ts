@@ -1,4 +1,5 @@
 /**
+import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
  * DXF (Drawing Exchange Format) Generator for Archi-Scan
  * AutoCAD 호환 DXF R12 포맷 생성
  */

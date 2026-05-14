@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import { X, RotateCcw, ZoomIn, ZoomOut } from "lucide-react"
 
+import { getBuildingGeometry, getClusterBlocks, type BuildingBlock } from "@/lib/building-geometry"
+
 interface BuildingVolume3DProps {
   layoutName: string
   layoutType: 'tower' | 'courtyard' | 'lshape' | 'linear' | 'cluster'
@@ -21,91 +23,9 @@ interface BuildingVolume3DProps {
   onClose: () => void
 }
 
-type Block = { x: number; z: number; w: number; d: number; label?: string }
-
-function getLayoutBlocks(type: string, coverage: number = 50, buildingCount?: number): Block[] {
-  const fp = Math.max(coverage, 20) / 100
-
-  switch (type) {
-    case 'tower': {
-      const ratio = 1.2
-      const w = Math.sqrt(fp * ratio)
-      const d = fp / w
-      return [{ x: 0, z: 0, w, d, label: 'TOWER' }]
-    }
-    case 'linear': {
-      // 판상형: 자연스러운 종횡비 (면적 100% 보존 우선)
-      const targetRatio = 3.2
-      const w = Math.min(0.92, Math.sqrt(fp * targetRatio))
-      const d = fp / w
-      return [{ x: 0, z: 0, w, d, label: 'SLAB' }]
-    }
-    case 'lshape': {
-      // ㄱ자형: 두 블록이 코너에서 접합 (시각적으로 L자)
-      const wingThick = Math.sqrt(fp) * 0.42
-      const longLen = fp * 0.6 / wingThick
-      const shortLen = fp * 0.4 / wingThick
-      // 긴 날개 (세로) — 우측에 배치
-      const longX = shortLen / 2 - wingThick / 2
-      // 짧은 날개 (가로) — 상단에 배치, 긴 날개 상단에 접합
-      const shortZ = -(longLen / 2 - wingThick / 2)
-      return [
-        { x: longX, z: 0, w: wingThick, d: longLen, label: '' },
-        { x: 0, z: shortZ, w: shortLen, d: wingThick, label: 'ㄱ자형' },
-      ]
-    }
-    case 'courtyard': {
-      // 중정형: 3블록이 ㄷ자로 접합 (개방면 = 남쪽)
-      const wingThick = Math.sqrt(fp) * 0.33
-      const topFrac = 0.36, sideFrac = 0.32
-      const topW = fp * topFrac / wingThick
-      const sideD = fp * sideFrac / wingThick
-      const halfW = topW / 2
-      // 상단 바 — 가장 뒤쪽(북쪽)
-      const topZ = -(sideD / 2)
-      // 좌우 날개 — 상단 바에서 남쪽으로 연장, 코너 접합
-      const sideZ = topZ + wingThick / 2 + sideD / 2
-      return [
-        { x: 0, z: topZ, w: topW, d: wingThick, label: '북동' },
-        { x: -(halfW - wingThick / 2), z: sideZ, w: wingThick, d: sideD, label: '서동' },
-        { x:  (halfW - wingThick / 2), z: sideZ, w: wingThick, d: sideD, label: '동동' },
-      ]
-    }
-    case 'cluster': {
-      // 클러스터: buildingCount 기반 동적 생성
-      const n = buildingCount || 4
-      const each = fp / n
-      const w = Math.sqrt(each * 1.3)
-      const d = each / w
-      const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
-      const rows = Math.ceil(n / cols)
-      const gapX = 0.10, gapZ = 0.12
-      const totalW = cols * w + (cols - 1) * gapX
-      const totalD = rows * d + (rows - 1) * gapZ
-      const result: Block[] = []
-      let cnt = 0
-      for (let r = 0; r < rows && cnt < n; r++) {
-        for (let c = 0; c < cols && cnt < n; c++) {
-          result.push({
-            x: -totalW / 2 + w / 2 + c * (w + gapX),
-            z: -totalD / 2 + d / 2 + r * (d + gapZ),
-            w, d,
-            label: `${String.fromCharCode(65 + cnt)}동`
-          })
-          cnt++
-        }
-      }
-      return result
-    }
-    default: {
-      const s = Math.sqrt(fp)
-      return [{ x: 0, z: 0, w: s, d: s }]
-    }
-  }
-}
+type Block = BuildingBlock
 
 function getBlockFloors(_idx: number, total: number, _type: string): number {
-  // 배치안 연면적과 100% 일치: 모든 블록이 동일 층수
   return total
 }
 
@@ -240,55 +160,9 @@ export function BuildingVolume3D({
       try { THREE = await import('three') } catch (e: any) { setError(e.message); setLoaded(true); return }
       if (!mounted || !canvasRef.current) return
 
-      const blocks = (() => {
-        if (layoutType === 'cluster' && buildingCount) {
-          // 동적 다동 생성 — AI 렌더링과 동일한 치수
-          const n = buildingCount
-          const ot = originalType || 'tower'
-          const result: Block[] = []
-          
-          // AI 렌더링(route.ts)과 동일한 건물 치수 계산
-          const covRatio = (coverage || 50) / 100
-          const eachFP = covRatio / Math.max(n, 1)
-          const linearR = ot === 'linear' ? 3.5 : ot === 'lshape' ? 1.8 : ot === 'courtyard' ? 1.5 : 1.4
-          const calcW = Math.sqrt(eachFP * linearR)
-          const calcD = eachFP / calcW
-          
-          // 판상형은 1열 배치 (남향 평행 배치), 나머지는 그리드
-          const isLinear = ot === 'linear'
-          const cols = isLinear ? 1 : n <= 2 ? 2 : n <= 4 ? 2 : 3
-          const rows = Math.ceil(n / cols)
-          
-          // 건물 간 간격 (판상형: 넓은 동간격)
-          const gapZ = isLinear ? Math.max(0.12, calcD * 0.8) : 0.15
-          const totalZ = rows * calcD + (rows - 1) * gapZ
-          const totalX = cols * calcW + (cols - 1) * 0.08
-          
-          let cnt = 0
-          for (let r = 0; r < rows && cnt < n; r++) {
-            for (let c = 0; c < cols && cnt < n; c++) {
-              const bx = cols === 1 ? 0 : -totalX / 2 + calcW / 2 + c * (calcW + 0.08)
-              const bz = -totalZ / 2 + calcD / 2 + r * (calcD + gapZ)
-              if (ot === 'lshape') {
-                const lw = calcW * 0.45, ld = calcD
-                result.push({ x: bx - calcW * 0.15, z: bz, w: lw * 0.5, d: ld, label: `${String.fromCharCode(65 + cnt)}동` })
-                result.push({ x: bx + lw * 0.15, z: bz + ld * 0.3, w: lw, d: ld * 0.35, label: '' })
-              } else if (ot === 'courtyard') {
-                const t = calcD * 0.2
-                result.push({ x: bx - calcW * 0.35, z: bz, w: t, d: calcD * 0.8, label: '' })
-                result.push({ x: bx + calcW * 0.35, z: bz, w: t, d: calcD * 0.8, label: '' })
-                result.push({ x: bx, z: bz + calcD * 0.35, w: calcW * 0.75, d: t, label: `${String.fromCharCode(65 + cnt)}동` })
-              } else {
-                // linear, tower, default
-                result.push({ x: bx, z: bz, w: calcW, d: calcD, label: `${String.fromCharCode(65 + cnt)}동` })
-              }
-              cnt++
-            }
-          }
-          return result
-        }
-        return getLayoutBlocks(layoutType, coverage, buildingCount)
-      })()
+      // 공유 유틸리티에서 건물 치수 계산 (도면 7종과 동일)
+      const geo = getBuildingGeometry({ type: layoutType, coverage, siteArea, floors, buildingCount, originalType, floorHeight })
+      const blocks: Block[] = geo.blocks
       const info: { label: string; floors: number }[] = []
       
       try { // ★ 전체 3D 렌더링을 하나의 try로 보호
