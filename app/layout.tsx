@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   generator: 'v0.app',
   manifest: '/manifest.json',
   themeColor: '#0d9488',
-  keywords: ['건축설계', '사전기획', '배치안', '사업성검토', 'AI건축', '개발사업', '법규검토', 'ROI분석', '건축물대장', '국토부', '용적률', '건폐율'],
+  keywords: ['건축설계', '사전기획', '배치안', '사업성검토', 'AI건축', '개발사업', '법규검토', 'ROI분석', '건축물대장', '국토부', '용적률', '건폐율', '토지분석', '부동산개발', '건축기획', '시행사', '디벨로퍼', '건축사', '아파트분양', '주택개발', 'AI렌더링', '건축투시도', '분양브로셔', '사업수지분석'],
   alternates: {
     canonical: 'https://www.archiscan.kr',
   },
