@@ -37,6 +37,9 @@
     },
     "app/api/ai-render/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/test-render/route.ts": {
+      "maxDuration": 300
     }
   }
 }
