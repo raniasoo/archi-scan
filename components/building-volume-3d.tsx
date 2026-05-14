@@ -458,14 +458,14 @@ export function BuildingVolume3D({
         : [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a, b]) => new THREE.Vector3(a * S / 2, 0.3, b * S / 2))
       scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(bpts), new THREE.LineBasicMaterial({ color: 0x60a5fa })))
 
-      // 이격거리 (regulation 기반 실제 값)
-      const frontSB = regulation?.frontSetback || 2  // 전면 이격 (도로쪽, +Z)
-      const sideSB = regulation?.sideSetback || 0.5  // 측면 이격 (좌우)
-      const rearSB = regulation?.rearSetback || 1    // 후면 이격 (-Z)
+      // 이격거리 (regulation 정확값 + 거리 라벨)
+      const frontSB = regulation?.frontSetback ?? 3
+      const sideSB = regulation?.sideSetback ?? 1.5
+      const rearSB = regulation?.rearSetback ?? 2
       const sbLeft = -S / 2 + sideSB
       const sbRight = S / 2 - sideSB
-      const sbFront = S / 2 - frontSB   // 도로쪽 (하단/+Z)
-      const sbRear = -S / 2 + rearSB    // 후면 (상단/-Z)
+      const sbFront = S / 2 - frontSB
+      const sbRear = -S / 2 + rearSB
       const sbPts = [
         new THREE.Vector3(sbLeft, 0.15, sbRear),
         new THREE.Vector3(sbRight, 0.15, sbRear),
@@ -476,6 +476,22 @@ export function BuildingVolume3D({
       const sbLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(sbPts),
         new THREE.LineDashedMaterial({ color: 0xf59e0b, dashSize: 1.5, gapSize: 1.2, opacity: 0.6, transparent: true }))
       sbLine.computeLineDistances(); scene.add(sbLine)
+      
+      // 이격거리 라벨 (각 변에 거리 표시)
+      const makeSBLabel = (text: string, px: number, pz: number) => {
+        const c = document.createElement('canvas'); c.width = 96; c.height = 32
+        const g = c.getContext('2d')!
+        g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(0, 0, 96, 32)
+        g.fillStyle = '#f59e0b'; g.font = 'bold 16px sans-serif'; g.textAlign = 'center'
+        g.fillText(text, 48, 22)
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(3, 1),
+          new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true }))
+        m.rotation.x = -Math.PI / 2; m.position.set(px, 0.3, pz); scene.add(m)
+      }
+      makeSBLabel(`전면 ${frontSB}m`, 0, sbFront + frontSB / 2)
+      makeSBLabel(`후면 ${rearSB}m`, 0, sbRear - rearSB / 2)
+      makeSBLabel(`측면 ${sideSB}m`, sbLeft - sideSB / 2, 0)
+      makeSBLabel(`측면 ${sideSB}m`, sbRight + sideSB / 2, 0)
 
       /* ── 건물 (PBR + 창문 텍스처) ── */
 
@@ -522,7 +538,9 @@ export function BuildingVolume3D({
         const geo = new THREE.ExtrudeGeometry(shape, { depth: tH, bevelEnabled: false })
         geo.rotateX(-Math.PI / 2)
 
-        const wCols = Math.max(4, Math.round(S * 0.3 / 3.5))
+        const resFloors2 = Math.max(floors - 1, 1)
+        const unitsPerFloor2 = units ? Math.max(1, Math.ceil(units / resFloors2)) : Math.max(4, Math.round(S * 0.3 / 3.5))
+        const wCols = Math.max(3, unitsPerFloor2 * 2)
         const wTex = new THREE.CanvasTexture(makeWindowTex(floors, wCols))
         wTex.wrapS = wTex.wrapT = THREE.RepeatWrapping
 
@@ -594,10 +612,12 @@ export function BuildingVolume3D({
         const geo = new THREE.ExtrudeGeometry(shape, { depth: tH, bevelEnabled: false })
         geo.rotateX(-Math.PI / 2)
 
-        // 창문 텍스처 — 세대수 기반 창문 개수
+        // 창문 텍스처 — 세대수 정확 반영
         const resFloors = Math.max(bF - 1, 1)
-        const unitsPerFloor = units ? Math.max(1, Math.ceil((units || 1) / resFloors / Math.max(blocks.length, 1))) : Math.max(3, Math.round(bW / 3.5))
-        const wCols = Math.max(3, Math.min(unitsPerFloor * 2, Math.round(bW / 2)))
+        const bldgCount = Math.max(blocks.length, 1)
+        const unitsThisBuilding = units ? Math.ceil(units / bldgCount) : 0
+        const unitsPerFloor = units ? Math.max(1, Math.ceil(unitsThisBuilding / resFloors)) : Math.max(3, Math.round(bW / 3.5))
+        const wCols = Math.max(3, unitsPerFloor * 2)
         const wTex = new THREE.CanvasTexture(makeWindowTex(bF, wCols))
         wTex.wrapS = wTex.wrapT = THREE.RepeatWrapping
 
@@ -861,9 +881,9 @@ export function BuildingVolume3D({
         scene.add(benchGrp)
       }
 
-      // 지하주차 출입구 (대지 전면) — 주차대수에 비례한 규모
+      // 지하주차장 (주차대수 정확 반영)
       const pkCount = parking || Math.ceil((units || 10) * 0.7)
-      const rampW = Math.min(8, 4 + pkCount * 0.05) // 주차대수에 비례한 램프 폭
+      const rampW = Math.min(8, 4 + pkCount * 0.05)
       const parkRamp = new THREE.Mesh(new THREE.BoxGeometry(rampW, 0.15, 4),
         new THREE.MeshStandardMaterial({ color: 0x353d45, roughness: 0.7 }))
       parkRamp.position.set(-S * 0.25, 0.08, S / 2 - 0.5); scene.add(parkRamp)
@@ -876,16 +896,33 @@ export function BuildingVolume3D({
       const pSign = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5),
         new THREE.MeshBasicMaterial({ color: 0x2266ff }))
       pSign.position.set(-S * 0.25, 2.2, S / 2 + 0.01); scene.add(pSign)
-      // 주차대수 표시 (지면에 P + 대수)
+      
+      // 지하주차장 범위 (점선 — 주차대수 기반 면적)
+      const parkArea = pkCount * 30 // 대당 30㎡ (주차+통로)
+      const pkFloors = Math.ceil(parkArea / (S * S * 0.7)) // 지하주차 층수
+      const pkW = Math.min(S * 0.85, Math.sqrt(parkArea / Math.max(pkFloors, 1) * 1.5))
+      const pkD = Math.min(S * 0.7, parkArea / Math.max(pkFloors, 1) / pkW)
+      const ugPts = [
+        new THREE.Vector3(-pkW/2, 0.05, -pkD/2),
+        new THREE.Vector3(pkW/2, 0.05, -pkD/2),
+        new THREE.Vector3(pkW/2, 0.05, pkD/2),
+        new THREE.Vector3(-pkW/2, 0.05, pkD/2),
+        new THREE.Vector3(-pkW/2, 0.05, -pkD/2),
+      ]
+      const ugLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(ugPts),
+        new THREE.LineDashedMaterial({ color: 0x6366f1, dashSize: 1, gapSize: 0.8, opacity: 0.4, transparent: true }))
+      ugLine.computeLineDistances(); scene.add(ugLine)
+
+      // 주차 정보 라벨
       const pkCanvas = document.createElement('canvas')
-      pkCanvas.width = 128; pkCanvas.height = 64
+      pkCanvas.width = 192; pkCanvas.height = 64
       const pkCtx = pkCanvas.getContext('2d')!
-      pkCtx.fillStyle = '#1a1a2e'; pkCtx.fillRect(0, 0, 128, 64)
-      pkCtx.fillStyle = '#60a5fa'; pkCtx.font = 'bold 28px sans-serif'; pkCtx.textAlign = 'center'
-      pkCtx.fillText(`P ${pkCount}대`, 64, 42)
-      const pkLabel = new THREE.Mesh(new THREE.PlaneGeometry(rampW, rampW * 0.5),
+      pkCtx.fillStyle = 'rgba(0,0,0,0.6)'; pkCtx.fillRect(0, 0, 192, 64)
+      pkCtx.fillStyle = '#60a5fa'; pkCtx.font = 'bold 22px sans-serif'; pkCtx.textAlign = 'center'
+      pkCtx.fillText(`P ${pkCount}대 · 지하${pkFloors}층`, 96, 42)
+      const pkLabel = new THREE.Mesh(new THREE.PlaneGeometry(rampW + 2, (rampW + 2) * 0.33),
         new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(pkCanvas), transparent: true }))
-      pkLabel.rotation.x = -Math.PI / 2; pkLabel.position.set(-S * 0.25, 0.2, S / 2 - 4)
+      pkLabel.rotation.x = -Math.PI / 2; pkLabel.position.set(-S * 0.25, 0.2, S / 2 - 5)
       scene.add(pkLabel)
 
       // 경계 관목 (대지 앞쪽 + 측면)
