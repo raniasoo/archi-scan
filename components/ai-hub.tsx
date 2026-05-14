@@ -232,6 +232,35 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         console.warn('[AI-HUB] 3D capture failed, falling back to text-only:', e)
       }
 
+      // ━━━ 3D 캡처 있으면 → 전체 파이프라인 (5방향 + Multi-shot + Auto-select) ━━━
+      if (threeJsCaptures && threeJsCaptures.length > 0) {
+        setRenderProgress('🎨 5방향 참조 + 2장 생성 + 자동 선별 중...')
+        const styleData = STYLES.find(s => s.id === style)
+        const r = await fetch('/api/3d-to-photo', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
+          multiAngle: threeJsCaptures,
+          layoutName: input.layoutName, floors: input.floors, units: input.units,
+          type: input.buildingType, buildingCount: input.buildingCount,
+          address: input.address, angle: angle || 'bird-eye',
+          stylePrompt: styleData?.prompt || '',
+          styleName: styleData?.label || '모던 럭셔리',
+        }) })
+        clearTimeout(timeout)
+        const d = await safeJson(r)
+        if (d.success && d.image) {
+          const scoreInfo = d.score ? ` (일치도 ${d.score}점, ${d.floorsDetected}층 감지)` : ''
+          console.log(`[AI-HUB] 3D-First Pipeline 완료${scoreInfo}`)
+          setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(angle || 'exterior')
+        } else if (retry < 1) {
+          // 실패 시 기존 텍스트 기반으로 1회 재시도
+          console.warn('[AI-HUB] 3D-First failed, falling back to text-based:', d.error)
+          threeJsCaptures = undefined // 캡처 무효화
+          await new Promise(r => setTimeout(r, 1000))
+          return doRender(retry + 1)
+        } else {
+          setError(d.error || '렌더링 실패'); setRetryCount(0)
+        }
+      } else {
+      // ━━━ 3D 캡처 없으면 → 기존 텍스트 기반 ━━━
       const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
         prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
         style, address:input.address, layoutName:input.layoutName,
@@ -247,7 +276,6 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         material: materialId ? { type: materialId } : undefined,
         regulation: input.regulation,
         referenceImage: useReference && previousRenderImage ? previousRenderImage : undefined,
-        threeJsCaptures: threeJsCaptures || undefined,
       }) })
       clearTimeout(timeout)
       const d = await safeJson(r)
@@ -260,6 +288,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
       } else {
         setError(d.error||'렌더링 실패'); setRetryCount(0)
       }
+      } // end else (text-based fallback)
     } catch(e) {
       clearTimeout(timeout)
       const msg = e instanceof Error ? e.message : '오류'
