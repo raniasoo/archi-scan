@@ -153,8 +153,9 @@ export function BuildingVolume3D({
   const [error, setError]         = useState<string | null>(null)
   const [photoResult, setPhotoResult] = useState<string | null>(null)
   const [photoLoading, setPhotoLoading] = useState(false)
+  const [photoScore, setPhotoScore] = useState('')
 
-  // Three.js 캡처 → Gemini 포토리얼 변환
+  // Three.js 캡처 → Gemini 포토리얼 변환 (v2: depth map + multi-shot + auto-select)
   const captureAndConvert = async () => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -162,6 +163,7 @@ export function BuildingVolume3D({
     setPhotoResult(null)
     try {
       const screenshot = canvas.toDataURL('image/png')
+      
       const res = await fetch('/api/3d-to-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -171,16 +173,17 @@ export function BuildingVolume3D({
           floors,
           units,
           type: layoutType,
-          address: '', // page에서 전달 가능
+          buildingCount: buildingCount || 1,
+          address: '',
           angle: 'bird-eye 45° aerial view',
         }),
       })
       const data = await res.json()
       if (data.success && data.image) {
         setPhotoResult(data.image)
+        setPhotoScore(data.score ? `${data.score}점 (${data.floorsDetected}층 감지, 형태 ${data.shapeMatch})` : '')
       } else {
         console.error('[3D-PHOTO]', data.error || data.textResponse)
-        setPhotoResult(null)
       }
     } catch (e: any) {
       console.error('[3D-PHOTO] Error:', e.message)
@@ -1161,7 +1164,7 @@ export function BuildingVolume3D({
         <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-30">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
           <p className="text-white text-sm font-medium">3D → 포토리얼 변환 중...</p>
-          <p className="text-white/50 text-xs mt-1">Gemini가 재질·조경·하늘을 추가합니다 (30~60초)</p>
+          <p className="text-white/50 text-xs mt-1">2장 동시 생성 → 자동 점수 매기기 → 최적 선별 (40~90초)</p>
         </div>
       )}
 
@@ -1171,7 +1174,7 @@ export function BuildingVolume3D({
           <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-emerald-900/80 to-blue-900/80">
             <div>
               <p className="text-white text-sm font-bold">📸 3D → 포토리얼 변환 완료</p>
-              <p className="text-white/60 text-[10px]">건물 형태·층수·동수가 3D 모델과 100% 일치합니다</p>
+              <p className="text-white/60 text-[10px]">{photoScore || '2장 생성 → 자동 선별 완료'}</p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => {
