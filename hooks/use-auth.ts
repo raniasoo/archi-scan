@@ -19,9 +19,31 @@ export function useAuth() {
   const supabase = createClient()
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
+
+      // 신규 가입 감지 → 환영 이메일 발송
+      if (event === 'SIGNED_IN' && session?.user) {
+        const createdAt = new Date(session.user.created_at).getTime()
+        const now = Date.now()
+        const isNewUser = (now - createdAt) < 120_000 // 2분 이내 생성 = 신규
+        const welcomeSentKey = `archiscan_welcome_${session.user.id}`
+
+        if (isNewUser && !localStorage.getItem(welcomeSentKey)) {
+          localStorage.setItem(welcomeSentKey, 'sent')
+          const userName = session.user.user_metadata?.full_name
+            || session.user.user_metadata?.name
+            || session.user.email?.split('@')[0]
+          fetch('/api/welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: session.user.email, userName }),
+          }).then(r => r.json()).then(d => {
+            if (d.success) console.log('[AUTH] Welcome email sent')
+          }).catch(() => {})
+        }
+      }
     })
 
     supabase.auth.getUser().then(({ data }) => {

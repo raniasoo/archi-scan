@@ -119,3 +119,75 @@ export async function sendPaymentReceipt(data: ReceiptData) {
     return { success: false, error: error instanceof Error ? error.message : 'email failed' }
   }
 }
+
+// ━━━ 환영 이메일 ━━━
+
+interface WelcomeData {
+  to: string
+  userName?: string
+}
+
+export async function sendWelcomeEmail(data: WelcomeData) {
+  const { to, userName } = data
+  const displayName = userName || to.split('@')[0]
+
+  try {
+    const result = await resend.emails.send({
+      from: 'Archi-Scan <noreply@archiscan.kr>',
+      to: [to],
+      subject: `${displayName}님, Archi-Scan에 오신 것을 환영합니다!`,
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f5f4f1;font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','맑은 고딕',sans-serif;">
+  <div style="max-width:560px;margin:0 auto;padding:32px 16px;">
+    <div style="height:5px;background:linear-gradient(90deg,#2F6B4F 0%,#3d8b68 50%,#2F6B4F 100%);border-radius:8px 8px 0 0;"></div>
+    <div style="background:#ffffff;padding:32px 32px 24px;border-left:1px solid #e8e4de;border-right:1px solid #e8e4de;">
+      <div style="padding-bottom:16px;border-bottom:1px solid #e8e4de;margin-bottom:24px;">
+        <span style="font-size:14px;font-weight:700;letter-spacing:3px;color:#2F6B4F;">ARCHI-SCAN</span>
+      </div>
+      <h1 style="font-size:24px;font-weight:300;color:#1a1a1a;margin:0 0 8px;line-height:1.4;">환영합니다, ${displayName}님!</h1>
+      <p style="font-size:14px;color:#8a8075;margin:0;line-height:1.6;">AI 기반 건축기획 분석 플랫폼 Archi-Scan의 회원이 되셨습니다.</p>
+    </div>
+    <div style="background:#ffffff;padding:0 32px 32px;border-left:1px solid #e8e4de;border-right:1px solid #e8e4de;">
+      <div style="background:#faf9f7;border:1px solid #e8e4de;border-radius:8px;padding:24px;margin-bottom:24px;">
+        <p style="font-size:12px;letter-spacing:2px;color:#2F6B4F;font-weight:600;margin:0 0 16px;text-transform:uppercase;">Quick Start Guide</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:12px 0;border-bottom:1px solid #e8e4de;vertical-align:top;width:36px;"><div style="width:28px;height:28px;background:#2F6B4F;border-radius:50%;color:white;text-align:center;line-height:28px;font-size:13px;font-weight:600;">1</div></td>
+            <td style="padding:12px 0 12px 12px;border-bottom:1px solid #e8e4de;"><p style="font-size:14px;font-weight:600;color:#2a2520;margin:0 0 4px;">대상지 주소 입력</p><p style="font-size:12px;color:#8a8075;margin:0;">도로명 주소를 입력하면 대지면적, 용도지역, 건폐율, 용적률이 자동 조회됩니다.</p></td>
+          </tr>
+          <tr>
+            <td style="padding:12px 0;border-bottom:1px solid #e8e4de;vertical-align:top;"><div style="width:28px;height:28px;background:#2F6B4F;border-radius:50%;color:white;text-align:center;line-height:28px;font-size:13px;font-weight:600;">2</div></td>
+            <td style="padding:12px 0 12px 12px;border-bottom:1px solid #e8e4de;"><p style="font-size:14px;font-weight:600;color:#2a2520;margin:0 0 4px;">법규 검토 & 배치안 생성</p><p style="font-size:12px;color:#8a8075;margin:0;">AI가 법규를 자동 검토하고, 대지에 맞는 최적 배치안을 여러 개 제안합니다.</p></td>
+          </tr>
+          <tr>
+            <td style="padding:12px 0;border-bottom:1px solid #e8e4de;vertical-align:top;"><div style="width:28px;height:28px;background:#2F6B4F;border-radius:50%;color:white;text-align:center;line-height:28px;font-size:13px;font-weight:600;">3</div></td>
+            <td style="padding:12px 0 12px 12px;border-bottom:1px solid #e8e4de;"><p style="font-size:14px;font-weight:600;color:#2a2520;margin:0 0 4px;">AI 건축 렌더링</p><p style="font-size:12px;color:#8a8075;margin:0;">실제 거리뷰를 참조한 포토리얼리스틱 건축 렌더링을 자동 생성합니다.</p></td>
+          </tr>
+          <tr>
+            <td style="padding:12px 0;vertical-align:top;"><div style="width:28px;height:28px;background:#2F6B4F;border-radius:50%;color:white;text-align:center;line-height:28px;font-size:13px;font-weight:600;">4</div></td>
+            <td style="padding:12px 0 12px 12px;"><p style="font-size:14px;font-weight:600;color:#2a2520;margin:0 0 4px;">사전검토 보고서 생성</p><p style="font-size:12px;color:#8a8075;margin:0;">사업성 분석, 법규 검토, 리스크 평가가 포함된 전문 보고서를 PDF로 다운로드하세요.</p></td>
+          </tr>
+        </table>
+      </div>
+      <div style="text-align:center;margin:8px 0 0;">
+        <a href="https://www.archiscan.kr" style="display:inline-block;background:#2F6B4F;color:white;padding:14px 40px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;letter-spacing:0.5px;">지금 시작하기 →</a>
+      </div>
+    </div>
+    <div style="background:#faf9f7;padding:20px 32px;border-radius:0 0 8px 8px;border:1px solid #e8e4de;border-top:none;text-align:center;">
+      <p style="font-size:11px;color:#8a8075;margin:0 0 4px;">Archi-Scan · AI 기반 건축기획 분석 플랫폼</p>
+      <p style="font-size:11px;color:#b0a99e;margin:0;">문의: any00815@gmail.com · archiscan.kr</p>
+    </div>
+    <div style="height:4px;background:linear-gradient(90deg,#2F6B4F 0%,#3d8b68 50%,#2F6B4F 100%);border-radius:0 0 8px 8px;"></div>
+  </div>
+</body>
+</html>`,
+    })
+    console.log('[EMAIL] Welcome sent to', to, result)
+    return { success: true, id: result.data?.id }
+  } catch (error) {
+    console.error('[EMAIL] Failed to send welcome:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'welcome email failed' }
+  }
+}

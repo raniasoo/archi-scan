@@ -2354,7 +2354,7 @@ export default function ArchiScanPage() {
                   <>
                     <span className="text-muted-foreground">건폐 <span className="text-foreground font-semibold">{regulation.maxCoverageRatio || 60}%</span></span>
                     <span className="text-muted-foreground">용적 <span className="text-foreground font-semibold">{regulation.maxFloorAreaRatio || 200}%</span></span>
-                    <span className="text-muted-foreground">높이 <span className="text-foreground font-semibold">{typeof regulation.maxHeight === 'number' && regulation.maxHeight > 0 ? `${regulation.maxHeight}m` : '-'}</span></span>
+                    <span className="text-muted-foreground">높이 <span className="text-foreground font-semibold">{regulation.maxHeight && Number(regulation.maxHeight) > 0 ? `${Number(regulation.maxHeight)}m` : '제한없음'}</span></span>
                   </>
                 )}
                 {selectedLayoutData && (
