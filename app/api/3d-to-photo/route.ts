@@ -34,7 +34,7 @@ async function callGemini(url: string, parts: any[]) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { multiAngle, layoutName, floors, units, type, buildingCount, address } = body
+    const { multiAngle, layoutName, floors, units, type, buildingCount, address, stylePrompt, styleName } = body
     
     const KEY = process.env.GOOGLE_AI_API_KEY
     if (!KEY) return NextResponse.json({ error: 'API key not set' }, { status: 500 })
@@ -81,6 +81,10 @@ SCALE: This is a SMALL ${fl}-story ${units || 5}-unit Korean residential villa (
 - It must look intimate and modest, NOT like a large apartment complex.
 
 CAMERA: Generate from the BIRD-EYE VIEW angle (45° aerial, same as the first image).
+
+═══ ARCHITECTURAL STYLE: ${styleName || '모던 럭셔리'} ═══
+${stylePrompt || 'sleek modern luxury, glass curtain wall, premium finishes, high-end materials'}
+Apply this architectural style to the building facade, materials, and details.
 
 ═══ ENHANCEMENTS (add photorealism only) ═══
 - Warm natural stone facade (베이지/크림 톤)

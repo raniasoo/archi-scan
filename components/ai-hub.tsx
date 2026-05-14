@@ -34,7 +34,7 @@ interface ConceptInput {
   regulation?: { heightLimit?: number; farRatio?: number; zoneName?: string; northShadow?: boolean; northShadowAngle?: number; overlappingRegs?: string[] }
 }
 
-const STYLES = [
+export const STYLES = [
   { id: "modern-luxury", label: "모던 럭셔리", emoji: "🏢", prompt: "sleek modern luxury, glass curtain wall, premium finishes, high-end materials" },
   { id: "eco-green", label: "친환경 녹색", emoji: "🌿", prompt: "eco-friendly green building, vertical garden, rooftop greenery, sustainable materials, solar panels" },
   { id: "korean-modern", label: "한국 모던", emoji: "🏛", prompt: "korean contemporary architecture, hanok-inspired eaves, warm earth tones, modern reinterpretation of traditional Korean design" },

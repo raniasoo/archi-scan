@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { X, RotateCcw, ZoomIn, ZoomOut, Camera, Loader2 } from "lucide-react"
 
 import { getBuildingGeometry, getClusterBlocks, type BuildingBlock } from "@/lib/building-geometry"
+import { STYLES } from "@/components/ai-hub"
 
 interface BuildingVolume3DProps {
   layoutName: string
@@ -155,6 +156,7 @@ export function BuildingVolume3D({
   const [photoResult, setPhotoResult] = useState<string | null>(null)
   const [photoLoading, setPhotoLoading] = useState(false)
   const [photoScore, setPhotoScore] = useState('')
+  const [selectedStyle, setSelectedStyle] = useState('modern-luxury')
 
   // Three.js 5방향 캡처 → Gemini 포토리얼 변환
   const captureAndConvert = async () => {
@@ -236,6 +238,7 @@ export function BuildingVolume3D({
       console.log(`[3D-PHOTO] ${captures.length}방향 캡처 완료`)
       
       // ━━━ API 호출 ━━━
+      const selectedStyleData = STYLES.find(s => s.id === selectedStyle)
       const res = await fetch('/api/3d-to-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -244,6 +247,8 @@ export function BuildingVolume3D({
           layoutName, floors, units, type: layoutType,
           buildingCount: buildingCount || 1,
           address: '', angle: 'bird-eye',
+          stylePrompt: selectedStyleData?.prompt || '',
+          styleName: selectedStyleData?.label || '모던 럭셔리',
         }),
       })
       const data = await res.json()
@@ -1158,6 +1163,15 @@ export function BuildingVolume3D({
           <div>
             <p className="text-sm font-bold text-white">{layoutName}</p>
             <p className="text-[10px] text-blue-300/80">{LABELS[layoutType]} · {floors}층 {units ? `${units}세대` : ''} · {siteArea.toLocaleString()}㎡{parking ? ` · P${parking}대` : ''}</p>
+          </div>
+          {/* 📸 스타일 선택 */}
+          <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+            {STYLES.slice(0, 7).map(s => (
+              <button key={s.id} onClick={() => setSelectedStyle(s.id)}
+                className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] border transition-all ${selectedStyle === s.id ? 'bg-emerald-500/30 border-emerald-400 text-emerald-300' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'}`}>
+                {s.emoji} {s.label}
+              </button>
+            ))}
           </div>
           {blockInfo.length > 1 && (
             <div className="hidden sm:flex gap-1.5">
