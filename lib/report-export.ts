@@ -2021,9 +2021,11 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     <div class="cover-accent"></div>
     <div class="cover-body">
       <div class="brand-bar">
-        <div>
-          <div class="brand-logo">ARCHI-SCAN</div>
-          <div class="brand-tagline">${report.cover.brandTagline || '건축기획 분석 시스템'}</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div>
+            <div class="brand-logo">${report.cover.companyName || "ARCHI-SCAN"}</div>
+            <div class="brand-tagline">${report.cover.brandTagline || '건축기획 분석 시스템'}</div>
+          </div>
         </div>
         <div style="text-align: right;">
           <div class="doc-label">DOCUMENT</div>
@@ -4110,9 +4112,11 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
     <div class="cover-accent"></div>
     <div class="cover-body">
       <div class="brand-bar">
-        <div>
-          <div class="brand-logo">ARCHI-SCAN</div>
-          <div class="brand-tagline">${report.cover.brandTagline || '건축기획 분석 시스템'}</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div>
+            <div class="brand-logo">${report.cover.companyName || "ARCHI-SCAN"}</div>
+            <div class="brand-tagline">${report.cover.brandTagline || '건축기획 분석 시스템'}</div>
+          </div>
         </div>
         <div style="text-align: right;">
           <div class="doc-label">DOCUMENT</div>
