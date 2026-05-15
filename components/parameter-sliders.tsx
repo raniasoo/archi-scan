@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 
 interface SliderParam {
   label: string
@@ -34,6 +34,9 @@ export default function ParameterSliders({
   setbackFront: initFront, setbackSide: initSide,
   siteArea, type, onChange
 }: ParameterSlidersProps) {
+  // ★ 원본 값을 ref로 보존 (리셋용 — prop 변경에 영향 안 받음)
+  const origRef = useRef({ cov: initCov, floors: initFloors, units: initUnits, front: initFront, side: initSide })
+  
   const [cov, setCov] = useState(initCov)
   const [floors, setFloors] = useState(initFloors)
   const [units, setUnits] = useState(initUnits)
@@ -42,11 +45,9 @@ export default function ParameterSliders({
   const [expanded, setExpanded] = useState(false)
 
   // 파라미터 변경 시 상위로 전달
-  const emit = useCallback(() => {
+  useEffect(() => {
     onChange({ coverage: cov, floors, units, setbackFront: front, setbackSide: side })
-  }, [cov, floors, units, front, side, onChange])
-
-  useEffect(() => { emit() }, [cov, floors, units, front, side])
+  }, [cov, floors, units, front, side]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 실시간 계산
   const buildingArea = Math.round(siteArea * cov / 100)
@@ -134,7 +135,10 @@ export default function ParameterSliders({
 
           {/* 리셋 */}
           <button
-            onClick={() => { setCov(initCov); setFloors(initFloors); setUnits(initUnits); setFront(initFront); setSide(initSide) }}
+            onClick={() => { 
+              const o = origRef.current
+              setCov(o.cov); setFloors(o.floors); setUnits(o.units); setFront(o.front); setSide(o.side)
+            }}
             className="w-full py-1.5 text-[10px] text-white/40 hover:text-white/70 border border-slate-700/50 rounded-lg hover:bg-slate-700/30 transition"
           >
             ↩ 원래 값으로 리셋

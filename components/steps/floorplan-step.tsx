@@ -123,7 +123,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
         <div className="min-w-0">
           <h2 className="text-lg font-bold text-foreground">평면도 검토</h2>
           <p className="text-[11px] text-muted-foreground truncate">
-            {selectedLayoutData.name} · 지상 {selectedLayoutData.floors}층 · {selectedLayoutData.units}세대 · 주차 {selectedLayoutData.parking}대
+            {selectedLayoutData.name} · 지상 {effectiveFloors}층 · {effectiveUnits}세대 · 주차 {selectedLayoutData.parking}대
           </p>
         </div>
         <button onClick={() => setShowInfo(!showInfo)} className="shrink-0 p-1.5 rounded-lg hover:bg-secondary/50">
@@ -136,11 +136,11 @@ export function FloorplanStep(props: FloorplanStepProps) {
         <div className="grid grid-cols-4 gap-1.5 animate-in slide-in-from-top-2 duration-200">
           <div className="bg-secondary/30 border border-border rounded p-1.5 text-center">
             <p className="text-[9px] text-muted-foreground">세대수</p>
-            <p className="text-xs font-semibold">{selectedLayoutData.units}세대</p>
+            <p className="text-xs font-semibold">{effectiveUnits}세대</p>
           </div>
           <div className="bg-secondary/30 border border-border rounded p-1.5 text-center">
             <p className="text-[9px] text-muted-foreground">규모</p>
-            <p className="text-xs font-semibold">지상{selectedLayoutData.floors}층</p>
+            <p className="text-xs font-semibold">지상{effectiveFloors}층</p>
           </div>
           <div className="bg-secondary/30 border border-border rounded p-1.5 text-center">
             <p className="text-[9px] text-muted-foreground">주차</p>
@@ -148,7 +148,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
           </div>
           <div className="bg-secondary/30 border border-border rounded p-1.5 text-center">
             <p className="text-[9px] text-muted-foreground">건폐율</p>
-            <p className="text-xs font-semibold">{selectedLayoutData.coverage}%</p>
+            <p className="text-xs font-semibold">{effectiveCoverage}%</p>
           </div>
         </div>
       )}
