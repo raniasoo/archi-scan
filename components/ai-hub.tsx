@@ -196,6 +196,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [renderProgress, setRenderProgress] = useState<string|null>(null)
   const [compareSet, setCompareSet] = useState<string[]>([]) // 3안 비교용 멀티 선택 (최대 3)
   const [selectMode, setSelectMode] = useState<'single' | 'compare'>('single') // 단일 vs 3안 선택 모드
+  const [renderEngine, setRenderEngine] = useState<'gemini' | 'controlnet'>('gemini') // ★ 렌더링 엔진 선택
 
   const styleName = STYLES.find(s => s.id === style)?.label || INTERIOR_STYLES.find(s => s.id === style)?.label || '모던 럭셔리'
 
@@ -250,6 +251,48 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
 
       // ━━━ 3D 캡처 있으면 → 파이프라인 분기 ━━━
       if (threeJsCaptures && threeJsCaptures.length > 0) {
+        
+        // ★ ControlNet 엔진 — 3D 캡처를 control_image로 사용
+        if (renderEngine === 'controlnet' && angle !== 'interior') {
+          setRenderProgress('🎯 ControlNet 정밀 렌더링 중...')
+          // 현재 앵글에 맞는 3D 캡처 선택
+          const bestCapture = threeJsCaptures.find(c => c.angle === angle) || threeJsCaptures[0]
+          try {
+            const r = await fetch('/api/ai-render-controlnet', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                controlImage: bestCapture.image,
+                controlMode: 'canny-pro',
+                prompt: `${input.layoutName} ${input.floors}층 ${input.units}세대`,
+                address: input.address, layoutName: input.layoutName,
+                floors: input.floors, units: input.units, siteArea: input.siteArea,
+                buildingType: input.buildingType, coverage: input.buildingCoverageRatio,
+                cameraAngle: angle, sceneMode: scene, material: materialId ? { type: materialId } : undefined,
+                surroundingContext: input.slope ? `경사도 ${input.slope.average}%, ${input.slope.direction} 방향` : undefined,
+                style, patterns: input.patterns, strategy: input.strategy,
+              }),
+            })
+            const data = await safeJson(r)
+            if (data.success && data.image) {
+              setRenderImg(data.image)
+              onRenderComplete?.(data.image)
+              trackAiRenderComplete(angle, true, data.engine || 'controlnet')
+              setRenderProgress(null)
+              setLoading(false)
+              clearTimeout(timeout)
+              return
+            }
+            // ControlNet 실패 시 Gemini로 폴백
+            console.warn(`[AI-HUB] ControlNet failed (${data.error}), falling back to Gemini`)
+            setRenderProgress('⚡ ControlNet → Gemini 폴백 전환 중...')
+          } catch (e) {
+            console.warn('[AI-HUB] ControlNet error, falling back to Gemini:', e)
+            setRenderProgress('⚡ Gemini 폴백 전환 중...')
+          }
+        }
+
         if (angle === 'interior') {
           // ━━━ 인테리어 3D-First: 실내 캡처 → ai-render 전달 ━━━
           setRenderProgress('🛋️ 실내 3D 참조 + AI 포토리얼 변환 중...')
@@ -744,10 +787,38 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                 </button>
               </div>
             )}
+            {/* ★ 렌더링 엔진 선택 */}
+            <div className="flex gap-1.5 p-1 rounded-lg bg-secondary/30 mb-2">
+              <button
+                onClick={() => setRenderEngine('gemini')}
+                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all flex items-center justify-center gap-1 ${
+                  renderEngine === 'gemini' 
+                    ? 'bg-card shadow-sm border border-border/50 text-foreground' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>✨</span> Gemini
+                <span className="text-[8px] opacity-60">빠름</span>
+              </button>
+              <button
+                onClick={() => setRenderEngine('controlnet')}
+                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all flex items-center justify-center gap-1 ${
+                  renderEngine === 'controlnet' 
+                    ? 'bg-card shadow-sm border border-violet-500/50 text-violet-300' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>🎯</span> ControlNet
+                <span className="text-[8px] opacity-60">정밀</span>
+              </button>
+            </div>
+            {renderEngine === 'controlnet' && (
+              <p className="text-[9px] text-violet-400/70 mb-2">3D 모델의 건물 윤곽을 정확히 유지하며 포토리얼 변환합니다. Replicate API 키 필요.</p>
+            )}
             {/* 렌더링 버튼 (항상 보임) */}
             <div className="flex gap-2">
               <button onClick={() => doRender(0)} disabled={loading} className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
-                {loading && !multiImages ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2` : '생성 중'}</> : '🎨 렌더링'}
+                {loading && !multiImages ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2` : '생성 중'}</> : renderEngine === 'controlnet' ? '🎯 ControlNet 렌더링' : '🎨 렌더링'}
               </button>
               <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1 relative" title="정면+조감+입구+인테리어 4장">
                 {loading && multiImages !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '📐 4장'}
