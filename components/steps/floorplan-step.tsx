@@ -8,7 +8,8 @@ import type { LayoutOption } from "@/app/page"
 import type { ZoningRegulation } from "@/lib/regulation-types"
 import type { DesignStrategy } from "@/lib/design-strategy"
 import { safeNumber } from "@/lib/project-analysis-state"
-import { useState } from "react"
+import { useState, useCallback } from "react"
+import ParameterSliders from "@/components/parameter-sliders"
 
 const LoadingBox = () => <div className="flex items-center justify-center p-8 text-muted-foreground"><span className="animate-spin mr-2">⏳</span>로딩 중...</div>
 const FloorPlan = dynamic(() => import("@/components/floor-plan").then(m => ({ default: m.FloorPlan })), { ssr: false, loading: LoadingBox })
@@ -61,6 +62,26 @@ export function FloorplanStep(props: FloorplanStepProps) {
 
   const [showInfo, setShowInfo] = useState(false)
   const totalFloors = safeNumber(selectedLayoutData.floors, selectedFloor)
+
+  // ━━━ 파라미터 슬라이더: 커스텀 값으로 오버라이드 ━━━
+  const [customParams, setCustomParams] = useState<{
+    coverage: number; floors: number; units: number; setbackFront: number; setbackSide: number;
+  } | null>(null)
+
+  const handleParamChange = useCallback((params: typeof customParams) => {
+    setCustomParams(params)
+  }, [])
+
+  // 슬라이더 값이 있으면 오버라이드, 없으면 원본 사용
+  const effectiveData = customParams ? {
+    ...selectedLayoutData,
+    coverage: customParams.coverage,
+    floors: customParams.floors,
+    units: customParams.units,
+  } : selectedLayoutData
+  const effectiveCoverage = customParams?.coverage ?? selectedLayoutData.coverage
+  const effectiveFloors = customParams?.floors ?? totalFloors
+  const effectiveUnits = customParams?.units ?? selectedLayoutData.units
   const isFloorTab = drawingTab === 'floor'
 
   // 건물 용도 판정 (기본 평면과 동일 로직)
@@ -132,6 +153,18 @@ export function FloorplanStep(props: FloorplanStepProps) {
         </div>
       )}
 
+      {/* ━━━ 파라미터 슬라이더 (실시간 3D 조절) ━━━ */}
+      <ParameterSliders
+        coverage={effectiveCoverage}
+        floors={effectiveFloors}
+        units={effectiveUnits}
+        setbackFront={regulation?.setbackFront ?? 3}
+        setbackSide={regulation?.setbackSide ?? 1.5}
+        siteArea={siteAreaNum}
+        type={selectedLayoutData.type}
+        onChange={handleParamChange}
+      />
+
       {/* ━━━ 통합 도면 탭 ━━━ */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         {/* 탭 바 */}
@@ -178,7 +211,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
                   totalFloors={selectedLayoutData.floors}
                   strategy={strategy}
                   zoneType={molit.zoneCode || regulation?.zoneType}
-                  units={selectedLayoutData.units}
+                  units={effectiveUnits}
                   gfa={selectedLayoutData.gfa || gfa}
                   buildingCount={selectedLayoutData.buildingCount}
                 />
@@ -196,9 +229,9 @@ export function FloorplanStep(props: FloorplanStepProps) {
           {drawingTab === "ai-generate" && (
             <AIFloorPlan
               siteArea={siteAreaNum}
-              buildingCoverage={selectedLayoutData.coverage}
-              floors={selectedLayoutData.floors}
-              units={selectedLayoutData.units}
+              buildingCoverage={effectiveCoverage}
+              floors={effectiveFloors}
+              units={effectiveUnits}
               type={selectedLayoutData.type}
               buildingCount={selectedLayoutData.buildingCount}
               layoutName={selectedLayoutData.name}
@@ -219,10 +252,10 @@ export function FloorplanStep(props: FloorplanStepProps) {
           {drawingTab === "3d-unified" && (
             <ThreeJSDiagrams
               type={selectedLayoutData.type}
-              coverage={selectedLayoutData.coverage}
+              coverage={effectiveCoverage}
               siteArea={siteAreaNum}
-              floors={selectedLayoutData.floors}
-              units={selectedLayoutData.units}
+              floors={effectiveFloors}
+              units={effectiveUnits}
               buildingCount={selectedLayoutData.buildingCount}
               originalType={selectedLayoutData._originalType}
               regulation={{
@@ -238,9 +271,9 @@ export function FloorplanStep(props: FloorplanStepProps) {
           {drawingTab === "site" && (
             <SitePlan
               siteArea={siteAreaNum}
-              buildingCoverage={selectedLayoutData.coverage}
-              floors={selectedLayoutData.floors}
-              units={selectedLayoutData.units}
+              buildingCoverage={effectiveCoverage}
+              floors={effectiveFloors}
+              units={effectiveUnits}
               parking={selectedLayoutData.parking}
               buildingCount={selectedLayoutData.buildingCount}
               originalType={selectedLayoutData._originalType}
@@ -260,22 +293,22 @@ export function FloorplanStep(props: FloorplanStepProps) {
 
           {/* 아이소메트릭 */}
           {drawingTab === "iso" && (
-            <IsometricView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
+            <IsometricView siteArea={siteAreaNum} buildingCoverage={effectiveCoverage} floors={effectiveFloors} units={effectiveUnits} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
           )}
 
           {/* 투시도 */}
           {drawingTab === "perspective" && (
-            <PerspectiveView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
+            <PerspectiveView siteArea={siteAreaNum} buildingCoverage={effectiveCoverage} floors={effectiveFloors} units={effectiveUnits} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
           )}
 
           {/* 단면도 */}
           {drawingTab === "section" && (
-            <SectionView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} parking={selectedLayoutData.parking} heightLimit={molit.heightLimit || regulation.maxHeight} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} hasDistrictPlan={molit.hasDistrictPlan ?? false} />
+            <SectionView siteArea={siteAreaNum} buildingCoverage={effectiveCoverage} floors={effectiveFloors} units={effectiveUnits} parking={selectedLayoutData.parking} heightLimit={molit.heightLimit || regulation.maxHeight} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} hasDistrictPlan={molit.hasDistrictPlan ?? false} />
           )}
 
           {/* 입면도 */}
           {drawingTab === "elevation" && (
-            <ElevationView siteArea={siteAreaNum} buildingCoverage={selectedLayoutData.coverage} floors={selectedLayoutData.floors} units={selectedLayoutData.units} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} heightLimit={molit.heightLimit || regulation.maxHeight} />
+            <ElevationView siteArea={siteAreaNum} buildingCoverage={effectiveCoverage} floors={effectiveFloors} units={effectiveUnits} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} heightLimit={molit.heightLimit || regulation.maxHeight} />
           )}
         </div>
       </div>
