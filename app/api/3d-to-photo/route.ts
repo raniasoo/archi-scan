@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { matchPatterns, buildPatternPrompt } from '@/lib/pattern-matcher'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 3D-First Pipeline v4 — 5방향 캡처 + Depth Map + Multi-shot Auto-Select
@@ -61,6 +62,14 @@ export async function POST(req: NextRequest) {
       return `Image: ${a.angle}`
     }).join('\n')
 
+    // ━━━ 알렉산더 253패턴 자동 매칭 ━━━
+    let patternPromptText = ''
+    try {
+      const patternResult = await matchPatterns({ type: type || 'tower', floors: parseInt(fl) || 3, units: units || 1, siteArea: 500, coverage: 50 })
+      patternPromptText = buildPatternPrompt(patternResult, 12)
+      console.log(`[3D-PHOTO] Alexander: ${patternResult.summary}`)
+    } catch (e) { console.warn('[3D-PHOTO] Pattern matching skipped:', e) }
+
     const prompt = `You are a world-class architectural visualization artist.
 
 I am providing ${angles.length} REFERENCE IMAGES of the SAME building from different angles:
@@ -86,6 +95,8 @@ CAMERA: Generate from the BIRD-EYE VIEW angle (45° aerial, same as the first im
 ═══ ARCHITECTURAL STYLE: ${styleName || '모던 럭셔리'} ═══
 ${stylePrompt || 'sleek modern luxury, glass curtain wall, premium finishes, high-end materials'}
 Apply this architectural style to the building facade, materials, and details.
+
+${patternPromptText}
 
 ═══ ENHANCEMENTS (add photorealism only) ═══
 - Warm natural stone facade (베이지/크림 톤)
