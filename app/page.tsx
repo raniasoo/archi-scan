@@ -608,6 +608,7 @@ export default function ArchiScanPage() {
   const [aiRenderImage, setAiRenderImage] = useState<string | null>(null)
   const [aiMultiImages, setAiMultiImages] = useState<{angle:string; image:string|null}[] | null>(null)
   const [aiInteriorComparison, setAiInteriorComparison] = useState<{style:string; label:string; image:string}[] | null>(null)
+  const [nearbyAnalysis, setNearbyAnalysis] = useState<any>(null)
   const [reportVerified, setReportVerified] = useState(false)
   const [financialScenarios, setFinancialScenarios] = useState<FinancialScenariosConfig>(EMPTY_SCENARIOS_CONFIG)
   const [optimizationResult, setOptimizationResult] = useState<OptimizationReport | null>(null)
@@ -2694,6 +2695,8 @@ export default function ArchiScanPage() {
             aiInteriorComparison={aiInteriorComparison}
             sitePolygon={sitePolygon}
             siteCoords={siteCoords}
+            nearbyAnalysis={nearbyAnalysis}
+            setNearbyAnalysis={setNearbyAnalysis}
           />
         )}
         

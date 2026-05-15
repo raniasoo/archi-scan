@@ -84,6 +84,8 @@ export interface ReportStepProps {
   aiInteriorComparison?: {style: string; label: string; image: string}[] | null
   sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
   siteCoords?: { lng: number; lat: number } | null
+  nearbyAnalysis?: any
+  setNearbyAnalysis?: (data: any) => void
 }
 
 export function ReportStep(props: ReportStepProps) {
@@ -101,7 +103,7 @@ export function ReportStep(props: ReportStepProps) {
     address, siteAreaNum, branding, selectedLayoutData, layouts,
     feasibilityResult, marketPrice, regionalPricing, landPriceData,
     regulation, molitSupplementData, strategy, userValues,
-    aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison,
+    aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison, nearbyAnalysis: props.nearbyAnalysis,
   })
 
   // ━━━ 분양 브로셔 ━━━
@@ -217,7 +219,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison, nearbyAnalysis: props.nearbyAnalysis });
                       const { downloadPdf } = await loadExportFunctions(); const result = await downloadPdf(exportData);
                       if (!result.success) {
                         toast.error('PDF 생성 실패', { id: 'pdf-dl', description: result.error })
@@ -266,7 +268,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison, nearbyAnalysis: props.nearbyAnalysis });
                       const { downloadHtml } = await loadExportFunctions(); const result = downloadHtml(exportData);
                       if (!result.success) {
                         toast.error('HTML 생성 실패', { id: 'html-dl', description: result.error })
@@ -316,7 +318,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison, nearbyAnalysis: props.nearbyAnalysis });
                       const { downloadExcel } = await loadExportFunctions(); const result = downloadExcel(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || '엑셀 다운로드 중 오류가 발생했습니다.');
@@ -362,7 +364,7 @@ export function ReportStep(props: ReportStepProps) {
                       if (!address) {
                         throw new Error('주소가 없습니다. 먼저 주소를 입력해주세요.');
                       }
-                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison });
+                      const exportData = buildExportData({ address, siteAreaNum, branding, selectedLayoutData: selectedLayoutData!, layouts, feasibilityResult, marketPrice, regionalPricing, landPriceData, regulation, molitSupplementData, strategy, userValues, aiRenderImage: props.aiRenderImage, aiMultiImages: props.aiMultiImages, aiInteriorComparison: props.aiInteriorComparison, nearbyAnalysis: props.nearbyAnalysis });
                       const { openPrintPreview } = await loadExportFunctions(); const result = openPrintPreview(exportData);
                       if (!result.success) {
                         setDownloadError(result.error || '인쇄 준비 중 오류가 발생했습니다.');
@@ -518,6 +520,14 @@ export function ReportStep(props: ReportStepProps) {
                     siteArea={siteAreaNum}
                     gfa={gfa}
                     strategy={typeof strategy === 'string' ? strategy : strategy?.id || 'balanced'}
+                    onResult={(result) => {
+                      if (result?.analysis && props.setNearbyAnalysis) {
+                        props.setNearbyAnalysis({
+                          ...result.analysis,
+                          summary: result.summary,
+                        })
+                      }
+                    }}
                   />
                 ) : (
                   <div className="text-center py-8 text-sm text-muted-foreground">

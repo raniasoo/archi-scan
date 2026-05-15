@@ -3,23 +3,22 @@ import { NextRequest, NextResponse } from 'next/server'
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY
 
 // ━━━ Overpass API로 주변 건물 조회 ━━━
-async function fetchNearbyBuildings(lat: number, lng: number, radius: number = 300) {
+async function fetchNearbyBuildings(lat: number, lng: number, radius: number = 250) {
   try {
-    const query = `[out:json][timeout:15];
+    // 건물은 250m, 도로/편의시설은 150m로 범위 축소 → 응답 속도 개선
+    const query = `[out:json][timeout:10];
 (
   way(around:${radius},${lat},${lng})[building];
-  way(around:${radius},${lat},${lng})["building:use"];
-  way(around:200,${lat},${lng})[highway~"^(primary|secondary|tertiary|residential)$"];
-  way(around:200,${lat},${lng})[amenity];
-  way(around:200,${lat},${lng})[shop];
-  node(around:200,${lat},${lng})[amenity];
-  node(around:200,${lat},${lng})[shop];
+  way(around:150,${lat},${lng})[highway~"^(primary|secondary|tertiary|residential)$"];
+  way(around:150,${lat},${lng})[amenity];
+  node(around:150,${lat},${lng})[amenity];
+  node(around:150,${lat},${lng})[shop];
 );out center tags;`
 
     const res = await fetch('https://overpass-api.de/api/interpreter', {
       method: 'POST', body: query,
       headers: { 'Content-Type': 'text/plain', 'User-Agent': 'ArchiScan/2.0' },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(12000),
     })
     const data = await res.json()
     return data?.elements || []
@@ -122,10 +121,10 @@ async function callGeminiAnalysis(prompt: string): Promise<string> {
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { 
             temperature: 0.4, 
-            maxOutputTokens: 2000,
+            maxOutputTokens: 1500,
           },
         }),
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(25000),
       }
     )
     const data = await res.json()
