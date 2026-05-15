@@ -125,7 +125,23 @@ export function getBuildingGeometry(params: {
     }
   }
 
-  const totalFootprint = blocks.reduce((sum, b) => sum + (S * b.w) * (S * b.d), 0)
+  // 건축면적 계산 (L자/ㄷ자는 코너 중복 제거)
+  let totalFootprint: number
+  if (type === 'lshape' && wingThickness > 0) {
+    // L자: wt × (H + V - wt) = fp × S² (코너 중복 제거)
+    const wt = wingThickness * S
+    const H = blocks[0] ? S * blocks[1].w : 0  // short wing
+    const V = blocks[0] ? S * blocks[0].d : 0  // long wing  
+    totalFootprint = wt * (H + V - wt)
+  } else if (type === 'courtyard' && wingThickness > 0) {
+    // ㄷ자: topW × wt + 2 × wt × sideD (중복 없는 정확 계산)
+    const wt = wingThickness * S
+    const topW = blocks[0] ? S * blocks[0].w : 0
+    const sideD = blocks[1] ? S * blocks[1].d : 0
+    totalFootprint = topW * wt + 2 * wt * sideD
+  } else {
+    totalFootprint = blocks.reduce((sum, b) => sum + (S * b.w) * (S * b.d), 0)
+  }
 
   return {
     blocks,
