@@ -111,17 +111,27 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     const GRID = MESH_GRID
 
     const minE = Math.min(...elevations), maxE = Math.max(...elevations)
-    const eRange = Math.max(maxE - minE, 1)
+    const eRange = Math.max(maxE - minE, 0.5)
     
-    // ★ 실제 고저차에 비례한 수직 스케일 (평탄지가 산처럼 보이는 문제 해결)
+    // ★ 실제 고저차에 비례한 수직 스케일
+    // 핵심 원칙: 경사도 0.8%(평탄) 대지는 시각적으로도 거의 평평해야 함
     const realSpanM = RANGE * 2 * 111000 // 실제 조회 영역 크기 (m)
     const meshPerMeter = MESH_SIZE / realSpanM
     const realScaleZ = eRange * meshPerMeter // 실제 비율의 높이
-    // 과장 배율: 평탄지는 약간만, 경사지는 그대로
-    const exaggeration = eRange < 3 ? 3.0 : eRange < 10 ? 2.0 : eRange < 30 ? 1.5 : 1.2
-    const TARGET_MAX_Z = Math.min(realScaleZ * exaggeration, MESH_SIZE * 0.4)
     
-    console.log(`[TERRAIN-3D] 고저차 ${eRange.toFixed(1)}m, 실스케일 ${realScaleZ.toFixed(1)}, 과장 x${exaggeration}, 최종Z ${TARGET_MAX_Z.toFixed(1)}`)
+    // 과장 배율 — 평탄지는 최소화, 급경사지만 약간 과장
+    // eRange < 2m (사실상 평지): 과장 없음 → 거의 flat
+    // eRange < 5m (완만): 1.5배 → 약간 보임
+    // eRange < 15m (중간): 2.0배
+    // eRange ≥ 15m (급경사): 1.5배 (이미 충분히 보임)
+    const exaggeration = eRange < 2 ? 1.0 : eRange < 5 ? 1.5 : eRange < 15 ? 2.0 : 1.5
+    
+    // ★ 평탄지 강제 cap: eRange < 3m이면 TARGET_MAX_Z 최대 1.5 (메시 100 기준 1.5%)
+    const rawTargetZ = realScaleZ * exaggeration
+    const flatCap = eRange < 3 ? 1.5 : eRange < 5 ? 3.0 : MESH_SIZE * 0.35
+    const TARGET_MAX_Z = Math.min(rawTargetZ, flatCap)
+    
+    console.log(`[TERRAIN-3D] 고저차 ${eRange.toFixed(1)}m, 실스케일 ${realScaleZ.toFixed(1)}, 과장 x${exaggeration}, cap ${flatCap}, 최종Z ${TARGET_MAX_Z.toFixed(1)}`)
     
     // terrain 데이터를 ref에 저장 (경계선 별도 렌더링용)
     terrainDataRef.current = { elevations, minE, eRange, GRID, RANGE, MESH_SIZE, TARGET_MAX_Z, RANGE_LNG }
@@ -149,7 +159,9 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
         const dW = elevations[idx] - elevations[gy * GRID + gx - 1]
         const localSlope = Math.abs(dN) + Math.abs(dS) + Math.abs(dE) + Math.abs(dW)
         const noise = (Math.sin(gx * 3.7 + gy * 2.3) * 0.5 + Math.cos(gx * 1.3 - gy * 4.1) * 0.3) * localSlope * 0.02
-        verts[idx * 3 + 2] += noise * TARGET_MAX_Z * 0.1
+        // ★ 평탄지에서는 노이즈 최소화 (0.8% 경사가 울퉁불퉁해 보이는 문제 방지)
+        const noiseFactor = eRange < 3 ? 0.02 : eRange < 10 ? 0.05 : 0.1
+        verts[idx * 3 + 2] += noise * TARGET_MAX_Z * noiseFactor
       }
     }
 
@@ -162,7 +174,7 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
 
     // 높이별 색상 (초록 → 연두 → 노랑 → 갈색)
     // 평탄지(eRange < 5m)는 색상 범위를 좁혀서 거의 균일한 초록으로 표시
-    const colorIntensity = eRange < 3 ? 0.15 : eRange < 10 ? 0.5 : 1.0 // 색상 변화 강도
+    const colorIntensity = eRange < 2 ? 0.05 : eRange < 5 ? 0.12 : eRange < 10 ? 0.4 : 1.0 // 색상 변화 강도
     const colors = new Float32Array(GRID * GRID * 3)
     for (let i = 0; i < GRID * GRID; i++) {
       const hRaw = maxZ > 0 ? verts[i * 3 + 2] / maxZ : 0
