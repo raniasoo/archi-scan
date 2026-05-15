@@ -1179,7 +1179,7 @@ export function BuildingVolume3D({
       {/* ━━━ 스타일 선택 (2행, 스크롤 가능) ━━━ */}
       <div className="flex items-center gap-1 px-3 py-1.5 border-b border-white/5 bg-[#0a1628]/80 overflow-x-auto scrollbar-hide shrink-0">
         <span className="text-[9px] text-white/30 shrink-0 mr-1">스타일</span>
-        {STYLES.slice(0, 7).map(s => (
+        {STYLES.map(s => (
           <button key={s.id} onClick={() => setSelectedStyle(s.id)}
             className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] border transition-all ${selectedStyle === s.id ? 'bg-emerald-500/30 border-emerald-400 text-emerald-300' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'}`}>
             {s.emoji} {s.label}
