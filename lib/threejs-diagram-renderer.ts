@@ -5,6 +5,7 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import { getBuildingGeometry, type BuildingGeometry } from '@/lib/building-geometry'
+import { getPatternVisuals, type PatternVisuals } from '@/lib/alexander-patterns'
 
 export interface DiagramParams {
   type: string
@@ -136,6 +137,76 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   const typeKR: Record<string,string> = { tower:'타워형', linear:'판상형', lshape:'ㄱ자형', courtyard:'중정형', cluster:'클러스터형' }
   const typeLabel = typeKR[params.type] || params.type
 
+  // ━━━ 알렉산더 패턴 시각 요소 추출 ━━━
+  const pv = getPatternVisuals({
+    type: params.type, floors: params.floors, units: params.units,
+    coverage: params.coverage, siteArea: params.siteArea,
+    buildingCount: params.buildingCount,
+  })
+
+  // ━━━ 패턴 기반 3D 요소 추가 함수 ━━━
+  function addPatternElements(scene: any, mode: 'plan' | 'iso' | 'perspective') {
+    const hedgeMat = new THREE.MeshStandardMaterial({ color: 0x3a7a2a })
+    const benchMat = new THREE.MeshStandardMaterial({ color: 0x8B6914 })
+    const pathMat = new THREE.MeshStandardMaterial({ color: 0xc8b898 })
+
+    // #110 정원벽 — 대지 경계에 헤지
+    if (pv.hasGardenWall) {
+      const hw = 0.8, hh = 1.2, positions = [
+        [-S/2+0.5, hh/2, 0], [S/2-0.5, hh/2, 0],
+        [0, hh/2, -S/2+0.5],
+      ]
+      for (const [x, y, z] of positions) {
+        const hedgeLen = mode === 'plan' ? S*0.3 : S*0.25
+        const hedge = new THREE.Mesh(new THREE.BoxGeometry(hw, hh, hedgeLen), hedgeMat)
+        hedge.position.set(x, y, z); scene.add(hedge)
+      }
+    }
+
+    // #163 야외 방 — 퍼골라/벤치
+    if (pv.hasOutdoorRoom) {
+      const bench = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 0.8), benchMat)
+      bench.position.set(S*0.25, 0.25, -S*0.3); scene.add(bench)
+    }
+
+    // #112 조용한 입구 — 전이 포장
+    if (pv.hasQuietEntry) {
+      const path = new THREE.Mesh(new THREE.PlaneGeometry(2, S*0.3), pathMat)
+      path.rotation.x = -Math.PI/2; path.position.set(0, 0.05, S*0.35); scene.add(path)
+    }
+
+    // #73 놀이터
+    if (pv.hasPlayground && mode !== 'plan') {
+      const slide = new THREE.Mesh(new THREE.BoxGeometry(1, 1.5, 0.5), new THREE.MeshStandardMaterial({ color: 0xe85050 }))
+      slide.position.set(-S*0.2, 0.75, S*0.15); scene.add(slide)
+    }
+
+    // #170 과일 나무 (간단 원뿔)
+    if (pv.hasFruitTrees) {
+      const treeMat = new THREE.MeshStandardMaterial({ color: 0x2d8a2d })
+      const treePositions = [[S*0.3, 0, -S*0.25], [-S*0.3, 0, -S*0.2]]
+      for (const [tx, _, tz] of treePositions) {
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 2, 6), benchMat)
+        trunk.position.set(tx, 1, tz); scene.add(trunk)
+        const canopy = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 6), treeMat)
+        canopy.position.set(tx, 3, tz); scene.add(canopy)
+      }
+    }
+
+    hedgeMat.dispose(); benchMat.dispose(); pathMat.dispose()
+  }
+
+  // ━━━ 패턴 라벨 추가 함수 ━━━
+  function addPatternLabels(scene: any, x: number, y: number, z: number) {
+    const labels = pv.patternLabels.slice(0, 4)
+    labels.forEach((label, i) => {
+      addLabel(scene, label, x, y - i * 1.5, z, 1.2, '#1a6b1a')
+    })
+    if (pv.propertyLabels.length > 0) {
+      addLabel(scene, `속성: ${pv.propertyLabels.slice(0, 3).join(' · ')}`, x, y - labels.length * 1.5 - 1, z, 1, '#6a3399')
+    }
+  }
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ① 배치도 (Site Plan) — 위에서 내려다 봄
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -158,6 +229,9 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     addLabel(scene, `${typeLabel} 배치도`, 0, bH + 3, -S/2 - 2, 2.5, '#333333')
     addLabel(scene, 'N ↑', -S/2 + 2, bH + 2, -S/2 + 2, 2, '#2266cc')
     addLabel(scene, '도로', 0, 1, S/2 + (params.regulation?.roadWidth || 6)/2 + 2, 1.5, '#666666')
+    // 알렉산더 패턴 요소
+    addPatternElements(scene, 'plan')
+    addPatternLabels(scene, -S/2 - 5, bH + 8, 0)
     // 카메라 (위에서)
     const cam = new THREE.OrthographicCamera(-S*0.8, S*0.8, S*0.6, -S*0.8, 0.1, S*10)
     cam.position.set(0, S * 2, 0.01); cam.lookAt(0, 0, 0)
@@ -207,6 +281,10 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     // 건축면적 표시
     const fpArea = Math.round(geo.totalFootprint)
     addLabel(scene, `건축면적 ${fpArea}㎡`, 0, -2, bD/2 + dimOff + 3, 2, '#006644')
+    
+    // 알렉산더 패턴 요소
+    addPatternElements(scene, 'iso')
+    addPatternLabels(scene, -S*0.6, bH + 8, -S*0.3)
     
     // 카메라 (아이소메트릭 — 약간 더 멀리)
     const d = S * 1.5
@@ -293,6 +371,8 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
       new THREE.MeshStandardMaterial({ color: 0x444444 }))
     road.rotation.x = -Math.PI / 2; road.position.set(0, 0.05, S/2+5); scene.add(road)
     addLabel(scene, `투시도 · ${typeLabel} · ${params.floors}층 ${params.units || 1}세대`, 0, bH+4, 0, 2.5, '#333333')
+    // 알렉산더 패턴 요소
+    addPatternElements(scene, 'perspective')
     // 카메라 (원근)
     const cam = new THREE.PerspectiveCamera(35, 800/600, 0.1, S*10)
     cam.position.set(S*0.6, bH*0.8, S*0.9); cam.lookAt(0, bH*0.25, 0)

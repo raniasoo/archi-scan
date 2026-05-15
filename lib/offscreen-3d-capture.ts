@@ -4,6 +4,7 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import { getBuildingGeometry } from '@/lib/building-geometry'
+import { getPatternVisuals } from '@/lib/alexander-patterns'
 
 interface CaptureParams {
   type: string
@@ -113,6 +114,28 @@ export async function captureBuilding3D(params: CaptureParams): Promise<{ angle:
   const road = new THREE.Mesh(roadGeo, roadMat)
   road.rotation.x = -Math.PI / 2; road.position.set(0, 0.05, S / 2 + 5)
   scene.add(road)
+
+  // ━━━ 알렉산더 패턴 3D 요소 (AI 렌더링 참조용) ━━━
+  const pv = getPatternVisuals({ type, floors, units, coverage, siteArea, buildingCount })
+  const hedgeMat = new THREE.MeshStandardMaterial({ color: 0x3a7a2a })
+  // 정원벽 (헤지)
+  if (pv.hasGardenWall) {
+    for (const [hx, hz] of [[-S/2+0.5, 0], [S/2-0.5, 0], [0, -S/2+0.5]] as [number,number][]) {
+      const h = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1, S*0.2), hedgeMat)
+      h.position.set(hx, 0.5, hz); scene.add(h)
+    }
+  }
+  // 야외 벤치
+  if (pv.hasOutdoorRoom) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 0.6), new THREE.MeshStandardMaterial({ color: 0x8B6914 }))
+    b.position.set(S*0.2, 0.2, -S*0.25); scene.add(b)
+  }
+  // 입구 전이 포장
+  if (pv.hasQuietEntry) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(1.5, S*0.2), new THREE.MeshStandardMaterial({ color: 0xc8b898 }))
+    p.rotation.x = -Math.PI/2; p.position.set(0, 0.06, S*0.3); scene.add(p)
+  }
+  hedgeMat.dispose()
 
   // ━━━ 층수 라벨 (건물 정면에 "1F" "2F" 표시 → Gemini 층수 강제) ━━━
   const fH = floorHeight
