@@ -173,21 +173,45 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(S*1.5, S*1.5), new THREE.MeshStandardMaterial({ color: 0xd8e8d0 }))
     ground.rotation.x = -Math.PI / 2; scene.add(ground)
     addBuilding(scene, bldMat)
-    // 층수 라벨
-    for (let f = 0; f < params.floors; f++) {
-      addLabel(scene, `${f+1}F`, -S*0.35, f * fH + fH/2, S*0.35, 1.2, '#555555')
-    }
-    addLabel(scene, `${typeLabel} · ${params.floors}층`, 0, bH + 3, 0, 2, '#333333')
-    // 치수
+    
+    // 층 구분선 (건물 외벽에 수평선)
     const blk0 = geo.blocks[0]
     const bW = S * (blk0?.w || 0.5), bD = S * (blk0?.d || 0.5)
-    addDimLine(scene, [-bW/2, 0, bD/2+2], [bW/2, 0, bD/2+2], `${bW.toFixed(1)}m`)
-    addDimLine(scene, [bW/2+2, 0, -bD/2], [bW/2+2, 0, bD/2], `${bD.toFixed(1)}m`)
-    addDimLine(scene, [bW/2+3, 0, 0], [bW/2+3, bH, 0], `${bH.toFixed(1)}m`, 1)
-    // 카메라 (아이소메트릭)
-    const d = S * 1.2
-    const cam = new THREE.OrthographicCamera(-d, d, d*0.75, -d*0.5, 0.1, S*10)
-    cam.position.set(S*0.8, S*0.7, S*0.8); cam.lookAt(0, bH*0.3, 0)
+    for (let f = 0; f <= params.floors; f++) {
+      const y = f * fH
+      // 정면 층 구분선
+      const pts1 = [new THREE.Vector3(-bW/2, y, bD/2 + 0.1), new THREE.Vector3(bW/2, y, bD/2 + 0.1)]
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts1), new THREE.LineBasicMaterial({ color: 0x666666 })))
+      // 측면 층 구분선
+      const pts2 = [new THREE.Vector3(bW/2 + 0.1, y, -bD/2), new THREE.Vector3(bW/2 + 0.1, y, bD/2)]
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), new THREE.LineBasicMaterial({ color: 0x666666 })))
+    }
+    
+    // 층수 라벨 (건물 정면 우측에 크게 — 카메라에서 보이는 위치)
+    for (let f = 0; f < params.floors; f++) {
+      addLabel(scene, `${f+1}F`, bW/2 + 3, f * fH + fH/2, bD/2 + 1, 2.5, '#2255aa')
+    }
+    
+    // 타이틀
+    addLabel(scene, `${typeLabel} · ${params.floors}층 ${params.units || 1}세대`, 0, bH + 5, 0, 3, '#222222')
+    
+    // 치수선 (굵게, 건물에서 떨어진 위치)
+    // 가로 (건물 폭)
+    const dimOff = 5
+    addDimLine(scene, [-bW/2, 0, bD/2 + dimOff], [bW/2, 0, bD/2 + dimOff], `${bW.toFixed(1)}m`)
+    // 세로 (건물 깊이)  
+    addDimLine(scene, [bW/2 + dimOff, 0, -bD/2], [bW/2 + dimOff, 0, bD/2], `${bD.toFixed(1)}m`)
+    // 높이
+    addDimLine(scene, [bW/2 + dimOff + 2, 0, bD/2], [bW/2 + dimOff + 2, bH, bD/2], `H=${bH.toFixed(1)}m`, 2)
+    
+    // 건축면적 표시
+    const fpArea = Math.round(geo.totalFootprint)
+    addLabel(scene, `건축면적 ${fpArea}㎡`, 0, -2, bD/2 + dimOff + 3, 2, '#006644')
+    
+    // 카메라 (아이소메트릭 — 약간 더 멀리)
+    const d = S * 1.5
+    const cam = new THREE.OrthographicCamera(-d, d, d*0.7, -d*0.5, 0.1, S*10)
+    cam.position.set(S*0.9, S*0.8, S*0.9); cam.lookAt(0, bH*0.3, 0)
     renderer.render(scene, cam)
     results.push({ type: 'isometric', label: '아이소메트릭', image: canvas.toDataURL('image/png') })
   }
