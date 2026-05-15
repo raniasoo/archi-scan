@@ -66,7 +66,7 @@ export default function NearbyAnalysisCard({ lat, lng, address, buildingType, fl
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<NearbyAnalysisResult | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
 
   const fetchAnalysis = async () => {
     setLoading(true)
@@ -178,6 +178,9 @@ export default function NearbyAnalysisCard({ lat, lng, address, buildingType, fl
         </div>
       </div>
 
+      {/* ━━━ 접기/펼치기 대상 (입지 점수 아래 전체) ━━━ */}
+      {expanded && (<>
+
       {/* 시장 포지셔닝 */}
       <div className="px-4 py-3 border-b border-slate-100">
         <p className="text-[10px] font-semibold text-slate-500 mb-1">📊 시장 포지셔닝</p>
@@ -257,10 +260,7 @@ export default function NearbyAnalysisCard({ lat, lng, address, buildingType, fl
         <p className="text-xs text-slate-700 leading-relaxed">{a.recommendation}</p>
       </div>
 
-      {/* 확장 영역 */}
-      {expanded && (
-        <>
-          {/* 비교 대상 프로젝트 */}
+      {/* 비교 대상 프로젝트 */}
           {a.comparableProjects?.length > 0 && (
             <div className="px-4 py-3 border-b border-slate-100">
               <p className="text-[10px] font-semibold text-slate-500 mb-2">🏢 비교 대상 프로젝트</p>

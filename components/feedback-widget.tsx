@@ -64,7 +64,7 @@ export function FeedbackWidget() {
     <>
       {/* 피드백 프롬프트 (조건부) */}
       {showPrompt && !open && (
-        <div className="fixed bottom-20 right-4 z-50 bg-card border border-primary/30 rounded-xl p-3 shadow-lg max-w-[220px] animate-in slide-in-from-right">
+        <div className="fixed bottom-[120px] md:bottom-20 right-4 z-50 bg-card border border-primary/30 rounded-xl p-3 shadow-lg max-w-[220px] animate-in slide-in-from-right">
           <button onClick={dismissPrompt} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-muted flex items-center justify-center">
             <X className="h-3 w-3" />
           </button>
@@ -78,7 +78,7 @@ export function FeedbackWidget() {
       {/* 피드백 버튼 */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+        className="fixed bottom-[72px] md:bottom-4 right-4 z-40 w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
         title="피드백"
       >
         <MessageSquarePlus className="h-4 w-4" />
