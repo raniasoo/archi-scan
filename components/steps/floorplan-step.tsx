@@ -18,13 +18,14 @@ const ElevationView = dynamic(() => import("@/components/elevation-view").then(m
 const PerspectiveView = dynamic(() => import("@/components/perspective-view").then(m => ({ default: m.PerspectiveView })), { ssr: false, loading: LoadingBox })
 const SitePlan = dynamic(() => import("@/components/site-plan").then(m => ({ default: m.SitePlan })), { ssr: false, loading: LoadingBox })
 const AIFloorPlan = dynamic(() => import("@/components/ai-floorplan-renderer").then(m => ({ default: m.AIFloorPlan })), { ssr: false, loading: LoadingBox })
+const ThreeJSDiagrams = dynamic(() => import("@/components/threejs-diagrams").then(m => ({ default: m.ThreeJSDiagrams })), { ssr: false, loading: LoadingBox })
 
 export interface FloorplanStepProps {
   selectedLayoutData: LayoutOption
   selectedFloor: number
   setSelectedFloor: Dispatch<SetStateAction<number>>
-  drawingTab: "floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "ai-generate"
-  setDrawingTab: Dispatch<SetStateAction<"floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "ai-generate">>
+  drawingTab: "floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "ai-generate" | "3d-unified"
+  setDrawingTab: Dispatch<SetStateAction<"floor" | "site" | "iso" | "section" | "elevation" | "perspective" | "ai-generate" | "3d-unified">>
   floorPlanViewMode: "fit" | "original"
   setFloorPlanViewMode: Dispatch<SetStateAction<"fit" | "original">>
   isFloorPlanFullscreen: boolean
@@ -86,6 +87,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
   const tabs = [
     { id: "floor" as const, label: "기본 평면" },
     { id: "ai-generate" as const, label: "📐 상세평면도" },
+    { id: "3d-unified" as const, label: "🧊 3D 도면" },
     { id: "site" as const, label: "배치도" },
     { id: "iso" as const, label: "아이소" },
     { id: "perspective" as const, label: "투시도" },
@@ -209,6 +211,25 @@ export function FloorplanStep(props: FloorplanStepProps) {
                 front: molit.hasDistrictPlan ? 2 : 3,
                 side: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 1.5 : 1,
                 rear: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 2 : 1.5,
+              }}
+            />
+          )}
+
+          {/* 🧊 3D 통합 도면 — Three.js Single Source of Truth */}
+          {drawingTab === "3d-unified" && (
+            <ThreeJSDiagrams
+              type={selectedLayoutData.type}
+              coverage={selectedLayoutData.coverage}
+              siteArea={siteAreaNum}
+              floors={selectedLayoutData.floors}
+              units={selectedLayoutData.units}
+              buildingCount={selectedLayoutData.buildingCount}
+              originalType={selectedLayoutData._originalType}
+              regulation={{
+                frontSetback: regulation?.setbackFront ?? 3,
+                sideSetback: regulation?.setbackSide ?? 1.5,
+                rearSetback: regulation?.setbackRear ?? 2,
+                roadWidth: regulation?.roadWidth || 8,
               }}
             />
           )}
