@@ -125,14 +125,21 @@ export default function DashboardPage() {
     if (deleteConfirmText !== '회원탈퇴') return
     setDeleteProcessing(true)
     try {
-      const res = await fetch('/api/auth/delete-account', {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { alert('로그인 세션이 만료되었습니다.'); return }
+      
+      // ★ Supabase Edge Function 호출 (service_role 내장)
+      const res = await fetch('https://ntuqxbkcwpfmolejfxln.supabase.co/functions/v1/delete-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ confirmation: '회원탈퇴' }),
       })
       const data = await res.json()
       if (data.success) {
-        // localStorage 정리
         try {
           localStorage.removeItem('archi-render-usage')
           localStorage.removeItem('archi-projects')
