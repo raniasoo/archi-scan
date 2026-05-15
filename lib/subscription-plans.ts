@@ -16,6 +16,7 @@ export interface Plan {
   // ★ 렌더링 횟수 제한 (월간, -1 = 무제한)
   maxGeminiRenders: number
   maxControlNetRenders: number
+  max3DPhotoRenders: number
   features: string[]
   recommended?: boolean
 }
@@ -31,6 +32,7 @@ export const PLANS: Record<PlanTier, Plan> = {
     maxReports: 10,
     maxGeminiRenders: 5,
     maxControlNetRenders: 3,
+    max3DPhotoRenders: 3,
     features: [
       '월 5회 사업성 분석',
       '기본 배치안 4종',
@@ -38,6 +40,7 @@ export const PLANS: Record<PlanTier, Plan> = {
       '국토부 자동조회',
       'Gemini 렌더링 월 5회',
       'ControlNet 렌더링 월 3회',
+      '3D 포토리얼 월 3회',
     ],
   },
   pro: {
@@ -50,6 +53,7 @@ export const PLANS: Record<PlanTier, Plan> = {
     maxReports: -1,
     maxGeminiRenders: 20,
     maxControlNetRenders: 10,
+    max3DPhotoRenders: 10,
     recommended: true,
     features: [
       '무제한 사업성 분석',
@@ -57,6 +61,7 @@ export const PLANS: Record<PlanTier, Plan> = {
       'PDF + Excel 보고서',
       'Gemini 렌더링 월 20회',
       'ControlNet 정밀 렌더링 월 10회',
+      '3D 포토리얼 월 10회',
       '실거래가 트렌드 분석',
       '클라우드 프로젝트 저장',
       '우선 기술지원',
@@ -72,10 +77,12 @@ export const PLANS: Record<PlanTier, Plan> = {
     maxReports: -1,
     maxGeminiRenders: -1,
     maxControlNetRenders: 50,
+    max3DPhotoRenders: 30,
     features: [
       '프로 플랜 전체 기능',
       'Gemini 렌더링 무제한',
       'ControlNet 정밀 렌더링 월 50회',
+      '3D 포토리얼 월 30회',
       '팀 공유 및 권한 관리',
       '커스텀 브랜딩',
       '전용 기술 지원',
@@ -120,9 +127,9 @@ export function canUseControlNetRender(tier: PlanTier, currentCount: number): bo
   return currentCount < plan.maxControlNetRenders
 }
 
-export function getRenderLimits(tier: PlanTier): { gemini: number; controlNet: number } {
+export function getRenderLimits(tier: PlanTier): { gemini: number; controlNet: number; photo3D: number } {
   const plan = getPlan(tier)
-  return { gemini: plan.maxGeminiRenders, controlNet: plan.maxControlNetRenders }
+  return { gemini: plan.maxGeminiRenders, controlNet: plan.maxControlNetRenders, photo3D: plan.max3DPhotoRenders }
 }
 
 export function getRenderUsageLabel(limit: number, used: number): string {

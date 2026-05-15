@@ -6,6 +6,7 @@ import { X, RotateCcw, ZoomIn, ZoomOut, Camera, Loader2 } from "lucide-react"
 import { getBuildingGeometry, getClusterBlocks, type BuildingBlock } from "@/lib/building-geometry"
 import { getPatternVisuals } from "@/lib/alexander-patterns"
 import { STYLES } from "@/components/ai-hub"
+import { getRenderLimits, getRenderUsageLabel } from "@/lib/subscription-plans"
 
 interface BuildingVolume3DProps {
   layoutName: string
@@ -159,8 +160,41 @@ export function BuildingVolume3D({
   const [photoScore, setPhotoScore] = useState('')
   const [selectedStyle, setSelectedStyle] = useState('modern-luxury')
 
+  // ★ 3D 포토리얼 횟수 추적
+  const get3DPhotoUsage = () => {
+    try {
+      const stored = localStorage.getItem('archi-render-usage')
+      if (!stored) return 0
+      const data = JSON.parse(stored)
+      const currentMonth = new Date().toISOString().slice(0, 7)
+      if (data.month !== currentMonth) return 0
+      return data.photo3D || 0
+    } catch { return 0 }
+  }
+  const track3DPhoto = () => {
+    try {
+      const stored = localStorage.getItem('archi-render-usage')
+      const data = stored ? JSON.parse(stored) : {}
+      data.month = new Date().toISOString().slice(0, 7)
+      data.photo3D = (data.photo3D || 0) + 1
+      localStorage.setItem('archi-render-usage', JSON.stringify(data))
+    } catch {}
+  }
+
   // Three.js 5방향 캡처 → Gemini/ControlNet 포토리얼 변환
   const captureAndConvert = async () => {
+    // ★ 횟수 제한 체크
+    const limits = getRenderLimits('pro') // TODO: 실제 유저 tier
+    const used = get3DPhotoUsage()
+    if (limits.photo3D !== -1 && used >= limits.photo3D) {
+      try { 
+        const { toast } = await import('sonner')
+        toast.error(`3D 포토리얼 월 ${limits.photo3D}회 한도를 초과했습니다.`, {
+          action: { label: '플랜 업그레이드', onClick: () => window.open('/pricing', '_blank') },
+        })
+      } catch {}
+      return
+    }
     const canvas = canvasRef.current
     const renderer = rendererRef.current
     const camera = cameraRef.current
@@ -272,6 +306,7 @@ export function BuildingVolume3D({
       if (data.success && data.image) {
         setPhotoResult(data.image)
         setPhotoScore(data.score ? `${data.score}점 (${data.floorsDetected}층 감지, 형태 ${data.shapeMatch})` : '')
+        track3DPhoto() // ★ 횟수 기록
       } else {
         console.error('[3D-PHOTO]', data.error)
         try { 
