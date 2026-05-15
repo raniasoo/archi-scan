@@ -1158,30 +1158,13 @@ export function BuildingVolume3D({
 
   return (
     <div className="fixed inset-0 z-[200] bg-[#060d1a] flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0 bg-gradient-to-r from-[#0a1628] to-[#0f2540]">
-        <div className="flex items-center gap-3">
-          <div>
-            <p className="text-sm font-bold text-white">{layoutName}</p>
-            <p className="text-[10px] text-blue-300/80">{LABELS[layoutType]} · {floors}층 {units ? `${units}세대` : ''} · {siteArea.toLocaleString()}㎡{parking ? ` · P${parking}대` : ''}</p>
-          </div>
-          {/* 📸 스타일 선택 */}
-          <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
-            {STYLES.slice(0, 7).map(s => (
-              <button key={s.id} onClick={() => setSelectedStyle(s.id)}
-                className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] border transition-all ${selectedStyle === s.id ? 'bg-emerald-500/30 border-emerald-400 text-emerald-300' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'}`}>
-                {s.emoji} {s.label}
-              </button>
-            ))}
-          </div>
-          {blockInfo.length > 1 && (
-            <div className="hidden sm:flex gap-1.5">
-              {blockInfo.map((b, i) => (
-                <span key={i} className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 text-[10px] font-medium border border-blue-500/20">{b.label} {b.floors}F</span>
-              ))}
-            </div>
-          )}
+      {/* ━━━ 헤더: 이름 + 컨트롤 (1행) ━━━ */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 shrink-0 bg-gradient-to-r from-[#0a1628] to-[#0f2540]">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-white truncate">{layoutName}</p>
+          <p className="text-[10px] text-blue-300/80 truncate">{LABELS[layoutType]} · {floors}층 {units ? `${units}세대` : ''} · {siteArea.toLocaleString()}㎡{parking ? ` · P${parking}대` : ''}</p>
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1 shrink-0 ml-2">
           {[
             { icon: <ZoomIn className="h-4 w-4"/>, fn: () => { zoom.current = Math.min(4, zoom.current + 0.25) } },
             { icon: <ZoomOut className="h-4 w-4"/>, fn: () => { zoom.current = Math.max(0.3, zoom.current - 0.25) } },
@@ -1189,9 +1172,19 @@ export function BuildingVolume3D({
             { icon: photoLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Camera className="h-4 w-4"/>, fn: captureAndConvert },
             { icon: <X className="h-4 w-4"/>, fn: onClose },
           ].map((btn, i) => (
-            <button key={i} onClick={btn.fn} className="p-2 rounded-lg bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-colors">{btn.icon}</button>
+            <button key={i} onClick={btn.fn} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-colors">{btn.icon}</button>
           ))}
         </div>
+      </div>
+      {/* ━━━ 스타일 선택 (2행, 스크롤 가능) ━━━ */}
+      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-white/5 bg-[#0a1628]/80 overflow-x-auto scrollbar-hide shrink-0">
+        <span className="text-[9px] text-white/30 shrink-0 mr-1">스타일</span>
+        {STYLES.slice(0, 7).map(s => (
+          <button key={s.id} onClick={() => setSelectedStyle(s.id)}
+            className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] border transition-all ${selectedStyle === s.id ? 'bg-emerald-500/30 border-emerald-400 text-emerald-300' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'}`}>
+            {s.emoji} {s.label}
+          </button>
+        ))}
       </div>
       <div ref={containerRef} className="flex-1 relative overflow-hidden">
         {!loaded && !error && (
