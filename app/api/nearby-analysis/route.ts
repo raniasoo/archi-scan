@@ -183,13 +183,18 @@ interface RealPriceData {
 }
 
 async function fetchRealPrices(address: string): Promise<RealPriceData | null> {
-  if (!MOLIT_API_KEY) return null
+  if (!MOLIT_API_KEY) {
+    console.log('[REAL-PRICE] MOLIT_API_KEY 미설정')
+    return null
+  }
   
   const lawdCd = extractLawdCd(address)
   if (!lawdCd) {
     console.log('[REAL-PRICE] LAWD_CD not found for:', address)
     return null
   }
+  
+  console.log(`[REAL-PRICE] 시작: ${address} → LAWD_CD: ${lawdCd}`)
   
   // 최근 3개월 조회
   const now = new Date()
@@ -203,9 +208,12 @@ async function fetchRealPrices(address: string): Promise<RealPriceData | null> {
   
   for (const dealYmd of months) {
     try {
-      const url = `http://openapi.molit.go.kr/OpenAPI_ToolInstall/service/rest/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev?serviceKey=${encodeURIComponent(MOLIT_API_KEY)}&LAWD_CD=${lawdCd}&DEAL_YMD=${dealYmd}&pageNo=1&numOfRows=30`
+      // HTTPS 우선 시도
+      const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev?serviceKey=${encodeURIComponent(MOLIT_API_KEY)}&LAWD_CD=${lawdCd}&DEAL_YMD=${dealYmd}&pageNo=1&numOfRows=30`
+      console.log(`[REAL-PRICE] 조회: ${dealYmd}, URL length: ${url.length}`)
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
       const text = await res.text()
+      console.log(`[REAL-PRICE] ${dealYmd} 응답: ${res.status}, length: ${text.length}, preview: ${text.slice(0, 200)}`)
       
       // XML 파싱 (간단한 정규식)
       const items = text.match(/<item>([\s\S]*?)<\/item>/g) || []
