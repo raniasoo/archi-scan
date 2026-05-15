@@ -178,15 +178,16 @@ export async function POST(req: NextRequest) {
     console.log(`[ControlNet] Prompt: ${fullPrompt.slice(0, 200)}...`)
     console.log(`[ControlNet] Control image size: ${Math.round(controlImage.length / 1024)}KB`)
 
-    // Replicate prediction 생성
-    const predictionRes = await fetch('https://api.replicate.com/v1/predictions', {
+    // Replicate prediction 생성 (models endpoint)
+    const modelPath = model.replace('/', '/')  // e.g. black-forest-labs/flux-canny-pro
+    const predictionRes = await fetch(`https://api.replicate.com/v1/models/${modelPath}/predictions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${REPLICATE_API_TOKEN}`,
         'Content-Type': 'application/json',
+        'Prefer': 'wait=120',
       },
       body: JSON.stringify({
-        model,
         input: {
           prompt: fullPrompt,
           control_image: controlImageUrl,

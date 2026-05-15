@@ -114,15 +114,15 @@ export async function GET(req: NextRequest) {
   const prompt = `Photorealistic architectural rendering of a ${test.floors}-story modern residential building. ${test.angle === 'birds-eye' ? 'Aerial birds-eye view from 45 degrees above.' : 'Eye-level street perspective.'} Located in ${test.address}, South Korea. White concrete facade with glass balconies, warm wood accents. Golden afternoon sunlight, mature trees, clean sidewalks. Professional architectural photography quality.`
 
   try {
-    // 2. Replicate prediction 생성
-    const predRes = await fetch('https://api.replicate.com/v1/predictions', {
+    // 2. Replicate prediction 생성 (models endpoint)
+    const predRes = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-canny-pro/predictions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${REPLICATE_API_TOKEN}`,
         'Content-Type': 'application/json',
+        'Prefer': 'wait',
       },
       body: JSON.stringify({
-        model: 'black-forest-labs/flux-canny-pro',
         input: {
           prompt,
           control_image: controlImage,
