@@ -361,7 +361,9 @@ export interface ExportData {
     totalPatternScore: number;
     totalLivingScore: number;
     philosophy: string;
-    topPatterns: { id: number; nameKr: string; score: number }[];
+    topPatterns: { id: number; nameKr: string; score: number; description?: string; category?: string }[];
+    livingStructure?: { propertyKr: string; score: number; reason: string }[];
+    categoryBreakdown?: { town: number; building: number; construction: number };
   };
   aiRenderImage?: string | null;
   aiMultiImages?: {angle: string; image: string | null}[] | null;
@@ -621,6 +623,228 @@ export function downloadExcel(data: ExportData): { success: boolean; error?: str
     console.error('[v0] downloadExcel 오류:', message, error);
     return { success: false, error: message };
   }
+}
+
+// ============================================
+// 15속성 레이더 차트 SVG 생성기
+// ============================================
+
+function generateRadarChartSVG(livingStructure: { propertyKr: string; score: number }[]): string {
+  const cx = 250, cy = 250, maxR = 150
+  const n = livingStructure.length
+  if (n === 0) return ''
+  
+  const angleStep = (2 * Math.PI) / n
+  
+  // 배경 다각형 (20, 40, 60, 80, 100 레벨)
+  const bgPolygons = [20, 40, 60, 80, 100].map(level => {
+    const r = (level / 100) * maxR
+    const pts = Array.from({ length: n }, (_, i) => {
+      const angle = -Math.PI / 2 + i * angleStep
+      return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`
+    }).join(' ')
+    return `<polygon points="${pts}" fill="none" stroke="#e2e8f0" stroke-width="${level === 100 ? 1.5 : 0.5}" />`
+  }).join('\n    ')
+  
+  // 축 선
+  const axisLines = Array.from({ length: n }, (_, i) => {
+    const angle = -Math.PI / 2 + i * angleStep
+    const x2 = cx + maxR * Math.cos(angle)
+    const y2 = cy + maxR * Math.sin(angle)
+    return `<line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" stroke="#e2e8f0" stroke-width="0.5" />`
+  }).join('\n    ')
+  
+  // 데이터 다각형
+  const dataPoints = livingStructure.map((ls, i) => {
+    const r = (ls.score / 100) * maxR
+    const angle = -Math.PI / 2 + i * angleStep
+    return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`
+  }).join(' ')
+  
+  // 레이블 (각 꼭짓점 바깥에)
+  const labels = livingStructure.map((ls, i) => {
+    const angle = -Math.PI / 2 + i * angleStep
+    const labelR = maxR + 40
+    const x = cx + labelR * Math.cos(angle)
+    const y = cy + labelR * Math.sin(angle)
+    const anchor = Math.abs(Math.cos(angle)) < 0.1 ? 'middle' : Math.cos(angle) > 0 ? 'start' : 'end'
+    const dy = Math.abs(Math.sin(angle)) > 0.9 ? (Math.sin(angle) > 0 ? 14 : -6) : 4
+    return `<text x="${x}" y="${y}" dy="${dy}" text-anchor="${anchor}" font-size="9" fill="#475569" font-family="Pretendard,sans-serif">${ls.propertyKr}</text>
+    <text x="${x}" y="${y}" dy="${dy + 12}" text-anchor="${anchor}" font-size="8" fill="#94a3b8" font-family="Pretendard,sans-serif">${ls.score}점</text>`
+  }).join('\n    ')
+  
+  // 데이터 포인트 원
+  const dots = livingStructure.map((ls, i) => {
+    const r = (ls.score / 100) * maxR
+    const angle = -Math.PI / 2 + i * angleStep
+    const x = cx + r * Math.cos(angle)
+    const y = cy + r * Math.sin(angle)
+    return `<circle cx="${x}" cy="${y}" r="3.5" fill="#0d9488" stroke="white" stroke-width="1.5" />`
+  }).join('\n    ')
+  
+  return `<svg viewBox="0 0 500 500" width="420" height="420" xmlns="http://www.w3.org/2000/svg" style="margin:0 auto; display:block;">
+    ${bgPolygons}
+    ${axisLines}
+    <polygon points="${dataPoints}" fill="rgba(20,184,166,0.15)" stroke="#0d9488" stroke-width="2" />
+    ${dots}
+    ${labels}
+  </svg>`
+}
+
+function generatePatternAnalysisHTML(pq: NonNullable<ExportData['patternQuality']>): string {
+  const ls = pq.livingStructure || []
+  const cat = pq.categoryBreakdown || { town: 0, building: 0, construction: 0 }
+  const radarSVG = generateRadarChartSVG(ls)
+  
+  // 등급별 배경 그라데이션 색상
+  const gradeBg = pq.grade === 'S' ? '#f0fdfa' : pq.grade === 'A' ? '#ecfdf5' : pq.grade === 'B' ? '#f0f9ff' : '#fefce8'
+  
+  // 카테고리 아이콘/라벨
+  const catLabels = [
+    { key: 'town', label: '도시·단지', score: cat.town, color: '#8b5cf6', icon: '🏘️' },
+    { key: 'building', label: '건물·공간', score: cat.building, color: '#0d9488', icon: '🏛️' },
+    { key: 'construction', label: '시공·디테일', score: cat.construction, color: '#2563eb', icon: '🔩' },
+  ]
+  
+  // ─── 페이지 1: 레이더 차트 + 종합 평가 ───
+  let html = `
+    <!-- 패턴 분석 페이지 1: 설계 품질 종합 분석 -->
+    <section class="pdf-section" style="page-break-before:always;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:4px; height:28px; background:linear-gradient(180deg,#0d9488,#06b6d4); border-radius:2px;"></div>
+        <div>
+          <h2 style="font-size:18px; font-weight:800; color:#0f172a; margin:0; letter-spacing:-0.5px;">설계 품질 종합 분석</h2>
+          <p style="font-size:10px; color:#94a3b8; margin:2px 0 0 0;">Christopher Alexander · A Pattern Language (1977) + The Nature of Order (2002)</p>
+        </div>
+      </div>
+      
+      <!-- 상단: 등급 + 점수 요약 -->
+      <div style="display:grid; grid-template-columns:auto 1fr; gap:16px; margin-bottom:20px; padding:16px; background:${gradeBg}; border-radius:12px; border:1px solid ${pq.gradeColor}30;">
+        <div style="text-align:center; min-width:100px;">
+          <p style="font-size:10px; color:#64748b; margin:0 0 4px 0; font-weight:600;">종합 등급</p>
+          <p style="font-size:52px; font-weight:900; color:${pq.gradeColor}; margin:0; line-height:1; letter-spacing:-2px;">${pq.grade}</p>
+          <p style="font-size:20px; font-weight:700; color:#1e293b; margin:4px 0 0 0;">${pq.overallQuality}<span style="font-size:12px; color:#94a3b8;">점</span></p>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; align-items:center;">
+          <div style="padding:10px; background:white; border-radius:8px; text-align:center; border:1px solid #e2e8f0;">
+            <p style="font-size:9px; color:#64748b; margin:0 0 2px 0;">패턴 적합도</p>
+            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${pq.totalPatternScore}</p>
+          </div>
+          <div style="padding:10px; background:white; border-radius:8px; text-align:center; border:1px solid #e2e8f0;">
+            <p style="font-size:9px; color:#64748b; margin:0 0 2px 0;">Living Structure</p>
+            <p style="font-size:22px; font-weight:700; color:#0369a1; margin:0;">${pq.totalLivingScore}</p>
+          </div>
+          <div style="padding:10px; background:white; border-radius:8px; text-align:center; border:1px solid #e2e8f0;">
+            <p style="font-size:9px; color:#64748b; margin:0 0 2px 0;">종합 품질</p>
+            <p style="font-size:22px; font-weight:700; color:${pq.gradeColor}; margin:0;">${pq.overallQuality}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 15속성 레이더 차트 -->
+      <div style="margin-bottom:18px;">
+        <p style="font-size:12px; font-weight:700; color:#0f172a; margin:0 0 10px 0;">The Nature of Order — 15가지 구조적 속성</p>
+        <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:16px; text-align:center;">
+          ${radarSVG}
+        </div>
+      </div>
+
+      <!-- 카테고리별 평균 점수 -->
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;">
+        ${catLabels.map(c => `
+        <div style="padding:12px; background:white; border:1px solid #e2e8f0; border-radius:10px; text-align:center;">
+          <p style="font-size:18px; margin:0 0 4px 0;">${c.icon}</p>
+          <p style="font-size:10px; color:#64748b; margin:0 0 4px 0; font-weight:600;">${c.label}</p>
+          <p style="font-size:24px; font-weight:800; color:${c.color}; margin:0;">${c.score}<span style="font-size:11px; color:#94a3b8;">점</span></p>
+        </div>
+        `).join('')}
+      </div>
+
+      <!-- 설계 철학 -->
+      <div style="background:#f8fafb; border:1px solid #e2e8f0; border-left:4px solid #0d9488; border-radius:8px; padding:14px;">
+        <p style="font-size:11px; font-weight:700; color:#0f766e; margin:0 0 6px 0;">🏛️ 설계 철학</p>
+        <p style="font-size:11px; color:#334155; line-height:1.7; margin:0;">${pq.philosophy}</p>
+      </div>
+    </section>`
+  
+  // ─── 페이지 2: Top 10 패턴 + 15속성 상세 ───
+  html += `
+    <!-- 패턴 분석 페이지 2: 적용 패턴 상세 -->
+    <section class="pdf-section" style="page-break-before:always;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:4px; height:28px; background:linear-gradient(180deg,#8b5cf6,#6366f1); border-radius:2px;"></div>
+        <div>
+          <h2 style="font-size:18px; font-weight:800; color:#0f172a; margin:0; letter-spacing:-0.5px;">적용 패턴 상세 분석</h2>
+          <p style="font-size:10px; color:#94a3b8; margin:2px 0 0 0;">A Pattern Language 253개 패턴 중 본 프로젝트에 적용된 핵심 패턴</p>
+        </div>
+      </div>
+
+      <!-- Top 10 패턴 테이블 -->
+      <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:18px;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:8px 6px; text-align:center; color:#64748b; font-weight:600; width:40px;">순위</th>
+            <th style="padding:8px 6px; text-align:left; color:#64748b; font-weight:600; width:50px;">패턴</th>
+            <th style="padding:8px 6px; text-align:left; color:#64748b; font-weight:600;">이름</th>
+            <th style="padding:8px 6px; text-align:left; color:#64748b; font-weight:600;">적용 상태</th>
+            <th style="padding:8px 6px; text-align:right; color:#64748b; font-weight:600; width:50px;">점수</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${pq.topPatterns.map((p, i) => {
+            const barColor = p.score >= 80 ? '#10b981' : p.score >= 60 ? '#f59e0b' : '#ef4444'
+            const catBadge = p.category === 'town' ? '<span style="background:#ede9fe; color:#7c3aed; padding:1px 5px; border-radius:3px; font-size:8px;">도시</span>'
+              : p.category === 'building' ? '<span style="background:#ccfbf1; color:#0f766e; padding:1px 5px; border-radius:3px; font-size:8px;">건물</span>'
+              : '<span style="background:#dbeafe; color:#2563eb; padding:1px 5px; border-radius:3px; font-size:8px;">시공</span>'
+            return `<tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:6px; text-align:center; font-weight:700; color:${i < 3 ? '#0d9488' : '#64748b'};">${i + 1}</td>
+              <td style="padding:6px; color:#0d9488; font-weight:600;">#${p.id}</td>
+              <td style="padding:6px; color:#1e293b;">${p.nameKr} ${catBadge}</td>
+              <td style="padding:6px; color:#475569; font-size:9px; line-height:1.4;">${p.description || ''}</td>
+              <td style="padding:6px; text-align:right;">
+                <div style="display:inline-flex; align-items:center; gap:4px;">
+                  <div style="width:40px; height:6px; background:#f1f5f9; border-radius:3px; overflow:hidden;">
+                    <div style="width:${p.score}%; height:100%; background:${barColor}; border-radius:3px;"></div>
+                  </div>
+                  <span style="font-weight:700; color:#0f172a;">${p.score}</span>
+                </div>
+              </td>
+            </tr>`
+          }).join('')}
+        </tbody>
+      </table>
+
+      <!-- 15속성 상세 그리드 -->
+      <p style="font-size:12px; font-weight:700; color:#0f172a; margin:0 0 10px 0;">15가지 구조적 속성 상세</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;">
+        ${(ls || []).map(attr => {
+          const scoreColor = attr.score >= 80 ? '#059669' : attr.score >= 60 ? '#d97706' : '#dc2626'
+          const barWidth = attr.score
+          return `<div style="padding:8px 10px; background:#fafafa; border:1px solid #e2e8f0; border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:10px; font-weight:600; color:#1e293b;">${attr.propertyKr}</span>
+              <span style="font-size:11px; font-weight:700; color:${scoreColor};">${attr.score}</span>
+            </div>
+            <div style="width:100%; height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin-bottom:4px;">
+              <div style="width:${barWidth}%; height:100%; background:${scoreColor}; border-radius:2px;"></div>
+            </div>
+            <p style="font-size:8px; color:#94a3b8; margin:0; line-height:1.3;">${attr.reason}</p>
+          </div>`
+        }).join('')}
+      </div>
+
+      <!-- 출처 및 참고문헌 -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-top:auto;">
+        <p style="font-size:9px; font-weight:600; color:#64748b; margin:0 0 4px 0;">참고문헌</p>
+        <p style="font-size:8px; color:#94a3b8; line-height:1.6; margin:0;">
+          • Christopher Alexander, Sara Ishikawa, Murray Silverstein, <i>A Pattern Language</i>, Oxford University Press, 1977<br/>
+          • Christopher Alexander, <i>The Nature of Order</i> (Books 1–4), Center for Environmental Structure, 2002–2005<br/>
+          • 본 분석은 253개 패턴 라이브러리와 15가지 구조적 속성(Properties of Life)을 기반으로 자동 평가되었습니다.
+        </p>
+      </div>
+    </section>`
+  
+  return html
 }
 
 // ============================================
@@ -2002,45 +2226,8 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     </section>
 
     
-    <!-- 8.5 설계 품질 평가 (Alexander Pattern Language) -->
-    ${data.patternQuality ? `
-    <section class="pdf-section pdf-card-group">
-      <h2 class="section-title" style="margin-bottom:12px;">설계 품질 평가</h2>
-      <p style="font-size:11px; color:#64748b; margin-bottom:12px;">Alexander Pattern Language · The Nature of Order 기반</p>
-      
-      <div style="display:grid; grid-template-columns:1fr 2fr; gap:12px; margin-bottom:14px;">
-        <div style="text-align:center; padding:16px; background:${data.patternQuality.gradeColor}15; border:2px solid ${data.patternQuality.gradeColor}; border-radius:12px;">
-          <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">종합 등급</p>
-          <p style="font-size:36px; font-weight:800; color:${data.patternQuality.gradeColor}; margin:0; line-height:1;">${data.patternQuality.grade}</p>
-          <p style="font-size:18px; font-weight:700; color:#1e293b; margin:4px 0 0 0;">${data.patternQuality.overallQuality}점</p>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-          <div style="padding:12px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; text-align:center;">
-            <p style="font-size:10px; color:#64748b; margin:0 0 4px 0;">패턴 점수</p>
-            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${data.patternQuality.totalPatternScore}</p>
-          </div>
-          <div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; text-align:center;">
-            <p style="font-size:10px; color:#64748b; margin:0 0 4px 0;">Living Structure</p>
-            <p style="font-size:22px; font-weight:700; color:#0369a1; margin:0;">${data.patternQuality.totalLivingScore}</p>
-          </div>
-        </div>
-      </div>
-
-      <div style="background:#f8fafb; border:1px solid #e2e8f0; border-left:4px solid #14b8a6; border-radius:8px; padding:12px; margin-bottom:14px;">
-        <p style="font-size:11px; font-weight:700; color:#0f766e; margin:0 0 6px 0;">설계 철학</p>
-        <p style="font-size:11px; color:#334155; line-height:1.6; margin:0;">${data.patternQuality.philosophy}</p>
-      </div>
-
-      <p style="font-size:11px; font-weight:600; color:#334155; margin-bottom:8px;">핵심 패턴 평가</p>
-      <table style="width:100%; border-collapse:collapse; font-size:11px;">
-        <thead><tr style="background:#f1f5f9;"><th style="padding:6px 8px; text-align:left; color:#64748b;">패턴</th><th style="padding:6px 8px; text-align:left; color:#64748b;">이름</th><th style="padding:6px 8px; text-align:right; color:#64748b;">점수</th></tr></thead>
-        <tbody>
-          ${data.patternQuality.topPatterns.map(p => `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:5px 8px; color:#14b8a6; font-weight:600;">#${p.id}</td><td style="padding:5px 8px; color:#334155;">${p.nameKr}</td><td style="padding:5px 8px; text-align:right; font-weight:600;">${p.score}</td></tr>`).join('')}
-        </tbody>
-      </table>
-      <p style="font-size:9px; color:#94a3b8; margin-top:8px; text-align:center;">Christopher Alexander, A Pattern Language (1977)</p>
-    </section>
-    ` : ''}
+    <!-- 설계 품질 종합 분석 (Alexander Pattern Language 2페이지) -->
+    ${data.patternQuality ? generatePatternAnalysisHTML(data.patternQuality) : ''}
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
     <section class="pdf-section pdf-section">
@@ -4111,45 +4298,8 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
     </section>
 
     
-    <!-- 8.5 설계 품질 평가 (Alexander Pattern Language) -->
-    ${patternQuality ? `
-    <section class="pdf-section pdf-card-group">
-      <h2 class="section-title" style="margin-bottom:12px;">설계 품질 평가</h2>
-      <p style="font-size:11px; color:#64748b; margin-bottom:12px;">Alexander Pattern Language · The Nature of Order 기반</p>
-      
-      <div style="display:grid; grid-template-columns:1fr 2fr; gap:12px; margin-bottom:14px;">
-        <div style="text-align:center; padding:16px; background:${patternQuality.gradeColor}15; border:2px solid ${patternQuality.gradeColor}; border-radius:12px;">
-          <p style="font-size:11px; color:#64748b; margin:0 0 6px 0;">종합 등급</p>
-          <p style="font-size:36px; font-weight:800; color:${patternQuality.gradeColor}; margin:0; line-height:1;">${patternQuality.grade}</p>
-          <p style="font-size:18px; font-weight:700; color:#1e293b; margin:4px 0 0 0;">${patternQuality.overallQuality}점</p>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-          <div style="padding:12px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; text-align:center;">
-            <p style="font-size:10px; color:#64748b; margin:0 0 4px 0;">패턴 점수</p>
-            <p style="font-size:22px; font-weight:700; color:#0f766e; margin:0;">${patternQuality.totalPatternScore}</p>
-          </div>
-          <div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; text-align:center;">
-            <p style="font-size:10px; color:#64748b; margin:0 0 4px 0;">Living Structure</p>
-            <p style="font-size:22px; font-weight:700; color:#0369a1; margin:0;">${patternQuality.totalLivingScore}</p>
-          </div>
-        </div>
-      </div>
-
-      <div style="background:#f8fafb; border:1px solid #e2e8f0; border-left:4px solid #14b8a6; border-radius:8px; padding:12px; margin-bottom:14px;">
-        <p style="font-size:11px; font-weight:700; color:#0f766e; margin:0 0 6px 0;">설계 철학</p>
-        <p style="font-size:11px; color:#334155; line-height:1.6; margin:0;">${patternQuality.philosophy}</p>
-      </div>
-
-      <p style="font-size:11px; font-weight:600; color:#334155; margin-bottom:8px;">핵심 패턴 평가</p>
-      <table style="width:100%; border-collapse:collapse; font-size:11px;">
-        <thead><tr style="background:#f1f5f9;"><th style="padding:6px 8px; text-align:left; color:#64748b;">패턴</th><th style="padding:6px 8px; text-align:left; color:#64748b;">이름</th><th style="padding:6px 8px; text-align:right; color:#64748b;">점수</th></tr></thead>
-        <tbody>
-          ${patternQuality.topPatterns.map(p => `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:5px 8px; color:#14b8a6; font-weight:600;">#${p.id}</td><td style="padding:5px 8px; color:#334155;">${p.nameKr}</td><td style="padding:5px 8px; text-align:right; font-weight:600;">${p.score}</td></tr>`).join('')}
-        </tbody>
-      </table>
-      <p style="font-size:9px; color:#94a3b8; margin-top:8px; text-align:center;">Christopher Alexander, A Pattern Language (1977)</p>
-    </section>
-    ` : ''}
+    <!-- 설계 품질 종합 분석 (Alexander Pattern Language 2페이지) -->
+    ${patternQuality ? generatePatternAnalysisHTML(patternQuality) : ''}
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
     <section class="pdf-section pdf-section">

@@ -125,6 +125,12 @@ export function buildExportData(params: BuildExportDataParams): ExportData {
           siteArea: siteAreaNum,
           strategy: (params.strategy as string) || 'profitability',
         }, params.userValues)
+        
+        // 카테고리별 분류
+        const townPatterns = pq.patterns.filter(p => p.category === 'town')
+        const buildingPatterns = pq.patterns.filter(p => p.category === 'building')
+        const constructionPatterns = pq.patterns.filter(p => p.category === 'construction')
+        
         return {
           overallQuality: pq.overallQuality,
           grade: pq.grade,
@@ -134,8 +140,18 @@ export function buildExportData(params: BuildExportDataParams): ExportData {
           philosophy: pq.philosophy,
           topPatterns: pq.patterns
             .sort((a, b) => b.score - a.score)
-            .slice(0, 6)
-            .map(p => ({ id: p.id, nameKr: p.nameKr, score: p.score })),
+            .slice(0, 10)
+            .map(p => ({ id: p.id, nameKr: p.nameKr, score: p.score, description: p.description, category: p.category })),
+          livingStructure: pq.livingStructure.map(ls => ({
+            propertyKr: ls.propertyKr,
+            score: ls.score,
+            reason: ls.reason,
+          })),
+          categoryBreakdown: {
+            town: townPatterns.length > 0 ? Math.round(townPatterns.reduce((s, p) => s + p.score, 0) / townPatterns.length) : 0,
+            building: buildingPatterns.length > 0 ? Math.round(buildingPatterns.reduce((s, p) => s + p.score, 0) / buildingPatterns.length) : 0,
+            construction: constructionPatterns.length > 0 ? Math.round(constructionPatterns.reduce((s, p) => s + p.score, 0) / constructionPatterns.length) : 0,
+          },
         }
       } catch { return undefined }
     })(),
