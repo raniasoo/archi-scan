@@ -575,14 +575,21 @@ export default function ArchiScanPage() {
   // 공시지가 state
   // 건물관리번호 - 지적도 PNU 조회용 독립 state (molitSupplementData chain 우회)
   
-  // 실거래가 시세 데이터
+  // 실거래가 시세 데이터 (v2: 유형별 분리)
+  type PropertyType = 'apt' | 'villa' | 'officetel'
+  type TypeStats = { avgPricePerM2: number; avgPricePerPyeong: number; transactionCount: number; priceRange: { min: number; max: number }; suggestedSalePrice: number; transactions: any[] }
   const [marketPrice, setMarketPrice] = useState<{
     avgPricePerM2: number
     suggestedSalePrice: number
     transactionCount: number
     loaded: boolean
-    transactions: Array<{ name: string; area: number; pricePerM2: number; dealDate: string }>
-  }>({ avgPricePerM2: 0, suggestedSalePrice: 0, transactionCount: 0, loaded: false, transactions: [] })
+    transactions: Array<{ name: string; area: number; pricePerM2: number; dealDate: string; propertyType?: string }>
+    // ★ v2 유형별 분리
+    byType: Partial<Record<PropertyType, TypeStats>>
+    primaryType: PropertyType
+    availableTypes: PropertyType[]
+    activeType: PropertyType  // UI에서 선택 중인 유형
+  }>({ avgPricePerM2: 0, suggestedSalePrice: 0, transactionCount: 0, loaded: false, transactions: [], byType: {}, primaryType: 'apt', availableTypes: [], activeType: 'apt' })
   const [siteBdMgtSn, setSiteBdMgtSn] = useState<string>('')
   
   // 지역별 분양가·공사비 (주소 기반 자동 적용)
@@ -841,10 +848,16 @@ export default function ArchiScanPage() {
   // ━━━ 중앙 분양가/공사비 단가 (Single Source of Truth) ━━━
   // 모든 컴포넌트가 이 값을 사용해야 ROI 일치 보장
   const effectiveSalesPrice = useMemo(() => {
-    if (marketPrice.loaded && marketPrice.suggestedSalePrice > 0) return marketPrice.suggestedSalePrice
+    if (marketPrice.loaded) {
+      // ★ 사용자가 선택한 유형(activeType)의 분양가 우선 사용
+      const activeStats = marketPrice.byType?.[marketPrice.activeType]
+      if (activeStats && activeStats.suggestedSalePrice > 0) return activeStats.suggestedSalePrice
+      // fallback: 주력 유형
+      if (marketPrice.suggestedSalePrice > 0) return marketPrice.suggestedSalePrice
+    }
     if (regionalPricing) return Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation.zoneType || ''))
     return 5000000
-  }, [marketPrice.loaded, marketPrice.suggestedSalePrice, regionalPricing, regulation.zoneType])
+  }, [marketPrice.loaded, marketPrice.suggestedSalePrice, marketPrice.activeType, marketPrice.byType, regionalPricing, regulation.zoneType])
   
   const effectiveConstructionCost = useMemo(() => {
     return regionalPricing?.constructionCostPerM2 || 2500000
@@ -1330,18 +1343,35 @@ export default function ArchiScanPage() {
     }
     
     if (sgCd && sgCd.length >= 5) {
-      fetch(`/api/real-price?sigunguCd=${sgCd}`)
+      // ★ 용도지역 기반 주력 유형 결정
+      const zoneKey = regulation.zoneType || data.zoneType || ''
+      const zoneCfg = ZONE_LAYOUT_CONFIGS[zoneKey] || null
+      const primaryUse = zoneCfg?.primaryUse || ''
+      const apiPrimaryType = primaryUse === 'multi-family' ? 'villa' 
+        : (primaryUse === 'officetel' || primaryUse === 'commercial-mix') ? 'officetel' 
+        : 'apt'
+      
+      fetch(`/api/real-price?sigunguCd=${sgCd}&type=all&primaryType=${apiPrimaryType}`)
         .then(r => r.json())
         .then(result => {
-          if (result.avgPricePerM2 > 0) {
+          if (result.avgPricePerM2 > 0 || (result.availableTypes && result.availableTypes.length > 0)) {
+            const primary = result.primaryType || apiPrimaryType
+            const byType = result.byType || {}
+            const availableTypes = result.availableTypes || []
             setMarketPrice({
               avgPricePerM2: result.avgPricePerM2,
               suggestedSalePrice: result.suggestedSalePrice,
               transactionCount: result.transactionCount,
               loaded: true,
               transactions: (result.transactions || []).slice(0, 30),
+              byType,
+              primaryType: primary,
+              availableTypes,
+              activeType: primary,
             })
-            console.log(`[market-price] 실거래가: ${(result.avgPricePerM2/10000).toFixed(0)}만원/㎡, 추천 분양가: ${(result.suggestedSalePrice/10000).toFixed(0)}만원/㎡ (${result.transactionCount}건)`)
+            const typeLabels: Record<string, string> = { apt: '아파트', villa: '연립다세대', officetel: '오피스텔' }
+            const typeSummary = availableTypes.map((t: string) => `${typeLabels[t] || t} ${byType[t]?.transactionCount || 0}건`).join(', ')
+            console.log(`[market-price] 주력: ${typeLabels[primary]} | ${typeSummary} | 추천 분양가: ${(result.suggestedSalePrice/10000).toFixed(0)}만원/㎡`)
           }
         })
         .catch(() => {})
@@ -1904,10 +1934,15 @@ export default function ArchiScanPage() {
         if (quickRenderImage) setAiRenderImage(quickRenderImage)
         // Quick에서 조회한 실거래가 → marketPrice에 반영 (effectiveSalesPrice 즉시 유효)
         if (rawData?._marketPrice?.suggestedSalePrice > 0) {
+          const mp = rawData._marketPrice
           setMarketPrice(prev => ({
             ...prev,
-            suggestedSalePrice: rawData._marketPrice.suggestedSalePrice,
+            suggestedSalePrice: mp.suggestedSalePrice,
             loaded: true,
+            byType: mp.byType || prev.byType,
+            primaryType: mp.primaryType || prev.primaryType,
+            availableTypes: mp.availableTypes || prev.availableTypes,
+            activeType: mp.primaryType || prev.activeType,
           }))
         }
         if (rawData) {
@@ -2653,6 +2688,7 @@ export default function ArchiScanPage() {
             effectiveSalesPrice={effectiveSalesPrice}
             effectiveConstructionCost={effectiveConstructionCost}
             setCurrentStep={setCurrentStep}
+            onActiveTypeChange={(t: string) => setMarketPrice(prev => ({ ...prev, activeType: t as any }))}
           />
         </>)}
 

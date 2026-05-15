@@ -29,19 +29,38 @@ export interface FinancialStepProps {
   regulation: ZoningRegulation
   feasibilityResult: FeasibilityResult | null
   landPriceData: { pricePerM2: number }
-  marketPrice: { loaded: boolean; suggestedSalePrice: number; avgPricePerM2: number; transactionCount: number; transactions: any[] }
+  marketPrice: { 
+    loaded: boolean; suggestedSalePrice: number; avgPricePerM2: number; transactionCount: number; transactions: any[]
+    byType?: Record<string, { avgPricePerM2: number; avgPricePerPyeong: number; transactionCount: number; priceRange: { min: number; max: number }; suggestedSalePrice: number; transactions: any[] }>
+    primaryType?: string
+    availableTypes?: string[]
+    activeType?: string
+  }
   regionalPricing: RegionalPricing | null
   effectiveSalesPrice: number
   effectiveConstructionCost: number
   setCurrentStep: Dispatch<SetStateAction<any>>
+  onActiveTypeChange?: (type: string) => void
 }
 
 export function FinancialStep(props: FinancialStepProps) {
   const {
     selectedLayoutData, allLayouts, projectType, existingBuildingInfo, address, siteAreaNum, gfa, regulation,
     feasibilityResult, landPriceData, marketPrice, regionalPricing, effectiveSalesPrice, effectiveConstructionCost,
-    setCurrentStep,
+    setCurrentStep, onActiveTypeChange,
   } = props
+
+  const TYPE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
+    apt: { label: '아파트', icon: '🏢', color: 'blue' },
+    villa: { label: '연립다세대', icon: '🏘️', color: 'emerald' },
+    officetel: { label: '오피스텔', icon: '🏬', color: 'violet' },
+  }
+  
+  const byType = marketPrice.byType || {}
+  const availableTypes = marketPrice.availableTypes || []
+  const activeType = marketPrice.activeType || marketPrice.primaryType || 'apt'
+  const activeStats = byType[activeType]
+  const hasMultipleTypes = availableTypes.length > 1
 
   return (
           <div className="flex flex-col gap-6">
@@ -94,48 +113,118 @@ export function FinancialStep(props: FinancialStepProps) {
               landPricePerM2={landPriceData.pricePerM2 || 5000000}
             />
 
-            {/* 주변 실거래가 정보 */}
+            {/* ★ 주변 실거래가 시세 — 유형별 탭 */}
             {marketPrice.loaded && marketPrice.avgPricePerM2 > 0 && (
               <div className="rounded-xl border border-border bg-card p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingUp className="h-4 w-4 text-blue-400" />
                   <span className="text-sm font-semibold text-foreground">주변 실거래가 시세</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">{marketPrice.transactionCount}건</span>
+                  {marketPrice.primaryType && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                      {TYPE_LABELS[marketPrice.primaryType]?.icon} {TYPE_LABELS[marketPrice.primaryType]?.label} 기준
+                    </span>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-secondary/30 p-3">
-                    <p className="text-[10px] text-muted-foreground">평균 거래가</p>
-                    <p className="text-sm font-bold text-foreground">{(marketPrice.avgPricePerM2 / 10000).toFixed(0)}만원<span className="text-[10px] font-normal text-muted-foreground">/㎡</span></p>
-                    <p className="text-[10px] text-muted-foreground">{(marketPrice.avgPricePerM2 * 3.3058 / 10000).toFixed(0)}만원/평</p>
-                  </div>
-                  <div className="rounded-lg bg-secondary/30 p-3">
-                    <p className="text-[10px] text-muted-foreground">추천 분양가</p>
-                    <p className="text-sm font-bold text-emerald-400">{(marketPrice.suggestedSalePrice / 10000).toFixed(0)}만원<span className="text-[10px] font-normal text-muted-foreground">/㎡</span></p>
-                    <p className="text-[10px] text-muted-foreground">실거래가 +15% 프리미엄</p>
-                  </div>
-                </div>
-                {/* 최근 실거래 내역 */}
-                {marketPrice.transactions.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border/30">
-                    <p className="text-[10px] font-medium text-muted-foreground mb-2">최근 거래 내역</p>
-                    <div className="space-y-1">
-                      {marketPrice.transactions.slice(0, 5).map((t, i) => {
-                        const maxPrice = Math.max(...marketPrice.transactions.slice(0, 5).map(x => x.pricePerM2))
-                        const pct = maxPrice > 0 ? (t.pricePerM2 / maxPrice) * 100 : 0
-                        return (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="text-[9px] text-muted-foreground w-16 truncate">{t.name}</span>
-                            <div className="flex-1 h-3 bg-secondary/30 rounded overflow-hidden">
-                              <div className="h-full bg-blue-500/40 rounded" style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className="text-[9px] font-medium text-foreground w-16 text-right">{(t.pricePerM2 / 10000).toFixed(0)}만/㎡</span>
-                          </div>
-                        )
-                      })}
-                    </div>
+
+                {/* 유형 탭 — 2개 이상 유형에 데이터가 있을 때만 표시 */}
+                {hasMultipleTypes && (
+                  <div className="flex gap-1 mb-3 p-1 rounded-lg bg-secondary/30">
+                    {availableTypes.map((t: string) => {
+                      const info = TYPE_LABELS[t] || { label: t, icon: '📊', color: 'gray' }
+                      const stats = byType[t]
+                      const isActive = t === activeType
+                      return (
+                        <button
+                          key={t}
+                          onClick={() => onActiveTypeChange?.(t)}
+                          className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 rounded-md text-[10px] transition-all ${
+                            isActive 
+                              ? 'bg-card shadow-sm border border-border/50 font-semibold text-foreground' 
+                              : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
+                          }`}
+                        >
+                          <span className="text-sm">{info.icon}</span>
+                          <span>{info.label}</span>
+                          <span className={`text-[9px] ${isActive ? 'text-primary' : 'text-muted-foreground/70'}`}>
+                            {stats?.transactionCount || 0}건
+                          </span>
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
-                <p className="text-[10px] text-muted-foreground mt-2">※ 최근 6개월 인근 아파트 실거래가 기준. 실제 분양가와 다를 수 있습니다.</p>
+
+                {/* 선택된 유형의 통계 */}
+                {(() => {
+                  const stats = activeStats || { avgPricePerM2: marketPrice.avgPricePerM2, suggestedSalePrice: marketPrice.suggestedSalePrice, transactionCount: marketPrice.transactionCount, transactions: marketPrice.transactions }
+                  const txns = stats.transactions || marketPrice.transactions || []
+                  return (<>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-secondary/30 p-3">
+                        <p className="text-[10px] text-muted-foreground">평균 거래가</p>
+                        <p className="text-sm font-bold text-foreground">{(stats.avgPricePerM2 / 10000).toFixed(0)}만원<span className="text-[10px] font-normal text-muted-foreground">/㎡</span></p>
+                        <p className="text-[10px] text-muted-foreground">{(stats.avgPricePerM2 * 3.3058 / 10000).toFixed(0)}만원/평</p>
+                      </div>
+                      <div className="rounded-lg bg-secondary/30 p-3">
+                        <p className="text-[10px] text-muted-foreground">추천 분양가</p>
+                        <p className="text-sm font-bold text-emerald-400">{(stats.suggestedSalePrice / 10000).toFixed(0)}만원<span className="text-[10px] font-normal text-muted-foreground">/㎡</span></p>
+                        <p className="text-[10px] text-muted-foreground">실거래가 +15% 프리미엄</p>
+                      </div>
+                    </div>
+
+                    {/* 유형별 비교 미니 바 (다른 유형이 있을 때) */}
+                    {hasMultipleTypes && (
+                      <div className="mt-3 pt-3 border-t border-border/30">
+                        <p className="text-[10px] font-medium text-muted-foreground mb-2">유형별 ㎡당 평균 비교</p>
+                        <div className="space-y-1.5">
+                          {availableTypes.map((t: string) => {
+                            const s = byType[t]
+                            if (!s) return null
+                            const info = TYPE_LABELS[t] || { label: t, icon: '📊', color: 'gray' }
+                            const maxAvg = Math.max(...availableTypes.map((tt: string) => byType[tt]?.avgPricePerM2 || 0))
+                            const pct = maxAvg > 0 ? (s.avgPricePerM2 / maxAvg) * 100 : 0
+                            const isActive = t === activeType
+                            const barColor = t === 'apt' ? 'bg-blue-500/60' : t === 'villa' ? 'bg-emerald-500/60' : 'bg-violet-500/60'
+                            return (
+                              <div key={t} className={`flex items-center gap-2 ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                                <span className="text-[9px] w-14 truncate">{info.icon} {info.label}</span>
+                                <div className="flex-1 h-4 bg-secondary/30 rounded overflow-hidden">
+                                  <div className={`h-full ${barColor} rounded flex items-center justify-end pr-1`} style={{ width: `${pct}%` }}>
+                                    <span className="text-[8px] font-bold text-white drop-shadow-sm">{(s.avgPricePerM2 / 10000).toFixed(0)}만</span>
+                                  </div>
+                                </div>
+                                <span className="text-[9px] text-muted-foreground w-10 text-right">{s.transactionCount}건</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 최근 실거래 내역 */}
+                    {txns.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border/30">
+                        <p className="text-[10px] font-medium text-muted-foreground mb-2">최근 거래 내역 ({TYPE_LABELS[activeType]?.label || '전체'})</p>
+                        <div className="space-y-1">
+                          {txns.slice(0, 5).map((t: any, i: number) => {
+                            const maxPrice = Math.max(...txns.slice(0, 5).map((x: any) => x.pricePerM2))
+                            const pct = maxPrice > 0 ? (t.pricePerM2 / maxPrice) * 100 : 0
+                            return (
+                              <div key={i} className="flex items-center gap-2">
+                                <span className="text-[9px] text-muted-foreground w-16 truncate">{t.name}</span>
+                                <div className="flex-1 h-3 bg-secondary/30 rounded overflow-hidden">
+                                  <div className="h-full bg-blue-500/40 rounded" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-[9px] font-medium text-foreground w-16 text-right">{(t.pricePerM2 / 10000).toFixed(0)}만/㎡</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-2">※ 최근 6개월 인근 {TYPE_LABELS[activeType]?.label || ''} 실거래가 기준. 실제 분양가와 다를 수 있습니다.</p>
+                  </>)
+                })()}
               </div>
             )}
 
@@ -167,7 +256,7 @@ export function FinancialStep(props: FinancialStepProps) {
                     <p className="font-bold text-foreground">{Math.round((landPriceData.pricePerM2 || 5000000) / 10000).toLocaleString()}만/㎡</p>
                   </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1.5">{regionalPricing.note} {marketPrice.loaded && marketPrice.suggestedSalePrice > 0 ? '· 분양가는 실거래가 기준 적용 중' : ''}</p>
+                <p className="text-[10px] text-muted-foreground mt-1.5">{regionalPricing.note} {marketPrice.loaded && marketPrice.suggestedSalePrice > 0 ? `· 분양가는 ${TYPE_LABELS[activeType]?.label || ''} 실거래가 기준 적용 중` : ''}</p>
               </div>
             )}
 
@@ -211,9 +300,7 @@ export function FinancialStep(props: FinancialStepProps) {
                 <ContributionSimulator
                   totalProjectCost={(feasibilityResult.totalCost || 0) / 100000000}
                   totalUnits={selectedLayoutData.units}
-                  salePricePerM2={(marketPrice.loaded && marketPrice.suggestedSalePrice > 0) 
-                    ? marketPrice.suggestedSalePrice 
-                    : regionalPricing ? Math.round(regionalPricing.salesPricePerM2 * getZoneMultiplier(regulation?.zoneType || '')) : 5000000}
+                  salePricePerM2={effectiveSalesPrice}
                   avgUnitArea={selectedLayoutData.gfa ? Math.round(selectedLayoutData.gfa / Math.max(selectedLayoutData.units, 1)) : 84}
                 />
                 <ScenarioComparison

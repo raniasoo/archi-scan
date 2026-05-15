@@ -8,6 +8,7 @@ import { analyzeSunAndView, type SunAnalysisResult } from "@/lib/sun-analysis"
 import { buildSiteContextPrompt } from "@/lib/site-context-builder"
 import { calculateFeasibility } from "@/lib/project-analysis-state"
 import { getRegionalPricing, getZoneMultiplier } from "@/lib/regional-pricing"
+import { ZONE_LAYOUT_CONFIGS } from "@/lib/zone-layout-config"
 import { useSubscription } from "@/components/subscription-provider"
 
 interface QuickAnalysisProps {
@@ -293,16 +294,29 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
       const earthworkCost = terrainResult?.earthworkCost || 0
       const parkingCount = Math.ceil(totalUnits * 1.0)
       
-      // 실거래가 조회 (sigunguCode 있으면)
+      // 실거래가 조회 (sigunguCode 있으면) — ★ 전 유형 조회
       let realPriceSalesPrice = 0
+      let realPriceByType: any = {}
+      let realPricePrimaryType = 'apt'
+      let realPriceAvailableTypes: string[] = []
       const sigunguCode = molitData.data?.sigunguCode
       if (sigunguCode && sigunguCode.length >= 5) {
         try {
-          const rpRes = await fetch(`/api/real-price?sigunguCd=${sigunguCode.slice(0, 5)}`)
+          // 용도지역 기반 주력 유형 결정
+          const zoneCfg = ZONE_LAYOUT_CONFIGS[zoneCode] || null
+          const primaryUse = zoneCfg?.primaryUse || ''
+          const apiPrimaryType = primaryUse === 'multi-family' ? 'villa' 
+            : (primaryUse === 'officetel' || primaryUse === 'commercial-mix') ? 'officetel' 
+            : 'apt'
+          
+          const rpRes = await fetch(`/api/real-price?sigunguCd=${sigunguCode.slice(0, 5)}&type=all&primaryType=${apiPrimaryType}`)
           const rpData = await rpRes.json()
           if (rpData.suggestedSalePrice > 0) {
             realPriceSalesPrice = rpData.suggestedSalePrice
-            console.log(`[QuickAnalysis] 실거래가 반영: ${(realPriceSalesPrice/10000).toFixed(0)}만/㎡ (${rpData.transactionCount}건)`)
+            realPriceByType = rpData.byType || {}
+            realPricePrimaryType = rpData.primaryType || apiPrimaryType
+            realPriceAvailableTypes = rpData.availableTypes || []
+            console.log(`[QuickAnalysis] 실거래가 반영: ${(realPriceSalesPrice/10000).toFixed(0)}만/㎡ (${rpData.transactionCount}건, 주력: ${realPricePrimaryType})`)
           }
         } catch (e) {
           console.warn('[QuickAnalysis] 실거래가 조회 실패:', e)
@@ -376,7 +390,7 @@ export function QuickAnalysis({ onDetailedAnalysis, strategy, userValues }: Quic
           cadastralMapUrl: vworldData?.cadastralMapUrl,
           streetViewUrls: vworldData?.streetViewUrls,
           // 실거래가 데이터 → 상세분석 전환 시 page.tsx effectiveSalesPrice에 반영
-          _marketPrice: realPriceSalesPrice > 0 ? { suggestedSalePrice: realPriceSalesPrice } : undefined,
+          _marketPrice: realPriceSalesPrice > 0 ? { suggestedSalePrice: realPriceSalesPrice, byType: realPriceByType, primaryType: realPricePrimaryType, availableTypes: realPriceAvailableTypes } : undefined,
           _dynamicSalesPrice: dynamicSalesPrice,
         },
       })

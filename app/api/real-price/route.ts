@@ -1,17 +1,21 @@
 /**
- * 실거래가 조회 API
+ * 실거래가 조회 API (v2)
  * 국토부 아파트/연립다세대/오피스텔 실거래가 → 주변 시세 자동 반영
  * 
  * Query params:
  *   sigunguCd: 시군구 코드 5자리 (필수)
- *   type: 'apt' | 'villa' | 'officetel' | 'all' (기본: apt)
+ *   type: 'apt' | 'villa' | 'officetel' | 'all' (기본: all)
+ *   primaryType: 용도지역 기반 주력 유형 힌트 (선택)
  */
 import { NextResponse } from 'next/server'
 
 const MOLIT_API_KEY = process.env.MOLIT_API_KEY || '384c065c489b613aa46ae60dbc3284d59c52d1cbb9ec32bfeba5d56d21444098'
 
+type PropertyType = 'apt' | 'villa' | 'officetel'
+const ALL_TYPES: PropertyType[] = ['apt', 'villa', 'officetel']
+
 // 유형별 API 엔드포인트
-const API_ENDPOINTS: Record<string, { url: string; nameTag: string; label: string }> = {
+const API_ENDPOINTS: Record<PropertyType, { url: string; nameTag: string; label: string }> = {
   apt: {
     url: 'https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade',
     nameTag: 'aptNm',
@@ -33,28 +37,67 @@ const API_ENDPOINTS: Record<string, { url: string; nameTag: string; label: strin
 const cache = new Map<string, { data: any; ts: number }>()
 const CACHE_TTL = 60 * 60 * 1000 // 1시간
 
+interface Transaction {
+  name: string
+  area: number
+  price: number
+  pricePerM2: number
+  floor: number
+  dealDate: string
+  propertyType: PropertyType  // ★ 유형 태깅
+}
+
+interface TypeStats {
+  avgPricePerM2: number
+  avgPricePerPyeong: number
+  transactionCount: number
+  priceRange: { min: number; max: number }
+  suggestedSalePrice: number
+  transactions: Transaction[]
+}
+
 interface RealPriceResult {
-  avgPricePerM2: number       // ㎡당 평균 거래가 (원)
-  avgPricePerPyeong: number   // 평당 평균 거래가 (원)
-  transactionCount: number     // 거래 건수
-  recentMonth: string          // 조회 기준월
-  district: string             // 시군구
-  priceRange: { min: number; max: number } // 가격 범위
-  suggestedSalePrice: number   // 추천 분양가 (㎡당)
-  transactions: Array<{
-    name: string
-    area: number
-    price: number
-    pricePerM2: number
-    floor: number
-    dealDate: string
-  }>
+  // 주력 유형 기준 통합 통계 (하위 호환)
+  avgPricePerM2: number
+  avgPricePerPyeong: number
+  transactionCount: number
+  recentMonth: string
+  district: string
+  priceRange: { min: number; max: number }
+  suggestedSalePrice: number
+  transactions: Transaction[]
+  // ★ 유형별 분리 데이터 (v2 신규)
+  byType: Partial<Record<PropertyType, TypeStats>>
+  primaryType: PropertyType   // 주력 유형
+  availableTypes: PropertyType[] // 데이터 있는 유형 목록
+  message?: string
+}
+
+function computeTypeStats(txns: Transaction[]): TypeStats | null {
+  if (txns.length === 0) return null
+  const prices = txns.map(t => t.pricePerM2).sort((a, b) => a - b)
+  // IQR 이상치 제거
+  const q1 = prices[Math.floor(prices.length * 0.25)]
+  const q3 = prices[Math.floor(prices.length * 0.75)]
+  const iqr = q3 - q1
+  const filtered = prices.filter(p => p >= q1 - 1.5 * iqr && p <= q3 + 1.5 * iqr)
+  if (filtered.length === 0) return null
+  const avgPrice = Math.round(filtered.reduce((a, b) => a + b, 0) / filtered.length)
+  return {
+    avgPricePerM2: avgPrice,
+    avgPricePerPyeong: Math.round(avgPrice * 3.3058),
+    transactionCount: txns.length,
+    priceRange: { min: prices[0], max: prices[prices.length - 1] },
+    suggestedSalePrice: Math.round(avgPrice * 1.15 / 100000) * 100000,
+    transactions: txns.sort((a, b) => b.pricePerM2 - a.pricePerM2).slice(0, 10),
+  }
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const sigunguCd = searchParams.get('sigunguCd') || ''
-  const propertyType = searchParams.get('type') || 'apt' // apt, villa, officetel, all
+  const propertyType = searchParams.get('type') || 'all' // ★ 기본값 all로 변경
+  const primaryTypeHint = (searchParams.get('primaryType') || 'apt') as PropertyType
   
   if (!sigunguCd || sigunguCd.length < 5) {
     return NextResponse.json({ error: '시군구 코드(5자리)가 필요합니다' }, { status: 400 })
@@ -65,12 +108,12 @@ export async function GET(request: Request) {
   }
 
   const lawdCd = sigunguCd.slice(0, 5)
-  const typesToFetch = propertyType === 'all' 
-    ? ['apt', 'villa', 'officetel'] 
-    : [propertyType]
+  const typesToFetch: PropertyType[] = propertyType === 'all' 
+    ? ALL_TYPES 
+    : [propertyType as PropertyType]
   
   // 캐시 확인
-  const cacheKey = `${lawdCd}_${propertyType}`
+  const cacheKey = `v2_${lawdCd}_${propertyType}_${primaryTypeHint}`
   const cached = cache.get(cacheKey)
   if (cached && Date.now() - cached.ts < CACHE_TTL) {
     console.log(`[real-price] 캐시 히트: ${cacheKey}`)
@@ -87,9 +130,8 @@ export async function GET(request: Request) {
     months.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
 
-  const allTransactions: Array<{
-    name: string; area: number; price: number; pricePerM2: number; floor: number; dealDate: string
-  }> = []
+  // ★ 유형별로 분리 수집
+  const txnsByType: Record<PropertyType, Transaction[]> = { apt: [], villa: [], officetel: [] }
 
   for (const dealYmd of months) {
     for (const pType of typesToFetch) {
@@ -138,13 +180,14 @@ export async function GET(request: Request) {
           const price = parseInt(priceStr) * 10000 // 만원 → 원
           
           if (area > 0 && price > 0) {
-            allTransactions.push({
+            txnsByType[pType].push({
               name: getValue(endpoint.nameTag) || getValue('아파트') || getValue('연립다세대') || getValue('단지명') || '—',
               area,
               price,
               pricePerM2: Math.round(price / area),
               floor: parseInt(getValue('floor') || getValue('층')) || 0,
               dealDate: `${dealYmd.slice(0,4)}.${dealYmd.slice(4)}.${getValue('dealDay') || getValue('일')}`,
+              propertyType: pType,
             })
           }
         }
@@ -153,10 +196,26 @@ export async function GET(request: Request) {
         console.warn(`[real-price] ${endpoint.label} ${dealYmd} 조회 실패: ${errMsg}`)
       }
     }
-    // 충분한 데이터 확보 시 조기 종료 (20건 이상)
-    if (allTransactions.length >= 20) break
+    // 충분한 데이터 확보 시 조기 종료 (주력 유형 기준 20건 이상)
+    const primaryCount = txnsByType[primaryTypeHint]?.length || 0
+    const totalCount = Object.values(txnsByType).reduce((s, arr) => s + arr.length, 0)
+    if (primaryCount >= 20 || totalCount >= 50) break
   }
 
+  // ★ 유형별 통계 계산
+  const byType: Partial<Record<PropertyType, TypeStats>> = {}
+  const availableTypes: PropertyType[] = []
+  
+  for (const pType of ALL_TYPES) {
+    const stats = computeTypeStats(txnsByType[pType])
+    if (stats) {
+      byType[pType] = stats
+      availableTypes.push(pType)
+    }
+  }
+
+  const allTransactions = Object.values(txnsByType).flat()
+  
   if (allTransactions.length === 0) {
     return NextResponse.json({
       avgPricePerM2: 0,
@@ -165,38 +224,42 @@ export async function GET(request: Request) {
       recentMonth: months[0],
       district: lawdCd,
       priceRange: { min: 0, max: 0 },
-      suggestedSalePrice: 0, // 데이터 없음 → 호출처에서 지역테이블 fallback 사용
+      suggestedSalePrice: 0,
       transactions: [],
+      byType: {},
+      primaryType: primaryTypeHint,
+      availableTypes: [],
       message: '최근 6개월 실거래 데이터가 없습니다. 지역별 시세 테이블을 사용합니다.',
     })
   }
 
-  // 통계 계산
-  const prices = allTransactions.map(t => t.pricePerM2).sort((a, b) => a - b)
-  const q1 = prices[Math.floor(prices.length * 0.25)]
-  const q3 = prices[Math.floor(prices.length * 0.75)]
-  const iqr = q3 - q1
-  const filtered = prices.filter(p => p >= q1 - 1.5 * iqr && p <= q3 + 1.5 * iqr)
+  // ★ 주력 유형 결정: primaryTypeHint에 데이터가 있으면 그것, 없으면 가장 거래 많은 유형
+  const effectivePrimary: PropertyType = byType[primaryTypeHint] 
+    ? primaryTypeHint 
+    : availableTypes.sort((a, b) => (byType[b]?.transactionCount || 0) - (byType[a]?.transactionCount || 0))[0] || 'apt'
+
+  const primaryStats = byType[effectivePrimary] || computeTypeStats(allTransactions)!
   
-  const avgPrice = Math.round(filtered.reduce((a, b) => a + b, 0) / filtered.length)
-  const suggestedSalePrice = Math.round(avgPrice * 1.15 / 100000) * 100000 // 15% 프리미엄 + 10만원 단위 반올림
+  console.log(`[real-price] 유형별 거래건수: 아파트 ${txnsByType.apt.length}건, 연립다세대 ${txnsByType.villa.length}건, 오피스텔 ${txnsByType.officetel.length}건 → 주력: ${effectivePrimary}`)
 
   const result: RealPriceResult = {
-    avgPricePerM2: avgPrice,
-    avgPricePerPyeong: Math.round(avgPrice * 3.3058),
-    transactionCount: allTransactions.length,
+    // 하위호환: 주력 유형 기준 통합 통계
+    avgPricePerM2: primaryStats.avgPricePerM2,
+    avgPricePerPyeong: primaryStats.avgPricePerPyeong,
+    transactionCount: primaryStats.transactionCount,
     recentMonth: months[0],
     district: lawdCd,
-    priceRange: { min: prices[0], max: prices[prices.length - 1] },
-    suggestedSalePrice,
-    transactions: allTransactions
-      .sort((a, b) => b.pricePerM2 - a.pricePerM2)
-      .slice(0, 10), // 상위 10건만
+    priceRange: primaryStats.priceRange,
+    suggestedSalePrice: primaryStats.suggestedSalePrice,
+    transactions: primaryStats.transactions,
+    // ★ v2 신규 필드
+    byType,
+    primaryType: effectivePrimary,
+    availableTypes,
   }
 
   // 캐시 저장
   cache.set(cacheKey, { data: result, ts: Date.now() })
-  // 캐시 크기 제한 (100개 초과 시 오래된 항목 삭제)
   if (cache.size > 100) {
     const oldest = [...cache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0]
     if (oldest) cache.delete(oldest[0])
