@@ -383,14 +383,19 @@ export function BuildingVolume3D({
       
       if (siteCoords?.lat && siteCoords?.lng) {
         try {
-          const range = 0.003
+          // 대지 크기에 비례한 범위 (대지 대각선 길이의 1.5배, 최소 0.0008°~최대 0.002°)
+          const siteRadius = Math.sqrt(siteArea || 500) * 1.5 // m
+          const range = Math.max(0.0008, Math.min(0.002, siteRadius / 111000))
           const eRes = await fetch(`/api/elevation-grid?lat=${siteCoords.lat}&lng=${siteCoords.lng}&grid=12&range=${range}`)
           const eData = await eRes.json()
           if (eData.elevations?.length > 0) {
             const elev = eData.elevations as number[]
             const minE = Math.min(...elev), maxE = Math.max(...elev)
             const eRange = Math.max(maxE - minE, 0.5)
-            const heightScale = Math.min(S * 0.15, eRange * 2) // 시각적 스케일
+            // 실제 고저차에 비례한 스케일 (평탄지는 거의 평평하게, 경사지만 과장)
+            const slopePercent = (eRange / (siteRadius * 2)) * 100
+            const exaggeration = slopePercent < 2 ? 1.0 : slopePercent < 5 ? 1.5 : 2.0
+            const heightScale = eRange * exaggeration
             const pos = groundGeo.attributes.position
             for (let i = 0; i < pos.count; i++) {
               const gx = Math.floor((i % TERRAIN_GRID) / (TERRAIN_GRID - 1) * 11)
@@ -401,7 +406,7 @@ export function BuildingVolume3D({
             }
             pos.needsUpdate = true
             groundGeo.computeVertexNormals()
-            console.log(`[3D] 실제 표고 지형 적용: 고저차 ${eRange.toFixed(1)}m (${minE.toFixed(0)}~${maxE.toFixed(0)}m)`)
+            console.log(`[3D] 지형 적용: 고저차 ${eRange.toFixed(1)}m (${minE.toFixed(0)}~${maxE.toFixed(0)}m), 경사 ${slopePercent.toFixed(1)}%, 과장 x${exaggeration}`)
           }
         } catch (e) {
           console.warn('[3D] 표고 데이터 로딩 실패:', e)
