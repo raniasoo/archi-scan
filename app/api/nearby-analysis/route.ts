@@ -4,26 +4,36 @@ const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY
 
 // ━━━ Overpass API로 주변 건물 조회 ━━━
 async function fetchNearbyBuildings(lat: number, lng: number, radius: number = 250) {
+  // 1차 시도: 기본 반경
+  const result = await _fetchOverpass(lat, lng, radius, 150, 12000)
+  if (result.length > 0) return result
+  
+  // 2차 시도: 반경 축소 (고밀도 지역 폴백)
+  console.log(`[NEARBY] 1차 실패, 반경 축소 재시도: ${radius}m → 150m`)
+  const fallback = await _fetchOverpass(lat, lng, 150, 100, 10000)
+  return fallback
+}
+
+async function _fetchOverpass(lat: number, lng: number, buildingRadius: number, amenityRadius: number, timeout: number) {
   try {
-    // 건물은 250m, 도로/편의시설은 150m로 범위 축소 → 응답 속도 개선
-    const query = `[out:json][timeout:10];
+    const query = `[out:json][timeout:${Math.floor(timeout / 1000)}];
 (
-  way(around:${radius},${lat},${lng})[building];
-  way(around:150,${lat},${lng})[highway~"^(primary|secondary|tertiary|residential)$"];
-  way(around:150,${lat},${lng})[amenity];
-  node(around:150,${lat},${lng})[amenity];
-  node(around:150,${lat},${lng})[shop];
+  way(around:${buildingRadius},${lat},${lng})[building];
+  way(around:${amenityRadius},${lat},${lng})[highway~"^(primary|secondary|tertiary|residential)$"];
+  way(around:${amenityRadius},${lat},${lng})[amenity];
+  node(around:${amenityRadius},${lat},${lng})[amenity];
+  node(around:${amenityRadius},${lat},${lng})[shop];
 );out center tags;`
 
     const res = await fetch('https://overpass-api.de/api/interpreter', {
       method: 'POST', body: query,
       headers: { 'Content-Type': 'text/plain', 'User-Agent': 'ArchiScan/2.0' },
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(timeout),
     })
     const data = await res.json()
     return data?.elements || []
   } catch (e) {
-    console.error('[NEARBY] Overpass error:', e)
+    console.error(`[NEARBY] Overpass error (r=${buildingRadius}m):`, e)
     return []
   }
 }
