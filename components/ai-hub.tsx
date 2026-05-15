@@ -427,6 +427,17 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   // #9: 멀티앵글 일괄 생성 + 3D-First Pipeline
   const doMultiRender = async () => {
     if (!requireFeature('multi-angle')) return
+    // ★ 4장 렌더링 → Gemini 4회 필요
+    const usage = getRenderUsage()
+    const limits = getRenderLimits('pro')
+    const geminiUsed = usage.gemini || 0
+    const remaining = limits.gemini === -1 ? 999 : limits.gemini - geminiUsed
+    if (remaining < 4) {
+      toast.error(`멀티앵글 4장에 Gemini ${4}회가 필요하지만, 잔여 ${remaining}회입니다.`, {
+        action: { label: '플랜 업그레이드', onClick: () => window.open('/pricing', '_blank') },
+      })
+      return
+    }
     setLoading(true); setError(null); setMultiImages(null)
     setRenderProgress('🧊 3D 모델 캡처 중...')
 
@@ -479,7 +490,9 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         if (first) onRenderComplete?.(first.image)
         const successCount = d.images.filter((i: any) => i.image).length
         toast.success(`멀티앵글 ${successCount}/${d.images.length}장 생성 완료 (3D 참조)`)
-        trackAiRenderComplete('multi-angle'); trackRender('gemini')
+        trackAiRenderComplete('multi-angle')
+        // ★ 장당 1회 차감 (성공한 장수만큼)
+        for (let i = 0; i < successCount; i++) trackRender('gemini')
       } else setError(d.error || '멀티앵글 생성 실패')
     } catch(e) {
       clearTimeout(timeout)
@@ -534,6 +547,17 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   }
   const doInteriorCompare = async () => {
     if (!requireFeature('interior-compare')) return
+    // ★ 3안 렌더링 → Gemini 3회 필요
+    const usage = getRenderUsage()
+    const limits = getRenderLimits('pro')
+    const geminiUsed = usage.gemini || 0
+    const remaining = limits.gemini === -1 ? 999 : limits.gemini - geminiUsed
+    if (remaining < 3) {
+      toast.error(`인테리어 3안에 Gemini ${3}회가 필요하지만, 잔여 ${remaining}회입니다.`, {
+        action: { label: '플랜 업그레이드', onClick: () => window.open('/pricing', '_blank') },
+      })
+      return
+    }
     setLoading(true); setError(null); setInteriorComp(null)
     const compareStyles = getCompareStyles()
     try {
@@ -575,6 +599,8 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         setInteriorComp(results)
         onInteriorComparisonComplete?.(results)
         toast.success(`인테리어 ${results.length}안 비교 완료`)
+        // ★ 장당 1회 차감 (성공한 장수만큼)
+        for (let i = 0; i < results.length; i++) trackRender('gemini')
       } else setError('인테리어 생성 실패 — 잠시 후 다시 시도해주세요')
     } catch(e) { setError(e instanceof Error ? e.message : '오류') } finally { setLoading(false); setRenderProgress(null) }
   }
