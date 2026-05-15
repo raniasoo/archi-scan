@@ -304,16 +304,36 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
     } finally { setLoading(false); setRenderProgress(null) }
   }
 
-  // #9: 멀티앵글 일괄 생성
+  // #9: 멀티앵글 일괄 생성 + 3D-First Pipeline
   const doMultiRender = async () => {
     if (!requireFeature('multi-angle')) return
     setLoading(true); setError(null); setMultiImages(null)
-    setRenderProgress('🎨 4장 렌더링 중 — 약 2~3분 소요...')
+    setRenderProgress('🧊 3D 모델 캡처 중...')
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 280_000) // 4분 40초 클라이언트 타임아웃
+    const timeout = setTimeout(() => controller.abort(), 280_000)
 
     try {
+      // ━━━ 3D-First: 오프스크린 Three.js 5방향 캡처 ━━━
+      let threeJsCaptures: { angle: string; image: string }[] | undefined
+      try {
+        if (input.buildingType && input.siteArea && input.floors) {
+          threeJsCaptures = await captureBuilding3D({
+            type: input.buildingType,
+            coverage: input.buildingCoverageRatio || 50,
+            siteArea: input.siteArea,
+            floors: input.floors,
+            units: input.units,
+            buildingCount: input.buildingCount,
+            originalType: (input as any)._originalType || (input as any).originalType || input.buildingType,
+          })
+          console.log(`[MULTI] 3D captures: ${threeJsCaptures?.length}장`)
+        }
+      } catch (e) {
+        console.warn('[MULTI] 3D capture failed:', e)
+      }
+
+      setRenderProgress('🎨 4장 렌더링 중 (3D 참조) — 약 2~3분 소요...')
       const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
         prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
         style, address:input.address, layoutName:input.layoutName,
@@ -328,6 +348,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         material: materialId ? { type: materialId } : undefined,
         regulation: input.regulation,
         multiAngle: true,
+        threeJsCaptures: threeJsCaptures || undefined,
       }) })
       clearTimeout(timeout)
       const d = await safeJson(r)
@@ -337,7 +358,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         const first = d.images.find((i: any) => i.image)
         if (first) onRenderComplete?.(first.image)
         const successCount = d.images.filter((i: any) => i.image).length
-        toast.success(`멀티앵글 ${successCount}/${d.images.length}장 생성 완료`)
+        toast.success(`멀티앵글 ${successCount}/${d.images.length}장 생성 완료 (3D 참조)`)
         trackAiRenderComplete('multi-angle')
       } else setError(d.error || '멀티앵글 생성 실패')
     } catch(e) {
