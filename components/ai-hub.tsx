@@ -7,6 +7,7 @@ import { captureBuilding3D } from "@/lib/offscreen-3d-capture"
 import { captureInterior3D } from "@/lib/interior-3d-capture"
 import { trackAiRenderStart, trackAiRenderComplete } from "@/components/google-analytics"
 import { useSubscription } from "@/components/subscription-provider"
+import { getRenderLimits, getRenderUsageLabel } from "@/lib/subscription-plans"
 
 // API 응답 안전 파싱 (504 타임아웃 등 HTML 에러 대응)
 const safeJson = async (r: Response) => {
@@ -178,6 +179,25 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [tab, setTab] = useState<'render'|'consult'|'proposal'|'prompt'>('render')
   const [style, setStyle] = useState(optimal.style)
   const { requireFeature, canUseFeature } = useSubscription()
+  
+  // ★ 렌더링 횟수 추적 (월간 리셋)
+  const getRenderUsage = () => {
+    try {
+      const stored = localStorage.getItem('archi-render-usage')
+      if (!stored) return { gemini: 0, controlNet: 0, month: '' }
+      const data = JSON.parse(stored)
+      const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
+      if (data.month !== currentMonth) return { gemini: 0, controlNet: 0, month: currentMonth }
+      return data
+    } catch { return { gemini: 0, controlNet: 0, month: '' } }
+  }
+  const trackRender = (engine: 'gemini' | 'controlNet') => {
+    const usage = getRenderUsage()
+    usage.month = new Date().toISOString().slice(0, 7)
+    usage[engine] = (usage[engine] || 0) + 1
+    try { localStorage.setItem('archi-render-usage', JSON.stringify(usage)) } catch {}
+    return usage
+  }
   const [angle, setAngle] = useState(optimal.angle)
   const [scene, setScene] = useState(optimal.scene)
   const [materialId, setMaterialId] = useState<string | null>(optimal.material)
@@ -207,6 +227,22 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
 
   // #5: 재시도 로직 + Gemini/Flux 엔진 라우팅
   const doRender = async (retry = 0) => {
+    // ★ 렌더링 횟수 제한 체크
+    if (retry === 0) {
+      const usage = getRenderUsage()
+      const limits = getRenderLimits('pro') // TODO: 실제 유저 tier 사용
+      const engine = renderEngine === 'controlnet' ? 'controlNet' : 'gemini'
+      const limit = engine === 'controlNet' ? limits.controlNet : limits.gemini
+      const used = usage[engine] || 0
+      if (limit !== -1 && used >= limit) {
+        const engineLabel = engine === 'controlNet' ? 'ControlNet' : 'Gemini'
+        toast.error(`${engineLabel} 렌더링 월 ${limit}회 한도를 초과했습니다. 다음 달에 초기화됩니다.`, {
+          action: { label: '플랜 업그레이드', onClick: () => window.open('/pricing', '_blank') },
+        })
+        return
+      }
+    }
+    
     setLoading(true); setError(null); setRetryCount(retry); setMultiImages(null)
     setRenderProgress(retry > 0 ? `재시도 중 (${retry}/2)...` : '3D 모델 캡처 + AI 렌더링 중...')
     trackAiRenderStart(angle || 'exterior')
@@ -279,6 +315,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               setRenderImg(data.image)
               onRenderComplete?.(data.image)
               trackAiRenderComplete(angle, true, data.engine || 'controlnet')
+              trackRender('controlNet') // ★ 횟수 기록
               setRenderProgress(null)
               setLoading(false)
               clearTimeout(timeout)
@@ -311,7 +348,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
           const d = await safeJson(r)
           if (d.success && d.image) {
             console.log('[AI-HUB] Interior 3D-First Pipeline 완료')
-            setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete('interior')
+            setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete('interior'); trackRender('gemini')
           } else if (retry < 1) {
             threeJsCaptures = undefined
             return doRender(retry + 1)
@@ -333,8 +370,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         if (d.success && d.image) {
           const scoreInfo = d.score ? ` (일치도 ${d.score}점, ${d.floorsDetected}층 감지)` : ''
           console.log(`[AI-HUB] 3D-First Pipeline 완료${scoreInfo}`)
-          setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(angle || 'exterior')
-        } else if (retry < 1) {
+          setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(angle || 'exterior'); trackRender('gemini')        } else if (retry < 1) {
           // 실패 시 기존 텍스트 기반으로 1회 재시도
           console.warn('[AI-HUB] 3D-First failed, falling back to text-based:', d.error)
           threeJsCaptures = undefined // 캡처 무효화
@@ -365,7 +401,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
       clearTimeout(timeout)
       const d = await safeJson(r)
       if (d.success && d.image) {
-        setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(angle || 'exterior')
+        setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete(angle || 'exterior'); trackRender('gemini')
       } else if (retry < 2 && !d.error?.includes('시간 초과')) {
         // 재시도 (최대 2회, 타임아웃은 재시도 안 함)
         await new Promise(r => setTimeout(r, 1500))
@@ -443,7 +479,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         if (first) onRenderComplete?.(first.image)
         const successCount = d.images.filter((i: any) => i.image).length
         toast.success(`멀티앵글 ${successCount}/${d.images.length}장 생성 완료 (3D 참조)`)
-        trackAiRenderComplete('multi-angle')
+        trackAiRenderComplete('multi-angle'); trackRender('gemini')
       } else setError(d.error || '멀티앵글 생성 실패')
     } catch(e) {
       clearTimeout(timeout)
@@ -787,31 +823,41 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                 </button>
               </div>
             )}
-            {/* ★ 렌더링 엔진 선택 */}
+            {/* ★ 렌더링 엔진 선택 + 잔여 횟수 */}
+            {(() => {
+              const usage = getRenderUsage()
+              const limits = getRenderLimits('pro') // TODO: 실제 유저 tier
+              const geminiUsed = usage.gemini || 0
+              const cnUsed = usage.controlNet || 0
+              const geminiLabel = getRenderUsageLabel(limits.gemini, geminiUsed)
+              const cnLabel = getRenderUsageLabel(limits.controlNet, cnUsed)
+              return (<>
             <div className="flex gap-1.5 p-1 rounded-lg bg-secondary/30 mb-2">
               <button
                 onClick={() => setRenderEngine('gemini')}
-                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all flex items-center justify-center gap-1 ${
+                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all flex flex-col items-center gap-0.5 ${
                   renderEngine === 'gemini' 
                     ? 'bg-card shadow-sm border border-border/50 text-foreground' 
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <span>✨</span> Gemini
-                <span className="text-[8px] opacity-60">빠름</span>
+                <span className="flex items-center gap-1">✨ Gemini <span className="text-[8px] opacity-60">빠름</span></span>
+                <span className={`text-[8px] ${limits.gemini !== -1 && geminiUsed >= limits.gemini ? 'text-red-400' : 'text-muted-foreground/70'}`}>{geminiLabel}</span>
               </button>
               <button
                 onClick={() => setRenderEngine('controlnet')}
-                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all flex items-center justify-center gap-1 ${
+                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all flex flex-col items-center gap-0.5 ${
                   renderEngine === 'controlnet' 
                     ? 'bg-card shadow-sm border border-violet-500/50 text-violet-300' 
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <span>🎯</span> ControlNet
-                <span className="text-[8px] opacity-60">정밀</span>
+                <span className="flex items-center gap-1">🎯 ControlNet <span className="text-[8px] opacity-60">정밀</span></span>
+                <span className={`text-[8px] ${limits.controlNet !== -1 && cnUsed >= limits.controlNet ? 'text-red-400' : 'text-muted-foreground/70'}`}>{cnLabel}</span>
               </button>
             </div>
+            </>)
+            })()}
             {renderEngine === 'controlnet' && (
               <p className="text-[9px] text-violet-400/70 mb-2">3D 모델의 건물 윤곽을 정확히 유지하며 포토리얼 변환합니다. Replicate API 키 필요.</p>
             )}
