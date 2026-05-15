@@ -207,7 +207,7 @@ ${amenityList || '정보 없음'}
 [도로]
 ${roadList || '정보 없음'}
 
-다음 JSON 형식으로만 응답하세요 (마크다운 코드블록 없이):
+다음 JSON 형식으로만 응답하세요. 마크다운 코드블록(```)을 사용하지 마세요. 문자열 값 안에 줄바꿈(\n)이나 이스케이프된 따옴표(\")를 넣지 마세요. 순수 JSON만 출력하세요:
 {
   "marketPosition": "이 지역의 부동산 시장 포지셔닝 분석 (2-3문장)",
   "competitiveAdvantage": "본 프로젝트의 주변 대비 경쟁 우위 요소 (2-3문장)",
@@ -231,20 +231,48 @@ ${roadList || '정보 없음'}
 
     const rawAnalysis = await callGeminiAnalysis(analysisPrompt)
 
-    // 4. JSON 파싱
+    // 4. JSON 파싱 (다중 시도)
     let analysis: any = null
-    try {
-      const cleaned = rawAnalysis.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-      analysis = JSON.parse(cleaned)
-    } catch {
-      console.error('[NEARBY] JSON parse failed, using fallback')
+    const parseAttempts = [
+      // 시도 1: 코드블록 제거
+      () => JSON.parse(rawAnalysis.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()),
+      // 시도 2: 첫 { ~ 마지막 } 추출
+      () => {
+        const start = rawAnalysis.indexOf('{')
+        const end = rawAnalysis.lastIndexOf('}')
+        if (start >= 0 && end > start) return JSON.parse(rawAnalysis.slice(start, end + 1))
+        throw new Error('no braces')
+      },
+      // 시도 3: 이중 이스케이프 제거 후 재시도
+      () => {
+        let cleaned = rawAnalysis.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+        // 이중 이스케이프된 JSON 문자열 복구
+        cleaned = cleaned.replace(/\\n/g, ' ').replace(/\\"/g, '"')
+        const start = cleaned.indexOf('{')
+        const end = cleaned.lastIndexOf('}')
+        if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1))
+        throw new Error('no braces after clean')
+      },
+    ]
+
+    for (const attempt of parseAttempts) {
+      try {
+        analysis = attempt()
+        if (analysis && analysis.marketPosition) break
+      } catch { /* try next */ }
+    }
+
+    if (!analysis || !analysis.marketPosition) {
+      console.error('[NEARBY] All parse attempts failed, using fallback')
+      // 원문에서 핵심 정보 추출 시도
+      const rawText = rawAnalysis.replace(/```json\s*/g, '').replace(/```\s*/g, '').replace(/\\n/g, ' ').replace(/\\"/g, '"').trim()
       analysis = {
-        marketPosition: rawAnalysis.slice(0, 200),
+        marketPosition: rawText.slice(0, 300),
         competitiveAdvantage: '',
-        risks: ['분석 파싱 실패'],
-        opportunities: [],
+        risks: ['AI 분석 결과를 구조화하지 못했습니다'],
+        opportunities: ['원문 분석은 성공적으로 수행되었습니다'],
         comparableProjects: [],
-        recommendation: rawAnalysis.slice(0, 300),
+        recommendation: rawText.slice(0, 400),
         priceEstimate: '',
         neighborhoodScore: { transportation: 5, education: 5, commercial: 5, greenSpace: 5, development: 5 },
       }

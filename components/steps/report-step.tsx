@@ -182,11 +182,11 @@ export function ReportStep(props: ReportStepProps) {
             </div>
 
             <Tabs defaultValue="summary" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
-                <TabsTrigger value="summary" className="text-xs sm:text-sm">요약</TabsTrigger>
-                <TabsTrigger value="nearby" className="text-xs sm:text-sm">주변</TabsTrigger>
-                <TabsTrigger value="ai" className="text-xs sm:text-sm">AI 분석</TabsTrigger>
-                <TabsTrigger value="financial" className="text-xs sm:text-sm">사업성</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4 mb-4">
+                <TabsTrigger value="summary" className="text-[11px] sm:text-sm px-1">요약</TabsTrigger>
+                <TabsTrigger value="nearby" className="text-[11px] sm:text-sm px-1">주변</TabsTrigger>
+                <TabsTrigger value="ai" className="text-[11px] sm:text-sm px-1">AI분석</TabsTrigger>
+                <TabsTrigger value="financial" className="text-[11px] sm:text-sm px-1">사업성</TabsTrigger>
               </TabsList>
               
               {/* Download Error Message */}
