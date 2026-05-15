@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Sparkles, Copy, Check, Loader2, X, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
 import { captureBuilding3D } from "@/lib/offscreen-3d-capture"
+import { captureInterior3D } from "@/lib/interior-3d-capture"
 import { trackAiRenderStart, trackAiRenderComplete } from "@/components/google-analytics"
 import { useSubscription } from "@/components/subscription-provider"
 
@@ -213,28 +214,67 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
     const timeout = setTimeout(() => controller.abort(), 120_000)
 
     try {
-      // ━━━ 3D-First: 오프스크린 Three.js 5방향 자동 캡처 ━━━
+      // ━━━ 3D-First: 오프스크린 Three.js 자동 캡처 ━━━
       let threeJsCaptures: { angle: string; image: string }[] | undefined
       try {
         if (input.buildingType && input.siteArea && input.floors) {
-          setRenderProgress('🧊 3D 모델 생성 + 5방향 캡처 중...')
-          threeJsCaptures = await captureBuilding3D({
-            type: input.buildingType,
-            coverage: input.buildingCoverageRatio || 50,
-            siteArea: input.siteArea,
-            floors: input.floors,
-            units: input.units,
-            buildingCount: input.buildingCount,
-            originalType: (input as any)._originalType || (input as any).originalType || input.buildingType,
-          })
+          if (angle === 'interior') {
+            // ━━━ 인테리어 3D-First: 실내 모델링 + 3방향 캡처 ━━━
+            setRenderProgress('🛋️ 실내 3D 모델 생성 중...')
+            threeJsCaptures = await captureInterior3D({
+              unitArea: input.siteArea * (input.buildingCoverageRatio || 50) / 100 / (input.units || 1),
+              floors: input.floors,
+              type: input.buildingType,
+              units: input.units || 1,
+              style,
+            })
+            console.log(`[AI-HUB] Interior 3D: ${threeJsCaptures?.length}방향 캡처`)
+          } else {
+            // ━━━ 외관 3D-First: 건물 모델링 + 5방향 캡처 ━━━
+            setRenderProgress('🧊 3D 모델 생성 + 5방향 캡처 중...')
+            threeJsCaptures = await captureBuilding3D({
+              type: input.buildingType,
+              coverage: input.buildingCoverageRatio || 50,
+              siteArea: input.siteArea,
+              floors: input.floors,
+              units: input.units,
+              buildingCount: input.buildingCount,
+              originalType: (input as any)._originalType || (input as any).originalType || input.buildingType,
+            })
+          }
           setRenderProgress('🎨 AI 포토리얼 변환 중...')
         }
       } catch (e) {
         console.warn('[AI-HUB] 3D capture failed, falling back to text-only:', e)
       }
 
-      // ━━━ 3D 캡처 있으면 → 전체 파이프라인 (5방향 + Multi-shot + Auto-select) ━━━
+      // ━━━ 3D 캡처 있으면 → 파이프라인 분기 ━━━
       if (threeJsCaptures && threeJsCaptures.length > 0) {
+        if (angle === 'interior') {
+          // ━━━ 인테리어 3D-First: 실내 캡처 → ai-render 전달 ━━━
+          setRenderProgress('🛋️ 실내 3D 참조 + AI 포토리얼 변환 중...')
+          const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
+            prompt:`${input.layoutName} ${input.floors}층 ${input.units}세대`,
+            style, address:input.address, layoutName:input.layoutName,
+            floors:input.floors, units:input.units, siteArea:input.siteArea,
+            buildingType:input.buildingType, buildingCount:input.buildingCount, coverage:input.buildingCoverageRatio,
+            strategy:input.strategy, values:input.values, patterns:input.patterns,
+            surroundingContext:input.surroundingContext,
+            cameraAngle: 'interior', sceneMode: scene,
+            regulation: input.regulation,
+            threeJsCaptures,
+          }) })
+          clearTimeout(timeout)
+          const d = await safeJson(r)
+          if (d.success && d.image) {
+            console.log('[AI-HUB] Interior 3D-First Pipeline 완료')
+            setRenderImg(d.image); onRenderComplete?.(d.image); setRetryCount(0); trackAiRenderComplete('interior')
+          } else if (retry < 1) {
+            threeJsCaptures = undefined
+            return doRender(retry + 1)
+          } else { setError(d.error || '인테리어 렌더링 실패'); setRetryCount(0) }
+        } else {
+        // ━━━ 외관 3D-First: 5방향 + Multi-shot + Auto-select ━━━
         setRenderProgress('🎨 5방향 참조 + 3장 생성 + 자동 선별 중...')
         const styleData = STYLES.find(s => s.id === style)
         const r = await fetch('/api/3d-to-photo', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
@@ -260,6 +300,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         } else {
           setError(d.error || '렌더링 실패'); setRetryCount(0)
         }
+        } // end exterior 3D-First
       } else {
       // ━━━ 3D 캡처 없으면 → 기존 텍스트 기반 ━━━
       const r = await fetch('/api/ai-render', { method:'POST', headers:{'Content-Type':'application/json'}, signal: controller.signal, body:JSON.stringify({
