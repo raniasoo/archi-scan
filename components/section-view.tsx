@@ -1,5 +1,6 @@
 "use client"
 import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
+import { getPatternVisuals } from "@/lib/alexander-patterns"
 
 import React from "react"
 
@@ -32,6 +33,7 @@ export function SectionView({
   const basementHeight = 3.2 // 지하 층고 (m)
   const basementFloors = Math.max(1, Math.ceil(parking / (siteArea * buildingCoverage / 100 / 30)))
   const geo = getBuildingDimensionsInMeters({ type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType })
+  const pv = getPatternVisuals({ type, floors, units, coverage: buildingCoverage, siteArea, buildingCount })
 
   const totalHeight = gfHeight + (floors - 1) * floorHeight
   const basementTotalH = basementFloors * basementHeight

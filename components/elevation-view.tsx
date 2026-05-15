@@ -1,5 +1,6 @@
 "use client"
 import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
+import { getPatternVisuals } from "@/lib/alexander-patterns"
 
 import React, { useState } from "react"
 
@@ -37,6 +38,7 @@ export function ElevationView({
 
   // 건물 폭 — AI 렌더링과 동일한 공식
   const geo = getBuildingDimensionsInMeters({ type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType })
+  const pv = getPatternVisuals({ type, floors, units, coverage: buildingCoverage, siteArea, buildingCount })
   const effectiveBldgCount = geo.effectiveBuildingCount
   const firstBlock = geo.blocksInMeters[0]
   let bldRealW = Math.round(firstBlock?.widthM || 10)

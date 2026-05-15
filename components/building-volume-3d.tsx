@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { X, RotateCcw, ZoomIn, ZoomOut, Camera, Loader2 } from "lucide-react"
 
 import { getBuildingGeometry, getClusterBlocks, type BuildingBlock } from "@/lib/building-geometry"
+import { getPatternVisuals } from "@/lib/alexander-patterns"
 import { STYLES } from "@/components/ai-hub"
 
 interface BuildingVolume3DProps {

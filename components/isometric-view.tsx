@@ -1,5 +1,6 @@
 "use client"
 import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
+import { getPatternVisuals } from "@/lib/alexander-patterns"
 
 import React from "react"
 
@@ -99,6 +100,7 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, build
   const floorH = Math.min(14, Math.max(8, 180 / Math.max(floors, 2)))
   const buildH = floors * floorH
   const geo = getBuildingDimensionsInMeters({ type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType })
+  const pv = getPatternVisuals({ type, floors, units, coverage: buildingCoverage, siteArea, buildingCount })
   const bldRatio = Math.sqrt(geo.totalFootprint / siteArea) * 0.9
 
   // viewBox 동적 계산: 건물 영역에 맞게 줌
@@ -386,6 +388,13 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, build
         <text x={W / 2} y={H - 8} textAnchor="middle" fontSize="7" fill="#64748b">
           {layoutName || type} · {floors}층 · {units}세대 · 건폐율 {buildingCoverage}% · 대지 {siteArea.toLocaleString()}㎡
         </text>
+        {/* 알렉산더 패턴 주석 */}
+        {pv.patternLabels.slice(0, 3).map((label, i) => (
+          <text key={`pat-${i}`} x="10" y={390 + i * 12} fontSize="8" fill="#1a6b1a" opacity="0.7">{label}</text>
+        ))}
+        {pv.propertyLabels.length > 0 && (
+          <text x="10" y={390 + Math.min(pv.patternLabels.length, 3) * 12 + 12} fontSize="7" fill="#6a3399" opacity="0.6">속성: {pv.propertyLabels.slice(0, 3).join(' · ')}</text>
+        )}
       </svg>
     </div>
   )

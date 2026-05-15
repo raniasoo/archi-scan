@@ -1,5 +1,6 @@
 "use client"
 import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
+import { getPatternVisuals } from "@/lib/alexander-patterns"
 
 interface BuildingFootprintProps {
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
