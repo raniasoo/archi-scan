@@ -1275,6 +1275,7 @@ SPATIAL QUALITY — CHRISTOPHER ALEXANDER'S NATURE OF ORDER:
 These specific objects and arrangements make the space feel ALIVE, like a real home, not a sterile model unit:
 ${alexanderObjects.map(h => `- ${h}`).join('\n')}
 ${patternHints.length > 0 ? `\nUSER-SELECTED PATTERN ELEMENTS:\n${patternHints.filter(h => h.toLowerCase().includes('window') || h.toLowerCase().includes('terrace') || h.toLowerCase().includes('ceiling') || h.toLowerCase().includes('light') || h.toLowerCase().includes('garden') || h.toLowerCase().includes('earth')).map(h => `- ${h}`).join('\n')}` : ''}
+${supabasePatternPrompt || ''}
 
 ATMOSPHERE:
 - Primary light: Natural afternoon sunlight through windows (warm, directional, casting long shadows across the floor)
