@@ -114,7 +114,7 @@ async function callGeminiAnalysis(prompt: string): Promise<string> {
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -123,7 +123,6 @@ async function callGeminiAnalysis(prompt: string): Promise<string> {
           generationConfig: { 
             temperature: 0.4, 
             maxOutputTokens: 2000,
-            responseMimeType: 'application/json',
           },
         }),
         signal: AbortSignal.timeout(30000),
