@@ -1,0 +1,250 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY
+
+// ━━━ Overpass API로 주변 건물 조회 ━━━
+async function fetchNearbyBuildings(lat: number, lng: number, radius: number = 300) {
+  try {
+    const query = `[out:json][timeout:15];
+(
+  way(around:${radius},${lat},${lng})[building];
+  way(around:${radius},${lat},${lng})["building:use"];
+  way(around:200,${lat},${lng})[highway~"^(primary|secondary|tertiary|residential)$"];
+  way(around:200,${lat},${lng})[amenity];
+  way(around:200,${lat},${lng})[shop];
+  node(around:200,${lat},${lng})[amenity];
+  node(around:200,${lat},${lng})[shop];
+);out center tags;`
+
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST', body: query,
+      headers: { 'Content-Type': 'text/plain', 'User-Agent': 'ArchiScan/2.0' },
+      signal: AbortSignal.timeout(15000),
+    })
+    const data = await res.json()
+    return data?.elements || []
+  } catch (e) {
+    console.error('[NEARBY] Overpass error:', e)
+    return []
+  }
+}
+
+// ━━━ 주변 요소 분류 ━━━
+function classifyElements(elements: any[], lat: number, lng: number) {
+  const LM = Math.cos(lat * Math.PI / 180) * 111319
+  const buildings: any[] = []
+  const amenities: any[] = []
+  const roads: any[] = []
+  const shops: any[] = []
+
+  for (const el of elements) {
+    const cLat = el.center?.lat || el.lat
+    const cLng = el.center?.lon || el.lon
+    if (!cLat || !cLng) continue
+    const dx = (cLng - lng) * LM
+    const dy = (cLat - lat) * 111319
+    const dist = Math.round(Math.sqrt(dx * dx + dy * dy))
+    const bearing = Math.round((Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360)
+    const dirs = ['북', '북동', '동', '남동', '남', '남서', '서', '북서']
+    const dir = dirs[Math.round(bearing / 45) % 8]
+
+    if (el.tags?.building) {
+      const floors = parseInt(el.tags['building:levels'] || '0') || 0
+      const height = parseFloat(el.tags['height'] || '0') || (floors > 0 ? floors * 3.3 : 0)
+      const use = el.tags['building'] || ''
+      const name = el.tags['name'] || ''
+      const addr = el.tags['addr:full'] || el.tags['addr:street'] || ''
+      buildings.push({ name, use, floors, height: Math.round(height), dist, dir, addr })
+    } else if (el.tags?.amenity) {
+      amenities.push({ name: el.tags.name || el.tags.amenity, type: el.tags.amenity, dist, dir })
+    } else if (el.tags?.shop) {
+      shops.push({ name: el.tags.name || el.tags.shop, type: el.tags.shop, dist, dir })
+    } else if (el.tags?.highway) {
+      roads.push({ name: el.tags.name || el.tags.highway, type: el.tags.highway, dist, dir })
+    }
+  }
+
+  buildings.sort((a, b) => a.dist - b.dist)
+  amenities.sort((a, b) => a.dist - b.dist)
+  return { buildings: buildings.slice(0, 30), amenities: amenities.slice(0, 15), roads: roads.slice(0, 10), shops: shops.slice(0, 10) }
+}
+
+// ━━━ 건물 용도 한국어 변환 ━━━
+function translateBuildingUse(use: string): string {
+  const map: Record<string, string> = {
+    'apartments': '공동주택', 'residential': '주거', 'commercial': '상업',
+    'retail': '판매시설', 'office': '업무시설', 'industrial': '공장',
+    'house': '단독주택', 'detached': '단독주택', 'yes': '건물',
+    'church': '교회', 'school': '학교', 'hospital': '병원',
+    'hotel': '호텔', 'warehouse': '창고', 'garage': '차고',
+    'public': '공공시설', 'civic': '공공시설', 'university': '대학',
+  }
+  return map[use] || use
+}
+
+// ━━━ 주변 통계 요약 ━━━
+function summarizeContext(classified: ReturnType<typeof classifyElements>) {
+  const { buildings, amenities, roads, shops } = classified
+  const residential = buildings.filter(b => ['apartments', 'residential', 'house', 'detached'].includes(b.use))
+  const commercial = buildings.filter(b => ['commercial', 'retail', 'office'].includes(b.use))
+  const maxFloors = buildings.reduce((m, b) => Math.max(m, b.floors), 0)
+  const avgFloors = buildings.filter(b => b.floors > 0).length > 0
+    ? Math.round(buildings.filter(b => b.floors > 0).reduce((s, b) => s + b.floors, 0) / buildings.filter(b => b.floors > 0).length * 10) / 10
+    : 0
+  const maxHeight = buildings.reduce((m, b) => Math.max(m, b.height), 0)
+
+  return {
+    totalBuildings: buildings.length,
+    residentialCount: residential.length,
+    commercialCount: commercial.length,
+    maxFloors, avgFloors, maxHeight,
+    amenityTypes: [...new Set(amenities.map(a => a.type))],
+    mainRoads: roads.filter(r => ['primary', 'secondary', 'tertiary'].includes(r.type)).map(r => r.name).filter(Boolean),
+    shopTypes: [...new Set(shops.map(s => s.type))],
+    nearestBuilding: buildings[0] || null,
+    highRiseCount: buildings.filter(b => b.floors >= 10).length,
+    lowRiseCount: buildings.filter(b => b.floors > 0 && b.floors < 5).length,
+    midRiseCount: buildings.filter(b => b.floors >= 5 && b.floors < 10).length,
+  }
+}
+
+// ━━━ Gemini 분석 호출 ━━━
+async function callGeminiAnalysis(prompt: string): Promise<string> {
+  if (!GOOGLE_AI_API_KEY) return '(AI 분석 키가 설정되지 않았습니다)'
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2000 },
+        }),
+        signal: AbortSignal.timeout(30000),
+      }
+    )
+    const data = await res.json()
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || '(분석 결과를 생성하지 못했습니다)'
+  } catch (e) {
+    console.error('[NEARBY] Gemini error:', e)
+    return '(AI 분석 호출 실패)'
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { lat, lng, address, buildingType, floors, units, siteArea, gfa, strategy } = body
+
+    if (!lat || !lng) {
+      return NextResponse.json({ error: '좌표가 필요합니다' }, { status: 400 })
+    }
+
+    console.log(`[NEARBY] 분석 시작: ${address} (${lat},${lng})`)
+
+    // 1. 주변 데이터 수집
+    const elements = await fetchNearbyBuildings(lat, lng, 300)
+    const classified = classifyElements(elements, lat, lng)
+    const summary = summarizeContext(classified)
+
+    console.log(`[NEARBY] 주변 건물 ${summary.totalBuildings}개, 편의시설 ${classified.amenities.length}개`)
+
+    // 2. 주변 건물 목록 텍스트
+    const buildingList = classified.buildings.slice(0, 15).map(b =>
+      `- ${b.dir}쪽 ${b.dist}m: ${translateBuildingUse(b.use)}${b.name ? ` (${b.name})` : ''} ${b.floors > 0 ? `${b.floors}층` : ''} ${b.height > 0 ? `높이${b.height}m` : ''}`
+    ).join('\n')
+
+    const amenityList = classified.amenities.slice(0, 10).map(a =>
+      `- ${a.dir}쪽 ${a.dist}m: ${a.name || a.type}`
+    ).join('\n')
+
+    const roadList = classified.roads.slice(0, 5).map(r =>
+      `- ${r.dir}쪽: ${r.name || r.type}`
+    ).join('\n')
+
+    // 3. Gemini 분석 프롬프트
+    const analysisPrompt = `당신은 한국 부동산 개발 전문 컨설턴트입니다.
+아래 대상지 정보와 주변 현황을 분석하여 개발사업 사전검토에 필요한 주변 프로젝트 분석을 JSON 형식으로 작성하세요.
+
+[대상지 정보]
+- 주소: ${address}
+- 좌표: ${lat}, ${lng}
+- 대지면적: ${siteArea || '미정'}㎡
+- 계획 배치: ${buildingType || '미정'}
+- 계획 층수: ${floors || '미정'}층
+- 계획 세대수: ${units || '미정'}세대
+- 연면적: ${gfa || '미정'}㎡
+- 전략: ${strategy === 'profitability' ? '수익 극대화' : strategy === 'quality' ? '설계 품질' : '균형'}
+
+[주변 건물 현황 (반경 300m)]
+건물 총 ${summary.totalBuildings}개 (주거 ${summary.residentialCount}, 상업 ${summary.commercialCount})
+평균 층수: ${summary.avgFloors}층, 최고 층수: ${summary.maxFloors}층
+고층(10F+): ${summary.highRiseCount}개, 중층(5-9F): ${summary.midRiseCount}개, 저층(1-4F): ${summary.lowRiseCount}개
+
+${buildingList}
+
+[주변 편의시설]
+${amenityList || '정보 없음'}
+
+[도로]
+${roadList || '정보 없음'}
+
+다음 JSON 형식으로만 응답하세요 (마크다운 코드블록 없이):
+{
+  "marketPosition": "이 지역의 부동산 시장 포지셔닝 분석 (2-3문장)",
+  "competitiveAdvantage": "본 프로젝트의 주변 대비 경쟁 우위 요소 (2-3문장)",
+  "risks": ["리스크 1", "리스크 2", "리스크 3"],
+  "opportunities": ["기회 1", "기회 2", "기회 3"],
+  "comparableProjects": [
+    {"name": "주변 비교 대상 1", "type": "유형", "floors": 층수, "distance": 거리m, "relevance": "관련성 설명"},
+    {"name": "주변 비교 대상 2", "type": "유형", "floors": 층수, "distance": 거리m, "relevance": "관련성 설명"},
+    {"name": "주변 비교 대상 3", "type": "유형", "floors": 층수, "distance": 거리m, "relevance": "관련성 설명"}
+  ],
+  "recommendation": "종합 제안 (3-4문장, 구체적인 개발 전략 포함)",
+  "priceEstimate": "주변 시세 및 분양가 추정 (있으면 구체적 금액, 없으면 추정 근거)",
+  "neighborhoodScore": {
+    "transportation": 1-10점,
+    "education": 1-10점,
+    "commercial": 1-10점,
+    "greenSpace": 1-10점,
+    "development": 1-10점
+  }
+}`
+
+    const rawAnalysis = await callGeminiAnalysis(analysisPrompt)
+
+    // 4. JSON 파싱
+    let analysis: any = null
+    try {
+      const cleaned = rawAnalysis.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+      analysis = JSON.parse(cleaned)
+    } catch {
+      console.error('[NEARBY] JSON parse failed, using fallback')
+      analysis = {
+        marketPosition: rawAnalysis.slice(0, 200),
+        competitiveAdvantage: '',
+        risks: ['분석 파싱 실패'],
+        opportunities: [],
+        comparableProjects: [],
+        recommendation: rawAnalysis.slice(0, 300),
+        priceEstimate: '',
+        neighborhoodScore: { transportation: 5, education: 5, commercial: 5, greenSpace: 5, development: 5 },
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      address,
+      summary,
+      buildings: classified.buildings.slice(0, 15),
+      amenities: classified.amenities.slice(0, 10),
+      roads: classified.roads.slice(0, 5),
+      analysis,
+    })
+  } catch (err: any) {
+    console.error('[NEARBY] Error:', err)
+    return NextResponse.json({ error: err.message || 'Unknown error' }, { status: 500 })
+  }
+}

@@ -47,6 +47,7 @@ const LoadingBox = () => <div className="flex items-center justify-center p-8 te
 const ReportSummary = dynamic(() => import("@/components/report-summary").then(m => ({ default: m.ReportSummary })), { loading: LoadingBox })
 const FinancialAnalysis = dynamic(() => import("@/components/financial-analysis").then(m => ({ default: m.FinancialAnalysis })), { loading: LoadingBox })
 const AIReasoningPanel = dynamic(() => import("@/components/ai-reasoning").then(m => ({ default: m.AIReasoningPanel })))
+const NearbyAnalysisCard = dynamic(() => import("@/components/nearby-analysis-card"), { loading: LoadingBox })
 
 export interface ReportStepProps {
   selectedLayoutData: LayoutOption
@@ -82,6 +83,7 @@ export interface ReportStepProps {
   aiMultiImages?: {angle: string; image: string | null}[] | null
   aiInteriorComparison?: {style: string; label: string; image: string}[] | null
   sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
+  siteCoords?: { lng: number; lat: number } | null
 }
 
 export function ReportStep(props: ReportStepProps) {
@@ -182,6 +184,7 @@ export function ReportStep(props: ReportStepProps) {
             <Tabs defaultValue="summary" className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-4">
                 <TabsTrigger value="summary" className="text-xs sm:text-sm">요약</TabsTrigger>
+                <TabsTrigger value="nearby" className="text-xs sm:text-sm">주변</TabsTrigger>
                 <TabsTrigger value="ai" className="text-xs sm:text-sm">AI 분석</TabsTrigger>
                 <TabsTrigger value="financial" className="text-xs sm:text-sm">사업성</TabsTrigger>
               </TabsList>
@@ -501,6 +504,27 @@ export function ReportStep(props: ReportStepProps) {
                   sitePolygon={props.sitePolygon}
                 />
                 </ReportErrorBoundary>
+              </TabsContent>
+
+              <TabsContent value="nearby">
+                {props.siteCoords ? (
+                  <NearbyAnalysisCard
+                    lat={props.siteCoords.lat}
+                    lng={props.siteCoords.lng}
+                    address={address}
+                    buildingType={selectedLayoutData.type}
+                    floors={selectedLayoutData.floors}
+                    units={selectedLayoutData.units || 0}
+                    siteArea={siteAreaNum}
+                    gfa={gfa}
+                    strategy={typeof strategy === 'string' ? strategy : strategy?.id || 'balanced'}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    <p>📍 대상지 좌표가 필요합니다</p>
+                    <p className="text-xs mt-1">주소 검색 후 이용 가능합니다</p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="ai">

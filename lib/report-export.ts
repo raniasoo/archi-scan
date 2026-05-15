@@ -368,6 +368,17 @@ export interface ExportData {
   aiRenderImage?: string | null;
   aiMultiImages?: {angle: string; image: string | null}[] | null;
   aiInteriorComparison?: {style: string; label: string; image: string}[] | null;
+  nearbyAnalysis?: {
+    marketPosition: string;
+    competitiveAdvantage: string;
+    risks: string[];
+    opportunities: string[];
+    recommendation: string;
+    priceEstimate: string;
+    neighborhoodScore: { transportation: number; education: number; commercial: number; greenSpace: number; development: number };
+    comparableProjects: { name: string; type: string; floors: number; distance: number; relevance: string }[];
+    summary: { totalBuildings: number; avgFloors: number; maxFloors: number; residentialCount: number; commercialCount: number };
+  };
 }
 
 // ExportData를 ReportDataV250으로 변환
@@ -845,6 +856,132 @@ function generatePatternAnalysisHTML(pq: NonNullable<ExportData['patternQuality'
     </section>`
   
   return html
+}
+
+function generateNearbyAnalysisHTML(na: NonNullable<ExportData['nearbyAnalysis']>): string {
+  const ns = na.neighborhoodScore
+  const scoreItems = [
+    { label: '교통', score: ns.transportation, icon: '🚇', color: '#0d9488' },
+    { label: '교육', score: ns.education, icon: '🎓', color: '#7c3aed' },
+    { label: '상업', score: ns.commercial, icon: '🏪', color: '#ea580c' },
+    { label: '녹지', score: ns.greenSpace, icon: '🌳', color: '#16a34a' },
+    { label: '개발', score: ns.development, icon: '🏗️', color: '#2563eb' },
+  ]
+  const avgScore = Math.round((ns.transportation + ns.education + ns.commercial + ns.greenSpace + ns.development) / 5 * 10) / 10
+
+  return `
+    <section class="pdf-section" style="page-break-before:always;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:4px; height:28px; background:linear-gradient(180deg,#2563eb,#7c3aed); border-radius:2px;"></div>
+        <div>
+          <h2 style="font-size:18px; font-weight:800; color:#0f172a; margin:0;">주변 프로젝트 분석</h2>
+          <p style="font-size:10px; color:#94a3b8; margin:2px 0 0 0;">AI 기반 주변 시장 분석 · 반경 300m · 건물 ${na.summary.totalBuildings}개</p>
+        </div>
+      </div>
+
+      <!-- 입지 경쟁력 점수 -->
+      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:18px;">
+        ${scoreItems.map(si => `
+        <div style="padding:12px 8px; background:#fafafa; border:1px solid #e2e8f0; border-radius:10px; text-align:center;">
+          <p style="font-size:18px; margin:0 0 2px 0;">${si.icon}</p>
+          <p style="font-size:9px; color:#64748b; margin:0 0 4px 0;">${si.label}</p>
+          <p style="font-size:24px; font-weight:800; color:${si.color}; margin:0;">${si.score}</p>
+          <div style="width:80%; height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin:4px auto 0;">
+            <div style="width:${si.score * 10}%; height:100%; background:${si.color}; border-radius:2px;"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+
+      <!-- 평균 점수 -->
+      <div style="text-align:center; margin-bottom:16px; padding:8px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px;">
+        <span style="font-size:10px; color:#0369a1;">입지 경쟁력 종합 평균: </span>
+        <span style="font-size:16px; font-weight:800; color:#0369a1;">${avgScore}</span>
+        <span style="font-size:10px; color:#0369a1;"> / 10</span>
+      </div>
+
+      <!-- 시장 포지셔닝 + 경쟁 우위 -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div style="padding:14px; background:#f8fafb; border:1px solid #e2e8f0; border-left:4px solid #2563eb; border-radius:8px;">
+          <p style="font-size:10px; font-weight:700; color:#2563eb; margin:0 0 6px 0;">📊 시장 포지셔닝</p>
+          <p style="font-size:10px; color:#334155; line-height:1.6; margin:0;">${na.marketPosition}</p>
+        </div>
+        <div style="padding:14px; background:#f8fafb; border:1px solid #e2e8f0; border-left:4px solid #059669; border-radius:8px;">
+          <p style="font-size:10px; font-weight:700; color:#059669; margin:0 0 6px 0;">🏆 경쟁 우위</p>
+          <p style="font-size:10px; color:#334155; line-height:1.6; margin:0;">${na.competitiveAdvantage}</p>
+        </div>
+      </div>
+
+      <!-- 리스크 / 기회 -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div style="padding:12px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px;">
+          <p style="font-size:10px; font-weight:700; color:#dc2626; margin:0 0 6px 0;">⚠️ 리스크 요인</p>
+          ${na.risks.map(r => `<p style="font-size:10px; color:#7f1d1d; line-height:1.5; margin:0 0 3px 0;">• ${r}</p>`).join('')}
+        </div>
+        <div style="padding:12px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px;">
+          <p style="font-size:10px; font-weight:700; color:#059669; margin:0 0 6px 0;">💡 기회 요인</p>
+          ${na.opportunities.map(o => `<p style="font-size:10px; color:#064e3b; line-height:1.5; margin:0 0 3px 0;">• ${o}</p>`).join('')}
+        </div>
+      </div>
+
+      <!-- 시세 추정 -->
+      ${na.priceEstimate ? `
+      <div style="padding:14px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; margin-bottom:16px;">
+        <p style="font-size:10px; font-weight:700; color:#92400e; margin:0 0 6px 0;">💰 시세 및 분양가 추정</p>
+        <p style="font-size:10px; color:#451a03; line-height:1.6; margin:0;">${na.priceEstimate}</p>
+      </div>` : ''}
+
+      <!-- 비교 대상 프로젝트 -->
+      ${na.comparableProjects.length > 0 ? `
+      <p style="font-size:11px; font-weight:700; color:#0f172a; margin:0 0 8px 0;">🏢 비교 대상 프로젝트</p>
+      <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:16px;">
+        <thead><tr style="background:#f1f5f9;">
+          <th style="padding:6px 8px; text-align:left; color:#64748b; font-weight:600;">프로젝트</th>
+          <th style="padding:6px 8px; text-align:left; color:#64748b; font-weight:600;">유형</th>
+          <th style="padding:6px 8px; text-align:center; color:#64748b; font-weight:600;">층수</th>
+          <th style="padding:6px 8px; text-align:center; color:#64748b; font-weight:600;">거리</th>
+          <th style="padding:6px 8px; text-align:left; color:#64748b; font-weight:600;">관련성</th>
+        </tr></thead>
+        <tbody>
+          ${na.comparableProjects.map(cp => `<tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:5px 8px; color:#1e293b; font-weight:600;">${cp.name}</td>
+            <td style="padding:5px 8px; color:#475569;">${cp.type}</td>
+            <td style="padding:5px 8px; text-align:center; color:#475569;">${cp.floors}F</td>
+            <td style="padding:5px 8px; text-align:center; color:#475569;">${cp.distance}m</td>
+            <td style="padding:5px 8px; color:#475569; font-size:9px;">${cp.relevance}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : ''}
+
+      <!-- 종합 제안 -->
+      <div style="padding:14px; background:#eff6ff; border:2px solid #93c5fd; border-radius:10px;">
+        <p style="font-size:11px; font-weight:700; color:#1d4ed8; margin:0 0 6px 0;">🎯 종합 제안</p>
+        <p style="font-size:11px; color:#1e293b; line-height:1.7; margin:0;">${na.recommendation}</p>
+      </div>
+
+      <!-- 주변 현황 요약 -->
+      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:14px;">
+        <div style="padding:8px; background:#fafafa; border:1px solid #e2e8f0; border-radius:6px; text-align:center;">
+          <p style="font-size:16px; font-weight:700; color:#0f172a; margin:0;">${na.summary.totalBuildings}</p>
+          <p style="font-size:8px; color:#94a3b8; margin:0;">총 건물</p>
+        </div>
+        <div style="padding:8px; background:#fafafa; border:1px solid #e2e8f0; border-radius:6px; text-align:center;">
+          <p style="font-size:16px; font-weight:700; color:#2563eb; margin:0;">${na.summary.avgFloors}</p>
+          <p style="font-size:8px; color:#94a3b8; margin:0;">평균 층수</p>
+        </div>
+        <div style="padding:8px; background:#fafafa; border:1px solid #e2e8f0; border-radius:6px; text-align:center;">
+          <p style="font-size:16px; font-weight:700; color:#d97706; margin:0;">${na.summary.maxFloors}</p>
+          <p style="font-size:8px; color:#94a3b8; margin:0;">최고 층수</p>
+        </div>
+        <div style="padding:8px; background:#fafafa; border:1px solid #e2e8f0; border-radius:6px; text-align:center;">
+          <p style="font-size:16px; font-weight:700; color:#059669; margin:0;">${na.summary.residentialCount}</p>
+          <p style="font-size:8px; color:#94a3b8; margin:0;">주거 건물</p>
+        </div>
+        <div style="padding:8px; background:#fafafa; border:1px solid #e2e8f0; border-radius:6px; text-align:center;">
+          <p style="font-size:16px; font-weight:700; color:#7c3aed; margin:0;">${na.summary.commercialCount}</p>
+          <p style="font-size:8px; color:#94a3b8; margin:0;">상업 건물</p>
+        </div>
+      </div>
+    </section>`
 }
 
 // ============================================
@@ -2229,6 +2366,9 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
     <!-- 설계 품질 종합 분석 (Alexander Pattern Language 2페이지) -->
     ${data.patternQuality ? generatePatternAnalysisHTML(data.patternQuality) : ''}
 
+    <!-- 주변 프로젝트 분석 (AI 기반) -->
+    ${data.nearbyAnalysis ? generateNearbyAnalysisHTML(data.nearbyAnalysis) : ''}
+
     <!-- 8. 시나리오 및 사업기간 분석 -->
     <section class="pdf-section pdf-section">
       <div class="print-title-group">
@@ -2414,7 +2554,7 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
 export async function downloadPdf(data: ExportData): Promise<{ success: boolean; error?: string }> {
   try {
     const report = convertToV250(data);
-    let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality);
+    let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality, data.nearbyAnalysis);
     
     // AI 렌더링 이미지 삽입 (멀티앵글 우선, 단일 이미지 fallback)
     const _aL: Record<string,string> = {'eye-level':'정면','birds-eye':'조감도','entrance':'입구','interior':'인테리어'}
@@ -2904,7 +3044,7 @@ export async function downloadPdf(data: ExportData): Promise<{ success: boolean;
 export function openPrintPreview(data: ExportData): { success: boolean; error?: string } {
   try {
     const report = convertToV250(data);
-    let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality);
+    let htmlContent = generateFullHtmlReport(report, data.address, data.patternQuality, data.nearbyAnalysis);
     
     // AI 렌더링 이미지 삽입 (멀티앵글 우선, 단일 이미지 fallback)
     const _aL: Record<string,string> = {'eye-level':'정면','birds-eye':'조감도','entrance':'입구','interior':'인테리어'}
@@ -2975,7 +3115,7 @@ export function openPrintPreview(data: ExportData): { success: boolean; error?: 
 }
 
 // 공통 HTML 생성 함수 (HTML 다운로드��� 프린트 미리보기 공유)
-function generateFullHtmlReport(report: ReportDataV250, address: string, patternQuality?: ExportData["patternQuality"]): string {
+function generateFullHtmlReport(report: ReportDataV250, address: string, patternQuality?: ExportData["patternQuality"], nearbyAnalysis?: ExportData["nearbyAnalysis"]): string {
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -4300,6 +4440,9 @@ function generateFullHtmlReport(report: ReportDataV250, address: string, pattern
     
     <!-- 설계 품질 종합 분석 (Alexander Pattern Language 2페이지) -->
     ${patternQuality ? generatePatternAnalysisHTML(patternQuality) : ''}
+
+    <!-- 주변 프로젝트 분석 (AI 기반) -->
+    ${nearbyAnalysis ? generateNearbyAnalysisHTML(nearbyAnalysis) : ''}
 
     <!-- 8. 시나리오 및 사업기간 분석 -->
     <section class="pdf-section pdf-section">

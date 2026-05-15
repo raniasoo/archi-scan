@@ -2693,6 +2693,7 @@ export default function ArchiScanPage() {
             aiMultiImages={aiMultiImages}
             aiInteriorComparison={aiInteriorComparison}
             sitePolygon={sitePolygon}
+            siteCoords={siteCoords}
           />
         )}
         
