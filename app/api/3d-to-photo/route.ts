@@ -98,6 +98,14 @@ Apply this architectural style to the building facade, materials, and details.
 - Neighboring buildings in blurred background
 - A few people walking
 
+═══ COMPOSITION & FRAMING ═══
+CRITICAL: The ENTIRE building must be FULLY VISIBLE within the image frame.
+- Leave at least 10% margin on all sides (left, right, top, bottom)
+- Do NOT crop or cut off any part of the building
+- Use a WIDE SHOT that shows the complete building with surrounding context
+- The building should occupy about 60-70% of the image width, not edge-to-edge
+- Include street, sidewalk, trees, and sky as framing context
+
 ═══ FINAL SELF-CHECK ═══
 Count floors in your output: is it EXACTLY ${fl}? 
 Check footprint shape: does it match the TOP-DOWN VIEW?
