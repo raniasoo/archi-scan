@@ -148,6 +148,108 @@ async function callGeminiAnalysis(prompt: string): Promise<string> {
   }
 }
 
+// ━━━ 국토부 실거래가 조회 ━━━
+const MOLIT_API_KEY = process.env.MOLIT_API_KEY
+
+// 주요 시군구 LAWD_CD 매핑 (주소에서 추출)
+const LAWD_MAP: Record<string, string> = {
+  '강남구': '11680', '서초구': '11650', '송파구': '11710', '강동구': '11740',
+  '마포구': '11440', '용산구': '11170', '성동구': '11200', '광진구': '11215',
+  '종로구': '11110', '중구': '11140', '동대문구': '11230', '성북구': '11290',
+  '강북구': '11305', '도봉구': '11320', '노원구': '11350', '은평구': '11380',
+  '서대문구': '11410', '중랑구': '11260', '동작구': '11590', '관악구': '11620',
+  '영등포구': '11560', '구로구': '11530', '금천구': '11545', '양천구': '11470',
+  '강서구': '11500', '종로구': '11110',
+  '해운대구': '26350', '수영구': '26410', '남구': '26290', '부산진구': '26230',
+  '분당구': '41135', '수정구': '41131', '중원구': '41133',
+  '수원시': '41110', '용인시': '41460', '화성시': '41590', '성남시': '41130',
+  '제주시': '50110', '서귀포시': '50130',
+}
+
+function extractLawdCd(address: string): string | null {
+  for (const [name, code] of Object.entries(LAWD_MAP)) {
+    if (address.includes(name)) return code
+  }
+  return null
+}
+
+interface RealPriceData {
+  deals: { name: string; area: number; price: number; floor: number; yearMonth: string }[]
+  avgPrice: number  // 만원/㎡
+  minPrice: number
+  maxPrice: number
+  dealCount: number
+  period: string
+}
+
+async function fetchRealPrices(address: string): Promise<RealPriceData | null> {
+  if (!MOLIT_API_KEY) return null
+  
+  const lawdCd = extractLawdCd(address)
+  if (!lawdCd) {
+    console.log('[REAL-PRICE] LAWD_CD not found for:', address)
+    return null
+  }
+  
+  // 최근 3개월 조회
+  const now = new Date()
+  const months: string[] = []
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    months.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  
+  const allDeals: RealPriceData['deals'] = []
+  
+  for (const dealYmd of months) {
+    try {
+      const url = `http://openapi.molit.go.kr/OpenAPI_ToolInstall/service/rest/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev?serviceKey=${encodeURIComponent(MOLIT_API_KEY)}&LAWD_CD=${lawdCd}&DEAL_YMD=${dealYmd}&pageNo=1&numOfRows=30`
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+      const text = await res.text()
+      
+      // XML 파싱 (간단한 정규식)
+      const items = text.match(/<item>([\s\S]*?)<\/item>/g) || []
+      for (const item of items.slice(0, 10)) {
+        const get = (tag: string) => {
+          const m = item.match(new RegExp(`<${tag}>([^<]*)</${tag}>`))
+          return m ? m[1].trim() : ''
+        }
+        const priceStr = get('거래금액') || get('dealAmount')
+        const price = parseInt(priceStr.replace(/,/g, '')) || 0
+        const area = parseFloat(get('전용면적') || get('excluUseAr') || '0')
+        const floor = parseInt(get('층') || get('floor') || '0')
+        const name = get('아파트') || get('aptNm') || ''
+        const year = get('년') || get('dealYear')
+        const month = get('월') || get('dealMonth')
+        
+        if (price > 0 && area > 0) {
+          allDeals.push({
+            name, area, price, floor,
+            yearMonth: `${year}.${month}`,
+          })
+        }
+      }
+    } catch (e) {
+      console.error(`[REAL-PRICE] ${dealYmd} fetch error:`, e)
+    }
+  }
+  
+  if (allDeals.length === 0) return null
+  
+  // ㎡당 가격 계산 (만원)
+  const pricesPerM2 = allDeals.map(d => Math.round(d.price / d.area))
+  const avgPrice = Math.round(pricesPerM2.reduce((s, p) => s + p, 0) / pricesPerM2.length)
+  
+  return {
+    deals: allDeals.sort((a, b) => b.price - a.price).slice(0, 10),
+    avgPrice,
+    minPrice: Math.min(...pricesPerM2),
+    maxPrice: Math.max(...pricesPerM2),
+    dealCount: allDeals.length,
+    period: `${months[months.length - 1]}~${months[0]}`,
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -159,12 +261,15 @@ export async function POST(req: NextRequest) {
 
     console.log(`[NEARBY] 분석 시작: ${address} (${lat},${lng})`)
 
-    // 1. 주변 데이터 수집
-    const elements = await fetchNearbyBuildings(lat, lng, 300)
+    // 1. 주변 데이터 + 실거래가 병렬 수집
+    const [elements, realPrices] = await Promise.all([
+      fetchNearbyBuildings(lat, lng, 250),
+      fetchRealPrices(address),
+    ])
     const classified = classifyElements(elements, lat, lng)
     const summary = summarizeContext(classified)
 
-    console.log(`[NEARBY] 주변 건물 ${summary.totalBuildings}개, 편의시설 ${classified.amenities.length}개`)
+    console.log(`[NEARBY] 건물 ${summary.totalBuildings}개, 실거래 ${realPrices?.dealCount || 0}건`)
 
     // 2. 주변 건물 목록 텍스트
     const buildingList = classified.buildings.slice(0, 15).map(b =>
@@ -205,6 +310,15 @@ ${amenityList || '정보 없음'}
 
 [도로]
 ${roadList || '정보 없음'}
+
+${realPrices ? `[실거래가 데이터 (국토교통부 공식)]
+- 조회 기간: ${realPrices.period}
+- 거래 건수: ${realPrices.dealCount}건
+- 평균 단가: ${realPrices.avgPrice}만원/㎡ (평당 약 ${Math.round(realPrices.avgPrice * 3.3)}만원)
+- 최저: ${realPrices.minPrice}만원/㎡ ~ 최고: ${realPrices.maxPrice}만원/㎡
+- 최근 거래:
+${realPrices.deals.slice(0, 5).map(d => `  · ${d.name} ${d.area}㎡ ${d.floor}층 → ${d.price.toLocaleString()}만원 (${d.yearMonth})`).join('\n')}
+` : '[실거래가 데이터] 해당 지역 데이터 없음 — 추정 근거로 분석해주세요'}
 
 다음 JSON 형식으로만 응답하세요. 마크다운 코드블록을 사용하지 마세요. 문자열 값 안에 줄바꿈이나 이스케이프 문자를 넣지 마세요. 순수 JSON만 출력하세요:
 {
@@ -285,6 +399,7 @@ ${roadList || '정보 없음'}
       amenities: classified.amenities.slice(0, 10),
       roads: classified.roads.slice(0, 5),
       analysis,
+      realPrices: realPrices || null,
     })
   } catch (err: any) {
     console.error('[NEARBY] Error:', err)

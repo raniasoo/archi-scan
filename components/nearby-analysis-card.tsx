@@ -37,6 +37,14 @@ interface NearbyAnalysisResult {
       development: number
     }
   }
+  realPrices?: {
+    deals: { name: string; area: number; price: number; floor: number; yearMonth: string }[]
+    avgPrice: number
+    minPrice: number
+    maxPrice: number
+    dealCount: number
+    period: string
+  } | null
 }
 
 interface Props {
@@ -201,6 +209,39 @@ export default function NearbyAnalysisCard({ lat, lng, address, buildingType, fl
           ))}
         </div>
       </div>
+
+      {/* 실거래가 데이터 (국토부 공식) */}
+      {result.realPrices && result.realPrices.dealCount > 0 && (
+        <div className="px-4 py-3 border-b border-slate-100 bg-emerald-50/50">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-semibold text-emerald-700">📊 국토부 실거래가</p>
+            <span className="text-[9px] text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">{result.realPrices.period} · {result.realPrices.dealCount}건</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            <div className="text-center p-1.5 bg-white rounded-lg border border-emerald-100">
+              <p className="text-[9px] text-slate-500">평균</p>
+              <p className="text-sm font-bold text-emerald-700">{Math.round(result.realPrices.avgPrice * 3.3).toLocaleString()}<span className="text-[8px] font-normal text-slate-400">만/평</span></p>
+            </div>
+            <div className="text-center p-1.5 bg-white rounded-lg border border-emerald-100">
+              <p className="text-[9px] text-slate-500">최저</p>
+              <p className="text-sm font-bold text-blue-600">{Math.round(result.realPrices.minPrice * 3.3).toLocaleString()}<span className="text-[8px] font-normal text-slate-400">만/평</span></p>
+            </div>
+            <div className="text-center p-1.5 bg-white rounded-lg border border-emerald-100">
+              <p className="text-[9px] text-slate-500">최고</p>
+              <p className="text-sm font-bold text-red-600">{Math.round(result.realPrices.maxPrice * 3.3).toLocaleString()}<span className="text-[8px] font-normal text-slate-400">만/평</span></p>
+            </div>
+          </div>
+          <div className="space-y-1">
+            {result.realPrices.deals.slice(0, 3).map((d, i) => (
+              <div key={i} className="flex items-center justify-between text-[10px] px-2 py-1 bg-white rounded border border-slate-100">
+                <span className="text-slate-600 truncate flex-1">{d.name} {d.area}㎡ {d.floor}층</span>
+                <span className="font-semibold text-emerald-700 ml-2">{d.price.toLocaleString()}만원</span>
+                <span className="text-slate-400 ml-1.5">{d.yearMonth}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 분양가 추정 */}
       {a.priceEstimate && (
