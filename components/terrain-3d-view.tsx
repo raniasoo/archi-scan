@@ -44,7 +44,7 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     canvas.width = W; canvas.height = H
 
     const MESH_SIZE = 100
-    const TARGET_MAX_Z = MESH_SIZE * 0.3
+    let TARGET_MAX_Z = MESH_SIZE * 0.3 // 기본값 (표고 데이터 로딩 후 재계산)
 
     try {
 
@@ -113,6 +113,16 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     const minE = Math.min(...elevations), maxE = Math.max(...elevations)
     const eRange = Math.max(maxE - minE, 1)
     
+    // ★ 실제 고저차에 비례한 수직 스케일 (평탄지가 산처럼 보이는 문제 해결)
+    const realSpanM = RANGE * 2 * 111000 // 실제 조회 영역 크기 (m)
+    const meshPerMeter = MESH_SIZE / realSpanM
+    const realScaleZ = eRange * meshPerMeter // 실제 비율의 높이
+    // 과장 배율: 평탄지는 약간만, 경사지는 그대로
+    const exaggeration = eRange < 3 ? 3.0 : eRange < 10 ? 2.0 : eRange < 30 ? 1.5 : 1.2
+    const TARGET_MAX_Z = Math.min(realScaleZ * exaggeration, MESH_SIZE * 0.4)
+    
+    console.log(`[TERRAIN-3D] 고저차 ${eRange.toFixed(1)}m, 실스케일 ${realScaleZ.toFixed(1)}, 과장 x${exaggeration}, 최종Z ${TARGET_MAX_Z.toFixed(1)}`)
+    
     // terrain 데이터를 ref에 저장 (경계선 별도 렌더링용)
     terrainDataRef.current = { elevations, minE, eRange, GRID, RANGE, MESH_SIZE, TARGET_MAX_Z, RANGE_LNG }
 
@@ -151,9 +161,12 @@ export function Terrain3DView({ lng, lat, address, className = "", sitePolygon }
     geo.computeVertexNormals()
 
     // 높이별 색상 (초록 → 연두 → 노랑 → 갈색)
+    // 평탄지(eRange < 5m)는 색상 범위를 좁혀서 거의 균일한 초록으로 표시
+    const colorIntensity = eRange < 3 ? 0.15 : eRange < 10 ? 0.5 : 1.0 // 색상 변화 강도
     const colors = new Float32Array(GRID * GRID * 3)
     for (let i = 0; i < GRID * GRID; i++) {
-      const h = maxZ > 0 ? verts[i * 3 + 2] / maxZ : 0
+      const hRaw = maxZ > 0 ? verts[i * 3 + 2] / maxZ : 0
+      const h = hRaw * colorIntensity // 평탄지는 h가 거의 0에 가까움 → 초록 유지
       let r, g, b
       if (h < 0.2) { r = 0.15; g = 0.5; b = 0.2 }
       else if (h < 0.4) { const t = (h - 0.2) * 5; r = 0.15 + t * 0.35; g = 0.5 + t * 0.15; b = 0.2 - t * 0.1 }
