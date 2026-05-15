@@ -264,3 +264,25 @@ ${roadList || '정보 없음'}
     return NextResponse.json({ error: err.message || 'Unknown error' }, { status: 500 })
   }
 }
+
+// ━━━ GET 테스트 핸들러 (디버그용) ━━━
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url)
+  const lat = parseFloat(url.searchParams.get('lat') || '0')
+  const lng = parseFloat(url.searchParams.get('lng') || '0')
+  const address = url.searchParams.get('address') || '테스트 주소'
+  const buildingType = url.searchParams.get('type') || 'tower'
+  const floors = parseInt(url.searchParams.get('floors') || '5')
+  const units = parseInt(url.searchParams.get('units') || '20')
+  const siteArea = parseInt(url.searchParams.get('siteArea') || '500')
+  const gfa = parseInt(url.searchParams.get('gfa') || '2500')
+  const strategy = url.searchParams.get('strategy') || 'balanced'
+
+  if (!lat || !lng) {
+    return NextResponse.json({ error: 'lat, lng 필수' }, { status: 400 })
+  }
+
+  // POST 핸들러 재사용
+  const fakeReq = { json: async () => ({ lat, lng, address, buildingType, floors, units, siteArea, gfa, strategy }) } as NextRequest
+  return POST(fakeReq)
+}
