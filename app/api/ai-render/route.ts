@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resvg } from '@resvg/resvg-js'
+import { matchPatterns, buildPatternPrompt } from '@/lib/pattern-matcher'
 
 // ━━━ Vercel 타임아웃 확장 (기본 60초 → 최대 300초) ━━━
 export const maxDuration = 300  // 5분 — Gemini 이미지 생성은 최대 90초/건
@@ -32,6 +33,21 @@ export async function POST(req: NextRequest) {
 
     const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, buildingCount: userBuildingCount, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation, terrainInfo, referenceImage, threeJsCaptures } = await req.json()
     const ti = terrainInfo as { slopeDirection?: string; elevationDiff?: number; avgSlope?: number } | undefined
+
+    // ━━━ Supabase 253패턴 자동 매칭 (모든 렌더링에 공통 적용) ━━━
+    let supabasePatternPrompt = ''
+    try {
+      const patternResult = await matchPatterns({
+        type: buildingType || 'tower',
+        floors: parseInt(floors) || 3,
+        units: parseInt(units) || 1,
+        siteArea: parseFloat(siteArea) || 500,
+        coverage: parseFloat(coverage) || 50,
+        strategy, userPatterns: patterns,
+      })
+      supabasePatternPrompt = buildPatternPrompt(patternResult, 12)
+      console.log(`[AI-RENDER] Alexander 253: ${patternResult.summary}`)
+    } catch (e) { console.warn('[AI-RENDER] Pattern matching skipped:', e) }
 
     if (!prompt) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
@@ -492,7 +508,7 @@ export async function POST(req: NextRequest) {
       // ━━━ 헬퍼: 단일 앵글 Gemini 호출 ━━━
       const generateAngle = async (ai: number, a: typeof angles[0]): Promise<{ angle: string; image: string | null; error?: string; base64?: string; mime?: string }> => {
         const aPrompt = buildArchitecturePrompt({
-          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, userBuildingCount, regulation
+          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, userBuildingCount, regulation, supabasePatternPrompt
         })
         
         const parts: any[] = []
@@ -641,7 +657,7 @@ The entrance must use the SAME materials and style visible in the street-level i
     }
 
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, regulation, polygonShapeDesc
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, regulation, polygonShapeDesc, supabasePatternPrompt
     })
 
     // Gemini API 호출 — 모델 fallback 체인
@@ -786,6 +802,7 @@ function buildArchitecturePrompt(params: {
   material?: { type?: string; color?: string; accent?: string }
   userBuildingCount?: number  // 사용자가 수동 입력한 동수
   polygonShapeDesc?: string
+  supabasePatternPrompt?: string
   // 법규 검토 데이터
   regulation?: {
     heightLimit?: number       // 높이제한 (m)
@@ -799,7 +816,7 @@ function buildArchitecturePrompt(params: {
     zoneName?: string          // 용도지역 이름
   }
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, regulation, polygonShapeDesc } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, regulation, polygonShapeDesc, supabasePatternPrompt } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
@@ -1301,6 +1318,7 @@ ${strategyStyle || 'Modern residential design'}
 ${materialHint ? `\nMATERIALS AND FINISH:\n${materialHint}` : ''}
 ${atmosphereHints.length > 0 ? `\nATMOSPHERE:\n${atmosphereHints.map(h => `- ${h}`).join('\n')}` : ''}
 ${patternHints.length > 0 ? `\nMUST INCLUDE THESE ELEMENTS (Christopher Alexander's Pattern Language):\n${patternHints.map(h => `- ${h}`).join('\n')}` : ''}
+${supabasePatternPrompt || ''}
 ${livingAtmosphere.length > 0 ? `\nSPATIAL QUALITY — THE NATURE OF ORDER (architectural philosophy that makes spaces feel ALIVE):\n${livingAtmosphere.map(h => `- ${h}`).join('\n')}` : ''}
 
 CONTEXT:
