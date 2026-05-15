@@ -120,16 +120,33 @@ async function callGeminiAnalysis(prompt: string): Promise<string> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2000 },
+          generationConfig: { 
+            temperature: 0.4, 
+            maxOutputTokens: 2000,
+            responseMimeType: 'application/json',
+          },
         }),
         signal: AbortSignal.timeout(30000),
       }
     )
     const data = await res.json()
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || '(분석 결과를 생성하지 못했습니다)'
-  } catch (e) {
-    console.error('[NEARBY] Gemini error:', e)
-    return '(AI 분석 호출 실패)'
+    
+    if (data?.error) {
+      console.error('[NEARBY] Gemini API error:', JSON.stringify(data.error).slice(0, 200))
+      return '(Gemini API 에러: ' + (data.error.message || 'unknown') + ')'
+    }
+    
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!text) {
+      console.error('[NEARBY] Gemini empty response:', JSON.stringify(data).slice(0, 300))
+      return '(빈 응답)'
+    }
+    
+    console.log('[NEARBY] Gemini response length:', text.length)
+    return text
+  } catch (e: any) {
+    console.error('[NEARBY] Gemini error:', e.message)
+    return '(AI 분석 호출 실패: ' + e.message + ')'
   }
 }
 
