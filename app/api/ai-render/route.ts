@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resvg } from '@resvg/resvg-js'
 import { matchPatterns, buildPatternPrompt } from '@/lib/pattern-matcher'
+import { buildContextualPatternPrompt, angleToContext } from '@/lib/pattern-prompt-builder'
 
 // ━━━ Vercel 타임아웃 확장 (기본 60초 → 최대 300초) ━━━
 export const maxDuration = 300  // 5분 — Gemini 이미지 생성은 최대 90초/건
@@ -36,8 +37,9 @@ export async function POST(req: NextRequest) {
 
     // ━━━ Supabase 253패턴 자동 매칭 (모든 렌더링에 공통 적용) ━━━
     let supabasePatternPrompt = ''
+    let patternMatchResult: any = null
     try {
-      const patternResult = await matchPatterns({
+      patternMatchResult = await matchPatterns({
         type: buildingType || 'tower',
         floors: parseInt(floors) || 3,
         units: parseInt(units) || 1,
@@ -45,8 +47,10 @@ export async function POST(req: NextRequest) {
         coverage: parseFloat(coverage) || 50,
         strategy, userPatterns: patterns,
       })
-      supabasePatternPrompt = buildPatternPrompt(patternResult, 12)
-      console.log(`[AI-RENDER] Alexander 253: ${patternResult.summary}`)
+      // 카메라 앵글에 따라 관련 패턴만 선별
+      const context = angleToContext(cameraAngle)
+      supabasePatternPrompt = buildContextualPatternPrompt(patternMatchResult, context, 12)
+      console.log(`[AI-RENDER] Alexander 253: ${patternMatchResult.summary} (context: ${context})`)
     } catch (e) { console.warn('[AI-RENDER] Pattern matching skipped:', e) }
 
     if (!prompt) {
@@ -507,8 +511,10 @@ export async function POST(req: NextRequest) {
       
       // ━━━ 헬퍼: 단일 앵글 Gemini 호출 ━━━
       const generateAngle = async (ai: number, a: typeof angles[0]): Promise<{ angle: string; image: string | null; error?: string; base64?: string; mime?: string }> => {
+        const aContext = angleToContext(a.angle)
+        const aPatternPrompt = patternMatchResult ? buildContextualPatternPrompt(patternMatchResult, aContext, 10) : supabasePatternPrompt
         const aPrompt = buildArchitecturePrompt({
-          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, userBuildingCount, regulation, supabasePatternPrompt
+          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, userBuildingCount, regulation, supabasePatternPrompt: aPatternPrompt
         })
         
         const parts: any[] = []

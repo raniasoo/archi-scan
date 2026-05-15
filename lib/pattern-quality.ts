@@ -182,6 +182,67 @@ function evaluatePatterns(layout: LayoutForPattern, values?: UserValues): Patter
     description: "주차 진입과 보행 동선이 분리되어 안전하고 쾌적한 보행 환경을 조성합니다"
   })
 
+  // ━━━ 추가 패턴 12개 (Phase 6 확장) ━━━
+
+  // Pattern #107: 빛의 날개 (Wings of Light)
+  const wingsScore = layout.type === 'linear' ? 90 : layout.type === 'courtyard' ? 85 : layout.type === 'l-shape' ? 80 : 65
+  patterns.push({ id: 107, name: "Wings of Light", nameKr: "빛의 날개", score: wingsScore, category: "building",
+    description: "건물 폭을 7m 이내로 유지하여 모든 실에 자연광이 도달합니다" })
+
+  // Pattern #118: 옥상 정원 (Roof Garden)
+  const roofScore = layout.floors <= 5 ? 80 : layout.floors <= 10 ? 70 : 60
+  patterns.push({ id: 118, name: "Roof Garden", nameKr: "옥상 정원", score: roofScore, category: "building",
+    description: layout.floors <= 5 ? "저층 옥상을 녹화하여 세대 전용 정원으로 활용합니다" : "옥상 공용 정원으로 커뮤니티 공간을 제공합니다" })
+
+  // Pattern #140: 거리 면 사적 테라스 (Private Terrace on Street)
+  const terraceScore = layout.floors <= 3 ? 90 : layout.type === 'courtyard' ? 85 : 70
+  patterns.push({ id: 140, name: "Private Terrace on Street", nameKr: "사적 테라스", score: terraceScore, category: "building",
+    description: "각 세대에 전용 외부 공간(테라스/정원)이 부여됩니다" })
+
+  // Pattern #159: 양면 채광 (Light on Two Sides)
+  const twoLightScore = layout.type === 'courtyard' ? 90 : layout.type === 'l-shape' ? 85 : layout.type === 'linear' ? 80 : 60
+  patterns.push({ id: 159, name: "Light on Two Sides", nameKr: "양면 채광", score: twoLightScore, category: "building",
+    description: "각 실이 최소 두 면에서 자연광을 받아 건강한 실내 환경을 만듭니다" })
+
+  // Pattern #163: 야외 방 (Outdoor Room)
+  const outdoorRoomScore = layout.type === 'courtyard' ? 95 : layout.type === 'l-shape' ? 85 : openSpaceRatio > 45 ? 75 : 55
+  patterns.push({ id: 163, name: "Outdoor Room", nameKr: "야외 방", score: outdoorRoomScore, category: "building",
+    description: layout.type === 'courtyard' ? "중정이 세 면으로 둘러싸인 야외 방을 형성합니다" : "건물이 형성하는 외부공간이 실외 거실 역할을 합니다" })
+
+  // Pattern #167: 6피트 발코니 (Six-Foot Balcony)
+  const balconyScore = layout.floors >= 2 ? 80 : 60
+  patterns.push({ id: 167, name: "Six-Foot Balcony", nameKr: "넓은 발코니", score: balconyScore, category: "building",
+    description: "1.8m 이상의 넓은 발코니로 실외 생활 공간을 확보합니다" })
+
+  // Pattern #190: 천장 높이 변화 (Ceiling Height Variety)
+  const ceilingScore = layout.floors <= 3 ? 85 : layout.floors <= 5 ? 75 : 65
+  patterns.push({ id: 190, name: "Ceiling Height Variety", nameKr: "천장 높이 변화", score: ceilingScore, category: "building",
+    description: "거실은 높게, 침실은 아늑하게 — 공간별 천장 높이 변화로 풍요로운 공간감을 만듭니다" })
+
+  // Pattern #207: 좋은 재료 (Good Materials)
+  const materialScore = layout.strategy === 'quality' ? 90 : 75
+  patterns.push({ id: 207, name: "Good Materials", nameKr: "좋은 재료", score: materialScore, category: "construction",
+    description: "천연석, 실목재, 고품질 마감재로 시간이 지나도 아름다운 건물을 만듭니다" })
+
+  // Pattern #238: 여과된 빛 (Filtered Light)
+  const filteredLightScore = layout.type === 'courtyard' ? 85 : layout.floors <= 3 ? 80 : 70
+  patterns.push({ id: 238, name: "Filtered Light", nameKr: "여과된 빛", score: filteredLightScore, category: "construction",
+    description: "루버, 격자, 나뭇잎을 통해 부드럽게 여과된 빛이 실내를 채웁니다" })
+
+  // Pattern #245: 높인 화단 (Raised Flowers)
+  const raisedFlowerScore = openSpaceRatio > 35 ? 80 : 65
+  patterns.push({ id: 245, name: "Raised Flowers", nameKr: "높인 화단", score: raisedFlowerScore, category: "construction",
+    description: "허리 높이의 화단이 보행로를 따라 배치되어 사계절 꽃과 녹지를 제공합니다" })
+
+  // Pattern #247: 틈새 포장 (Paving with Cracks)
+  const pavingScore = layout.type === 'courtyard' || layout.type === 'l-shape' ? 80 : 65
+  patterns.push({ id: 247, name: "Paving with Cracks Between", nameKr: "틈새 포장", score: pavingScore, category: "construction",
+    description: "포장 틈새에 이끼와 잔디가 자라 자연스러운 노면을 만듭니다" })
+
+  // Pattern #250: 따뜻한 색 (Warm Colors)
+  patterns.push({ id: 250, name: "Warm Colors", nameKr: "따뜻한 색", score: 80, category: "construction",
+    description: "크림, 베이지, 테라코타 등 따뜻한 어스톤으로 편안한 분위기를 조성합니다" })
+
   // ============================================================
   // 사용자가 선택한 패턴 → 점수 가중치 적용 (1.3배, 최대 100)
   // "내가 중요하게 여기는 것"이 점수에 실제 반영됨
