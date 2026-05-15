@@ -208,27 +208,35 @@ async function fetchRealPrices(address: string): Promise<RealPriceData | null> {
   
   for (const dealYmd of months) {
     try {
-      // HTTPS 우선 시도
-      const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev?serviceKey=${encodeURIComponent(MOLIT_API_KEY)}&LAWD_CD=${lawdCd}&DEAL_YMD=${dealYmd}&pageNo=1&numOfRows=30`
-      console.log(`[REAL-PRICE] 조회: ${dealYmd}, URL length: ${url.length}`)
+      // URLSearchParams 사용 (기존 /api/real-price와 동일 패턴)
+      const params = new URLSearchParams({
+        serviceKey: MOLIT_API_KEY!,
+        LAWD_CD: lawdCd,
+        DEAL_YMD: dealYmd,
+        pageNo: '1',
+        numOfRows: '30',
+      })
+      // 아파트 매매 실거래가 (기본)
+      const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade?${params}`
+      console.log(`[REAL-PRICE] 조회: ${dealYmd}, LAWD: ${lawdCd}`)
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
       const text = await res.text()
-      console.log(`[REAL-PRICE] ${dealYmd} 응답: ${res.status}, length: ${text.length}, preview: ${text.slice(0, 200)}`)
+      console.log(`[REAL-PRICE] ${dealYmd} 응답: HTTP ${res.status}, ${text.length}자`)
       
       // XML 파싱 (간단한 정규식)
       const items = text.match(/<item>([\s\S]*?)<\/item>/g) || []
       for (const item of items.slice(0, 10)) {
         const get = (tag: string) => {
-          const m = item.match(new RegExp(`<${tag}>([^<]*)</${tag}>`))
+          const m = item.match(new RegExp(`<${tag}>\\s*([^<]*?)\\s*</${tag}>`))
           return m ? m[1].trim() : ''
         }
-        const priceStr = get('거래금액') || get('dealAmount')
-        const price = parseInt(priceStr.replace(/,/g, '')) || 0
-        const area = parseFloat(get('전용면적') || get('excluUseAr') || '0')
-        const floor = parseInt(get('층') || get('floor') || '0')
-        const name = get('아파트') || get('aptNm') || ''
-        const year = get('년') || get('dealYear')
-        const month = get('월') || get('dealMonth')
+        const priceStr = (get('dealAmount') || get('거래금액')).replace(/,/g, '')
+        const price = parseInt(priceStr) || 0
+        const area = parseFloat(get('excluUseAr') || get('전용면적') || '0')
+        const floor = parseInt(get('floor') || get('층') || '0')
+        const name = get('aptNm') || get('아파트') || ''
+        const year = get('dealYear') || get('년')
+        const month = get('dealMonth') || get('월')
         
         if (price > 0 && area > 0) {
           allDeals.push({
