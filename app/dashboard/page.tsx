@@ -43,6 +43,9 @@ export default function DashboardPage() {
   const [contactMessage, setContactMessage] = useState("")
   const [contactSending, setContactSending] = useState(false)
   const [contactSent, setContactSent] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteProcessing, setDeleteProcessing] = useState(false)
   const { plan, monthlyUsage, monthlyLimit, isProUser, setShowPricingModal } = useSubscription()
 
   useEffect(() => {
@@ -116,6 +119,35 @@ export default function DashboardPage() {
     const supabase = createClient()
     await supabase.auth.signOut()
     window.location.href = '/'
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== '회원탈퇴') return
+    setDeleteProcessing(true)
+    try {
+      const res = await fetch('/api/auth/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: '회원탈퇴' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        // localStorage 정리
+        try {
+          localStorage.removeItem('archi-render-usage')
+          localStorage.removeItem('archi-projects')
+          localStorage.removeItem('archi-scan-current')
+        } catch {}
+        alert('회원 탈퇴가 완료되었습니다. 이용해주셔서 감사합니다.')
+        window.location.href = '/'
+      } else {
+        alert(`탈퇴 실패: ${data.error || '알 수 없는 오류'}`)
+      }
+    } catch (e) {
+      alert(`탈퇴 오류: ${e instanceof Error ? e.message : '네트워크 오류'}`)
+    } finally {
+      setDeleteProcessing(false)
+    }
   }
 
   const allProjects = activeTab === 'cloud' ? cloudProjects : localProjects
@@ -527,6 +559,79 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ━━━ 계정 관리 ━━━ */}
+        <div className="pt-6 border-t border-border/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">계정 관리</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5">{user?.email}</p>
+            </div>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-[11px] text-red-400/60 hover:text-red-400 transition-colors"
+            >
+              회원 탈퇴
+            </button>
+          </div>
+        </div>
+
+        {/* ━━━ 회원 탈퇴 확인 다이얼로그 ━━━ */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => !deleteProcessing && setShowDeleteConfirm(false)}>
+            <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full space-y-4" onClick={e => e.stopPropagation()}>
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-3">
+                  <span className="text-2xl">⚠️</span>
+                </div>
+                <h3 className="text-base font-bold text-foreground">회원 탈퇴</h3>
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                  탈퇴하시면 아래 데이터가 <span className="text-red-400 font-semibold">영구 삭제</span>되며 복구할 수 없습니다.
+                </p>
+              </div>
+              
+              <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-3 space-y-1.5">
+                <p className="text-[11px] text-red-300/80">• 저장된 프로젝트 및 보고서</p>
+                <p className="text-[11px] text-red-300/80">• 공유된 링크 (비활성화)</p>
+                <p className="text-[11px] text-red-300/80">• 구독 정보 및 사용 기록</p>
+                <p className="text-[11px] text-red-300/80">• 계정 정보 (이메일, 프로필)</p>
+              </div>
+
+              <div>
+                <p className="text-[11px] text-muted-foreground mb-1.5">확인을 위해 <span className="font-bold text-foreground">회원탈퇴</span>를 입력하세요</p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={e => setDeleteConfirmText(e.target.value)}
+                  placeholder="회원탈퇴"
+                  className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                  disabled={deleteProcessing}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText('') }}
+                  disabled={deleteProcessing}
+                  className="flex-1 py-2.5 text-sm font-medium text-foreground bg-secondary hover:bg-secondary/80 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== '회원탈퇴' || deleteProcessing}
+                  className="flex-1 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                >
+                  {deleteProcessing ? (
+                    <><span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 처리 중...</>
+                  ) : (
+                    '탈퇴하기'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
