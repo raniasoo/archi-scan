@@ -194,7 +194,8 @@ export function BuildingVolume3D({
         camera.lookAt(lx, ly, lz)
         camera.updateProjectionMatrix()
         renderer.render(scene, camera)
-        captures.push({ angle: name, data: canvas.toDataURL('image/png') })
+        // ★ JPEG 70%로 압축 (PNG 대비 5~10배 작음 → Vercel 4.5MB 제한 해결)
+        captures.push({ angle: name, data: canvas.toDataURL('image/jpeg', 0.7) })
       }
       
       // ━━━ 5방향 캡처 ━━━
@@ -226,7 +227,7 @@ export function BuildingVolume3D({
         camera.lookAt(0, bH * 0.3, 0)
         camera.updateProjectionMatrix()
         renderer.render(scene, camera)
-        captures.push({ angle: 'depth-map', data: canvas.toDataURL('image/png') })
+        captures.push({ angle: 'depth-map', data: canvas.toDataURL('image/jpeg', 0.8) })
         // 복원
         origMats.forEach((mat, obj) => { obj.material = mat })
         scene.traverse((obj: any) => {
@@ -247,18 +248,26 @@ export function BuildingVolume3D({
       
       // ━━━ API 호출 ━━━
       const selectedStyleData = STYLES.find(s => s.id === selectedStyle)
-      const res = await fetch('/api/3d-to-photo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const payload = JSON.stringify({
           multiAngle: captures.map(c => ({ angle: c.angle, image: c.data })),
           layoutName, floors, units, type: layoutType,
           buildingCount: buildingCount || 1,
           address: '', angle: 'bird-eye',
           stylePrompt: selectedStyleData?.prompt || '',
           styleName: selectedStyleData?.label || '모던 럭셔리',
-        }),
       })
+      console.log(`[3D-PHOTO] Payload: ${(payload.length / 1024 / 1024).toFixed(2)}MB (${captures.length}장)`)
+      
+      const res = await fetch('/api/3d-to-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      })
+      // ★ HTTP 에러 처리 (413 Request Entity Too Large 등)
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '')
+        throw new Error(`서버 오류 (${res.status}): ${errText.slice(0, 100)}`)
+      }
       const data = await res.json()
       if (data.success && data.image) {
         setPhotoResult(data.image)
