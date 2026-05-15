@@ -159,13 +159,20 @@ export function BuildingVolume3D({
   const [photoScore, setPhotoScore] = useState('')
   const [selectedStyle, setSelectedStyle] = useState('modern-luxury')
 
-  // Three.js 5방향 캡처 → Gemini 포토리얼 변환
+  // Three.js 5방향 캡처 → Gemini/ControlNet 포토리얼 변환
   const captureAndConvert = async () => {
     const canvas = canvasRef.current
     const renderer = rendererRef.current
     const camera = cameraRef.current
     const scene = sceneRef.current
-    if (!canvas || !renderer || !camera || !scene) return
+    if (!canvas || !renderer || !camera || !scene) {
+      console.error('[3D-PHOTO] refs null:', { canvas: !!canvas, renderer: !!renderer, camera: !!camera, scene: !!scene })
+      try { 
+        const { toast } = await import('sonner')
+        toast.error('3D 모델이 아직 로딩 중이거나 초기화에 실패했습니다. 잠시 후 다시 시도해주세요.')
+      } catch {}
+      return
+    }
     setPhotoLoading(true)
     setPhotoResult(null)
     setPhotoScore('')
@@ -258,9 +265,17 @@ export function BuildingVolume3D({
         setPhotoScore(data.score ? `${data.score}점 (${data.floorsDetected}층 감지, 형태 ${data.shapeMatch})` : '')
       } else {
         console.error('[3D-PHOTO]', data.error)
+        try { 
+          const { toast } = await import('sonner')
+          toast.error(`포토리얼 변환 실패: ${data.error || '알 수 없는 오류'}`)
+        } catch {}
       }
     } catch (e: any) {
       console.error('[3D-PHOTO] Error:', e.message)
+      try { 
+        const { toast } = await import('sonner')
+        toast.error(`포토리얼 변환 오류: ${e.message?.slice(0, 80) || '네트워크 오류'}`)
+      } catch {}
     } finally {
       setPhotoLoading(false)
     }
@@ -286,7 +301,7 @@ export function BuildingVolume3D({
 
       /* ── Renderer (ACES Tone Mapping) ── */
       let EffectComposer: any, RenderPass: any, UnrealBloomPass: any, ShaderPass: any
-      const r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
+      const r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true })
       r.setSize(W, H)
       r.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2))
       r.shadowMap.enabled = true
