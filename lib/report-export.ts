@@ -2315,6 +2315,65 @@ export function downloadHtml(data: ExportData): { success: boolean; error?: stri
       </div>
     </section>
 
+    <!-- 6. 일조사선 분석 (Phase 1) -->
+    <section class="pdf-section">
+      <div class="print-title-group">
+        <h2 class="section-title">6. 일조사선 분석</h2>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:14px;">
+          <div style="font-size:11px; color:#92400e; margin-bottom:6px;">정북방향 사선제한</div>
+          <div style="font-size:20px; font-weight:700; color:#b45309;">${
+            (() => {
+              const h = report.planning.maxHeight || 30
+              const isRes = (report.siteAnalysis?.zoneType || '').includes('주거')
+              if (!isRes) return '미적용'
+              const side = Math.sqrt(report.planning.siteArea || 660)
+              const setback = Math.max(side - Math.sqrt((report.planning.siteArea || 660) * (report.planning.coverage / 100)) - 1, 1.5)
+              const maxH = setback >= 1.5 ? Math.min(9 + (setback - 1.5) * 2, h) : 9
+              return maxH.toFixed(0) + 'm (' + Math.floor(maxH / 3.3) + '층)'
+            })()
+          }</div>
+          <div style="font-size:10px; color:#78716c; margin-top:4px;">건축법 제61조 제1항</div>
+        </div>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px;">
+          <div style="font-size:11px; color:#166534; margin-bottom:6px;">동지 기준 그림자</div>
+          <div style="font-size:20px; font-weight:700; color:#15803d;">${
+            (() => {
+              const bH = (report.planning.floors || 5) * 3.3
+              const angle = 90 - 37.55 - 23.44
+              const shadow = bH / Math.tan(angle * Math.PI / 180)
+              return Math.round(shadow) + 'm'
+            })()
+          }</div>
+          <div style="font-size:10px; color:#78716c; margin-top:4px;">서울 위도 37.55° 기준</div>
+        </div>
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:14px;">
+          <div style="font-size:11px; color:#1e40af; margin-bottom:6px;">계획 건물 높이</div>
+          <div style="font-size:20px; font-weight:700; color:#1d4ed8;">${((report.planning.floors || 5) * 3.3).toFixed(1)}m (${report.planning.floors}층)</div>
+          <div style="font-size:10px; color:#78716c; margin-top:4px;">층고 3.3m 기준</div>
+        </div>
+        <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:8px; padding:14px;">
+          <div style="font-size:11px; color:#6b21a8; margin-bottom:6px;">도로사선 제한</div>
+          <div style="font-size:20px; font-weight:700; color:#7c3aed;">${
+            (() => {
+              const isRes = (report.siteAnalysis?.zoneType || '').includes('주거')
+              if (!isRes) return '미적용'
+              const rw = report.regulation?.roadWidth || 8
+              const maxH = Math.min((rw + 1) * 1.5, report.planning.maxHeight || 30)
+              return Math.round(maxH) + 'm'
+            })()
+          }</div>
+          <div style="font-size:10px; color:#78716c; margin-top:4px;">건축법 제61조 제2항 (1:1.5)</div>
+        </div>
+      </div>
+      <div style="margin-top:12px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:10px; color:#64748b; line-height:1.6;">
+        <strong>분석 근거:</strong> 건축법 제61조(일조 등의 확보를 위한 건축물의 높이 제한) 기반 자동 분석. 
+        정북방향 높이 9m 이하 부분은 인접대지경계선에서 1.5m 이상, 9m 초과 부분은 해당 높이의 1/2 이상 이격 필요. 
+        본 분석은 대지 정방형 근사에 의한 참고값이며, 실제 건축허가 시 정확한 측량 데이터 기반 검토가 필요합니다.
+      </div>
+    </section>
+
     <!-- 7. 사업성 검토 -->
     <section class="pdf-section pdf-section">
       <div class="print-title-group">
