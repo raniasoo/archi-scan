@@ -74,6 +74,7 @@ import {
 import { evaluatePatternQuality, type UserValues } from "@/lib/pattern-quality"
 import { ALEXANDER_LAYOUT_TYPES, recommendLayoutTypes, getAlexanderLayoutDescription } from "@/lib/alexander-layouts"
 import { analyzeSolarEnvelope, type SolarEnvelopeResult } from "@/lib/sun-analysis"
+import { validateConsistency, createSnapshotFromLayout, type ConsistencyReport } from "@/lib/consistency-validator"
 
 // ── 동적 임포트: 3D/시각화 (가장 무거움, SSR 불필요) ──
 const LoadingBox = () => <div className="flex items-center justify-center p-8 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" />로딩 중...</div>
@@ -1675,6 +1676,63 @@ export default function ArchiScanPage() {
   }
   const gfa = selectedLayoutData ? selectedLayoutData.gfa : 0
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 사업성 분석 진입 전 일관성 검증
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const navigateToFinancial = () => {
+    if (!selectedLayoutData) {
+      setCurrentStep("financial")
+      return
+    }
+    
+    const snapshot = createSnapshotFromLayout(
+      siteAreaNum,
+      {
+        zoneType: regulation.zoneType,
+        maxCoverageRatio: regulation.maxCoverageRatio,
+        maxFloorAreaRatio: regulation.maxFloorAreaRatio,
+        maxHeight: regulation.maxHeight,
+        maxFloors: regulation.maxFloors,
+        roadWidth: regulation.roadWidth,
+        parkingRatio: regulation.parkingRatio,
+      },
+      {
+        type: selectedLayoutData.type,
+        _originalType: selectedLayoutData._originalType,
+        name: selectedLayoutData.name,
+        coverage: selectedLayoutData.coverage,
+        floors: selectedLayoutData.floors,
+        units: selectedLayoutData.units,
+        gfa: selectedLayoutData.gfa,
+        parking: selectedLayoutData.parking,
+        buildingCount: selectedLayoutData.buildingCount,
+        solarData: selectedLayoutData.solarData,
+      }
+    )
+    
+    const report = validateConsistency(snapshot)
+    
+    const errors = report.issues.filter(i => i.severity === 'error')
+    const warnings = report.issues.filter(i => i.severity === 'warning')
+    
+    if (errors.length > 0) {
+      // 오류가 있으면 토스트로 경고 후 진행 (차단하지는 않음)
+      const firstError = errors[0]
+      toast.error(`⚠️ 데이터 불일치 ${errors.length}건 발견`, {
+        description: firstError.message + (firstError.fix ? ` → ${firstError.fix}` : ''),
+        duration: 6000,
+      })
+    } else if (warnings.length > 0) {
+      toast.warning(`일관성 점수 ${report.score}점`, {
+        description: `${warnings.length}건 권장 수정 사항이 있습니다`,
+        duration: 4000,
+      })
+    }
+    
+    // 검증 결과와 무관하게 사업성 단계로 이동 (사용자 차단하지 않음)
+    setCurrentStep("financial")
+  }
+
   const handleSelectLayout = (id: number) => {
     setSelectedLayout(id)
     setSelectedFloor(1)
@@ -2345,7 +2403,7 @@ export default function ArchiScanPage() {
               return (
                 <button
                   key={step.id}
-                  onClick={() => isClickable && setCurrentStep(step.id as AppStep)}
+                  onClick={() => isClickable && (step.id === 'financial' ? navigateToFinancial() : setCurrentStep(step.id as AppStep))}
                   disabled={!isClickable}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-xs font-medium ${
                     isActive 
@@ -2437,7 +2495,7 @@ export default function ArchiScanPage() {
               return (
                 <button
                   key={step.id}
-                  onClick={() => isClickable && setCurrentStep(step.id as AppStep)}
+                  onClick={() => isClickable && (step.id === 'financial' ? navigateToFinancial() : setCurrentStep(step.id as AppStep))}
                   disabled={!isClickable}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-xs font-medium whitespace-nowrap shrink-0 ${
                     isActive 
@@ -2683,7 +2741,7 @@ export default function ArchiScanPage() {
                 평면도 보기
               </button>
               <button
-                onClick={() => setCurrentStep("financial")}
+                onClick={navigateToFinancial}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-semibold"
               >
                 <Banknote className="h-4 w-4" />
@@ -2898,7 +2956,7 @@ export default function ArchiScanPage() {
             const shortLabel = shortLabels[step.label] || step.label
             return (
               <button key={step.id}
-                onClick={() => isClickable && setCurrentStep(step.id as AppStep)}
+                onClick={() => isClickable && (step.id === 'financial' ? navigateToFinancial() : setCurrentStep(step.id as AppStep))}
                 disabled={!isClickable}
                 className={`flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg transition-all relative ${
                   isActive
