@@ -113,53 +113,35 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, build
 
   const getBlocks = () => {
     const bW = siteW * bldRatio, bD = siteD * bldRatio
+    
+    // ━━━ building-geometry 블록 데이터 직접 사용 (3D 모델과 100% 일치) ━━━
+    if (geo.blocksInMeters && geo.blocksInMeters.length > 0) {
+      const bm = geo.blocksInMeters
+      const S = geo.siteWidthM || Math.sqrt(siteArea)
+      // SVG 좌표 스케일: 실제 미터 → SVG 픽셀
+      const svgScale = bW / (S * bldRatio / bldRatio)  // bW = siteW * bldRatio
+      const scaleX = bW / S
+      const scaleZ = bD / S
+      
+      return bm.map((b, i) => ({
+        x: b.centerXM * scaleX - b.widthM * scaleX / 2,
+        y: b.centerZM * scaleZ - b.depthM * scaleZ / 2,
+        w: b.widthM * scaleX,
+        d: b.depthM * scaleZ,
+        h: buildH,
+        label: b.label || (bm.length > 1 ? `${String.fromCharCode(65 + i)}동` : type === 'tower' ? '타워동' : type === 'linear' ? '판상동' : ''),
+      }))
+    }
+    
+    // fallback: geo.blocksInMeters 없을 때 기존 로직
     switch (type) {
       case "tower":
         return [{ x: -bW / 2, y: -bD / 2, w: bW, d: bD, h: buildH, label: "타워동" }]
-      case "courtyard": {
-        const t = bD * 0.25
-        return [
-          { x: -bW / 2, y: -bD / 2, w: bW, d: t, h: buildH, label: "" },
-          { x: -bW / 2, y: bD / 2 - t, w: bW, d: t, h: buildH, label: "" },
-          { x: -bW / 2, y: -bD / 2 + t, w: bW * 0.2, d: bD - t * 2, h: buildH, label: "" },
-          { x: bW / 2 - bW * 0.2, y: -bD / 2 + t, w: bW * 0.2, d: bD - t * 2, h: buildH, label: "" },
-        ]
-      }
-      case "lshape": {
-        const armW = bW * 0.4
-        return [
-          { x: -bW / 2, y: -bD / 2, w: armW, d: bD, h: buildH, label: "A동" },
-          { x: -bW / 2 + armW, y: bD * 0.1, w: bW - armW, d: bD * 0.4, h: buildH * 0.85, label: "B동" },
-        ]
-      }
       case "linear":
         return [{ x: -bW / 2, y: -bD * 0.2, w: bW, d: bD * 0.4, h: buildH, label: "판상동" }]
-      case "cluster": {
-        const n = buildingCount || Math.max(2, Math.min(6, Math.ceil(units / (floors * 4))))
-        const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
-        const rows = Math.ceil(n / cols)
-        const gapX = bW * 0.06, gapY = bD * 0.06
-        const blockW = (bW - gapX * (cols - 1)) / cols
-        const blockD = (bD - gapY * (rows - 1)) / rows
-        const blocks: { x: number; y: number; w: number; d: number; h: number; label: string }[] = []
-        const labels = ["A동", "B동", "C동", "D동", "E동", "F동"]
-        let count = 0
-        for (let r = 0; r < rows && count < n; r++) {
-          for (let c = 0; c < cols && count < n; c++) {
-            const offsetX = (r % 2 === 1) ? blockW * 0.15 : 0
-            blocks.push({
-              x: -bW / 2 + c * (blockW + gapX) + offsetX,
-              y: -bD / 2 + r * (blockD + gapY),
-              w: blockW * 0.9,
-              d: blockD * 0.85,
-              h: buildH * (0.85 + Math.random() * 0.15),
-              label: labels[count] || `${count + 1}동`,
-            })
-            count++
-          }
-        }
-        return blocks
-      }
+      default:
+        return [{ x: -bW / 2, y: -bD / 2, w: bW, d: bD, h: buildH, label: "" }]
+    }
       default:
         return [{ x: -bW / 2, y: -bD / 2, w: bW, d: bD, h: buildH, label: type }]
     }

@@ -115,55 +115,35 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, bui
   const bx = VP_X - bw / 2              // 건물 시작 X
   const bDepth = 20                      // 건물의 깊이 위치
 
-  // 타입별 건물 형상 조정
+  // 타입별 건물 형상 — building-geometry 블록 데이터 기반
   let buildingBlocks: { x: number; depth: number; w: number; d: number; floors: number }[] = []
 
-  switch (type) {
-    case 'tower':
-      buildingBlocks = [{ x: bx + bw * 0.15, depth: bDepth, w: bw * 0.7, d: bd, floors }]
-      break
-    case 'courtyard':
-      buildingBlocks = [
-        { x: bx, depth: bDepth, w: bw, d: bd * 0.3, floors },           // 전면
-        { x: bx, depth: bDepth + bd * 0.7, w: bw, d: bd * 0.3, floors }, // 후면
-        { x: bx, depth: bDepth, w: bw * 0.2, d: bd, floors },            // 좌측
-        { x: bx + bw * 0.8, depth: bDepth, w: bw * 0.2, d: bd, floors }, // 우측
-      ]
-      break
-    case 'lshape':
-      // ㄱ자형: 남향 날개(긴) + 동향 날개(짧) — 명확한 L형
-      buildingBlocks = [
-        { x: bx, depth: bDepth, w: bw * 0.35, d: bd, floors },           // 동향 날개 (세로)
-        { x: bx, depth: bDepth + bd * 0.6, w: bw * 0.85, d: bd * 0.4, floors }, // 남향 날개 (가로)
-      ]
-      break
-    case 'linear':
-      buildingBlocks = [{ x: bx, depth: bDepth, w: bw, d: bd * 0.5, floors }]
-      break
-    case 'cluster': {
-      const n = buildingCount || Math.max(2, Math.min(6, Math.ceil(units / (floors * 4))))
-      const cFloors = Math.max(2, floors - 1)
-      const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
-      const rows = Math.ceil(n / cols)
-      const bwEach = bw * 0.85 / cols
-      buildingBlocks = []
-      let cnt = 0
-      for (let r = 0; r < rows && cnt < n; r++) {
-        for (let c = 0; c < cols && cnt < n; c++) {
-          buildingBlocks.push({
-            x: bx + c * (bwEach + bw * 0.04),
-            depth: bDepth - r * bd * 0.55,
-            w: bwEach * 0.9,
-            d: bd * (r === 0 ? 0.7 : 0.65),
-            floors: (cnt % 2 === 1) ? cFloors : floors,
-          })
-          cnt++
-        }
-      }
-      break
+  // ━━━ building-geometry 블록 데이터에서 투시도 블록 생성 ━━━
+  if (geo.blocksInMeters && geo.blocksInMeters.length > 1) {
+    const bm = geo.blocksInMeters
+    const S = geo.siteWidthM || Math.sqrt(siteArea)
+    const scaleX = bw / S
+    const scaleD = bd / S
+    
+    buildingBlocks = bm.map(b => ({
+      x: bx + (b.centerXM - b.widthM / 2 + S / 2) * scaleX,
+      depth: bDepth + (b.centerZM - b.depthM / 2 + S / 2) * scaleD,
+      w: b.widthM * scaleX,
+      d: b.depthM * scaleD,
+      floors,
+    }))
+  } else {
+    // 단동 fallback
+    switch (type) {
+      case 'tower':
+        buildingBlocks = [{ x: bx + bw * 0.15, depth: bDepth, w: bw * 0.7, d: bd, floors }]
+        break
+      case 'linear':
+        buildingBlocks = [{ x: bx, depth: bDepth, w: bw, d: bd * 0.5, floors }]
+        break
+      default:
+        buildingBlocks = [{ x: bx, depth: bDepth, w: bw * 0.8, d: bd, floors }]
     }
-    default:
-      buildingBlocks = [{ x: bx, depth: bDepth, w: bw * 0.7, d: bd, floors }]
   }
 
   // 건물 한 동 렌더링
