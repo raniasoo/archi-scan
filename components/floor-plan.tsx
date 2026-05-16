@@ -2,6 +2,7 @@
 
 import React from "react"
 import type { DesignStrategy } from "@/lib/design-strategy"
+import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
 
 interface FloorPlanProps {
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
@@ -11,7 +12,10 @@ interface FloorPlanProps {
   zoneType?: string
   units?: number
   gfa?: number
-  buildingCount?: number  // 클러스터 동수
+  buildingCount?: number
+  siteArea?: number      // building-geometry 연동용
+  coverage?: number      // building-geometry 연동용
+  originalType?: string  // 클러스터 원본 타입
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -108,9 +112,29 @@ function CoreBlock({ x, y, w, h }: { x: number; y: number; w: number; h: number 
 // 메인 컴포넌트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType, units = 0, gfa = 0, buildingCount }: FloorPlanProps) {
+export function FloorPlan({ type, floor, totalFloors, strategy = "profitability", zoneType, units = 0, gfa = 0, buildingCount, siteArea, coverage, originalType }: FloorPlanProps) {
   const isGF = floor === 1
   const isTop = floor === totalFloors
+
+  // ━━━ building-geometry 연동: 실제 건물 비율 계산 ━━━
+  const geoRatio = (() => {
+    if (!siteArea || !coverage) return null
+    try {
+      const geo = getBuildingDimensionsInMeters({
+        type, coverage, siteArea, floors: totalFloors,
+        buildingCount, originalType,
+      })
+      if (geo.blocks.length === 1) {
+        return geo.blocks[0].w / geo.blocks[0].d  // w:d 비율
+      }
+      // 복합 블록: 바운딩 박스 비율
+      const minX = Math.min(...geo.blocks.map(b => b.x - b.w / 2))
+      const maxX = Math.max(...geo.blocks.map(b => b.x + b.w / 2))
+      const minZ = Math.min(...geo.blocks.map(b => b.z - b.d / 2))
+      const maxZ = Math.max(...geo.blocks.map(b => b.z + b.d / 2))
+      return (maxX - minX) / Math.max(maxZ - minZ, 0.01)
+    } catch { return null }
+  })()
 
   // 클러스터: 동당 세대수로 계산
   const bc = buildingCount && buildingCount > 1 ? buildingCount : 1
@@ -184,34 +208,63 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
     : isTop ? `${clusterPrefix}${floor}층 (최상층)` : `${clusterPrefix}${floor}층 (기준층 ${curU}세대)`
   const sL = strategy === "view-priority" ? "조망형" : strategy === "privacy-priority" ? "프라이버시형" : strategy === "area-maximize" ? "면적형" : strategy === "parking-efficient" ? "주차형" : strategy === "profitability" ? "사업성형" : "실거주형"
 
+  // ━━━ SVG viewBox를 building-geometry 비율에 맞게 조정 ━━━
+  // 기본 viewBox는 300×220 (약 1.36:1)
+  // geoRatio가 이보다 크면 가로로 넓히고, 작으면 세로로 늘림
+  const baseRatio = 300 / 220  // ≈ 1.36
+  const effectiveRatio = geoRatio || baseRatio
+  let vbW = 300, vbH = 220
+  if (effectiveRatio > baseRatio * 1.1) {
+    // 가로로 더 넓은 건물 → viewBox 높이 축소
+    vbH = Math.round(300 / effectiveRatio)
+  } else if (effectiveRatio < baseRatio * 0.7) {
+    // 세로로 더 긴 건물 → viewBox 너비 축소
+    vbW = Math.round(220 * effectiveRatio)
+  }
+
   return (
-    <svg viewBox="0 0 300 220" className="w-full h-full" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', maxWidth: '100%', maxHeight: '100%' }}>
+    <svg viewBox={`0 0 ${vbW} ${vbH}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', maxWidth: '100%', maxHeight: '100%' }}>
       <defs>
         <pattern id="fp-grid" width="10" height="10" patternUnits="userSpaceOnUse">
           <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.15" className="text-border" />
         </pattern>
       </defs>
-      <rect x="0" y="0" width="300" height="220" fill="url(#fp-grid)" />
+      <rect x="0" y="0" width={vbW} height={vbH} fill="url(#fp-grid)" />
 
       {/* TOWER */}
       {type === "tower" && !isGF && (() => {
-        const n = Math.min(curU, 4), ox = 25, oy = 10, bW = 250, bH = 170
-        const cW = 50, cH = 28, cX = ox + bW/2 - cW/2, cY = oy + bH/2 - cH/2
+        // building-geometry 비율 적용: 3D와 동일한 가로:세로
+        const maxW = 250, maxH = 170, ox = 25, oy = 10
+        const ratio = geoRatio || 1.2
+        let bW: number, bH: number
+        if (ratio >= 1) {
+          bW = maxW; bH = Math.round(maxW / ratio)
+          if (bH > maxH) { bH = maxH; bW = Math.round(maxH * ratio) }
+        } else {
+          bH = maxH; bW = Math.round(maxH * ratio)
+          if (bW > maxW) { bW = maxW; bH = Math.round(maxW / ratio) }
+        }
+        const adjOx = ox + (maxW - bW) / 2
+        const adjOy = oy + (maxH - bH) / 2
+        // 이하 모든 좌표에 adjusted offset 적용
+        const bx = adjOx, by = adjOy
+        const n = Math.min(curU, 4)
+        const cW = 50, cH = 28, cX = bx + bW/2 - cW/2, cY = by + bH/2 - cH/2
         const corrH = 14, corrY = cY + cH
         return (<g>
-          <rect x={ox} y={oy} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
-          <rect x={ox + 5} y={corrY} width={bW - 10} height={corrH} fill="#64748b10" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1" />
-          <text x={ox + bW/2} y={corrY + corrH/2 + 2} fontSize="5" textAnchor="middle" fill="#94a3b8">복도</text>
+          <rect x={bx} y={by} width={bW} height={bH} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+          <rect x={bx + 5} y={corrY} width={bW - 10} height={corrH} fill="#64748b10" stroke="#64748b" strokeWidth="0.5" strokeDasharray="2 1" />
+          <text x={bx + bW/2} y={corrY + corrH/2 + 2} fontSize="5" textAnchor="middle" fill="#94a3b8">복도</text>
           <CoreBlock x={cX} y={cY} w={cW} h={cH} />
           {n >= 2 ? (<>
-            <UnitInterior x={ox + 5} y={oy + 5} w={(bW - 14)/2} h={cY - oy - 8} label="A호" area={uA} color={c.p} />
-            <UnitInterior x={ox + 5 + (bW - 14)/2 + 4} y={oy + 5} w={(bW - 14)/2} h={cY - oy - 8} label="B호" area={uA} color={c.p} mirror />
-          </>) : (<UnitInterior x={ox + 5} y={oy + 5} w={bW - 10} h={cY - oy - 8} label="A호" area={uA} color={c.p} />)}
+            <UnitInterior x={bx + 5} y={by + 5} w={(bW - 14)/2} h={cY - by - 8} label="A호" area={uA} color={c.p} />
+            <UnitInterior x={bx + 5 + (bW - 14)/2 + 4} y={by + 5} w={(bW - 14)/2} h={cY - by - 8} label="B호" area={uA} color={c.p} mirror />
+          </>) : (<UnitInterior x={bx + 5} y={by + 5} w={bW - 10} h={cY - by - 8} label="A호" area={uA} color={c.p} />)}
           {n >= 4 ? (<>
-            <UnitInterior x={ox + 5} y={corrY + corrH + 3} w={(bW - 14)/2} h={oy + bH - corrY - corrH - 8} label="C호" area={uA} color={c.p} />
-            <UnitInterior x={ox + 5 + (bW - 14)/2 + 4} y={corrY + corrH + 3} w={(bW - 14)/2} h={oy + bH - corrY - corrH - 8} label="D호" area={uA} color={c.p} mirror />
-          </>) : n >= 3 ? (<UnitInterior x={ox + 5} y={corrY + corrH + 3} w={bW - 10} h={oy + bH - corrY - corrH - 8} label="C호" area={uA} color={c.p} />) : null}
-          {n > 4 && <text x={ox + bW/2} y={oy + bH - 3} fontSize="6" textAnchor="middle" fill={c.p}>+ {curU - 4}세대</text>}
+            <UnitInterior x={bx + 5} y={corrY + corrH + 3} w={(bW - 14)/2} h={by + bH - corrY - corrH - 8} label="C호" area={uA} color={c.p} />
+            <UnitInterior x={bx + 5 + (bW - 14)/2 + 4} y={corrY + corrH + 3} w={(bW - 14)/2} h={by + bH - corrY - corrH - 8} label="D호" area={uA} color={c.p} mirror />
+          </>) : n >= 3 ? (<UnitInterior x={bx + 5} y={corrY + corrH + 3} w={bW - 10} h={by + bH - corrY - corrH - 8} label="C호" area={uA} color={c.p} />) : null}
+          {n > 4 && <text x={bx + bW/2} y={by + bH - 3} fontSize="6" textAnchor="middle" fill={c.p}>+ {curU - 4}세대</text>}
         </g>)
       })()}
 

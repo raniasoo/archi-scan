@@ -214,6 +214,9 @@ export function FloorplanStep(props: FloorplanStepProps) {
                   units={effectiveUnits}
                   gfa={selectedLayoutData.gfa || gfa}
                   buildingCount={selectedLayoutData.buildingCount}
+                  siteArea={siteArea}
+                  coverage={selectedLayoutData.coverage}
+                  originalType={selectedLayoutData._originalType}
                 />
               </div>
               <div className="grid grid-cols-4 gap-x-1 mt-2">

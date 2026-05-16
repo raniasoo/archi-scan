@@ -2270,6 +2270,9 @@ export default function ArchiScanPage() {
                 zoneType={molitSupplementData.zoneCode || regulation.zoneType}
                 units={selectedLayoutData.units}
                 gfa={selectedLayoutData.gfa || gfa}
+                siteArea={siteAreaNum}
+                coverage={selectedLayoutData.coverage}
+                originalType={selectedLayoutData._originalType}
               />
             </div>
           </div>
