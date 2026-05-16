@@ -924,28 +924,30 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               const geminiLabel = getRenderUsageLabel(limits.gemini, geminiUsed)
               const cnLabel = getRenderUsageLabel(limits.controlNet, cnUsed)
               return (<>
-            <div className="flex gap-1.5 p-1 rounded-lg bg-secondary/30 mb-2">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <button
                 onClick={() => setRenderEngine('gemini')}
-                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all flex flex-col items-center gap-0.5 ${
+                className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex flex-col items-center gap-1 ${
                   renderEngine === 'gemini' 
-                    ? 'bg-card shadow-sm border border-border/50 text-foreground' 
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border-2 border-emerald-500/60 text-emerald-300 shadow-lg shadow-emerald-500/10' 
+                    : 'bg-secondary/20 border border-border/30 text-muted-foreground hover:border-emerald-500/30'
                 }`}
               >
-                <span className="flex items-center gap-1">✨ Gemini <span className="text-[8px] opacity-60">빠름</span></span>
-                <span className={`text-[8px] ${limits.gemini !== -1 && geminiUsed >= limits.gemini ? 'text-red-400' : 'text-muted-foreground/70'}`}>{geminiLabel}</span>
+                <span className="flex items-center gap-1.5">✨ Gemini</span>
+                <span className="text-[9px] opacity-70">빠름 · 5~15초</span>
+                <span className={`text-[9px] mt-0.5 ${limits.gemini !== -1 && geminiUsed >= limits.gemini ? 'text-red-400' : 'opacity-50'}`}>{geminiLabel}</span>
               </button>
               <button
                 onClick={() => setRenderEngine('controlnet')}
-                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all flex flex-col items-center gap-0.5 ${
+                className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex flex-col items-center gap-1 ${
                   renderEngine === 'controlnet' 
-                    ? 'bg-card shadow-sm border border-violet-500/50 text-violet-300' 
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-gradient-to-br from-violet-500/20 to-purple-500/20 border-2 border-violet-500/60 text-violet-300 shadow-lg shadow-violet-500/10' 
+                    : 'bg-secondary/20 border border-border/30 text-muted-foreground hover:border-violet-500/30'
                 }`}
               >
-                <span className="flex items-center gap-1">🎯 ControlNet <span className="text-[8px] opacity-60">정밀</span></span>
-                <span className={`text-[8px] ${limits.controlNet !== -1 && cnUsed >= limits.controlNet ? 'text-red-400' : 'text-muted-foreground/70'}`}>{cnLabel}</span>
+                <span className="flex items-center gap-1.5">🎯 ControlNet</span>
+                <span className="text-[9px] opacity-70">정밀 · 30~120초</span>
+                <span className={`text-[9px] mt-0.5 ${limits.controlNet !== -1 && cnUsed >= limits.controlNet ? 'text-red-400' : 'opacity-50'}`}>{cnLabel}</span>
               </button>
             </div>
             </>)
@@ -955,7 +957,11 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
             )}
             {/* 렌더링 버튼 (항상 보임) */}
             <div className="flex gap-2">
-              <button onClick={() => doRender(0)} disabled={loading} className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+              <button onClick={() => doRender(0)} disabled={loading} className={`flex-1 py-2.5 rounded-lg text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 ${
+                  renderEngine === 'controlnet' 
+                    ? 'bg-gradient-to-r from-violet-600 to-purple-600' 
+                    : 'bg-gradient-to-r from-emerald-600 to-teal-600'
+                }`}>
                 {loading && !multiImages ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2` : '생성 중'}</> : renderEngine === 'controlnet' ? '🎯 ControlNet 렌더링' : '🎨 렌더링'}
               </button>
               <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1 relative" title="정면+조감+입구+인테리어 4장">
