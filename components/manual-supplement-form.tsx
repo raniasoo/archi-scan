@@ -438,7 +438,7 @@ export function ManualSupplementForm({
               </Label>
             </div>
             <Select 
-              value={zoneType} 
+              value={zoneType || undefined} 
               onValueChange={(value) => { setZoneType(value); setSaveSuccess(false); }}
             >
               <SelectTrigger className="h-9 text-xs bg-background">

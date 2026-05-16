@@ -14,15 +14,27 @@ function toCode(raw: string): string {
   if (raw.includes('제2종일반') || raw.includes('제2종 일반')) return 'residential-2'
   if (raw.includes('제3종일반') || raw.includes('제3종 일반')) return 'residential-3'
   if (raw.includes('준주거'))   return 'semi-residential'
+  if (raw.includes('일반주거')) return 'residential-2'   // fallback
+  if (raw.includes('전용주거')) return 'residential-exclusive-1' // fallback
+  if (raw.includes('주거'))    return 'residential-2'   // 최종 주거 fallback
   if (raw.includes('근린상업')) return 'commercial-neighborhood'
   if (raw.includes('중심상업')) return 'commercial-central'
   if (raw.includes('일반상업')) return 'commercial-general'
+  if (raw.includes('유통상업')) return 'commercial-general'
+  if (raw.includes('상업'))    return 'commercial-general'
   if (raw.includes('전용공업')) return 'industrial-exclusive'
   if (raw.includes('일반공업')) return 'industrial-general'
   if (raw.includes('준공업'))   return 'industrial-semi'
+  if (raw.includes('공업'))    return 'industrial-general'
   if (raw.includes('자연녹지')) return 'green-natural'
   if (raw.includes('생산녹지')) return 'green-production'
   if (raw.includes('보전녹지')) return 'green-conservation'
+  if (raw.includes('녹지'))    return 'green-natural'
+  if (raw.includes('계획관리')) return 'management-planned'
+  if (raw.includes('생산관리')) return 'management-planned'
+  if (raw.includes('보전관리')) return 'management-planned'
+  if (raw.includes('농림'))    return 'management-planned'
+  if (raw.includes('관리'))    return 'management-planned'
   return ''
 }
 const HEIGHT: Record<string,number> = {
