@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import Link from "next/link"
 import {
   Building2, ArrowLeft, Send, Loader2,
-  CheckCircle2, Mail, User, MessageSquare
+  CheckCircle2, Mail, User, MessageSquare,
+  Paperclip, X, FileImage, FileText
 } from "lucide-react"
 
 const CATEGORIES = [
@@ -15,14 +16,64 @@ const CATEGORIES = [
   { value: "제휴", label: "제휴 / 협업" },
 ]
 
+const MAX_FILES = 3
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+
+interface AttachedFile {
+  file: File
+  preview?: string // data URL for images
+}
+
 export default function ContactPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [category, setCategory] = useState("일반")
   const [message, setMessage] = useState("")
+  const [files, setFiles] = useState<AttachedFile[]>([])
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || [])
+    setError("")
+    
+    for (const file of selected) {
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`${file.name}이(가) 10MB를 초과합니다`)
+        return
+      }
+    }
+    
+    const remaining = MAX_FILES - files.length
+    const toAdd = selected.slice(0, remaining)
+    
+    const newFiles: AttachedFile[] = toAdd.map(file => {
+      const entry: AttachedFile = { file }
+      if (file.type.startsWith('image/')) {
+        entry.preview = URL.createObjectURL(file)
+      }
+      return entry
+    })
+    
+    setFiles(prev => [...prev, ...newFiles])
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const removeFile = (index: number) => {
+    setFiles(prev => {
+      const removed = prev[index]
+      if (removed.preview) URL.revokeObjectURL(removed.preview)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes}B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+  }
 
   const handleSubmit = async () => {
     if (!email) { setError("이메일을 입력해 주세요"); return }
@@ -31,10 +82,16 @@ export default function ContactPage() {
     setLoading(true)
 
     try {
+      const formData = new FormData()
+      formData.append("name", name)
+      formData.append("email", email)
+      formData.append("category", category)
+      formData.append("message", message)
+      files.forEach(f => formData.append("files", f.file))
+
       const res = await fetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, category, message }),
+        body: formData,
       })
       const data = await res.json()
       if (data.success) {
@@ -153,6 +210,60 @@ export default function ContactPage() {
                 className="w-full pl-10 pr-4 py-3 rounded-xl border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
+          </div>
+
+          {/* 파일 첨부 */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              파일 첨부 <span className="text-muted-foreground/60">(선택, 최대 {MAX_FILES}개)</span>
+            </label>
+            
+            {/* 첨부된 파일 목록 */}
+            {files.length > 0 && (
+              <div className="space-y-2 mb-2">
+                {files.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2 rounded-lg border bg-muted/30">
+                    {f.preview ? (
+                      <img src={f.preview} alt="" className="h-10 w-10 rounded object-cover shrink-0" />
+                    ) : (
+                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{f.file.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{formatFileSize(f.file.size)}</p>
+                    </div>
+                    <button onClick={() => removeFile(i)} className="p-1 rounded hover:bg-muted shrink-0">
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* 파일 추가 버튼 */}
+            {files.length < MAX_FILES && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-muted-foreground/30 text-sm text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
+              >
+                <Paperclip className="h-4 w-4" />
+                스크린샷, 서류 첨부
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              이미지, PDF, 문서 파일 / 파일당 최대 10MB
+            </p>
           </div>
 
           {/* 에러 */}
