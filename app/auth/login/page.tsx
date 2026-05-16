@@ -26,6 +26,30 @@ function LoginForm() {
 
   const supabase = createClient()
 
+  // ★ 인앱 브라우저 감지
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false)
+  const [inAppBrowserName, setInAppBrowserName] = useState('')
+  
+  useEffect(() => {
+    const ua = navigator.userAgent || ''
+    const checks: [RegExp, string][] = [
+      [/KAKAOTALK/i, '카카오톡'],
+      [/NAVER\(inapp/i, '네이버'],
+      [/Instagram/i, 'Instagram'],
+      [/FBAV|FBAN|FB_IAB/i, 'Facebook'],
+      [/Line\//i, 'LINE'],
+      [/SamsungBrowser\/.*CrossApp/i, '삼성 인터넷'],
+      [/wv\).*Version\/[\d.]+.*Chrome/i, 'WebView'],
+    ]
+    for (const [regex, name] of checks) {
+      if (regex.test(ua)) {
+        setIsInAppBrowser(true)
+        setInAppBrowserName(name)
+        break
+      }
+    }
+  }, [])
+
   // Check if already logged in
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -49,6 +73,18 @@ function LoginForm() {
   }, [])
 
   const handleSocialLogin = async (provider: "kakao" | "google") => {
+    // ★ Google은 인앱 브라우저에서 차단됨
+    if (provider === 'google' && isInAppBrowser) {
+      const currentUrl = window.location.href
+      // 외부 브라우저로 열기 시도
+      if (/Android/i.test(navigator.userAgent)) {
+        window.open(`intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`)
+      } else {
+        // iOS: 외부 브라우저 강제 열기 불가 → 안내
+        setError(`${inAppBrowserName || '인앱'} 브라우저에서는 Google 로그인이 차단됩니다. 주소를 복사하여 Chrome 또는 Safari에서 열어주세요.`)
+      }
+      return
+    }
     setSocialLoading(provider)
     setError("")
     try {
@@ -152,6 +188,31 @@ function LoginForm() {
                 : "30초 만에 가입하고 무료 분석을 시작하세요"}
             </p>
           </div>
+
+          {/* ★ 인앱 브라우저 경고 */}
+          {isInAppBrowser && (
+            <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+              <p className="text-xs font-semibold text-amber-400 mb-1">⚠️ {inAppBrowserName} 앱 내 브라우저 감지</p>
+              <p className="text-[11px] text-amber-300/70 leading-relaxed">
+                Google 로그인은 인앱 브라우저에서 차단됩니다. 
+                <strong className="text-amber-300"> Chrome 또는 Safari</strong>에서 열어주세요.
+              </p>
+              <button
+                onClick={() => {
+                  const url = window.location.href
+                  if (/Android/i.test(navigator.userAgent)) {
+                    window.open(`intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`)
+                  } else {
+                    navigator.clipboard?.writeText(url)
+                    setSuccess('주소가 복사되었습니다. Safari에 붙여넣기 해주세요.')
+                  }
+                }}
+                className="mt-2 w-full py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[11px] font-medium rounded-lg transition-colors"
+              >
+                {/Android/i.test(navigator.userAgent || '') ? '🌐 Chrome으로 열기' : '📋 주소 복사하기'}
+              </button>
+            </div>
+          )}
 
           {/* Social buttons */}
           <div className="space-y-3 mb-6">
