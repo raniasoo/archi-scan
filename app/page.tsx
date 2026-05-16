@@ -2742,7 +2742,7 @@ export default function ArchiScanPage() {
                 roi: feasibilityResult?.roi || 0,
                 totalProjectCost: feasibilityResult?.totalCost || 0,
                 strategy,
-                buildingType: selectedLayoutData._originalType || selectedLayoutData.type,
+                buildingType: selectedLayoutData.type,
                 buildingCount: selectedLayoutData.buildingCount,
                 isMultiBuilding: selectedLayoutData.type === 'cluster' && (selectedLayoutData._originalType || selectedLayoutData.type) !== 'cluster',
                 values: userValues ? {

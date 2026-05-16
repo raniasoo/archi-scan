@@ -82,6 +82,25 @@ export function FloorplanStep(props: FloorplanStepProps) {
   const effectiveCoverage = customParams?.coverage ?? selectedLayoutData.coverage
   const effectiveFloors = customParams?.floors ?? totalFloors
   const effectiveUnits = customParams?.units ?? selectedLayoutData.units
+  
+  // ━━━ Single Source of Truth: 모든 도면이 이 객체를 참조 ━━━
+  const renderData = {
+    type: selectedLayoutData.type as 'tower' | 'courtyard' | 'lshape' | 'linear' | 'cluster',
+    originalType: selectedLayoutData._originalType,
+    siteArea: siteAreaNum,
+    coverage: effectiveCoverage,
+    floors: effectiveFloors,
+    units: effectiveUnits,
+    buildingCount: selectedLayoutData.buildingCount,
+    layoutName: selectedLayoutData.name,
+    zoneType: (molit.zoneCode || regulation?.zoneType || '') as string,
+    gfa: selectedLayoutData.gfa || gfa,
+    parking: selectedLayoutData.parking,
+    roadWidth: molit.roadWidth || regulation.roadWidth || 8,
+    heightLimit: molit.heightLimit || regulation.maxHeight,
+    hasDistrictPlan: molit.hasDistrictPlan ?? false,
+  }
+  
   const isFloorTab = drawingTab === 'floor'
 
   // 건물 용도 판정 (기본 평면과 동일 로직)
@@ -206,16 +225,16 @@ export function FloorplanStep(props: FloorplanStepProps) {
             <div>
               <div className="w-full" style={{ aspectRatio: '3/2', minHeight: 260, maxHeight: 420 }}>
                 <FloorPlan
-                  type={selectedLayoutData._originalType || selectedLayoutData.type}
+                  type={selectedLayoutData.type}
                   floor={selectedFloor}
-                  totalFloors={selectedLayoutData.floors}
+                  totalFloors={effectiveFloors}
                   strategy={strategy}
                   zoneType={molit.zoneCode || regulation?.zoneType}
                   units={effectiveUnits}
                   gfa={selectedLayoutData.gfa || gfa}
                   buildingCount={selectedLayoutData.buildingCount}
-                  siteArea={siteArea}
-                  coverage={selectedLayoutData.coverage}
+                  siteArea={siteAreaNum}
+                  coverage={effectiveCoverage}
                   originalType={selectedLayoutData._originalType}
                 />
               </div>
@@ -231,16 +250,16 @@ export function FloorplanStep(props: FloorplanStepProps) {
           {/* 📐 평면도 */}
           {drawingTab === "ai-generate" && (
             <AIFloorPlan
-              siteArea={siteAreaNum}
-              buildingCoverage={effectiveCoverage}
-              floors={effectiveFloors}
-              units={effectiveUnits}
-              type={selectedLayoutData.type}
-              buildingCount={selectedLayoutData.buildingCount}
-              layoutName={selectedLayoutData.name}
+              siteArea={renderData.siteArea}
+              buildingCoverage={renderData.coverage}
+              floors={renderData.floors}
+              units={renderData.units}
+              type={renderData.type}
+              buildingCount={renderData.buildingCount}
+              layoutName={renderData.layoutName}
               address={address}
-              zoneType={molit.zoneCode || regulation?.zoneType}
-              heightLimit={molit.heightLimit || regulation.maxHeight}
+              zoneType={renderData.zoneType}
+              heightLimit={renderData.heightLimit}
               buildingUse={buildingUse}
               selectedPatterns={selectedPatterns}
               solarData={selectedLayoutData.solarData}
@@ -297,22 +316,22 @@ export function FloorplanStep(props: FloorplanStepProps) {
 
           {/* 아이소메트릭 */}
           {drawingTab === "iso" && (
-            <IsometricView siteArea={siteAreaNum} buildingCoverage={effectiveCoverage} floors={effectiveFloors} units={effectiveUnits} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
+            <IsometricView siteArea={renderData.siteArea} buildingCoverage={renderData.coverage} floors={renderData.floors} units={renderData.units} buildingCount={renderData.buildingCount} originalType={renderData.originalType} type={renderData.type} layoutName={renderData.layoutName} zoneType={renderData.zoneType} />
           )}
 
           {/* 투시도 */}
           {drawingTab === "perspective" && (
-            <PerspectiveView siteArea={siteAreaNum} buildingCoverage={effectiveCoverage} floors={effectiveFloors} units={effectiveUnits} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} zoneType={molit.zoneCode || regulation?.zoneType} />
+            <PerspectiveView siteArea={renderData.siteArea} buildingCoverage={renderData.coverage} floors={renderData.floors} units={renderData.units} buildingCount={renderData.buildingCount} originalType={renderData.originalType} type={renderData.type} layoutName={renderData.layoutName} zoneType={renderData.zoneType} />
           )}
 
           {/* 단면도 */}
           {drawingTab === "section" && (
-            <SectionView siteArea={siteAreaNum} buildingCoverage={effectiveCoverage} floors={effectiveFloors} units={effectiveUnits} parking={selectedLayoutData.parking} heightLimit={molit.heightLimit || regulation.maxHeight} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} hasDistrictPlan={molit.hasDistrictPlan ?? false} />
+            <SectionView siteArea={renderData.siteArea} buildingCoverage={renderData.coverage} floors={renderData.floors} units={renderData.units} parking={renderData.parking} heightLimit={renderData.heightLimit} buildingCount={renderData.buildingCount} originalType={renderData.originalType} type={renderData.type} layoutName={renderData.layoutName} roadWidth={renderData.roadWidth} hasDistrictPlan={renderData.hasDistrictPlan} />
           )}
 
           {/* 입면도 */}
           {drawingTab === "elevation" && (
-            <ElevationView siteArea={siteAreaNum} buildingCoverage={effectiveCoverage} floors={effectiveFloors} units={effectiveUnits} buildingCount={selectedLayoutData.buildingCount} originalType={selectedLayoutData._originalType} type={selectedLayoutData.type} layoutName={selectedLayoutData.name} roadWidth={molit.roadWidth || regulation.roadWidth || 8} heightLimit={molit.heightLimit || regulation.maxHeight} />
+            <ElevationView siteArea={renderData.siteArea} buildingCoverage={renderData.coverage} floors={renderData.floors} units={renderData.units} buildingCount={renderData.buildingCount} originalType={renderData.originalType} type={renderData.type} layoutName={renderData.layoutName} roadWidth={renderData.roadWidth} heightLimit={renderData.heightLimit} />
           )}
         </div>
       </div>
