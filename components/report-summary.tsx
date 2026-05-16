@@ -796,9 +796,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         <p style="font-size: 11pt; font-weight: 700; color: #1e40af;">${layout.name}</p>
       </div>
     </div>
-    <div style="padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.7;">
-      <p style="font-size: 9pt; font-weight: 600; color: #1e293b; margin-bottom: 6px;">설계 철학</p>
-      <p style="font-size: 8.5pt; color: #374151;">
+    <div style="padding: 14px; background: #ecfdf5; border-radius: 8px; border: 1px solid #a7f3d0; line-height: 1.7;">
+      <p style="font-size: 9pt; font-weight: 600; color: #065f46; margin-bottom: 6px;">설계 철학</p>
+      <p style="font-size: 8.5pt; color: #1e293b;">
         본 배치안은 대지면적 ${siteArea}㎡, ${
           (() => {
             const z = regulation?.zoneName || '일반주거지역'
