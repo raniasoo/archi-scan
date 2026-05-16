@@ -1,8 +1,9 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { Sparkles, Maximize2, X, ArrowLeft, ChevronDown } from "lucide-react"
+import { Sparkles, Maximize2, X, ArrowLeft, ChevronDown, Zap } from "lucide-react"
 import { getCatalog, getTypes, getSizeSpec, getVariants, applyPatternModifiers, type RoomDef } from "@/lib/floorplan-templates"
+import { optimizeUnitMix, formatUnitMixSummary, type UnitMix } from "@/lib/floorplan-optimizer"
 
 const WALL_EXT = 3, WALL_INT = 1.5
 
@@ -219,13 +220,25 @@ export interface AIFloorPlanProps {
   buildingUse?: 'house' | 'villa' | 'apartment' | 'commercial'
   buildingCount?: number  // 클러스터 동수
   selectedPatterns?: string[]
+  // Phase 2: 세대 믹스 최적화 연동
+  solarData?: {
+    winterSunlightHours: number
+    shadowLength: number
+    northSolarMaxHeight: number
+    effectiveMaxFloors: number
+    solarScore?: number
+    isConstraining?: boolean
+    summary?: string
+  }
+  targetUnitSize?: 'small' | 'medium' | 'large' | 'mixed'
 }
 
 export function AIFloorPlan(props: AIFloorPlanProps) {
-  const { siteArea, buildingCoverage, floors, units, zoneType, buildingUse, buildingCount, selectedPatterns } = props
+  const { siteArea, buildingCoverage, floors, units, zoneType, buildingUse, buildingCount, selectedPatterns, solarData, targetUnitSize } = props
   const [fullscreen, setFullscreen] = useState(false)
   const [variantIdx, setVariantIdx] = useState(0)
   const [selectedUnit, setSelectedUnit] = useState<UnitLayout | null>(null)
+  const [showOptInfo, setShowOptInfo] = useState(false)
 
   const ZONE_NAMES: Record<string,string> = {
     'residential-1':'제1종일반주거지역','residential-2':'제2종일반주거지역','residential-3':'제3종일반주거지역',
@@ -264,6 +277,49 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
     return { type: '원룸', size: 'M' }
   }
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Phase 2: AI 세대 믹스 최적화
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const buildingArea = footprint
+  const useMap: Record<string, string> = { house: 'single-family', villa: 'multi-family', apartment: 'apartment', commercial: 'officetel' }
+  
+  const optimizedMix = useMemo(() => {
+    try {
+      return optimizeUnitMix({
+        buildingType: (props.type || 'tower') as any,
+        totalUnits: unitsPerBuilding,
+        floors,
+        buildingArea,
+        buildingWidth: Math.sqrt(buildingArea * 1.3),
+        buildingDepth: Math.sqrt(buildingArea / 1.3),
+        targetUnitSize: targetUnitSize || 'mixed',
+        primaryOrientation: 'south',
+        southOpen: true,
+        solarData,
+        selectedPatterns,
+        zoneType,
+        buildingUse: useMap[buildingUse || 'villa'] || 'multi-family',
+      })
+    } catch {
+      return null
+    }
+  }, [unitsPerBuilding, floors, buildingArea, targetUnitSize, zoneType, buildingUse, solarData?.winterSunlightHours])
+
+  // AI 최적 프리셋 생성
+  const aiPreset = useMemo(() => {
+    if (!optimizedMix?.length) return null
+    const configs: {type: string; size: 'S'|'M'|'L'; variant: string}[] = []
+    for (const mix of optimizedMix) {
+      for (let i = 0; i < mix.count; i++) {
+        configs.push({ type: mix.type, size: mix.size, variant: mix.variant || 'ABCD'[i % 4] })
+      }
+    }
+    // unitsPerFloor에 맞게 자르기
+    return configs.slice(0, unitsPerFloor)
+  }, [optimizedMix, unitsPerFloor])
+
+  const aiMixSummary = optimizedMix ? formatUnitMixSummary(optimizedMix) : ''
+
   const auto = bestType(areaPerUnit)
   const autoSpec = getSizeSpec(auto.type, auto.size)
   const autoLabel = `✨ 자동 (${auto.type} ${autoSpec.area}㎡)`
@@ -271,8 +327,10 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
     type: auto.type, size: auto.size, variant: 'ABCD'[i % 4],
   }))
 
-  // 자동 + 수동 프리셋
+  // 자동 + AI최적 + 수동 프리셋
   const mixPresets: Record<string, {type:string;size:'S'|'M'|'L';variant:string}[]> = {
+    // AI 최적이 첫 번째 (기본 선택)
+    ...(aiPreset && aiPreset.length > 0 ? { '⚡ AI 최적': aiPreset } : {}),
     [autoLabel]: autoPreset,
     ...(buildingUse === 'house' ? {
       '쓰리룸+': Array.from({length:Math.min(unitsPerFloor,2)},(_,i)=>({type:'쓰리룸+',size:'M' as const,variant:'ABCD'[i%4]})),
@@ -287,7 +345,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
     }),
   }
 
-  const [selectedMix, setSelectedMix] = useState(autoLabel)
+  const [selectedMix, setSelectedMix] = useState(aiPreset ? '⚡ AI 최적' : autoLabel)
 
   const firstKey = Object.keys(mixPresets)[0] || autoLabel
   const currentMix = (mixPresets[selectedMix] || mixPresets[firstKey] || autoPreset).map((m,i) => ({...m, variant: 'ABCD'[(i+variantIdx)%4]}))
@@ -302,6 +360,9 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
     }
     return base
   }, [selectedMix, variantIdx, unitsPerFloor, areaPerUnit, selectedPatterns])
+
+  // AI 최적 선택 시 자동 전환
+  const isAiMix = selectedMix === '⚡ AI 최적'
 
   return (
     <div className="space-y-3">
@@ -335,6 +396,29 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
               </button>
             ))}
           </div>
+
+          {/* Phase 2: AI 최적화 요약 배너 */}
+          {isAiMix && optimizedMix && optimizedMix.length > 0 && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 space-y-1">
+              <button onClick={() => setShowOptInfo(!showOptInfo)} className="w-full flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+                  <Zap className="h-3 w-3"/>
+                  AI 세대 믹스 최적화
+                </span>
+                <ChevronDown className={`h-3 w-3 text-primary transition-transform ${showOptInfo ? 'rotate-180' : ''}`}/>
+              </button>
+              <p className="text-[10px] text-muted-foreground">{aiMixSummary}</p>
+              {showOptInfo && (
+                <div className="pt-1 space-y-1 text-[10px] text-muted-foreground border-t border-primary/10">
+                  {solarData && (
+                    <p>☀️ 동지 일조 {solarData.winterSunlightHours}시간 · 그림자 {solarData.shadowLength}m{solarData.isConstraining ? ` · 정북사선 ${solarData.effectiveMaxFloors}층 제한` : ''}</p>
+                  )}
+                  <p>🏠 용도: {useMap[buildingUse || 'villa'] || '다세대'} · 층당 {unitsPerFloor}세대 · {residentialFloors}개 주거층</p>
+                  <p className="text-[9px] text-muted-foreground/60">대지면적·용도지역·세대수·일조 조건을 종합 분석하여 최적 세대 타입 비율을 자동 결정합니다</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 헤더 */}
           <div className="flex items-center justify-between">

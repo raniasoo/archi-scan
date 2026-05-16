@@ -240,6 +240,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
               heightLimit={molit.heightLimit || regulation.maxHeight}
               buildingUse={buildingUse}
               selectedPatterns={selectedPatterns}
+              solarData={selectedLayoutData.solarData}
               setbacks={{
                 front: molit.hasDistrictPlan ? 2 : 3,
                 side: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 1.5 : 1,
