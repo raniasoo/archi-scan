@@ -845,8 +845,19 @@ function buildArchitecturePrompt(params: {
   const f = floors || 3
   const u = units || 6
   const footprint = siteArea && coverage ? Math.round(siteArea * coverage / 100) : 200
-  const bW = Math.round(Math.sqrt(footprint * 1.5))
-  const bD = Math.round(footprint / bW)
+  // ━━━ building-geometry Single Source of Truth: 3D/SVG와 동일한 치수 ━━━
+  const { getBuildingDimensionsInMeters: getGeoDims } = await import('@/lib/building-geometry')
+  const geoDims = getGeoDims({
+    type: (buildingType || 'tower') as any,
+    coverage: coverage || 50,
+    siteArea: siteArea || 500,
+    floors: f,
+    buildingCount: userBuildingCount,
+    originalType: buildingType,
+  })
+  const geoBlocks = geoDims.blocksInMeters
+  const bW = geoBlocks.length > 0 ? Math.round(geoBlocks[0].widthM) : Math.round(Math.sqrt(footprint * 1.5))
+  const bD = geoBlocks.length > 0 ? Math.round(geoBlocks[0].depthM) : Math.round(footprint / bW)
 
   // 건물 규모별 형태
   let buildingForm = ''
@@ -879,10 +890,17 @@ function buildArchitecturePrompt(params: {
     }
     
     const eachFootprint = Math.round(footprint / buildingCount)
-    // 판상형은 세로보다 가로가 3배 이상 긴 비율
-    const linearRatio = bt2 === 'linear' ? 3.5 : 1.4
-    const eachW = Math.round(Math.sqrt(eachFootprint * linearRatio))
-    const eachD = Math.round(eachFootprint / eachW)
+    // ━━━ building-geometry 블록에서 실제 치수 사용 ━━━
+    let eachW: number, eachD: number
+    if (geoBlocks.length > 0) {
+      // 첫 번째 블록의 실제 치수 사용 (3D/SVG와 동일)
+      eachW = Math.round(geoBlocks[0].widthM)
+      eachD = Math.round(geoBlocks[0].depthM)
+    } else {
+      const linearRatio = bt2 === 'linear' ? 3.5 : 1.4
+      eachW = Math.round(Math.sqrt(eachFootprint * linearRatio))
+      eachD = Math.round(eachFootprint / eachW)
+    }
     
     // 원래 건축 타입에 따른 건물 배치 설명
     const typeDesc: Record<string, string> = {
