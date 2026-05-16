@@ -396,9 +396,12 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
   
   if (s.floorPlan) {
     // LAY-FP-01: 세대수 불일치
-    const fpTotalUnits = s.floorPlan.unitTypes.reduce((sum, u) => sum + u.count, 0) * 
-                         Math.max(1, s.layout.floors - 1)
-    if (Math.abs(fpTotalUnits - s.layout.units) > s.layout.units * 0.3) {
+    // 평면설계의 총 세대수 = 층당 세대수 × 주거층수
+    const residentialFloors = Math.max(1, s.layout.floors - 1)
+    const fpTotalUnits = s.floorPlan.unitsPerFloor * residentialFloors
+    // 허용 오차: 층당 반올림 차이 × 주거층수 (최소 2세대)
+    const allowedDiff = Math.max(2, residentialFloors)
+    if (Math.abs(fpTotalUnits - s.layout.units) > allowedDiff) {
       issues.push({
         id: 'LAY-FP-01', severity: 'warning',
         systemA: '배치안', systemB: '평면설계',

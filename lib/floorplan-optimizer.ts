@@ -240,6 +240,16 @@ export function optimizeUnitMix(constraints: FloorPlanConstraints): UnitMix[] {
   // 허용 타입으로 필터링
   baseMix = baseMix.filter(m => allowedTypes.includes(m.type))
   
+  // ━━━ 핵심 수정: 믹스 타입 수를 층당 세대수에 맞게 축소 ━━━
+  // unitsPerFloor=2인데 타입이 4개면 각 타입 최소 1세대 → 4세대로 불일치 발생
+  // 따라서 타입 수를 층당 세대수 이하로 제한
+  if (baseMix.length > unitsPerFloor) {
+    // 비율이 높은 순으로 정렬 후 상위 N개만 유지
+    baseMix = [...baseMix]
+      .sort((a, b) => b.ratio - a.ratio)
+      .slice(0, unitsPerFloor)
+  }
+  
   // 필터 후 비율 없으면 허용 타입에서 자동 생성
   if (baseMix.length === 0) {
     // 목표 면적에 가장 가까운 허용 타입 찾기
@@ -257,9 +267,10 @@ export function optimizeUnitMix(constraints: FloorPlanConstraints): UnitMix[] {
   // 비율 정규화
   const totalRatio = baseMix.reduce((sum, m) => sum + m.ratio, 0)
   
-  // 세대수 배분
+  // 세대수 배분 — 타입 수 ≤ unitsPerFloor 보장됨
   const unitMix: UnitMix[] = baseMix.map(m => {
     const normalizedRatio = m.ratio / totalRatio
+    // 최소 1세대 보장하되, 총합이 unitsPerFloor를 넘지 않도록
     const count = Math.max(1, Math.round(unitsPerFloor * normalizedRatio))
     const template = getTemplate(m.type, m.size)
     const area = template?.area || targetUnitArea
@@ -526,8 +537,11 @@ export function optimizeFloorPlan(
   
   // 6. 면적 계산
   const grossAreaPerFloor = buildingArea
-  const netAreaPerFloor = units.reduce((sum, u) => sum + u.area, 0) / Math.max(1, Math.ceil(units.length / unitsPerFloor))
-  const totalNetArea = netAreaPerFloor * residentialFloors
+  const rawNetAreaPerFloor = units.reduce((sum, u) => sum + u.area, 0) / Math.max(1, Math.ceil(units.length / unitsPerFloor))
+  // ━━━ 핵심: 전용면적은 연면적의 72%(코어 효율)를 절대 초과할 수 없음 ━━━
+  const maxNetPerFloor = grossAreaPerFloor * 0.72
+  const netAreaPerFloor = Math.min(rawNetAreaPerFloor, maxNetPerFloor)
+  const totalNetArea = Math.min(netAreaPerFloor * residentialFloors, buildingArea * floors * 0.72)
   const coreEfficiency = grossAreaPerFloor > 0 ? Math.round((netAreaPerFloor / grossAreaPerFloor) * 100) : 72
   
   // 7. 점수 계산
