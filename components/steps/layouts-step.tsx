@@ -10,6 +10,7 @@ import type { LayoutOption } from "@/app/page"
 import type { ZoningRegulation } from "@/lib/regulation-types"
 import type { DesignStrategy } from "@/lib/design-strategy"
 import { LayoutSketch } from "@/components/layout-sketch"
+import { SolarMiniDiagram } from "@/components/solar-mini-diagram"
 import type { FeasibilityResult, LegalSummary } from "@/lib/project-analysis-state"
 import { calculateFeasibility, safeNumber } from "@/lib/project-analysis-state"
 import { getZoneMultiplier, type RegionalPricing } from "@/lib/regional-pricing"
@@ -271,6 +272,21 @@ export function LayoutsStep(props: LayoutsStepProps) {
                     <p className="text-xs font-bold">{layout.coverage?.toFixed(0)}%</p>
                   </div>
                 </div>
+
+                {/* ☀️ 일조사선 미니 다이어그램 */}
+                {layout.solarData && (
+                  <div className="mb-2 rounded-lg bg-secondary/20 border border-border/50 p-2">
+                    <SolarMiniDiagram
+                      buildingHeight={layout.floors * 3.3}
+                      northMaxHeight={layout.solarData.northSolarMaxHeight}
+                      effectiveMaxFloors={layout.solarData.effectiveMaxFloors}
+                      shadowLength={layout.solarData.shadowLength}
+                      winterSunlightHours={layout.solarData.winterSunlightHours}
+                      isConstraining={layout.solarData.isConstraining || false}
+                      summary={layout.solarData.summary}
+                    />
+                  </div>
+                )}
 
                 {/* ROI + AI 점수 */}
                 <div className="flex items-center justify-between">
