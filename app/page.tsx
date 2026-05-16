@@ -73,6 +73,7 @@ import {
 } from "@/lib/database"
 import { evaluatePatternQuality, type UserValues } from "@/lib/pattern-quality"
 import { ALEXANDER_LAYOUT_TYPES, recommendLayoutTypes, getAlexanderLayoutDescription } from "@/lib/alexander-layouts"
+import { analyzeSolarEnvelope, type SolarEnvelopeResult } from "@/lib/sun-analysis"
 
 // ── 동적 임포트: 3D/시각화 (가장 무거움, SSR 불필요) ──
 const LoadingBox = () => <div className="flex items-center justify-center p-8 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" />로딩 중...</div>
@@ -135,6 +136,16 @@ export interface LayoutOption {
   isLegallyCompliant?: boolean // 법규 준수 여부
   _originalType?: "tower" | "courtyard" | "lshape" | "linear" | "cluster" // 클러스터 변환 전 원래 타입
   _userEdited?: boolean // 사용자가 수동 조정했는지 여부
+  // Phase 1: 일조사선 제약 분석 데이터
+  solarData?: {
+    winterSunlightHours: number     // 동지 일조시간 (시간)
+    shadowLength: number            // 그림자 길이 (m)
+    northSolarMaxHeight: number     // 정북사선 최대 높이 (m)
+    effectiveMaxFloors: number      // 사선 반영 실효 최대 층수
+    solarScore: number              // 일조 점수 (0~100)
+    isConstraining: boolean         // 사선제한이 실질적 제약인지
+    summary: string                 // 사선제한 요약
+  }
 }
 
 // safeNumber is imported from @/lib/project-analysis-state
@@ -200,7 +211,29 @@ function generateLayouts(
   const maxFAR = regulation?.maxFloorAreaRatio ?? 200
   const maxFloorsByFAR = Math.ceil(maxFAR / (maxCoverage * params.coverageMultiplier))
   const maxFloorsByHeight = Math.floor((regulation?.maxHeight ?? 30) / 3.3)
-  const effectiveMaxFloors = Math.min(regulation?.maxFloors ?? 12, maxFloorsByFAR, maxFloorsByHeight)
+  
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Phase 1: 일조사선 제약 반영 (건축법 제61조)
+  // 정북방향 + 도로사선 → 실효 최대 층수 제한
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const zoneType = regulation?.zoneType ?? 'residential-2'
+  const isResidentialZone = zoneType.includes('residential') && !zoneType.includes('semi')
+  
+  const solarEnvelope = analyzeSolarEnvelope({
+    siteArea,
+    heightLimit: regulation?.maxHeight ?? 30,
+    roadWidth: regulation?.roadWidth ?? 8,
+    isResidential: isResidentialZone,
+    frontSetback: regulation?.setbackFront,
+    rearSetback: regulation?.setbackRear,
+  })
+  
+  // 사선제한이 실질적 제약인 경우 실효 최대 층수 적용
+  const solarMaxFloors = solarEnvelope.effectiveMaxFloors
+  const preEffectiveMaxFloors = Math.min(regulation?.maxFloors ?? 12, maxFloorsByFAR, maxFloorsByHeight)
+  const effectiveMaxFloors = isResidentialZone 
+    ? Math.min(preEffectiveMaxFloors, solarMaxFloors) 
+    : preEffectiveMaxFloors
 
   // 배치 유형별 계산 함수
   const calculateLayout = (
@@ -285,6 +318,14 @@ function generateLayouts(
       features.unshift("법규 조정됨")
     }
     
+    // Phase 1: 일조사선 제약 표시
+    if (isResidentialZone && solarEnvelope.isConstraining) {
+      features.push(`일조사선 ${solarEnvelope.effectiveMaxFloors}층 제한`)
+    }
+    if (isResidentialZone && solarEnvelope.winterSunlightHours >= 4) {
+      features.push(`동지 ${solarEnvelope.winterSunlightHours}시간 일조`)
+    }
+    
     return {
       id: 0, // Will be set later
       name: typeName,
@@ -301,6 +342,18 @@ function generateLayouts(
       recommendation,
       reasoning,
       isLegallyCompliant, // Add compliance flag
+      // Phase 1: 일조사선 분석 데이터
+      solarData: isResidentialZone ? {
+        winterSunlightHours: solarEnvelope.winterSunlightHours,
+        shadowLength: solarEnvelope.shadowLengthM,
+        northSolarMaxHeight: solarEnvelope.northSolarMaxHeight,
+        effectiveMaxFloors: solarEnvelope.effectiveMaxFloors,
+        solarScore: solarEnvelope.winterSunlightHours >= 6 ? 100 :
+                    solarEnvelope.winterSunlightHours >= 4 ? 70 :
+                    solarEnvelope.winterSunlightHours >= 2 ? 40 : 10,
+        isConstraining: solarEnvelope.isConstraining,
+        summary: solarEnvelope.summary,
+      } : undefined,
     }
   }
   
