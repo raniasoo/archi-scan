@@ -108,6 +108,7 @@ const FinancialStep = dynamic(() => import("@/components/steps/financial-step").
 const ReportStep = dynamic(() => import("@/components/steps/report-step").then(m => ({ default: m.ReportStep })), { loading: LoadingBox })
 const DataVerification = dynamic(() => import("@/components/data-verification").then(m => ({ default: m.DataVerification })), { loading: LoadingBox })
 const AIHub = dynamic(() => import("@/components/ai-hub").then(m => ({ default: m.AIHub })), { loading: LoadingBox })
+const EditorOverlay = dynamic(() => import("@/components/editor-overlay").then(m => ({ default: m.EditorOverlay })), { ssr: false })
 
 // ── 동적 임포트: 내보내기 함수 (사용 시에만 로드) ──
 const loadExportFunctions = () => import("@/lib/report-export")
@@ -586,6 +587,7 @@ export default function ArchiScanPage() {
   const [analysisRawData, setAnalysisRawData] = useState<any>(null)
   const [siteCoords, setSiteCoords] = useState<{ lng: number, lat: number } | null>(null)
   const [show3DVolume, setShow3DVolume] = useState(false)
+  const [showEditorOverlay, setShowEditorOverlay] = useState(false)
   const [showBrandingEditor, setShowBrandingEditor] = useState(false)
   const [branding, setBranding] = useState<BrandingConfig | null>(null)
   
@@ -2142,22 +2144,52 @@ export default function ArchiScanPage() {
       )}
       {/* 3D 볼륨 모델 모달 */}
       {show3DVolume && selectedLayoutData && (
-        <BuildingVolume3D
-          layoutName={selectedLayoutData.name}
-          layoutType={selectedLayoutData.type as any}
-          originalType={selectedLayoutData._originalType}
-          buildingCount={selectedLayoutData.buildingCount}
-          floors={selectedLayoutData.floors}
-          units={selectedLayoutData.units}
-          parking={selectedLayoutData.parking}
-          siteArea={siteAreaNum}
-          coverage={selectedLayoutData.coverage}
-          sitePolygon={sitePolygon}
-          terrain={analysisRawData?.terrain}
-          siteCoords={siteCoords}
-          regulation={{ frontSetback: regulation?.setbackFront ?? 3, sideSetback: regulation?.setbackSide ?? 1.5, rearSetback: regulation?.setbackRear ?? 2, roadWidth: regulation?.roadWidth || 8, maxHeight: regulation?.maxHeight || 30, setbackAngle: regulation?.setbackAngle ?? 45, northShadow: regulation?.setbackType === 'north' || regulation?.setbackType === 'both' }}
-          onClose={() => setShow3DVolume(false)}
-        />
+        <div className="relative">
+          <BuildingVolume3D
+            layoutName={selectedLayoutData.name}
+            layoutType={selectedLayoutData.type as any}
+            originalType={selectedLayoutData._originalType}
+            buildingCount={selectedLayoutData.buildingCount}
+            floors={selectedLayoutData.floors}
+            units={selectedLayoutData.units}
+            parking={selectedLayoutData.parking}
+            siteArea={siteAreaNum}
+            coverage={selectedLayoutData.coverage}
+            sitePolygon={sitePolygon}
+            terrain={analysisRawData?.terrain}
+            siteCoords={siteCoords}
+            regulation={{ frontSetback: regulation?.setbackFront ?? 3, sideSetback: regulation?.setbackSide ?? 1.5, rearSetback: regulation?.setbackRear ?? 2, roadWidth: regulation?.roadWidth || 8, maxHeight: regulation?.maxHeight || 30, setbackAngle: regulation?.setbackAngle ?? 45, northShadow: regulation?.setbackType === 'north' || regulation?.setbackType === 'both' }}
+            onClose={() => setShow3DVolume(false)}
+          />
+          {/* 편집 모드 토글 버튼 */}
+          {!showEditorOverlay && (
+            <button 
+              onClick={() => setShowEditorOverlay(true)}
+              className="absolute top-2 right-14 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 transition-colors"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              실시간 편집
+            </button>
+          )}
+          {/* Phase 3: 실시간 편집 오버레이 */}
+          {showEditorOverlay && (
+            <EditorOverlay
+              siteArea={siteAreaNum}
+              coverage={selectedLayoutData.coverage}
+              floors={selectedLayoutData.floors}
+              units={selectedLayoutData.units}
+              buildingType={selectedLayoutData.type}
+              zoneType={regulation.zoneType}
+              maxCoverage={regulation.maxCoverageRatio}
+              maxFAR={regulation.maxFloorAreaRatio}
+              maxHeight={regulation.maxHeight}
+              maxFloors={regulation.maxFloors}
+              roadWidth={regulation.roadWidth}
+              parkingRatio={regulation.parkingRatio}
+              onClose={() => setShowEditorOverlay(false)}
+            />
+          )}
+        </div>
       )}
 
       {/* 브랜딩 설정 모달 */}
