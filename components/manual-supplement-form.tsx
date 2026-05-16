@@ -218,11 +218,15 @@ const ZONE_TYPE_OPTIONS = [
   { value: 'commercial-general', label: '일반상업지역' },
   { value: 'commercial-central', label: '중심상업지역' },
   { value: 'industrial-general', label: '일반공업지역' },
+  { value: 'industrial-exclusive', label: '전용공업지역' },
+  { value: 'industrial-semi', label: '준공업지역' },
   { value: 'green-natural', label: '자연녹지지역' },
   { value: 'green-production', label: '생산녹지지역' },
+  { value: 'green-conservation', label: '보전녹지지역' },
   { value: 'management-planned', label: '계획관리지역' },
   { value: 'unknown', label: '확인 필요' },
 ]
+const ZONE_VALUES = new Set(ZONE_TYPE_OPTIONS.map(o => o.value))
 
 const ROAD_CONDITION_OPTIONS = [
   { value: 'under-4m', label: '4m 미만 도로 접함' },
@@ -279,6 +283,18 @@ export function ManualSupplementForm({
   const [heightLimit, setHeightLimit] = useState<string>(initialHeightStr)
   const [districtPlan, setDistrictPlan] = useState<string | undefined>(initialDistrictPlanValue)
   const [additionalNotes, setAdditionalNotes] = useState<string>(initialData?.additionalNotes || '')
+  
+  // ━━━ initialData가 외부에서 변경될 때 form state 동기화 ━━━
+  useEffect(() => {
+    if (initialData?.zoneType && initialData.zoneType !== zoneType) {
+      setZoneType(initialData.zoneType)
+    }
+  }, [initialData?.zoneType])
+  useEffect(() => {
+    if (initialData?.roadCondition && initialData.roadCondition !== roadCondition) {
+      setRoadCondition(initialData.roadCondition)
+    }
+  }, [initialData?.roadCondition])
   
   // UI state
   const [showAutoFilled, setShowAutoFilled] = useState(false)
@@ -430,7 +446,7 @@ export function ManualSupplementForm({
             <div className="flex items-center justify-between">
               <Label className="text-xs text-foreground flex items-center gap-1.5">
                 용도지역
-                {zoneType && zoneType !== 'unknown' ? (
+                {zoneType && zoneType !== 'unknown' && ZONE_VALUES.has(zoneType) ? (
                   <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                 ) : (
                   <span className="text-[10px] text-amber-500">*필수</span>
