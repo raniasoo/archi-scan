@@ -152,10 +152,48 @@ export class LayoutEditor {
   
   // ── 건물 등록 ──
   
-  /** 편집 가능한 건물 추가 */
+  /** 편집 가능한 건물 추가 (대지 이격거리 기반 자동 클램핑) */
   addBuilding(building: Omit<EditableBuilding, 'isSelected' | 'isDragging' | 'isValid' | 'violations'>): void {
+    // ━━━ 대지 이격거리 기반 건물 크기 자동 클램핑 ━━━
+    // 소형 대지에서 건물 크기가 이격거리를 넘지 않도록 보장
+    const usableWidth = this.site.width - this.constraints.setbackSide * 2
+    const usableDepth = this.site.depth - this.constraints.setbackFront - this.constraints.setbackRear
+    
+    const clampedWidth = Math.min(building.width, usableWidth * 0.95)  // 5% 여유
+    const clampedDepth = Math.min(building.depth, usableDepth * 0.95)
+    
+    // 위치도 경계 안으로 클램핑
+    const halfW = this.site.width / 2
+    const halfD = this.site.depth / 2
+    const maxX = halfW - this.constraints.setbackSide - clampedWidth / 2
+    const minX = -maxX
+    const maxZ = halfD - this.constraints.setbackFront - clampedDepth / 2
+    const minZ = -halfD + this.constraints.setbackRear + clampedDepth / 2
+    
+    const clampedX = Math.max(minX, Math.min(maxX, building.x))
+    const clampedZ = Math.max(minZ, Math.min(maxZ, building.z))
+    
+    // 정북사선 높이 제한 자동 적용
+    let clampedFloors = building.floors
+    let clampedHeight = building.height
+    if (this.constraints.northSolarApplied) {
+      const northEdge = clampedZ - clampedDepth / 2
+      const northSetback = halfD + northEdge
+      const maxH = calcNorthSolarMaxHeight(northSetback, this.constraints.maxHeight)
+      if (clampedHeight > maxH) {
+        clampedHeight = maxH
+        clampedFloors = Math.floor(maxH / 3.3)
+      }
+    }
+    
     this.buildings.set(building.id, {
       ...building,
+      width: clampedWidth,
+      depth: clampedDepth,
+      x: clampedX,
+      z: clampedZ,
+      floors: clampedFloors,
+      height: clampedHeight,
       isSelected: false,
       isDragging: false,
       isValid: true,
