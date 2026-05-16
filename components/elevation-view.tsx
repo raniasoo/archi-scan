@@ -36,13 +36,27 @@ export function ElevationView({
   const maxBldH = groundY - PAD - 30
   const vScale = maxBldH / (totalH + mechH + 4)
 
-  // 건물 폭 — AI 렌더링과 동일한 공식
+  // 건물 폭 — building-geometry 전체 블록 바운딩 박스 사용
   const geo = getBuildingDimensionsInMeters({ type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType })
   const pv = getPatternVisuals({ type, floors, units, coverage: buildingCoverage, siteArea, buildingCount })
   const effectiveBldgCount = geo.effectiveBuildingCount
-  const firstBlock = geo.blocksInMeters[0]
-  let bldRealW = Math.round(firstBlock?.widthM || 10)
-  let bldRealD = Math.round(firstBlock?.depthM || 10)
+  
+  // ━━━ 다중 블록: 바운딩 박스로 전체 건물 폭/깊이 계산 ━━━
+  const bm = geo.blocksInMeters
+  let bldRealW: number, bldRealD: number
+  
+  if (bm.length > 1) {
+    const minX = Math.min(...bm.map(b => b.centerXM - b.widthM / 2))
+    const maxX = Math.max(...bm.map(b => b.centerXM + b.widthM / 2))
+    const minZ = Math.min(...bm.map(b => b.centerZM - b.depthM / 2))
+    const maxZ = Math.max(...bm.map(b => b.centerZM + b.depthM / 2))
+    bldRealW = Math.round(maxX - minX)
+    bldRealD = Math.round(maxZ - minZ)
+  } else {
+    const firstBlock = bm[0]
+    bldRealW = Math.round(firstBlock?.widthM || 10)
+    bldRealD = Math.round(firstBlock?.depthM || 10)
+  }
 
   const faceW = face === "front" ? bldRealW : bldRealD
   const hScale = Math.min((W - PAD * 2 - 40) / faceW, vScale)
