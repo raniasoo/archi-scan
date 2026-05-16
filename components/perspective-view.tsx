@@ -104,9 +104,21 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, bui
   const geo = getBuildingDimensionsInMeters({ type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType })
   const pv = getPatternVisuals({ type, floors, units, coverage: buildingCoverage, siteArea, buildingCount })
   const effectiveBldgCount = geo.effectiveBuildingCount
-  const firstBlock = geo.blocksInMeters[0]
-  const realBldgW = Math.round(firstBlock?.widthM || 10)
-  const realBldgD = Math.round(firstBlock?.depthM || 10)
+  
+  // ━━━ 다중 블록: 바운딩 박스로 전체 건물 폭 계산 ━━━
+  const bm = geo.blocksInMeters
+  let realBldgW: number, realBldgD: number
+  if (bm.length > 1) {
+    const minX = Math.min(...bm.map(b => b.centerXM - b.widthM / 2))
+    const maxX = Math.max(...bm.map(b => b.centerXM + b.widthM / 2))
+    const minZ = Math.min(...bm.map(b => b.centerZM - b.depthM / 2))
+    const maxZ = Math.max(...bm.map(b => b.centerZM + b.depthM / 2))
+    realBldgW = Math.round(maxX - minX)
+    realBldgD = Math.round(maxZ - minZ)
+  } else {
+    realBldgW = Math.round(bm[0]?.widthM || 10)
+    realBldgD = Math.round(bm[0]?.depthM || 10)
+  }
   const sideM = realBldgW
 
   // VP_X=200이므로 건물폭은 좌우로 140px씩 = 280px
@@ -120,16 +132,39 @@ export function PerspectiveView({ siteArea, buildingCoverage, floors, units, bui
 
   // ━━━ building-geometry 블록 데이터에서 투시도 블록 생성 ━━━
   if (geo.blocksInMeters && geo.blocksInMeters.length > 1) {
-    const bm = geo.blocksInMeters
+    const bmAll = geo.blocksInMeters
     const S = geo.siteWidthM || Math.sqrt(siteArea)
-    const scaleX = bw / S
-    const scaleD = bd / S
     
-    buildingBlocks = bm.map(b => ({
-      x: bx + (b.centerXM - b.widthM / 2 + S / 2) * scaleX,
-      depth: bDepth + (b.centerZM - b.depthM / 2 + S / 2) * scaleD,
-      w: b.widthM * scaleX,
-      d: b.depthM * scaleD,
+    // ━━━ 다중 블록: 30° 회전하여 두 날개 모두 보이게 ━━━
+    const angle = Math.PI / 6  // 30도 회전
+    const cos = Math.cos(angle), sin = Math.sin(angle)
+    
+    // 블록 중심 기준 회전
+    const cx = bmAll.reduce((s, b) => s + b.centerXM, 0) / bmAll.length
+    const cz = bmAll.reduce((s, b) => s + b.centerZM, 0) / bmAll.length
+    
+    // 회전 후 바운딩 박스 계산
+    const rotated = bmAll.map(b => {
+      const dx = b.centerXM - cx, dz = b.centerZM - cz
+      return {
+        cx: dx * cos - dz * sin + cx,
+        cz: dx * sin + dz * cos + cz,
+        w: b.widthM * cos + b.depthM * sin,  // 회전된 폭
+        d: b.widthM * sin + b.depthM * cos,  // 회전된 깊이
+      }
+    })
+    const rMinX = Math.min(...rotated.map(r => r.cx - r.w / 2))
+    const rMaxX = Math.max(...rotated.map(r => r.cx + r.w / 2))
+    const rMinZ = Math.min(...rotated.map(r => r.cz - r.d / 2))
+    const rTotalW = rMaxX - rMinX
+    const rScaleX = bw / Math.max(rTotalW, 1)
+    const rScaleD = bd / Math.max(rTotalW, 1)
+    
+    buildingBlocks = rotated.map(r => ({
+      x: bx + (r.cx - r.w / 2 - rMinX) * rScaleX,
+      depth: bDepth + (r.cz - r.d / 2 - rMinZ) * rScaleD,
+      w: r.w * rScaleX,
+      d: r.d * rScaleD,
       floors,
     }))
   } else {
