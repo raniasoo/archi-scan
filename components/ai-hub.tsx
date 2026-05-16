@@ -291,42 +291,72 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         // ★ ControlNet 엔진 — 3D 캡처를 control_image로 사용
         if (renderEngine === 'controlnet' && angle !== 'interior') {
           setRenderProgress('🎯 ControlNet 정밀 렌더링 중...')
-          // 현재 앵글에 맞는 3D 캡처 선택
           const bestCapture = threeJsCaptures.find(c => c.angle === angle) || threeJsCaptures[0]
-          try {
-            const r = await fetch('/api/ai-render-controlnet', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              signal: controller.signal,
-              body: JSON.stringify({
-                controlImage: bestCapture.image,
-                controlMode: 'canny-pro',
-                prompt: `${input.layoutName} ${input.floors}층 ${input.units}세대`,
-                address: input.address, layoutName: input.layoutName,
-                floors: input.floors, units: input.units, siteArea: input.siteArea,
-                buildingType: input.buildingType, coverage: input.buildingCoverageRatio,
-                cameraAngle: angle, sceneMode: scene, material: materialId ? { type: materialId } : undefined,
-                surroundingContext: input.slope ? `경사도 ${input.slope.average}%, ${input.slope.direction} 방향` : undefined,
-                style, patterns: input.patterns, strategy: input.strategy,
-              }),
-            })
-            const data = await safeJson(r)
-            if (data.success && data.image) {
-              setRenderImg(data.image)
-              onRenderComplete?.(data.image)
-              trackAiRenderComplete(angle, true, data.engine || 'controlnet')
-              trackRender('controlNet') // ★ 횟수 기록
-              setRenderProgress(null)
-              setLoading(false)
-              clearTimeout(timeout)
-              return
+          
+          if (!bestCapture?.image) {
+            console.warn('[AI-HUB] No 3D capture available for ControlNet')
+            setRenderProgress('⚡ 3D 캡처 없음 → Gemini 폴백...')
+          } else {
+            try {
+              // 이미지 압축: Vercel 4.5MB 페이로드 한도 대응
+              let controlImage = bestCapture.image
+              if (controlImage.length > 2_000_000) {
+                // base64 → canvas → 압축 JPEG로 변환
+                const img = new Image()
+                await new Promise<void>((resolve, reject) => {
+                  img.onload = () => resolve()
+                  img.onerror = () => reject(new Error('Image load failed'))
+                  img.src = controlImage.startsWith('data:') ? controlImage : `data:image/png;base64,${controlImage}`
+                })
+                const canvas = document.createElement('canvas')
+                const maxDim = 1024
+                const scale = Math.min(maxDim / img.width, maxDim / img.height, 1)
+                canvas.width = Math.round(img.width * scale)
+                canvas.height = Math.round(img.height * scale)
+                canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height)
+                controlImage = canvas.toDataURL('image/jpeg', 0.8)
+                console.log(`[AI-HUB] ControlNet image compressed: ${bestCapture.image.length} → ${controlImage.length}`)
+              }
+              
+              const r = await fetch('/api/ai-render-controlnet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                body: JSON.stringify({
+                  controlImage,
+                  controlMode: 'canny-pro',
+                  prompt: `${input.layoutName} ${input.floors}층 ${input.units}세대`,
+                  address: input.address, layoutName: input.layoutName,
+                  floors: input.floors, units: input.units, siteArea: input.siteArea,
+                  buildingType: input.buildingType, coverage: input.buildingCoverageRatio,
+                  cameraAngle: angle, sceneMode: scene, material: materialId ? { type: materialId } : undefined,
+                  surroundingContext: input.slope ? `경사도 ${input.slope.average}%, ${input.slope.direction} 방향` : undefined,
+                  style, patterns: input.patterns, strategy: input.strategy,
+                }),
+              })
+              const data = await safeJson(r)
+              if (data.success && data.image) {
+                setRenderImg(data.image)
+                onRenderComplete?.(data.image)
+                trackAiRenderComplete(angle, true, data.engine || 'controlnet')
+                trackRender('controlNet')
+                setRenderProgress(null)
+                setLoading(false)
+                clearTimeout(timeout)
+                return
+              }
+              console.warn(`[AI-HUB] ControlNet failed (${data.error}), falling back to Gemini`)
+              setRenderProgress('⚡ ControlNet → Gemini 폴백 전환 중...')
+            } catch (e: any) {
+              const msg = e?.message || String(e)
+              if (msg.includes('Failed to fetch') || msg.includes('payload') || msg.includes('too large')) {
+                console.warn('[AI-HUB] ControlNet payload too large, falling back to Gemini')
+                setRenderProgress('⚡ 이미지 크기 초과 → Gemini 폴백...')
+              } else {
+                console.warn('[AI-HUB] ControlNet error, falling back to Gemini:', e)
+                setRenderProgress('⚡ Gemini 폴백 전환 중...')
+              }
             }
-            // ControlNet 실패 시 Gemini로 폴백
-            console.warn(`[AI-HUB] ControlNet failed (${data.error}), falling back to Gemini`)
-            setRenderProgress('⚡ ControlNet → Gemini 폴백 전환 중...')
-          } catch (e) {
-            console.warn('[AI-HUB] ControlNet error, falling back to Gemini:', e)
-            setRenderProgress('⚡ Gemini 폴백 전환 중...')
           }
         }
 
