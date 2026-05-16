@@ -288,7 +288,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
       // ━━━ 3D 캡처 있으면 → 파이프라인 분기 ━━━
       if (threeJsCaptures && threeJsCaptures.length > 0) {
         
-        // ★ ControlNet 엔진 — 3D 캡처를 control_image로 사용
+        // ★ ControlNet 엔진 — 3D 캡처를 Supabase Storage에 업로드 후 URL 전송
         if (renderEngine === 'controlnet' && angle !== 'interior') {
           setRenderProgress('🎯 ControlNet 정밀 렌더링 중...')
           const bestCapture = threeJsCaptures.find(c => c.angle === angle) || threeJsCaptures[0]
@@ -298,32 +298,74 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
             setRenderProgress('⚡ 3D 캡처 없음 → Gemini 폴백...')
           } else {
             try {
-              // 이미지 압축: Vercel 4.5MB 페이로드 한도 대응
-              let controlImage = bestCapture.image
-              if (controlImage.length > 2_000_000) {
-                // base64 → canvas → 압축 JPEG로 변환
+              // ━━━ Step 1: base64 → Blob → Supabase Storage 직접 업로드 ━━━
+              // Vercel 4.5MB 페이로드 한도를 완전 우회
+              setRenderProgress('📤 3D 캡처 업로드 중...')
+              
+              let controlImageUrl = bestCapture.image
+              
+              // base64를 Blob으로 변환
+              const base64Data = bestCapture.image.replace(/^data:image\/\w+;base64,/, '')
+              const binaryStr = atob(base64Data)
+              const bytes = new Uint8Array(binaryStr.length)
+              for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
+              const blob = new Blob([bytes], { type: 'image/png' })
+              
+              // 이미지가 크면 canvas로 리사이즈
+              let uploadBlob = blob
+              if (blob.size > 2_000_000) {
                 const img = new Image()
+                const objectUrl = URL.createObjectURL(blob)
                 await new Promise<void>((resolve, reject) => {
                   img.onload = () => resolve()
-                  img.onerror = () => reject(new Error('Image load failed'))
-                  img.src = controlImage.startsWith('data:') ? controlImage : `data:image/png;base64,${controlImage}`
+                  img.onerror = () => reject()
+                  img.src = objectUrl
                 })
+                URL.revokeObjectURL(objectUrl)
                 const canvas = document.createElement('canvas')
-                const maxDim = 1024
+                const maxDim = 1280
                 const scale = Math.min(maxDim / img.width, maxDim / img.height, 1)
                 canvas.width = Math.round(img.width * scale)
                 canvas.height = Math.round(img.height * scale)
                 canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height)
-                controlImage = canvas.toDataURL('image/jpeg', 0.8)
-                console.log(`[AI-HUB] ControlNet image compressed: ${bestCapture.image.length} → ${controlImage.length}`)
+                uploadBlob = await new Promise<Blob>((resolve) => 
+                  canvas.toBlob(b => resolve(b || blob), 'image/jpeg', 0.85)
+                )
               }
               
+              // Supabase Storage에 업로드 (서버 경유 없음)
+              const { createClient: createSupabaseClient } = await import('@/lib/supabase/client')
+              const supabase = createSupabaseClient()
+              const fileName = `controlnet/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${uploadBlob.type.includes('jpeg') ? 'jpg' : 'png'}`
+              
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('captures')
+                .upload(fileName, uploadBlob, { contentType: uploadBlob.type, upsert: true })
+              
+              if (uploadData?.path) {
+                const { data: urlData } = supabase.storage.from('captures').getPublicUrl(uploadData.path)
+                controlImageUrl = urlData.publicUrl
+                console.log(`[AI-HUB] 3D capture uploaded: ${(uploadBlob.size / 1024).toFixed(0)}KB → ${controlImageUrl}`)
+              } else {
+                console.warn('[AI-HUB] Storage upload failed:', uploadError?.message)
+                // 업로드 실패 시 압축된 base64로 fallback
+                if (uploadBlob.size < 3_000_000) {
+                  const reader = new FileReader()
+                  controlImageUrl = await new Promise<string>((resolve) => {
+                    reader.onload = () => resolve(reader.result as string)
+                    reader.readAsDataURL(uploadBlob)
+                  })
+                }
+              }
+              
+              // ━━━ Step 2: URL만 API에 전송 (페이로드 < 10KB) ━━━
+              setRenderProgress('🎯 ControlNet 렌더링 중...')
               const r = await fetch('/api/ai-render-controlnet', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 signal: controller.signal,
                 body: JSON.stringify({
-                  controlImage,
+                  controlImage: controlImageUrl,
                   controlMode: 'canny-pro',
                   prompt: `${input.layoutName} ${input.floors}층 ${input.units}세대`,
                   address: input.address, layoutName: input.layoutName,
@@ -348,14 +390,8 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               console.warn(`[AI-HUB] ControlNet failed (${data.error}), falling back to Gemini`)
               setRenderProgress('⚡ ControlNet → Gemini 폴백 전환 중...')
             } catch (e: any) {
-              const msg = e?.message || String(e)
-              if (msg.includes('Failed to fetch') || msg.includes('payload') || msg.includes('too large')) {
-                console.warn('[AI-HUB] ControlNet payload too large, falling back to Gemini')
-                setRenderProgress('⚡ 이미지 크기 초과 → Gemini 폴백...')
-              } else {
-                console.warn('[AI-HUB] ControlNet error, falling back to Gemini:', e)
-                setRenderProgress('⚡ Gemini 폴백 전환 중...')
-              }
+              console.warn('[AI-HUB] ControlNet error, falling back to Gemini:', e)
+              setRenderProgress('⚡ Gemini 폴백 전환 중...')
             }
           }
         }
