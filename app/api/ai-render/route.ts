@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resvg } from '@resvg/resvg-js'
 import { matchPatterns, buildPatternPrompt } from '@/lib/pattern-matcher'
 import { buildContextualPatternPrompt, angleToContext } from '@/lib/pattern-prompt-builder'
+import { getBuildingDimensionsInMeters } from '@/lib/building-geometry'
 
 // ━━━ Vercel 타임아웃 확장 (기본 60초 → 최대 300초) ━━━
 export const maxDuration = 300  // 5분 — Gemini 이미지 생성은 최대 90초/건
@@ -846,8 +847,7 @@ function buildArchitecturePrompt(params: {
   const u = units || 6
   const footprint = siteArea && coverage ? Math.round(siteArea * coverage / 100) : 200
   // ━━━ building-geometry Single Source of Truth: 3D/SVG와 동일한 치수 ━━━
-  const { getBuildingDimensionsInMeters: getGeoDims } = await import('@/lib/building-geometry')
-  const geoDims = getGeoDims({
+  const geoDims = getBuildingDimensionsInMeters({
     type: (buildingType || 'tower') as any,
     coverage: coverage || 50,
     siteArea: siteArea || 500,

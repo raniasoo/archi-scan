@@ -1,6 +1,14 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY || '')
+let _resend: Resend | null = null
+function getResend(): Resend {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY
+    if (!key) throw new Error('RESEND_API_KEY not set')
+    _resend = new Resend(key)
+  }
+  return _resend
+}
 
 interface ReceiptData {
   to: string
@@ -26,7 +34,7 @@ export async function sendPaymentReceipt(data: ReceiptData) {
     : ''
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResend().emails.send({
       from: 'Archi-Scan <noreply@archiscan.kr>',
       to: [to],
       subject: `[Archi-Scan] ${planLabel} 플랜 결제 완료 — ${formattedAmount}`,
@@ -132,7 +140,7 @@ export async function sendWelcomeEmail(data: WelcomeData) {
   const displayName = userName || to.split('@')[0]
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResend().emails.send({
       from: 'Archi-Scan <noreply@archiscan.kr>',
       to: [to],
       subject: `${displayName}님, Archi-Scan에 오신 것을 환영합니다!`,

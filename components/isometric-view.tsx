@@ -142,9 +142,6 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, build
       default:
         return [{ x: -bW / 2, y: -bD / 2, w: bW, d: bD, h: buildH, label: "" }]
     }
-      default:
-        return [{ x: -bW / 2, y: -bD / 2, w: bW, d: bD, h: buildH, label: type }]
-    }
   }
 
   let blocks = getBlocks()
