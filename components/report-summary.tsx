@@ -3027,9 +3027,9 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
                 <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{layout.name}</p>
               </div>
             </div>
-            <div className="p-3 bg-secondary/30 rounded-lg border report-border/30 text-xs leading-relaxed">
-              <p className="font-semibold mb-1">설계 철학</p>
-              <p className="text-muted-foreground">
+            <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50 dark:border-emerald-800/30 text-xs leading-relaxed">
+              <p className="font-semibold mb-1 text-emerald-800 dark:text-emerald-300">설계 철학</p>
+              <p className="text-foreground/80">
                 본 배치안은 대지면적 {siteArea.toLocaleString()}㎡, {regulation?.zoneName || '일반주거지역'} 조건에서 {layout.name} 형태를 통해 
                 건폐율 {layout.coverage}%, 용적률 {far}%를 달성합니다.
                 지상 {layout.floors}층, 총 {layout.units}세대, 주차 {layout.parking}대 규모이며, {
