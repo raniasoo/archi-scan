@@ -174,13 +174,13 @@ export function FloorplanStep(props: FloorplanStepProps) {
 
       {/* ━━━ 파라미터 슬라이더 (실시간 3D 조절) ━━━ */}
       <ParameterSliders
-        coverage={effectiveCoverage}
-        floors={effectiveFloors}
-        units={effectiveUnits}
+        coverage={renderData.coverage}
+        floors={renderData.floors}
+        units={renderData.units}
         setbackFront={regulation?.setbackFront ?? 3}
         setbackSide={regulation?.setbackSide ?? 1.5}
-        siteArea={siteAreaNum}
-        type={selectedLayoutData.type}
+        siteArea={renderData.siteArea}
+        type={renderData.type}
         onChange={handleParamChange}
       />
 
@@ -225,17 +225,17 @@ export function FloorplanStep(props: FloorplanStepProps) {
             <div>
               <div className="w-full" style={{ aspectRatio: '3/2', minHeight: 260, maxHeight: 420 }}>
                 <FloorPlan
-                  type={selectedLayoutData.type}
+                  type={renderData.type}
                   floor={selectedFloor}
                   totalFloors={effectiveFloors}
                   strategy={strategy}
                   zoneType={molit.zoneCode || regulation?.zoneType}
-                  units={effectiveUnits}
+                  units={renderData.units}
                   gfa={selectedLayoutData.gfa || gfa}
-                  buildingCount={selectedLayoutData.buildingCount}
-                  siteArea={siteAreaNum}
-                  coverage={effectiveCoverage}
-                  originalType={selectedLayoutData._originalType}
+                  buildingCount={renderData.buildingCount}
+                  siteArea={renderData.siteArea}
+                  coverage={renderData.coverage}
+                  originalType={renderData.originalType}
                 />
               </div>
               <div className="grid grid-cols-4 gap-x-1 mt-2">
@@ -274,13 +274,13 @@ export function FloorplanStep(props: FloorplanStepProps) {
           {/* 🧊 3D 통합 도면 — Three.js Single Source of Truth */}
           {drawingTab === "3d-unified" && (
             <ThreeJSDiagrams
-              type={selectedLayoutData.type}
-              coverage={effectiveCoverage}
-              siteArea={siteAreaNum}
-              floors={effectiveFloors}
-              units={effectiveUnits}
-              buildingCount={selectedLayoutData.buildingCount}
-              originalType={selectedLayoutData._originalType}
+              type={renderData.type}
+              coverage={renderData.coverage}
+              siteArea={renderData.siteArea}
+              floors={renderData.floors}
+              units={renderData.units}
+              buildingCount={renderData.buildingCount}
+              originalType={renderData.originalType}
               regulation={{
                 frontSetback: regulation?.setbackFront ?? 3,
                 sideSetback: regulation?.setbackSide ?? 1.5,
@@ -293,14 +293,14 @@ export function FloorplanStep(props: FloorplanStepProps) {
           {/* 배치도 */}
           {drawingTab === "site" && (
             <SitePlan
-              siteArea={siteAreaNum}
+              siteArea={renderData.siteArea}
               buildingCoverage={effectiveCoverage}
-              floors={effectiveFloors}
-              units={effectiveUnits}
+              floors={renderData.floors}
+              units={renderData.units}
               parking={selectedLayoutData.parking}
-              buildingCount={selectedLayoutData.buildingCount}
-              originalType={selectedLayoutData._originalType}
-              type={selectedLayoutData.type}
+              buildingCount={renderData.buildingCount}
+              originalType={renderData.originalType}
+              type={renderData.type}
               setbacks={{
                 front: molit.hasDistrictPlan ? 2 : 1,
                 side: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 1 : 0.5,
