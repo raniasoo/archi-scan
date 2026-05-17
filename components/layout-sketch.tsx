@@ -4,11 +4,43 @@ interface LayoutSketchProps {
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   size?: number
   className?: string
+  siteArea?: number
+  coverage?: number
+  floors?: number
+  buildingCount?: number
 }
 
-export function LayoutSketch({ type, size = 80, className = "" }: LayoutSketchProps) {
+export function LayoutSketch({ type, size = 80, className = "", siteArea, coverage, floors, buildingCount }: LayoutSketchProps) {
   const s = size
-  const pad = s * 0.08 // padding
+  const pad = s * 0.08
+
+  // building-geometry 블록 데이터 (있으면 사용)
+  let geoShapes: { x: number; y: number; w: number; h: number }[] | null = null
+  try {
+    if (siteArea && coverage) {
+      const { getBuildingDimensionsInMeters } = require('@/lib/building-geometry')
+      const geo = getBuildingDimensionsInMeters({ type, coverage, siteArea, floors: floors || 4, buildingCount })
+      const bm = geo.blocksInMeters
+      if (bm && bm.length > 0) {
+        const minX = Math.min(...bm.map((b: any) => b.centerXM - b.widthM / 2))
+        const maxX = Math.max(...bm.map((b: any) => b.centerXM + b.widthM / 2))
+        const minZ = Math.min(...bm.map((b: any) => b.centerZM - b.depthM / 2))
+        const maxZ = Math.max(...bm.map((b: any) => b.centerZM + b.depthM / 2))
+        const bbW = maxX - minX, bbH = maxZ - minZ
+        const areaW = s - pad * 2, areaH = s - pad * 2 - s * 0.1
+        const sc = Math.min(areaW / bbW, areaH / bbH) * 0.75
+        const oX = pad + (areaW - bbW * sc) / 2
+        const oY = pad + (areaH - bbH * sc) / 2
+        geoShapes = bm.map((b: any) => ({
+          x: oX + (b.centerXM - b.widthM / 2 - minX) * sc,
+          y: oY + (b.centerZM - b.depthM / 2 - minZ) * sc,
+          w: b.widthM * sc,
+          h: b.depthM * sc,
+        }))
+      }
+    }
+  } catch {}
+
 
   // 공통 스타일 — 다크모드 최대 가시성
   const site = { stroke: "#94a3b8", strokeWidth: 1.8, strokeDasharray: "3,2", fill: "none", opacity: 0.8 }
@@ -26,6 +58,24 @@ export function LayoutSketch({ type, size = 80, className = "" }: LayoutSketchPr
 
       {/* 대지 경계 */}
       <rect x={pad} y={pad} width={s - pad * 2} height={s - pad * 2 - s * 0.1} {...site} rx={2} />
+
+      {/* building-geometry 블록 데이터가 있으면 우선 사용 */}
+      {geoShapes ? (
+        <>
+          {geoShapes.map((sh, i) => (
+            <g key={i}>
+              <rect x={sh.x} y={sh.y} width={sh.w} height={sh.h} {...building} />
+              <rect x={sh.x} y={sh.y} width={sh.w} height={sh.h} {...buildingStroke} rx={1} />
+            </g>
+          ))}
+          {type === 'courtyard' && geoShapes.length >= 3 && (
+            <text x={s * 0.5} y={s * 0.46} {...label} fontSize={s * 0.055}>중정</text>
+          )}
+          {type === 'lshape' && (
+            <text x={s * 0.37} y={s * 0.5} {...label} fontSize={s * 0.055}>마당</text>
+          )}
+        </>
+      ) : (<>
 
       {type === "tower" && (
         <>
@@ -121,6 +171,8 @@ export function LayoutSketch({ type, size = 80, className = "" }: LayoutSketchPr
           <rect x={s * 0.12} y={s * 0.68} width={s * 0.76} height={s * 0.08} {...green} />
         </>
       )}
+
+      </>)}
 
       {/* 방위 표시 (N) */}
       <g transform={`translate(${s - s * 0.12}, ${s * 0.06})`}>

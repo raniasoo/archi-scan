@@ -184,7 +184,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
               </Badge>
             </div>
             <div className="flex gap-3">
-              <LayoutSketch type={bannerLayout._originalType || bannerLayout.type || 'tower'} size={64} className="shrink-0 opacity-70" />
+              <LayoutSketch type={bannerLayout._originalType || bannerLayout.type || 'tower'} size={64} className="shrink-0 opacity-70" siteArea={siteAreaNum} coverage={bannerLayout.coverage} floors={bannerLayout.floors} buildingCount={bannerLayout.buildingCount} />
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {getLayoutStory(bannerLayout, strategy)}
               </p>
@@ -249,7 +249,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
 
                 {/* SVG 배치 스케치 */}
                 <div className="flex justify-center mb-2 opacity-80">
-                  <LayoutSketch type={layout._originalType || layout.type || 'tower'} size={72} />
+                  <LayoutSketch type={layout._originalType || layout.type || 'tower'} size={72} siteArea={siteAreaNum} coverage={layout.coverage} floors={layout.floors} buildingCount={layout.buildingCount} />
                 </div>
 
                 {/* 스토리 한 줄 */}
