@@ -26,7 +26,8 @@ function UnitInterior({ x, y, w, h, label, area, color, mirror = false, compact 
   x: number; y: number; w: number; h: number
   label: string; area: number; color: string; mirror?: boolean; compact?: boolean
 }) {
-  if (compact || w < 35 || h < 35) {
+  // compact 임계값을 20으로 낮춤 (모바일에서도 상세 표시)
+  if (compact || w < 20 || h < 20) {
     return (
       <g>
         <rect x={x} y={y} width={w} height={h} fill={`${color}15`} stroke={color} strokeWidth="1" />
@@ -36,54 +37,114 @@ function UnitInterior({ x, y, w, h, label, area, color, mirror = false, compact 
     )
   }
 
-  const pad = 1.5
-  const innerW = w - pad * 2
-  const innerH = h - pad * 2
-  const ix = x + pad
-  const iy = y + pad
-  const livingH = Math.round(innerH * 0.55)
-  const kitchenW = Math.round(innerW * 0.35)
-  const roomH = innerH - livingH - 1
-  const roomY = iy + livingH + 1
-  const br1W = Math.round(innerW * 0.4)
-  const br2W = Math.round(innerW * 0.35)
-  const bathW = innerW - br1W - br2W - 2
+  const WALL = 2  // 벽체 두께
+  const ix = x + WALL, iy = y + WALL
+  const innerW = w - WALL * 2, innerH = h - WALL * 2
 
-  const lx = mirror ? ix + innerW - (innerW - kitchenW - 1) : ix
-  const kx = mirror ? ix : ix + innerW - kitchenW
+  // 실 배분 비율
+  const livingH = Math.round(innerH * 0.52)
+  const kitchenW = Math.round(innerW * 0.32)
+  const hallW = Math.round(innerW * 0.12)
+  const roomH = innerH - livingH - WALL
+  const roomY = iy + livingH + WALL
+  const br1W = Math.round(innerW * 0.38)
+  const br2W = Math.round(innerW * 0.34)
+  const bathW = innerW - br1W - br2W - WALL * 2
+
+  // 미러링 좌표
+  const lx = mirror ? ix + kitchenW + WALL : ix
+  const livingW = innerW - kitchenW - WALL
+  const kx = mirror ? ix : ix + livingW + WALL
   const r1x = mirror ? ix + innerW - br1W : ix
-  const r2x = mirror ? ix + innerW - br1W - br2W - 1 : ix + br1W + 1
-  const btx = mirror ? ix : ix + br1W + br2W + 2
+  const r2x = mirror ? r1x - br2W - WALL : r1x + br1W + WALL
+  const btx = mirror ? ix : r2x + br2W + WALL
 
   return (
     <g>
-      <rect x={x} y={y} width={w} height={h} fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
-      {/* 발코니 */}
-      <rect x={x + 2} y={y - 5} width={w - 4} height={5} fill="none" stroke={color} strokeWidth="0.5" strokeDasharray="2 1" />
-      <text x={x + w/2} y={y - 1} fontSize="3.5" textAnchor="middle" fill={color} opacity="0.5">발코니</text>
-      {/* 거실 */}
-      <rect x={lx} y={iy} width={innerW - kitchenW - 1} height={livingH} fill={`${color}08`} stroke={color} strokeWidth="0.5" />
-      <text x={lx + (innerW - kitchenW - 1)/2} y={iy + livingH/2} fontSize="6" textAnchor="middle" fill={color} fontWeight="500">거실</text>
-      <rect x={lx + 3} y={iy + livingH - 10} width={Math.min(innerW * 0.3, 22)} height={5} rx="1" fill={`${color}20`} stroke={color} strokeWidth="0.3" />
-      {/* 주방 */}
-      <rect x={kx} y={iy} width={kitchenW} height={livingH} fill={`${color}12`} stroke={color} strokeWidth="0.5" />
-      <text x={kx + kitchenW/2} y={iy + livingH/2} fontSize="5" textAnchor="middle" fill={color}>주방</text>
-      <rect x={kx + 2} y={iy + 3} width={kitchenW - 4} height={4} rx="1" fill={`${color}30`} stroke={color} strokeWidth="0.3" />
-      {/* 방1 */}
-      <rect x={r1x} y={roomY} width={br1W} height={roomH} fill={`${color}06`} stroke={color} strokeWidth="0.5" />
-      <text x={r1x + br1W/2} y={roomY + roomH/2} fontSize="5" textAnchor="middle" fill={color}>방1</text>
-      <rect x={r1x + 3} y={roomY + 3} width={br1W * 0.55} height={roomH * 0.45} rx="1" fill={`${color}12`} stroke={color} strokeWidth="0.2" />
-      {/* 방2 */}
-      <rect x={r2x} y={roomY} width={br2W} height={roomH} fill={`${color}06`} stroke={color} strokeWidth="0.5" />
-      <text x={r2x + br2W/2} y={roomY + roomH/2} fontSize="5" textAnchor="middle" fill={color}>방2</text>
-      {/* 욕실 */}
-      <rect x={btx} y={roomY} width={bathW} height={roomH} fill="#0ea5e908" stroke="#0ea5e9" strokeWidth="0.5" />
-      <text x={btx + bathW/2} y={roomY + roomH/2 - 1} fontSize="4" textAnchor="middle" fill="#0ea5e9">욕실</text>
-      <circle cx={btx + bathW/2} cy={roomY + roomH/2 + 5} r="2" fill="#0ea5e920" stroke="#0ea5e9" strokeWidth="0.3" />
-      {/* 현관 */}
-      <rect x={x + w/2 - 5} y={y + h - 2} width={10} height={3} fill={color} rx="0.5" />
-      {/* 라벨 */}
-      <text x={x + w/2} y={y + h + 9} fontSize="6.5" textAnchor="middle" fill={color} fontWeight="600">{label} ({area}㎡)</text>
+      {/* ━━━ 외벽 (두꺼운 벽체) ━━━ */}
+      <rect x={x} y={y} width={w} height={h} fill="none" stroke="currentColor" strokeWidth={WALL + 0.5} className="text-foreground" />
+
+      {/* ━━━ 발코니 (점선 테두리) ━━━ */}
+      <rect x={x + 4} y={y - 6} width={w - 8} height={6} fill="none" stroke={color} strokeWidth="0.4" strokeDasharray="2 1" />
+      <text x={x + w/2} y={y - 1.5} fontSize="3" textAnchor="middle" fill={color} opacity="0.4">발코니</text>
+
+      {/* ━━━ 거실 ━━━ */}
+      <rect x={lx} y={iy} width={livingW} height={livingH} fill={`${color}06`} stroke={color} strokeWidth={WALL * 0.6} />
+      <text x={lx + livingW/2} y={iy + 9} fontSize="5.5" textAnchor="middle" fill={color} fontWeight="500">거실</text>
+      {/* 소파 (ㄴ자) */}
+      <rect x={lx + 3} y={iy + livingH - 14} width={Math.min(livingW * 0.45, 24)} height={6} rx="1" fill={`${color}18`} stroke={color} strokeWidth="0.3" />
+      <rect x={lx + 3} y={iy + livingH - 14} width={4} height={10} rx="1" fill={`${color}18`} stroke={color} strokeWidth="0.3" />
+      {/* TV 보드 */}
+      <rect x={lx + livingW - 6} y={iy + livingH - 16} width={3} height={12} rx="0.5" fill={`${color}25`} stroke={color} strokeWidth="0.2" />
+      {/* 다이닝 테이블 */}
+      <rect x={lx + livingW * 0.35} y={iy + livingH * 0.3} width={livingW * 0.3} height={livingW * 0.18} rx="1" fill="none" stroke={color} strokeWidth="0.3" />
+      {/* 창문 표시 (외벽에 작은 사각) */}
+      {w > 50 && Array.from({ length: 3 }, (_, i) => (
+        <rect key={`wn-${i}`} x={lx + 8 + i * (livingW - 16) / 2.5} y={y - WALL/2} width={8} height={WALL} fill="#38bdf8" opacity="0.5" />
+      ))}
+
+      {/* ━━━ 주방/식당 ━━━ */}
+      <rect x={kx} y={iy} width={kitchenW} height={livingH} fill={`${color}10`} stroke={color} strokeWidth={WALL * 0.6} />
+      <text x={kx + kitchenW/2} y={iy + 9} fontSize="4.5" textAnchor="middle" fill={color}>주방</text>
+      {/* ㄱ자 싱크대 */}
+      <rect x={kx + 2} y={iy + 2} width={kitchenW - 4} height={4} rx="0.5" fill={`${color}30`} stroke={color} strokeWidth="0.4" />
+      <rect x={kx + 2} y={iy + 2} width={4} height={livingH * 0.5} rx="0.5" fill={`${color}30`} stroke={color} strokeWidth="0.4" />
+      {/* 싱크 원 */}
+      <circle cx={kx + kitchenW/2} cy={iy + 4} r="1.5" fill="none" stroke={color} strokeWidth="0.3" />
+      {/* 가스레인지 */}
+      {[0, 1].map(i => <circle key={`gs${i}`} cx={kx + kitchenW - 6 + i * 3.5} cy={iy + 4} r="1" fill="none" stroke={color} strokeWidth="0.25" />)}
+      {/* 냉장고 */}
+      <rect x={kx + 2} y={iy + livingH - 8} width={5} height={7} rx="0.5" fill={`${color}20`} stroke={color} strokeWidth="0.3" />
+
+      {/* ━━━ 내벽 (거실-침실 사이) ━━━ */}
+      <rect x={ix} y={roomY - WALL} width={innerW} height={WALL} fill="currentColor" className="text-foreground" opacity="0.7" />
+
+      {/* ━━━ 방1 (안방) ━━━ */}
+      <rect x={r1x} y={roomY} width={br1W} height={roomH} fill={`${color}05`} stroke={color} strokeWidth={WALL * 0.6} />
+      <text x={r1x + br1W/2} y={roomY + 9} fontSize="5" textAnchor="middle" fill={color}>안방</text>
+      {/* 더블 침대 */}
+      <rect x={r1x + 3} y={roomY + 3} width={br1W * 0.55} height={roomH * 0.5} rx="1" fill={`${color}10`} stroke={color} strokeWidth="0.25" />
+      {/* 베개 2개 */}
+      <rect x={r1x + 4} y={roomY + 4} width={br1W * 0.22} height={3} rx="1" fill={`${color}18`} stroke={color} strokeWidth="0.2" />
+      <rect x={r1x + 4 + br1W * 0.25} y={roomY + 4} width={br1W * 0.22} height={3} rx="1" fill={`${color}18`} stroke={color} strokeWidth="0.2" />
+      {/* 붙박이장 */}
+      <rect x={r1x + br1W - 5} y={roomY + 2} width={3} height={roomH - 4} rx="0.3" fill={`${color}12`} stroke={color} strokeWidth="0.2" />
+      {/* 문 스윙 (쿼터 서클) */}
+      <path d={`M ${r1x + br1W/2} ${roomY} A 8 8 0 0 ${mirror ? 0 : 1} ${r1x + br1W/2 + (mirror ? -8 : 8)} ${roomY + 8}`} fill="none" stroke={color} strokeWidth="0.3" strokeDasharray="1 1" />
+
+      {/* ━━━ 방2 ━━━ */}
+      <rect x={r2x} y={roomY} width={br2W} height={roomH} fill={`${color}05`} stroke={color} strokeWidth={WALL * 0.6} />
+      <text x={r2x + br2W/2} y={roomY + 9} fontSize="4.5" textAnchor="middle" fill={color}>방2</text>
+      {/* 싱글 침대 */}
+      <rect x={r2x + 3} y={roomY + 3} width={br2W * 0.45} height={roomH * 0.45} rx="1" fill={`${color}10`} stroke={color} strokeWidth="0.2" />
+      {/* 책상 */}
+      <rect x={r2x + br2W - 6} y={roomY + roomH - 7} width={4} height={5} rx="0.3" fill="none" stroke={color} strokeWidth="0.25" />
+      {/* 문 스윙 */}
+      <path d={`M ${r2x + br2W/2} ${roomY} A 7 7 0 0 ${mirror ? 1 : 0} ${r2x + br2W/2 + (mirror ? 7 : -7)} ${roomY + 7}`} fill="none" stroke={color} strokeWidth="0.3" strokeDasharray="1 1" />
+
+      {/* ━━━ 욕실 ━━━ */}
+      <rect x={btx} y={roomY} width={bathW} height={roomH} fill="#0ea5e906" stroke="#0ea5e9" strokeWidth={WALL * 0.6} />
+      <text x={btx + bathW/2} y={roomY + 8} fontSize="4" textAnchor="middle" fill="#0ea5e9">욕실</text>
+      {/* 변기 */}
+      <ellipse cx={btx + bathW/2} cy={roomY + roomH - 5} rx="2.5" ry="3" fill="#0ea5e910" stroke="#0ea5e9" strokeWidth="0.3" />
+      <rect x={btx + bathW/2 - 2} y={roomY + roomH - 3} width={4} height={2.5} rx="1" fill="#0ea5e915" stroke="#0ea5e9" strokeWidth="0.2" />
+      {/* 세면대 */}
+      <rect x={btx + 2} y={roomY + 2} width={4} height={3} rx="0.5" fill="#0ea5e912" stroke="#0ea5e9" strokeWidth="0.25" />
+      <circle cx={btx + 4} cy={roomY + 3.5} r="1" fill="none" stroke="#0ea5e9" strokeWidth="0.2" />
+      {/* 샤워부스 */}
+      {bathW > 12 && <rect x={btx + bathW - 7} y={roomY + 2} width={5} height={roomH * 0.5} rx="0.5" fill="#0ea5e908" stroke="#0ea5e9" strokeWidth="0.25" strokeDasharray="1.5 1" />}
+      {/* 문 스윙 */}
+      <path d={`M ${btx + bathW/2} ${roomY} A 5 5 0 0 1 ${btx + bathW/2 + 5} ${roomY + 5}`} fill="none" stroke="#0ea5e9" strokeWidth="0.3" strokeDasharray="1 1" />
+
+      {/* ━━━ 현관 ━━━ */}
+      <rect x={x + w/2 - 6} y={y + h - 3} width={12} height={3.5} fill={`${color}40`} rx="0.5" />
+      <text x={x + w/2} y={y + h + 1} fontSize="3" textAnchor="middle" fill={color} opacity="0.6">현관</text>
+      {/* 현관문 스윙 */}
+      <path d={`M ${x + w/2 + 6} ${y + h} A 10 10 0 0 1 ${x + w/2 - 4} ${y + h + 10}`} fill="none" stroke={color} strokeWidth="0.3" strokeDasharray="1.5 1" />
+
+      {/* ━━━ 라벨 ━━━ */}
+      <text x={x + w/2} y={y + h + 12} fontSize="6.5" textAnchor="middle" fill={color} fontWeight="600">{label}</text>
+      <text x={x + w/2} y={y + h + 19} fontSize="5" textAnchor="middle" fill={color} opacity="0.7">{area}㎡</text>
     </g>
   )
 }

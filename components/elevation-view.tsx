@@ -117,28 +117,37 @@ export function ElevationView({
 
         {/* 건물 본체 — 다중 블록 프로필 */}
         {bm.length > 1 ? (
-          // ━━━ ㄱ자/ㄷ자: 각 블록을 개별 직사각형으로 그림 ━━━
           bm.map((b, i) => {
             const minX = Math.min(...bm.map(bb => face === 'front' ? bb.centerXM - bb.widthM / 2 : bb.centerZM - bb.depthM / 2))
             const blockFaceW = face === 'front' ? b.widthM : b.depthM
             const blockFaceX = face === 'front' ? (b.centerXM - b.widthM / 2) : (b.centerZM - b.depthM / 2)
             const bx = bldX + (blockFaceX - minX) * hScale
             const bw = blockFaceW * hScale
-            return (
-              <rect key={`blk-${i}`} x={bx} y={bldTopY} width={bw} height={bldH}
-                fill="url(#elev-bld)" stroke="#475569" strokeWidth="0.8" />
-            )
+            return (<g key={`blk-${i}`}>
+              <rect x={bx} y={bldTopY} width={bw} height={bldH} fill="url(#elev-bld)" stroke="#475569" strokeWidth="0.8" />
+              {/* 재료 표현 — 상부 타일 패턴 */}
+              {Array.from({ length: Math.floor(bw / 6) }, (_, j) => (
+                <line key={`tile-${i}-${j}`} x1={bx + j * 6} y1={bldTopY} x2={bx + j * 6} y2={bldTopY + bldH - gfH * vScale} stroke="#4b5563" strokeWidth="0.15" opacity="0.3" />
+              ))}
+            </g>)
           })
-        ) : (
-          <rect x={bldX} y={bldTopY} width={bldW} height={bldH}
-            fill="url(#elev-bld)" stroke="#475569" strokeWidth="0.8" />
-        )}
+        ) : (<g>
+          <rect x={bldX} y={bldTopY} width={bldW} height={bldH} fill="url(#elev-bld)" stroke="#475569" strokeWidth="0.8" />
+          {/* 외벽 재료 — 세로 줄눈 패턴 */}
+          {Array.from({ length: Math.floor(bldW / 8) }, (_, j) => (
+            <line key={`tile-${j}`} x1={bldX + j * 8 + 4} y1={bldTopY} x2={bldX + j * 8 + 4} y2={bldTopY + bldH - gfH * vScale} stroke="#4b5563" strokeWidth="0.15" opacity="0.25" />
+          ))}
+        </g>)}
 
-        {/* 1층 (상가/로비) */}
+        {/* 1층 (상가/로비) — 석재 마감 표현 */}
         <rect x={bldX} y={groundY - gfH * vScale} width={bldW} height={gfH * vScale}
-          fill="url(#elev-gf)" stroke="#92400e" strokeWidth="0.5" />
+          fill="url(#elev-gf)" stroke="#92400e" strokeWidth="0.8" />
+        {/* 1층 석재 줄눈 */}
+        {Array.from({ length: Math.floor(gfH * vScale / 4) }, (_, r) => (
+          <line key={`stone-${r}`} x1={bldX} y1={groundY - gfH * vScale + r * 4 + 2} x2={bldX + bldW} y2={groundY - gfH * vScale + r * 4 + 2} stroke="#a16207" strokeWidth="0.15" opacity="0.4" />
+        ))}
 
-        {/* 1층 쇼윈도 */}
+        {/* 1층 쇼윈도 (대형 유리) */}
         {Array.from({ length: Math.max(2, Math.min(8, winCols - 1)) }, (_, c) => {
           const n = Math.max(2, Math.min(8, winCols - 1))
           const sw = (bldW - winMargin * 2) / n * 0.75
@@ -146,57 +155,100 @@ export function ElevationView({
           const sx = bldX + winMargin + c * (sw + sgap)
           const sy = groundY - gfH * vScale * 0.85
           const sh = gfH * vScale * 0.65
-          return (
-            <rect key={`gw-${c}`} x={sx} y={sy} width={sw} height={sh}
-              fill="#fbbf24" opacity="0.2" stroke="#f59e0b" strokeWidth="0.3" rx="0.5" />
-          )
+          return (<g key={`gw-${c}`}>
+            <rect x={sx} y={sy} width={sw} height={sh} fill="#fbbf24" opacity="0.15" stroke="#f59e0b" strokeWidth="0.4" rx="0.5" />
+            {/* 유리 반사 효과 */}
+            <line x1={sx + 2} y1={sy + 2} x2={sx + sw * 0.3} y2={sy + sh - 2} stroke="#fbbf24" strokeWidth="0.2" opacity="0.3" />
+          </g>)
         })}
 
-        {/* 출입구 */}
-        <rect x={bldX + bldW / 2 - 8} y={groundY - gfH * vScale * 0.85} width={16} height={gfH * vScale * 0.8}
-          fill="#1e293b" stroke="#64748b" strokeWidth="0.5" rx="1" />
-        <text x={bldX + bldW / 2} y={groundY - gfH * vScale * 0.3}
-          textAnchor="middle" fontSize="5" fill="#94a3b8">출입구</text>
+        {/* 출입구 — 유리 자동문 + 사이드라이트 */}
+        <rect x={bldX + bldW / 2 - 12} y={groundY - gfH * vScale * 0.9} width={24} height={gfH * vScale * 0.85}
+          fill="#0c1929" stroke="#64748b" strokeWidth="0.5" rx="0.5" />
+        {/* 유리 패널 2장 */}
+        <rect x={bldX + bldW / 2 - 5} y={groundY - gfH * vScale * 0.85} width={4.5} height={gfH * vScale * 0.75}
+          fill="#1e3a5f" stroke="#38bdf8" strokeWidth="0.3" rx="0.3" opacity="0.6" />
+        <rect x={bldX + bldW / 2 + 0.5} y={groundY - gfH * vScale * 0.85} width={4.5} height={gfH * vScale * 0.75}
+          fill="#1e3a5f" stroke="#38bdf8" strokeWidth="0.3" rx="0.3" opacity="0.6" />
+        <text x={bldX + bldW / 2} y={groundY - gfH * vScale * 0.2}
+          textAnchor="middle" fontSize="4.5" fill="#94a3b8" fontWeight="500">ENTRANCE</text>
 
-        {/* 캐노피 */}
-        <rect x={bldX + bldW / 2 - 14} y={groundY - gfH * vScale - 2} width={28} height={2.5}
-          fill="#475569" stroke="#64748b" strokeWidth="0.3" rx="0.5" />
+        {/* 캐노피 (넓은 차양) */}
+        <rect x={bldX + bldW / 2 - 18} y={groundY - gfH * vScale - 3} width={36} height={3}
+          fill="#374151" stroke="#64748b" strokeWidth="0.4" rx="0.5" />
+        {/* 캐노피 하부 조명 */}
+        {Array.from({ length: 3 }, (_, i) => (
+          <circle key={`cl-${i}`} cx={bldX + bldW / 2 - 10 + i * 10} cy={groundY - gfH * vScale - 1} r="0.8" fill="#fbbf24" opacity="0.6" />
+        ))}
 
-        {/* 기준층 창문 */}
+        {/* ━━━ 기준층 발코니 + 창문 (층별 차별화) ━━━ */}
         {Array.from({ length: floors - 1 }, (_, f) => {
           const fz = gfH + f * floorH
           const fy = groundY - fz * vScale - floorH * vScale * 0.85
-          const fh = floorH * vScale * 0.6
-          return Array.from({ length: winCols }, (_, c) => {
-            const wx = bldX + winMargin + c * (winW + winGap)
-            return (
-              <rect key={`w-${f}-${c}`} x={wx} y={fy} width={winW} height={fh}
-                fill="#7dd3fc" opacity="0.2" stroke="#38bdf8" strokeWidth="0.2" rx="0.3" />
-            )
-          })
+          const fh = floorH * vScale * 0.55
+          const isTopFloor = f === floors - 2
+          return (<g key={`floor-${f}`}>
+            {Array.from({ length: winCols }, (_, c) => {
+              const wx = bldX + winMargin + c * (winW + winGap)
+              const isCorner = c === 0 || c === winCols - 1
+              const ww = isCorner ? winW * 1.1 : winW
+              const wh = isTopFloor ? fh * 1.15 : fh  // 최상층 더 큰 창
+              return (<g key={`w-${f}-${c}`}>
+                {/* 창문 */}
+                <rect x={wx} y={fy} width={ww} height={wh}
+                  fill="#7dd3fc" opacity={0.15 + f * 0.01} stroke="#38bdf8" strokeWidth="0.3" rx="0.3" />
+                {/* 창틀 중앙 세로선 */}
+                <line x1={wx + ww/2} y1={fy} x2={wx + ww/2} y2={fy + wh} stroke="#38bdf8" strokeWidth="0.15" opacity="0.4" />
+              </g>)
+            })}
+            {/* 발코니 슬래브 (돌출) */}
+            <rect x={bldX - 2} y={fy + fh + 1} width={bldW + 4} height={1.5}
+              fill="#475569" stroke="#64748b" strokeWidth="0.2" />
+            {/* 발코니 난간 (유리) */}
+            <line x1={bldX - 2} y1={fy + fh + 1} x2={bldX - 2} y2={fy + fh - 2} stroke="#94a3b8" strokeWidth="0.3" opacity="0.5" />
+            <line x1={bldX + bldW + 2} y1={fy + fh + 1} x2={bldX + bldW + 2} y2={fy + fh - 2} stroke="#94a3b8" strokeWidth="0.3" opacity="0.5" />
+          </g>)
         })}
 
         {/* 층 구분선 */}
         {Array.from({ length: floors }, (_, f) => {
           const fz = f === 0 ? gfH : gfH + f * floorH
-          const y = groundY - fz * vScale
-          return (
-            <line key={`fl-${f}`} x1={bldX} y1={y} x2={bldX + bldW} y2={y}
-              stroke="#475569" strokeWidth="0.3" opacity="0.3" />
-          )
+          return <line key={`fl-${f}`} x1={bldX} y1={groundY - fz * vScale} x2={bldX + bldW} y2={groundY - fz * vScale}
+            stroke="#475569" strokeWidth="0.3" opacity="0.3" />
         })}
 
         {/* 옥상 기계실 */}
         <rect x={bldX + bldW * 0.35} y={bldTopY - mechH * vScale} width={bldW * 0.3} height={mechH * vScale}
           fill="#374151" stroke="#4b5563" strokeWidth="0.5" />
+        {/* 실외기 (옥상) */}
+        {Array.from({ length: 3 }, (_, i) => (
+          <rect key={`ac-${i}`} x={bldX + bldW * 0.7 + i * 8} y={bldTopY - 4} width={5} height={4}
+            fill="#4b5563" stroke="#64748b" strokeWidth="0.3" rx="0.3" />
+        ))}
 
-        {/* 옥상 난간 */}
-        <line x1={bldX} y1={bldTopY} x2={bldX + bldW} y2={bldTopY}
-          stroke="#64748b" strokeWidth="1.2" />
-        {Array.from({ length: Math.ceil(bldW / 8) }, (_, i) => (
-          <line key={`rail-${i}`} x1={bldX + i * 8 + 2} y1={bldTopY}
-            x2={bldX + i * 8 + 2} y2={bldTopY - 2}
-            stroke="#64748b" strokeWidth="0.4" />
+        {/* 옥상 난간 (유리 + 금속 포스트) */}
+        <line x1={bldX} y1={bldTopY} x2={bldX + bldW} y2={bldTopY} stroke="#64748b" strokeWidth="1.2" />
+        {Array.from({ length: Math.ceil(bldW / 10) }, (_, i) => (
+          <line key={`rail-${i}`} x1={bldX + i * 10 + 2} y1={bldTopY}
+            x2={bldX + i * 10 + 2} y2={bldTopY - 3.5}
+            stroke="#94a3b8" strokeWidth="0.5" />
+        ))}
+        {/* 옥상 유리 난간 */}
+        <rect x={bldX} y={bldTopY - 3.5} width={bldW} height={3.5}
+          fill="#38bdf8" opacity="0.05" stroke="#64748b" strokeWidth="0.2" />
+
+        {/* ━━━ 조경 (좌우 나무) ━━━ */}
+        {[bldX - 20, bldX + bldW + 8].map((tx, ti) => (
+          <g key={`tree-${ti}`}>
+            <rect x={tx + 3} y={groundY - 18} width={2} height={18} fill="#3f2d1c" rx="0.5" />
+            <circle cx={tx + 4} cy={groundY - 22} r="8" fill="#166534" opacity="0.7" />
+            <circle cx={tx + 1} cy={groundY - 18} r="6" fill="#15803d" opacity="0.6" />
+            <circle cx={tx + 7} cy={groundY - 19} r="5" fill="#166534" opacity="0.5" />
+          </g>
+        ))}
+        {/* 관목 */}
+        {[bldX - 8, bldX + bldW + 2].map((sx, si) => (
+          <ellipse key={`shrub-${si}`} cx={sx} cy={groundY - 2} rx="5" ry="3" fill="#15803d" opacity="0.4" />
         ))}
 
         {/* 높이 치수 (좌측) */}
