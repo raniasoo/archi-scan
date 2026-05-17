@@ -49,28 +49,43 @@ function makeWindowTex(floorCount: number, winCols: number): HTMLCanvasElement {
   const fH = H / floorCount, wW = W / winCols
   for (let f = 0; f < floorCount; f++) {
     const y = f * fH
-    const isLobby = f === floorCount - 1
+    const isCommercial = f === floorCount - 1
     for (let w = 0; w < winCols; w++) {
       const x = w * wW
-      if (isLobby) {
-        // 1층 로비 — 대형 유리 + 프레임
+      if (isCommercial) {
+        // 1층 상가 — 오렌지 벽체 + 대형 유리 쇼윈도
+        g.fillStyle = '#c47a4a'
+        g.fillRect(x, y, wW, fH)
+        // 상가 간판 영역 (상단)
+        g.fillStyle = '#b06a3a'
+        g.fillRect(x + wW * 0.05, y + fH * 0.02, wW * 0.9, fH * 0.18)
+        // 간판 텍스트 배경
+        g.fillStyle = '#e8a060'
+        g.fillRect(x + wW * 0.08, y + fH * 0.04, wW * 0.84, fH * 0.14)
+        // 대형 쇼윈도 유리
         g.fillStyle = '#1a1a1a'
-        g.fillRect(x + wW * 0.04, y + fH * 0.08, wW * 0.92, fH * 0.82)
-        g.fillStyle = '#142a42'
-        g.fillRect(x + wW * 0.06, y + fH * 0.1, wW * 0.88, fH * 0.78)
+        g.fillRect(x + wW * 0.06, y + fH * 0.24, wW * 0.88, fH * 0.6)
         // 유리 반사 그라데이션
-        const lGr = g.createLinearGradient(x, y, x + wW, y + fH)
-        lGr.addColorStop(0, 'rgba(100,180,230,0.35)')
-        lGr.addColorStop(0.4, 'rgba(140,200,240,0.15)')
-        lGr.addColorStop(1, 'rgba(80,150,210,0.3)')
+        const lGr = g.createLinearGradient(x, y + fH * 0.24, x + wW, y + fH * 0.84)
+        lGr.addColorStop(0, 'rgba(100,160,200,0.3)')
+        lGr.addColorStop(0.4, 'rgba(180,200,220,0.15)')
+        lGr.addColorStop(1, 'rgba(80,140,180,0.25)')
         g.fillStyle = lGr
-        g.fillRect(x + wW * 0.08, y + fH * 0.12, wW * 0.84, fH * 0.74)
-        // 로비 조명 (따뜻한 빛)
-        g.fillStyle = 'rgba(255,220,160,0.12)'
-        g.fillRect(x + wW * 0.2, y + fH * 0.3, wW * 0.6, fH * 0.4)
-        // 중앙 분할바
+        g.fillRect(x + wW * 0.08, y + fH * 0.26, wW * 0.84, fH * 0.56)
+        // 실내 따뜻한 조명
+        g.fillStyle = 'rgba(255,210,140,0.15)'
+        g.fillRect(x + wW * 0.15, y + fH * 0.35, wW * 0.7, fH * 0.4)
+        // 유리 중앙 분할바
         g.fillStyle = '#2a2a2a'
-        g.fillRect(x + wW * 0.49, y + fH * 0.1, wW * 0.02, fH * 0.78)
+        g.fillRect(x + wW * 0.49, y + fH * 0.24, wW * 0.02, fH * 0.6)
+        // 출입문 (중앙)
+        if (w === Math.floor(winCols / 2)) {
+          g.fillStyle = '#3a3a3a'
+          g.fillRect(x + wW * 0.3, y + fH * 0.24, wW * 0.4, fH * 0.7)
+          g.fillStyle = '#2a5a8a'
+          g.fillRect(x + wW * 0.32, y + fH * 0.26, wW * 0.16, fH * 0.66)
+          g.fillRect(x + wW * 0.52, y + fH * 0.26, wW * 0.16, fH * 0.66)
+        }
       } else {
         // 상층 주거 — 창문 + 프레임 + 발코니 + AC
         const wx = x + wW * 0.14, wy = y + fH * 0.16
@@ -560,12 +575,8 @@ export function BuildingVolume3D({
         const bX = S * blk.x, bZ = S * blk.z
         info.push({ label: blk.label ?? `동${idx + 1}`, floors: bF })
 
-        const shape = new THREE.Shape()
-        shape.moveTo(-bW / 2, -bD / 2); shape.lineTo(bW / 2, -bD / 2)
-        shape.lineTo(bW / 2, bD / 2); shape.lineTo(-bW / 2, bD / 2)
-        shape.closePath()
-        const geo = new THREE.ExtrudeGeometry(shape, { depth: tH, bevelEnabled: false })
-        geo.rotateX(-Math.PI / 2)
+        // ★ BoxGeometry: 6면 정상 UV 매핑 → 창문 텍스처 올바르게 표시
+        const geo = new THREE.BoxGeometry(bW, tH, bD)
 
         // 창문 텍스처 — 세대수 정확 반영
         const resFloors = Math.max(bF - 1, 1)
@@ -578,25 +589,25 @@ export function BuildingVolume3D({
 
         const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
           map: wTex, roughness: 0.25, metalness: 0.15,
-          color: 0xe0e5ec, envMapIntensity: 1.0, side: THREE.DoubleSide,
+          color: 0xf0f0f0, envMapIntensity: 1.0, side: THREE.DoubleSide,
         }))
-        mesh.position.set(bX + buildableOffsetX, 0, bZ + buildableOffsetZ); mesh.castShadow = true; mesh.receiveShadow = true
+        mesh.position.set(bX + buildableOffsetX, tH / 2, bZ + buildableOffsetZ); mesh.castShadow = true; mesh.receiveShadow = true
         scene.add(mesh)
 
         // 에지
         const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo),
           new THREE.LineBasicMaterial({ color: 0x8aa8c8, transparent: true, opacity: 0.25 }))
-        edges.position.set(bX, 0, bZ)
+        edges.position.set(bX + buildableOffsetX, tH / 2, bZ + buildableOffsetZ)
         scene.add(edges)
 
         // 최상층 라인
-        const top = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a, b]) => new THREE.Vector3(bX + a * bW / 2, tH, bZ + b * bD / 2))
+        const top = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a, b]) => new THREE.Vector3(bX + buildableOffsetX + a * bW / 2, tH, bZ + buildableOffsetZ + b * bD / 2))
         scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(top), new THREE.LineBasicMaterial({ color: 0x34d399 })))
 
         // 5층 단위 라인
         for (let f = 5; f < bF; f += 5) {
           const y = f * floorHeight
-          const pts = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a, b]) => new THREE.Vector3(bX + a * bW / 2, y, bZ + b * bD / 2))
+          const pts = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a, b]) => new THREE.Vector3(bX + buildableOffsetX + a * bW / 2, y, bZ + buildableOffsetZ + b * bD / 2))
           scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
             new THREE.LineBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.45 })))
         }
@@ -610,20 +621,20 @@ export function BuildingVolume3D({
         for (let i = 0; i < 128; i += 12) { rg.beginPath(); rg.moveTo(i, 0); rg.lineTo(i, 128); rg.stroke(); rg.beginPath(); rg.moveTo(0, i); rg.lineTo(128, i); rg.stroke() }
         const roof = new THREE.Mesh(new THREE.PlaneGeometry(bW, bD),
           new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(roofC), roughness: 0.7 }))
-        roof.rotation.x = -Math.PI / 2; roof.position.set(bX, tH + 0.05, bZ); roof.receiveShadow = true
+        roof.rotation.x = -Math.PI / 2; roof.position.set(bX + buildableOffsetX, tH + 0.05, bZ + buildableOffsetZ); roof.receiveShadow = true
         scene.add(roof)
 
         // 옥상 기계실
         const mH = floorHeight * 0.45
         const mech = new THREE.Mesh(new THREE.BoxGeometry(bW * 0.18, mH, bD * 0.22),
           new THREE.MeshStandardMaterial({ color: 0x506068, roughness: 0.6, metalness: 0.15 }))
-        mech.position.set(bX, tH + mH / 2, bZ); mech.castShadow = true
+        mech.position.set(bX + buildableOffsetX, tH + mH / 2, bZ + buildableOffsetZ); mech.castShadow = true
         scene.add(mech)
 
         // 엔트런스 캐노피 (유리)
         const canopy = new THREE.Mesh(new THREE.BoxGeometry(bW * 0.28, 0.12, 2.5),
           new THREE.MeshStandardMaterial({ color: 0x88ccee, roughness: 0.05, metalness: 0.85, transparent: true, opacity: 0.55 }))
-        canopy.position.set(bX, floorHeight * 0.82, bZ + bD / 2 + 0.8); canopy.castShadow = true
+        canopy.position.set(bX + buildableOffsetX, floorHeight * 0.82, bZ + buildableOffsetZ + bD / 2 + 0.8); canopy.castShadow = true
         scene.add(canopy)
       })
 
