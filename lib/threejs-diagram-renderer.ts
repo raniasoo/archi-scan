@@ -95,8 +95,11 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     return c
   }
 
-  // ━━━ 건물 메쉬 생성 (창문 텍스처 포함) ━━━
+  // ━━━ 건물 메쉬 생성 (창문 텍스처 + 건축 디테일) ━━━
   function addBuilding(scene: any, mat: any, useWindowTex: boolean = false) {
+    const balconyMat = new THREE.MeshStandardMaterial({ color: 0x607080, metalness: 0.3, roughness: 0.5 })
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x506070, metalness: 0.4, transparent: true, opacity: 0.7 })
+    
     for (const blk of geo.blocks) {
       const bW = S * blk.w, bD = S * blk.d
       let finalMat = mat
@@ -104,22 +107,68 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
         const cols = Math.max(3, Math.round(bW / 3))
         const wTex = new THREE.CanvasTexture(makeWindowTex(params.floors, cols))
         finalMat = new THREE.MeshStandardMaterial({
-          map: wTex, roughness: 0.3, metalness: 0.1,
-          color: 0xe0e5ec,
+          map: wTex, roughness: 0.3, metalness: 0.1, color: 0xe0e5ec,
         })
       }
+      // 본체
       const boxGeo = new THREE.BoxGeometry(bW, bH, bD)
       const mesh = new THREE.Mesh(boxGeo, finalMat)
       mesh.position.set(S * blk.x, bH / 2, S * blk.z)
       scene.add(mesh)
-      // 에지 (밝은 색)
+      // 에지
       scene.add(new THREE.LineSegments(
         new THREE.EdgesGeometry(boxGeo),
         new THREE.LineBasicMaterial({ color: 0x4a6080, transparent: true, opacity: 0.4 })
       ))
-      const edges = scene.children[scene.children.length - 1]
-      edges.position.copy(mesh.position)
+      scene.children[scene.children.length - 1].position.copy(mesh.position)
+      
+      // 발코니 (2층 이상 정면 — 얇은 슬라브 돌출)
+      if (useWindowTex && params.floors > 1) {
+        for (let f = 1; f < params.floors; f++) {
+          const balcony = new THREE.Mesh(
+            new THREE.BoxGeometry(bW * 0.85, 0.15, 1.2),
+            balconyMat
+          )
+          balcony.position.set(S * blk.x, f * fH, S * blk.z + bD/2 + 0.6)
+          scene.add(balcony)
+          // 난간
+          const rail = new THREE.Mesh(
+            new THREE.BoxGeometry(bW * 0.85, 1.0, 0.05),
+            railMat
+          )
+          rail.position.set(S * blk.x, f * fH + 0.5, S * blk.z + bD/2 + 1.15)
+          scene.add(rail)
+        }
+      }
+      
+      // 옥상 난간
+      if (useWindowTex) {
+        const roofRail = new THREE.Mesh(
+          new THREE.BoxGeometry(bW + 0.4, 0.8, 0.08),
+          railMat
+        )
+        roofRail.position.set(S * blk.x, bH + 0.4, S * blk.z + bD/2 + 0.04)
+        scene.add(roofRail)
+        // 측면 난간
+        const sideRail = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08, 0.8, bD + 0.4),
+          railMat
+        )
+        sideRail.position.set(S * blk.x + bW/2 + 0.04, bH + 0.4, S * blk.z)
+        scene.add(sideRail)
+      }
+      
+      // 1F 캐노피 (입구)
+      if (useWindowTex) {
+        const canopy = new THREE.Mesh(
+          new THREE.BoxGeometry(Math.min(bW * 0.3, 4), 0.12, 1.8),
+          new THREE.MeshStandardMaterial({ color: 0x506068, metalness: 0.3, roughness: 0.4 })
+        )
+        canopy.position.set(S * blk.x, fH * 0.82, S * blk.z + bD/2 + 0.9)
+        scene.add(canopy)
+      }
     }
+    balconyMat.dispose(); railMat.dispose()
   }
 
   // ━━━ 텍스트 라벨 생성 (다크 테마용) ━━━
@@ -303,12 +352,13 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     addLabel(scene, `건축면적 ${Math.round(geo.totalFootprint)}㎡`, bbCX, -2, bbMaxZ + dimOff + 3, 1.8, '#34d399')
     // 알렉산더 패턴
     addPatternElements(scene, 'iso')
-    // 카메라 — ㄱ자형은 두 날개가 모두 보이는 각도
-    const d = Math.max(S, bH) * 1.4
-    const cam = new THREE.OrthographicCamera(-d, d, d*0.7, -d*0.5, 0.1, S*10)
-    // ㄱ자/중정형: 왼쪽 뒤에서 보면 두 날개가 모두 보임
-    const camAngle = (isLShape || isCourtyard) ? { x: -S*0.7, z: S*1.0 } : { x: S*0.9, z: S*0.9 }
-    cam.position.set(camAngle.x, S*0.8, camAngle.z); cam.lookAt(bbCX, bH*0.3, bbCZ)
+    // 카메라 — 건물 크기 기준 줌 (대지가 아닌 건물에 맞춤)
+    const bldgSpan = Math.max(bbW, bbD, bH) * 1.6
+    const cam = new THREE.OrthographicCamera(-bldgSpan, bldgSpan, bldgSpan*0.7, -bldgSpan*0.5, 0.1, S*10)
+    // ㄱ자형: L의 안쪽(오목한 면)에서 보면 두 날개가 선명
+    const camX = (isLShape || isCourtyard) ? bbMinX - bbW*0.5 : bbMaxX + bbW*0.5
+    const camZ = (isLShape || isCourtyard) ? bbMaxZ + bbD*0.3 : bbMaxZ + bbD*0.3
+    cam.position.set(camX, bldgSpan*0.7, camZ); cam.lookAt(bbCX, bH*0.3, bbCZ)
     renderer.render(scene, cam)
     results.push({ type: 'isometric', label: '아이소메트릭', image: canvas.toDataURL('image/png') })
   }
@@ -386,10 +436,10 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     addLabel(scene, `정면 입면도 · ${typeLabel}`, bbCX, bH+3, bbMaxZ + 0.5, 2.2, '#e0e8f0')
     // 폭 치수
     addDimLine(scene, [bbMinX, -1, bbMaxZ + 0.5], [bbMaxX, -1, bbMaxZ + 0.5], `${bbW.toFixed(1)}m`)
-    // 카메라 — ㄱ자형은 넓은 면(수평 날개)이 보이도록 정면
-    const elScale = Math.max(bbW, bH) * 1.1
-    const cam = new THREE.OrthographicCamera(-elScale, elScale, elScale*0.8, -elScale*0.2, -S*2, S*3)
-    cam.position.set(bbCX, bH*0.4, bbMaxZ + S*1.5); cam.lookAt(bbCX, bH*0.4, bbCZ)
+    // 카메라 — 건물 크기 기준 정면
+    const elW = Math.max(bbW, bH) * 1.3
+    const cam = new THREE.OrthographicCamera(-elW, elW, elW*0.7, -elW*0.2, -S*2, S*3)
+    cam.position.set(bbCX, bH*0.4, bbMaxZ + bH*2); cam.lookAt(bbCX, bH*0.4, bbCZ)
     renderer.render(scene, cam)
     results.push({ type: 'elevation', label: '입면도', image: canvas.toDataURL('image/png') })
   }
@@ -421,10 +471,12 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     addLabel(scene, `투시도 · ${typeLabel}`, bbCX, bH+5, bbCZ, 2.5, '#e0e8f0')
     // 알렉산더 패턴
     addPatternElements(scene, 'perspective')
-    // 카메라 — ㄱ자형은 ㄱ 형태가 보이는 좌측 상단 뷰
-    const cam = new THREE.PerspectiveCamera(35, 800/600, 0.1, S*10)
-    const pCamX = (isLShape || isCourtyard) ? -S*0.5 : S*0.6
-    cam.position.set(pCamX, bH*0.9, S*1.0); cam.lookAt(bbCX, bH*0.25, bbCZ)
+    // 카메라 — 건물 크기 기준, ㄱ자형은 L 안쪽에서
+    const cam = new THREE.PerspectiveCamera(40, 800/600, 0.1, S*10)
+    const pDist = Math.max(bbW, bbD, bH) * 2.0
+    const pCamX = (isLShape || isCourtyard) ? bbMinX - pDist*0.3 : bbMaxX + pDist*0.3
+    const pCamZ = bbMaxZ + pDist*0.4
+    cam.position.set(pCamX, bH*1.0, pCamZ); cam.lookAt(bbCX, bH*0.3, bbCZ)
     renderer.render(scene, cam)
     results.push({ type: 'perspective', label: '투시도', image: canvas.toDataURL('image/png') })
   }
