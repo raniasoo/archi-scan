@@ -118,131 +118,59 @@ export function SitePlan({
   const buildingArea = siteArea * buildingCoverage / 100
   const bldRatio = Math.sqrt(buildingArea / siteArea)
 
-  // 배치 유형별 건물 형태
+  // 배치 유형별 건물 형태 — building-geometry Single Source of Truth
   const getBuildingShape = () => {
     const bW = bldZoneW * 0.85
     const bH = bldZoneH * 0.7
     const bX = bldZoneX + (bldZoneW - bW) / 2
     const bY = bldZoneY + (bldZoneH - bH) / 2
 
-    switch (type) {
-      case "tower":
-        return { shapes: [{ x: bX + bW * 0.15, y: bY + bH * 0.1, w: bW * 0.7, h: bH * 0.8 }], label: "타워동" }
-      case "courtyard": {
-        const t = bH * 0.22
-        return {
-          shapes: [
-            { x: bX, y: bY, w: bW, h: t },                    // 상단
-            { x: bX, y: bY + bH - t, w: bW, h: t },            // 하단
-            { x: bX, y: bY + t, w: bW * 0.2, h: bH - t * 2 },  // 좌
-            { x: bX + bW * 0.8, y: bY + t, w: bW * 0.2, h: bH - t * 2 }, // 우
-          ],
-          label: "ㅁ자형", courtyard: { x: bX + bW * 0.2, y: bY + t, w: bW * 0.6, h: bH - t * 2 }
-        }
-      }
-      case "lshape": {
-        const armW = bW * 0.4
-        return {
-          shapes: [
-            { x: bX, y: bY, w: armW, h: bH },                 // 수직동
-            { x: bX + armW, y: bY + bH * 0.6, w: bW - armW, h: bH * 0.4 }, // 수평동
-          ],
-          label: "ㄱ자형"
-        }
-      }
-      case "linear":
-        return {
-          shapes: [{ x: bX, y: bY + bH * 0.25, w: bW, h: bH * 0.5 }],
-          label: "판상형"
-        }
-      case "cluster": {
-        // buildingCount 기반 다동 배치
-        const n = buildingCount || Math.max(2, Math.min(6, Math.ceil(units / (floors * 4))))
+    // ━━━ building-geometry 블록 데이터 사용 (3D 모델과 동일) ━━━
+    try {
+      const { getBuildingDimensionsInMeters } = require('@/lib/building-geometry')
+      const geo = getBuildingDimensionsInMeters({
+        type, coverage, siteArea, floors, buildingCount, originalType: type,
+      })
+      const bm = geo.blocksInMeters
+      if (bm && bm.length > 0) {
+        const S = geo.siteWidthM || Math.sqrt(siteArea)
+        // 블록 바운딩 박스
+        const minX = Math.min(...bm.map((b: any) => b.centerXM - b.widthM / 2))
+        const maxX = Math.max(...bm.map((b: any) => b.centerXM + b.widthM / 2))
+        const minZ = Math.min(...bm.map((b: any) => b.centerZM - b.depthM / 2))
+        const maxZ = Math.max(...bm.map((b: any) => b.centerZM + b.depthM / 2))
+        const bbW = maxX - minX, bbH = maxZ - minZ
         
-        // 점-인-폴리곤 테스트 (ray casting)
-        const ptInPoly = (px: number, py: number, poly: {x:number;y:number}[]) => {
-          let inside = false
-          for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-            const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y
-            if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside
-          }
-          return inside
-        }
+        // SVG 좌표 스케일
+        const scaleX = bW / Math.max(bbW, 1)
+        const scaleZ = bH / Math.max(bbH, 1)
+        const scale = Math.min(scaleX, scaleZ) * 0.9
+        const ofsX = bX + (bW - bbW * scale) / 2
+        const ofsY = bY + (bH - bbH * scale) / 2
         
-        if (svgPolyCoords.length > 2) {
-          // ★ 실제 필지 형상 기반 배치
-          // 1. 이격 적용한 내접 폴리곤 중심 계산
-          const cx = svgPolyCoords.reduce((s, p) => s + p.x, 0) / svgPolyCoords.length
-          const cy = svgPolyCoords.reduce((s, p) => s + p.y, 0) / svgPolyCoords.length
-          
-          // 2. 폴리곤 내부에서 사용 가능한 영역 계산
-          const polyXs = svgPolyCoords.map(p => p.x)
-          const polyYs = svgPolyCoords.map(p => p.y)
-          const polyMinX = Math.min(...polyXs) + ss, polyMaxX = Math.max(...polyXs) - ss
-          const polyMinY = Math.min(...polyYs) + sr, polyMaxY = Math.max(...polyYs) - sf
-          const usableW = polyMaxX - polyMinX
-          const usableH = polyMaxY - polyMinY
-          
-          // 3. 그리드 계산 (폴리곤 비율에 맞춤)
-          const cols = n <= 2 ? (usableW > usableH * 1.3 ? 2 : 1) : n <= 4 ? 2 : 3
-          const rows = Math.ceil(n / cols)
-          const blockW = usableW * 0.85 / cols
-          const blockH = usableH * 0.8 / rows
-          
-          // 4. 건물 배치 — 폴리곤 안에 들어가는 위치만 사용
-          const shapes: { x: number; y: number; w: number; h: number }[] = []
-          const gridStartX = polyMinX + (usableW - cols * blockW) / 2
-          const gridStartY = polyMinY + (usableH - rows * blockH) / 2
-          
-          let count = 0
-          for (let r = 0; r < rows && count < n; r++) {
-            for (let c = 0; c < cols && count < n; c++) {
-              const bx = gridStartX + c * (usableW * 0.95 / cols)
-              const by = gridStartY + r * (usableH * 0.9 / rows)
-              const bcx = bx + blockW / 2
-              const bcy = by + blockH / 2
-              
-              // 건물 중심이 폴리곤 안에 있는지 확인
-              if (ptInPoly(bcx, bcy, svgPolyCoords)) {
-                shapes.push({ x: bx, y: by, w: blockW * 0.88, h: blockH * 0.85 })
-                count++
-              } else {
-                // 중심을 폴리곤 중심 쪽으로 조정
-                const dx = cx - bcx, dy = cy - bcy
-                const nbx = bx + dx * 0.3, nby = by + dy * 0.3
-                shapes.push({ x: nbx, y: nby, w: blockW * 0.8, h: blockH * 0.78 })
-                count++
-              }
-            }
-          }
-          return { shapes, label: "클러스터" }
-        }
+        const shapes = bm.map((b: any, i: number) => ({
+          x: ofsX + (b.centerXM - b.widthM / 2 - minX) * scale,
+          y: ofsY + (b.centerZM - b.depthM / 2 - minZ) * scale,
+          w: b.widthM * scale,
+          h: b.depthM * scale,
+        }))
         
-        // fallback: 직사각형 그리드 (폴리곤 없을 때)
-        const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3
-        const rows = Math.ceil(n / cols)
-        const gapX = bW * 0.06, gapY = bH * 0.06
-        const blockW = (bW - gapX * (cols - 1)) / cols
-        const blockH = (bH - gapY * (rows - 1)) / rows
-        const shapes: { x: number; y: number; w: number; h: number }[] = []
-        let count = 0
-        for (let r = 0; r < rows && count < n; r++) {
-          for (let c = 0; c < cols && count < n; c++) {
-            const offsetX = (r % 2 === 1) ? blockW * 0.15 : 0 // 엇갈림 배치
-            shapes.push({
-              x: bX + c * (blockW + gapX) + offsetX,
-              y: bY + r * (blockH + gapY),
-              w: blockW * 0.92,
-              h: blockH * 0.88,
-            })
-            count++
-          }
-        }
-        return { shapes, label: "클러스터" }
+        const isCourtyard = type === 'courtyard'
+        const courtyard = isCourtyard && bm.length >= 3 ? {
+          x: ofsX + (bm[0].centerXM + bm[0].widthM / 2 - minX) * scale,
+          y: ofsY + (bm[0].centerZM + bm[0].depthM / 2 - minZ) * scale,
+          w: Math.abs(bm[bm.length - 1].centerXM - bm[0].centerXM) * scale * 0.5,
+          h: Math.abs(bm[bm.length - 1].centerZM - bm[0].centerZM) * scale * 0.5,
+        } : undefined
+        
+        const label = type === 'tower' ? '타워동' : type === 'linear' ? '판상형' : 
+                       type === 'lshape' ? 'ㄱ자형' : type === 'courtyard' ? 'ㅁ자형' : ''
+        return { shapes, label, courtyard }
       }
-      default:
-        return { shapes: [{ x: bX, y: bY, w: bW, h: bH }], label: type }
-    }
+    } catch (e) { /* fallback below */ }
+
+    // fallback: building-geometry 없을 때
+    return { shapes: [{ x: bX, y: bY, w: bW, h: bH }], label: type === 'tower' ? '타워동' : type === 'linear' ? '판상형' : '' }
   }
 
   const building = getBuildingShape()
