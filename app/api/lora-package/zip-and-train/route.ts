@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const { data: files } = await supabase.storage.from(BUCKET).list(FOLDER, { limit: 1000 })
     if (!files) return NextResponse.json({ error: 'Storage 조회 실패' }, { status: 500 })
 
-    const images = files.filter(f => f.name.endsWith('.jpg'))
+    const images = files.filter(f => f.name.endsWith('.jpg')).slice(0, 250) // 250장 제한 (300초 타임아웃 대응)
     const metas = files.filter(f => f.name.startsWith('meta_batch_'))
     console.log(`[lora-zip] ${images.length} images, ${metas.length} meta files`)
 
@@ -64,8 +64,8 @@ export async function GET(req: NextRequest) {
     zip.file('metadata.jsonl', lines.join('\n'))
 
     let added = 0
-    for (let i = 0; i < images.length; i += 30) {
-      const batch = images.slice(i, i + 30)
+    for (let i = 0; i < images.length; i += 50) {
+      const batch = images.slice(i, i + 50)
       const dl = await Promise.all(batch.map(async f => {
         try {
           const { data } = await supabase.storage.from(BUCKET).download(`${FOLDER}/${f.name}`)
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
       console.log(`[lora-zip] ${added}/${images.length}`)
     }
 
-    const zipBuf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 3 } })
+    const zipBuf = await zip.generateAsync({ type: 'nodebuffer', compression: 'STORE' }) // 무압축=빠름
     const mb = (zipBuf.length / 1048576).toFixed(1)
     console.log(`[lora-zip] ZIP: ${mb}MB, ${added} images`)
 
