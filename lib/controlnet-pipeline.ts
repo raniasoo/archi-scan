@@ -253,8 +253,9 @@ export async function callReplicateControlNet(
   const model = options.model || 'flux-canny-pro'
   const negPrompt = options.negativePrompt || 'blurry, low quality, cartoon, anime, illustration, watermark, text, deformed, ugly, bad architecture, wrong proportions'
 
-  // LoRA 설정 — 학습된 한국 건축 LoRA 적용
-  const loraUrl = options.loraUrl || process.env.LORA_KOREAN_ARCH_URL || ''
+  // LoRA 설정 — 학습된 한국 건축 LoRA 적용 (2026-05-17 학습 완료)
+  const TRAINED_LORA_URL = 'https://replicate.delivery/xezq/nu4MTnFJqxbVMRKZDQfOLJmUP6w5q4DBvSeG5jxVSfWn3rLtA/trained_model.tar'
+  const loraUrl = options.loraUrl || process.env.LORA_KOREAN_ARCH_URL || TRAINED_LORA_URL
   const loraScale = options.loraScale ?? 0.8
   const loraPrompt = loraUrl ? `korarch style, ${prompt}` : prompt  // trigger word 자동 추가
 
