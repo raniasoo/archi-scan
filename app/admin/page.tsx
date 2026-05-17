@@ -446,47 +446,52 @@ export default function AdminPage() {
                           <div><span className="text-muted-foreground">가입:</span> <span className="font-medium">{p.provider || "email"}</span></div>
                           <div className="col-span-3"><span className="text-muted-foreground">가입일:</span> <span className="font-medium">{fmtFullDate(p.created_at)}</span></div>
                         </div>
-                        {/* Plan actions */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs text-muted-foreground mr-1">플랜 변경:</span>
-                          {p.plan !== "free" && (
-                            <button onClick={async () => {
-                              if (!confirm(`${p.name || p.email}을(를) 무료로 변경하시겠습니까?`)) return
-                              await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "free" })
-                              fetchData()
-                            }} className="px-2.5 py-1 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80">
-                              무료
-                            </button>
-                          )}
-                          {p.plan !== "pro" && (
-                            <button onClick={async () => {
-                              if (!confirm(`${p.name || p.email}을(를) Pro로 변경하시겠습니까?`)) return
-                              await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "pro" })
-                              fetchData()
-                            }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
-                              <Crown className="h-3 w-3" /> Pro
-                            </button>
-                          )}
-                          {p.plan !== "enterprise" && (
-                            <button onClick={async () => {
-                              if (!confirm(`${p.name || p.email}을(를) Enterprise로 변경하시겠습니까?`)) return
-                              await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "enterprise" })
-                              fetchData()
-                            }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-violet-500/10 text-violet-400 hover:bg-violet-500/20">
-                              💎 Enterprise
-                            </button>
-                          )}
-                          <div className="relative inline-block">
-                          <button
-                            onClick={() => setResetMenuUser(resetMenuUser === p.id ? null : p.id)}
-                            className="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"
-                          >
-                            사용량 초기화 ▾
-                          </button>
-                          {resetMenuUser === p.id && (<>
-                            {/* 배경 오버레이 — 클릭 시 닫기 */}
-                            <div className="fixed inset-0 z-40" onClick={() => setResetMenuUser(null)} />
-                            <div className="absolute right-0 bottom-full mb-2 z-50 w-56 bg-card border border-border rounded-xl shadow-2xl p-2 space-y-1">
+                        {/* Plan + Reset 액션 */}
+                        <div className="space-y-2">
+                          {/* 플랜 변경 */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-16 shrink-0">플랜 변경:</span>
+                            {p.plan !== "free" && (
+                              <button onClick={async () => {
+                                if (!confirm(`${p.name || p.email}을(를) 무료로 변경하시겠습니까?`)) return
+                                await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "free" })
+                                fetchData()
+                              }} className="px-2.5 py-1 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80">
+                                무료
+                              </button>
+                            )}
+                            {p.plan !== "pro" && (
+                              <button onClick={async () => {
+                                if (!confirm(`${p.name || p.email}을(를) Pro로 변경하시겠습니까?`)) return
+                                await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "pro" })
+                                fetchData()
+                              }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
+                                <Crown className="h-3 w-3" /> Pro
+                              </button>
+                            )}
+                            {p.plan !== "enterprise" && (
+                              <button onClick={async () => {
+                                if (!confirm(`${p.name || p.email}을(를) Enterprise로 변경하시겠습니까?`)) return
+                                await adminFetch("PATCH", { type: "update_plan", userId: p.id, plan: "enterprise" })
+                                fetchData()
+                              }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-violet-500/10 text-violet-400 hover:bg-violet-500/20">
+                                💎 Enterprise
+                              </button>
+                            )}
+                          </div>
+                          {/* 사용량 초기화 */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-16 shrink-0">사용량:</span>
+                            <div className="relative inline-block">
+                              <button
+                                onClick={() => setResetMenuUser(resetMenuUser === p.id ? null : p.id)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                              >
+                                초기화 ▾
+                              </button>
+                              {resetMenuUser === p.id && (<>
+                                <div className="fixed inset-0 z-40" onClick={() => setResetMenuUser(null)} />
+                                <div className="absolute left-0 bottom-full mb-2 z-50 w-56 bg-card border border-border rounded-xl shadow-2xl p-2 space-y-1">
                               <p className="text-[10px] text-muted-foreground px-2 pb-1">초기화할 항목 선택</p>
                               {[
                                 { key: 'analysis', label: '📊 분석 사용량', desc: '월간 분석 횟수' },
@@ -516,6 +521,8 @@ export default function AdminPage() {
                               </div>
                             </div>
                           </>)}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground">{p.monthly_usage || 0}회 분석 · {p.render_gemini || 0}회 Gemini · {p.render_controlnet || 0}회 CN</span>
                           </div>
                         </div>
                         <div className="text-[10px] text-muted-foreground/50 truncate">ID: {p.id}</div>
