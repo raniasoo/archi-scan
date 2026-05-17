@@ -243,6 +243,8 @@ export async function callReplicateControlNet(
     guidance?: number
     steps?: number
     negativePrompt?: string
+    loraUrl?: string       // ★ LoRA 모델 URL (학습 완료 후)
+    loraScale?: number     // ★ LoRA 가중치 (0.0~1.0, 기본 0.8)
   } = {}
 ): Promise<{ predictionId: string; imageUrl?: string; predictTime?: number }> {
   const token = process.env.REPLICATE_API_TOKEN
@@ -251,12 +253,17 @@ export async function callReplicateControlNet(
   const model = options.model || 'flux-canny-pro'
   const negPrompt = options.negativePrompt || 'blurry, low quality, cartoon, anime, illustration, watermark, text, deformed, ugly, bad architecture, wrong proportions'
 
+  // LoRA 설정 — 학습된 한국 건축 LoRA 적용
+  const loraUrl = options.loraUrl || process.env.LORA_KOREAN_ARCH_URL || ''
+  const loraScale = options.loraScale ?? 0.8
+  const loraPrompt = loraUrl ? `korarch style, ${prompt}` : prompt  // trigger word 자동 추가
+
   // 모델별 엔드포인트/파라미터
   const configs: Record<string, { url: string; input: any }> = {
     'flux-canny-pro': {
       url: 'https://api.replicate.com/v1/models/black-forest-labs/flux-canny-pro/predictions',
       input: {
-        prompt,
+        prompt: loraPrompt,
         control_image: controlImageBase64,
         guidance: options.guidance || 30,
         num_inference_steps: options.steps || 28,
@@ -264,12 +271,13 @@ export async function callReplicateControlNet(
         megapixels: '1',
         output_format: 'webp',
         output_quality: 85,
+        ...(loraUrl ? { extra_lora: loraUrl, extra_lora_scale: loraScale } : {}),
       },
     },
     'flux-depth-pro': {
       url: 'https://api.replicate.com/v1/models/black-forest-labs/flux-depth-pro/predictions',
       input: {
-        prompt,
+        prompt: loraPrompt,
         control_image: controlImageBase64,
         guidance: options.guidance || 25,
         num_inference_steps: options.steps || 28,
@@ -277,6 +285,7 @@ export async function callReplicateControlNet(
         megapixels: '1',
         output_format: 'webp',
         output_quality: 85,
+        ...(loraUrl ? { extra_lora: loraUrl, extra_lora_scale: loraScale } : {}),
       },
     },
     'sdxl-controlnet': {
