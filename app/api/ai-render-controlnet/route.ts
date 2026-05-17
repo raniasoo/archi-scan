@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
         const angleMap: Record<string, 'eye-level' | 'birds-eye' | 'entrance' | 'side'> = {
           'eye-level': 'eye-level', 'birds-eye': 'birds-eye', 'entrance': 'entrance', 'side': 'side',
         }
-        const ctrlMode = controlMode.includes('depth') ? 'depth' : 'canny'
+        const ctrlMode = controlMode.includes('depth') ? 'depth' : 'multi'  // ★ Multi-ControlNet 기본
         const svg = genCtrl({
           type: buildingType || 'tower', coverage: coverage || 50, siteArea, floors,
           units, buildingCount, originalType,

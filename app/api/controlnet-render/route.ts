@@ -45,8 +45,10 @@ export async function GET(req: NextRequest) {
         angle: (searchParams.get('angle') as any) || 'eye-level',
         style: searchParams.get('style') || 'modern-luxury',
       }
-      const controlMode = searchParams.get('controlMode') === 'depth' ? 'depth' : 'canny'
-      const svg = generateControlImage(input, controlMode as any)
+      const controlMode = searchParams.get('controlMode') || 'multi'  // ★ 기본: multi (depth+canny 합성)
+      const validModes = ['depth', 'canny', 'multi']
+      const ctrlMode = validModes.includes(controlMode) ? controlMode : 'multi'
+      const svg = generateControlImage(input, ctrlMode as any)
       // SVG에 NaN 체크
       if (svg.includes('NaN') || svg.includes('Infinity')) {
         return NextResponse.json({ error: 'SVG에 NaN/Infinity 값 포함', svgPreview: svg.slice(0, 1000) })

@@ -36,7 +36,7 @@ export interface ControlNetResult {
 }
 
 // ━━━ 건물 형상 → SVG 제어 이미지 생성 ━━━
-export function generateControlImage(input: ControlNetInput, mode: 'depth' | 'canny' = 'canny'): string {
+export function generateControlImage(input: ControlNetInput, mode: 'depth' | 'canny' | 'multi' = 'canny'): string {
   const W = 1024, H = 1024
   const geo = getBuildingGeometry({
     type: input.type, coverage: input.coverage, siteArea: input.siteArea,
@@ -62,12 +62,14 @@ export function generateControlImage(input: ControlNetInput, mode: 'depth' | 'ca
   const bbCX = (bbMinX+bbMaxX)/2, bbCZ = (bbMinZ+bbMaxZ)/2
 
   const isDepth = mode === 'depth'
-  const bgColor = isDepth ? '#000000' : '#000000'
-  const wallColor = isDepth ? '#C8C8C8' : '#FFFFFF'
-  const edgeColor = isDepth ? '#A0A0A0' : '#FFFFFF'
-  const windowColor = isDepth ? '#646464' : '#808080'
-  const groundColor = isDepth ? '#323232' : '#404040'
-  const skyColor = isDepth ? '#000000' : '#000000'
+  const isMulti = mode === 'multi'
+  // Multi 모드: depth 채움(공간감) + canny 에지(구조 디테일) 합성
+  const bgColor = '#000000'
+  const edgeColor = (isMulti || !isDepth) ? '#FFFFFF' : '#A0A0A0'
+  const edgeWidth = isMulti ? '2.5' : '3'  // multi: 에지 약간 가늘게 (depth와 균형)
+  const windowColor = isMulti ? '#4A4A4A' : (isDepth ? '#646464' : '#808080')
+  const groundColor = isMulti ? '#2A2A2A' : (isDepth ? '#323232' : '#404040')
+  const skyColor = '#000000'
 
   let svg = ''
 
@@ -89,7 +91,8 @@ export function generateControlImage(input: ControlNetInput, mode: 'depth' | 'ca
     const bW = S * blk.w * scale, bD = S * blk.d * scale
     const bx = cx + (S*blk.x)*scale - bW/2
     const bz = cy + (S*blk.z + offsetZ)*scale - bD/2
-    return `<rect x="${bx}" y="${bz}" width="${bW}" height="${bD}" fill="${wallColor}" stroke="${edgeColor}" stroke-width="2"/>`
+    const bldgFill = isMulti ? '#D0D0D0' : (isDepth ? '#C8C8C8' : '#FFFFFF')
+    return `<rect x="${bx}" y="${bz}" width="${bW}" height="${bD}" fill="${bldgFill}" stroke="${edgeColor}" stroke-width="2"/>`
   }).join('\n  ')}
 </svg>`
 
@@ -152,11 +155,12 @@ export function generateControlImage(input: ControlNetInput, mode: 'depth' | 'ca
       // 층간 라인
       windows += `<line x1="${b.sx - b.sw/2}" y1="${fy + floorH}" x2="${b.sx + b.sw/2}" y2="${fy + floorH}" stroke="${edgeColor}" stroke-width="0.5" opacity="0.5"/>`
     }
-    // depth 모드: 거리 기반 밝기 (가까울수록 밝게)
-    const depthBrightness = isDepth ? Math.round(200 - (b.depth - bbMinZ) / (bbD || 1) * 100) : 255
-    const fill = isDepth ? `rgb(${depthBrightness},${depthBrightness},${depthBrightness})` : 'none'
+    // depth 모드 또는 multi 모드: 거리 기반 밝기 (가까울수록 밝게)
+    const useDepthFill = isDepth || isMulti
+    const depthBrightness = useDepthFill ? Math.round(200 - (b.depth - bbMinZ) / (bbD || 1) * 100) : 255
+    const fill = useDepthFill ? `rgb(${depthBrightness},${depthBrightness},${depthBrightness})` : 'none'
     return `<g>
-      <rect x="${b.sx - b.sw/2}" y="${b.sy}" width="${b.sw}" height="${b.sh}" fill="${fill}" stroke="${edgeColor}" stroke-width="3"/>
+      <rect x="${b.sx - b.sw/2}" y="${b.sy}" width="${b.sw}" height="${b.sh}" fill="${fill}" stroke="${edgeColor}" stroke-width="${edgeWidth}"/>
       ${windows}
       <!-- 옥상 -->
       <line x1="${b.sx - b.sw/2}" y1="${b.sy}" x2="${b.sx + b.sw/2}" y2="${b.sy}" stroke="${edgeColor}" stroke-width="2"/>
@@ -348,8 +352,10 @@ async function pollPrediction(id: string, token: string, timeout = 120000): Prom
 export async function runControlNetPipeline(input: ControlNetInput): Promise<ControlNetResult> {
   const startTime = Date.now()
 
-  // 1. 제어 이미지 생성
-  const mode = input.angle === 'birds-eye' ? 'depth' : 'canny'
+  // 1. 제어 이미지 생성 — Multi-ControlNet (depth+canny 합성)
+  // birds-eye: depth 단독 (위에서 내려다보는 배치도는 깊이맵이 효과적)
+  // 그 외: multi (깊이 채움 + 에지 라인 합성 → 형상+공간감 동시 전달)
+  const mode = input.angle === 'birds-eye' ? 'depth' : 'multi'
   const controlSvg = generateControlImage(input, mode)
   const controlPng = svgToPngBase64(controlSvg, 1024)
   if (!controlPng) throw new Error('Control image 생성 실패')
@@ -357,11 +363,14 @@ export async function runControlNetPipeline(input: ControlNetInput): Promise<Con
   // 2. 프롬프트 생성
   const prompt = buildControlNetPrompt(input)
 
-  // 3. 모델 선택 (angle에 따라)
+  // 3. 모델 선택 — multi/canny → flux-canny-pro (에지+톤 모두 인식)
   const model = mode === 'depth' ? 'flux-depth-pro' : 'flux-canny-pro'
 
   // 4. Replicate 호출
-  const result = await callReplicateControlNet(controlPng, prompt, { model })
+  const result = await callReplicateControlNet(controlPng, prompt, {
+    model,
+    guidance: mode === 'multi' ? 25 : 30,  // multi: 약간 낮은 guidance로 자연스러운 합성
+  })
 
   if (!result.imageUrl) throw new Error('이미지 URL 없음')
 
