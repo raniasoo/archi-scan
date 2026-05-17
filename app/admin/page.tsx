@@ -476,15 +476,17 @@ export default function AdminPage() {
                               💎 Enterprise
                             </button>
                           )}
-                          <div className="relative">
+                          <div className="relative inline-block">
                           <button
                             onClick={() => setResetMenuUser(resetMenuUser === p.id ? null : p.id)}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"
                           >
                             사용량 초기화 ▾
                           </button>
-                          {resetMenuUser === p.id && (
-                            <div className="absolute right-0 bottom-8 z-50 w-52 bg-card border border-border rounded-xl shadow-xl p-2 space-y-1">
+                          {resetMenuUser === p.id && (<>
+                            {/* 배경 오버레이 — 클릭 시 닫기 */}
+                            <div className="fixed inset-0 z-40" onClick={() => setResetMenuUser(null)} />
+                            <div className="absolute right-0 bottom-full mb-2 z-50 w-56 bg-card border border-border rounded-xl shadow-2xl p-2 space-y-1">
                               <p className="text-[10px] text-muted-foreground px-2 pb-1">초기화할 항목 선택</p>
                               {[
                                 { key: 'analysis', label: '📊 분석 사용량', desc: '월간 분석 횟수' },
@@ -513,7 +515,7 @@ export default function AdminPage() {
                                 </button>
                               </div>
                             </div>
-                          )}
+                          </>)}
                           </div>
                         </div>
                         <div className="text-[10px] text-muted-foreground/50 truncate">ID: {p.id}</div>
