@@ -12,18 +12,12 @@ export async function GET(req: NextRequest) {
 
   if (action === 'start') {
     console.log('[lora] Starting training:', zipUrl)
-    const r = await fetch('https://api.replicate.com/v1/models/ostris/flux-dev-lora-trainer/versions', {
-      headers: { 'Authorization': `Bearer ${TOKEN}` },
-    })
-    const versions = await r.json()
-    const latestVersion = versions.results?.[0]?.id
-    if (!latestVersion) return NextResponse.json({ error: 'version not found', versions })
-
-    const tr = await fetch(`https://api.replicate.com/v1/models/ostris/flux-dev-lora-trainer/versions/${latestVersion}/trainings`, {
+    // predictions 엔드포인트로 직접 실행 (destination 불필요)
+    const tr = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        destination: 'raniasoo/korean-architecture-lora',
+        version: 'd995297071a44dcb72244e6c19462111649ec86a9646c96b64f8fb248ab3526e',
         input: {
           input_images: zipUrl, trigger_word: 'korarch', autocaption: false,
           steps: 1000, lora_rank: 16, optimizer: 'adamw8bit', batch_size: 1,
@@ -38,14 +32,14 @@ export async function GET(req: NextRequest) {
 
   if (action === 'check') {
     const id = searchParams.get('id')!
-    const r = await fetch(`https://api.replicate.com/v1/trainings/${id}`, {
+    const r = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
       headers: { 'Authorization': `Bearer ${TOKEN}` },
     })
     const d = await r.json()
     return NextResponse.json({ id: d.id, status: d.status, output: d.output, error: d.error, logs: d.logs?.split('\n').slice(-5).join('\n') })
   }
 
-  const r = await fetch('https://api.replicate.com/v1/trainings', {
+  const r = await fetch('https://api.replicate.com/v1/predictions', {
     headers: { 'Authorization': `Bearer ${TOKEN}` },
   })
   const d = await r.json()
