@@ -203,6 +203,14 @@ export async function POST(req: NextRequest) {
     console.log(`[ControlNet] Prompt: ${fullPrompt.slice(0, 200)}...`)
     console.log(`[ControlNet] Control image size: ${Math.round(finalControlImage.length / 1024)}KB`)
 
+    // LoRA 설정 — 시점별 자동 조절
+    const TRAINED_LORA_URL = 'https://replicate.delivery/xezq/nu4MTnFJqxbVMRKZDQfOLJmUP6w5q4DBvSeG5jxVSfWn3rLtA/trained_model.tar'
+    const loraUrl = process.env.LORA_KOREAN_ARCH_URL || TRAINED_LORA_URL
+    const VIEW_LORA_SCALES: Record<string, number> = { 'eye-level': 0.7, 'entrance': 0.5, 'side': 0.6, 'birds-eye': 0.4 }
+    const loraScale = VIEW_LORA_SCALES[cameraAngle] ?? 0.6
+    const loraPrompt = `korarch style, ${fullPrompt}`
+    console.log(`[ControlNet] LoRA: ${cameraAngle} → scale=${loraScale}`)
+
     // Replicate prediction 생성 (models endpoint)
     const modelPath = model.replace('/', '/')  // e.g. black-forest-labs/flux-canny-pro
     const predictionRes = await fetch(`https://api.replicate.com/v1/models/${modelPath}/predictions`, {
@@ -214,7 +222,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         input: {
-          prompt: fullPrompt,
+          prompt: loraPrompt,
           control_image: controlImageUrl,
           guidance: guidance,
           num_inference_steps: steps,
@@ -222,6 +230,8 @@ export async function POST(req: NextRequest) {
           megapixels: megapixels,
           output_format: outputFormat,
           output_quality: 90,
+          extra_lora: loraUrl,
+          extra_lora_scale: loraScale,
         },
       }),
     })

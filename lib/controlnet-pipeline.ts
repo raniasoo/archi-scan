@@ -253,11 +253,22 @@ export async function callReplicateControlNet(
   const model = options.model || 'flux-canny-pro'
   const negPrompt = options.negativePrompt || 'blurry, low quality, cartoon, anime, illustration, watermark, text, deformed, ugly, bad architecture, wrong proportions'
 
-  // LoRA 설정 — 학습된 한국 건축 LoRA 적용 (2026-05-17 학습 완료)
+  // LoRA 설정 — 학습된 한국 건축 LoRA (2026-05-17 학습 완료)
+  // 시점별 자동 조절: eye-level 0.7 / entrance 0.5 / birds-eye 0.4
   const TRAINED_LORA_URL = 'https://replicate.delivery/xezq/nu4MTnFJqxbVMRKZDQfOLJmUP6w5q4DBvSeG5jxVSfWn3rLtA/trained_model.tar'
   const loraUrl = options.loraUrl || process.env.LORA_KOREAN_ARCH_URL || TRAINED_LORA_URL
-  const loraScale = options.loraScale ?? 0.8
+  
+  // 시점별 LoRA 가중치 — Street View 학습 데이터 특성 반영
+  const cameraAngle = (options as any).cameraAngle || 'eye-level'
+  const VIEW_LORA_SCALES: Record<string, number> = {
+    'eye-level': 0.7,   // 학습 데이터와 동일 시점 → 강하게 적용
+    'entrance': 0.5,    // 1층 클로즈업 → 중간
+    'side': 0.6,        // 측면 → 중간+
+    'birds-eye': 0.4,   // 조감도 → 약하게 (학습 데이터 없는 시점)
+  }
+  const loraScale = options.loraScale ?? VIEW_LORA_SCALES[cameraAngle] ?? 0.6
   const loraPrompt = loraUrl ? `korarch style, ${prompt}` : prompt  // trigger word 자동 추가
+  console.log(`[ControlNet] LoRA: ${cameraAngle} → scale=${loraScale}`)
 
   // 모델별 엔드포인트/파라미터
   const configs: Record<string, { url: string; input: any }> = {

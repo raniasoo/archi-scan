@@ -291,7 +291,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
         
         // ★ ControlNet 엔진 — 3D 캡처를 Supabase Storage에 업로드 후 URL 전송
         if (renderEngine === 'controlnet' && angle !== 'interior') {
-          setRenderProgress('🎯 ControlNet 정밀 렌더링 중...')
+          setRenderProgress('✨ ControlNet + LoRA 고품질 렌더링 중...')
           const bestCapture = threeJsCaptures.find(c => c.angle === angle) || threeJsCaptures[0]
           
           if (!bestCapture?.image) {
@@ -360,7 +360,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               }
               
               // ━━━ Step 2: URL만 API에 전송 (페이로드 < 10KB) ━━━
-              setRenderProgress('🎯 ControlNet 렌더링 중...')
+              setRenderProgress('✨ ControlNet + LoRA 렌더링 중...')
               const r = await fetch('/api/ai-render-controlnet', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -917,7 +917,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                 </button>
               </div>
             )}
-            {/* ★ 렌더링 엔진 선택 + 잔여 횟수 */}
+            {/* ★ 2단계 렌더링 파이프라인 */}
             {(() => {
               const usage = getRenderUsage()
               const limits = getRenderLimits('pro') // TODO: 실제 유저 tier
@@ -935,8 +935,8 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                     : 'bg-secondary/20 border border-border/30 text-muted-foreground hover:border-emerald-500/30'
                 }`}
               >
-                <span className="flex items-center gap-1.5">✨ Gemini</span>
-                <span className="text-[9px] opacity-70">빠름 · 5~15초</span>
+                <span className="flex items-center gap-1.5">⚡ 빠른 미리보기</span>
+                <span className="text-[9px] opacity-70">Gemini · 5~15초</span>
                 <span className={`text-[9px] mt-0.5 ${limits.gemini !== -1 && geminiUsed >= limits.gemini ? 'text-red-400' : 'opacity-50'}`}>{geminiLabel}</span>
               </button>
               <button
@@ -947,15 +947,18 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                     : 'bg-secondary/20 border border-border/30 text-muted-foreground hover:border-violet-500/30'
                 }`}
               >
-                <span className="flex items-center gap-1.5">🎯 ControlNet</span>
-                <span className="text-[9px] opacity-70">정밀 · 30~120초</span>
+                <span className="flex items-center gap-1.5">✨ 고품질 최종본</span>
+                <span className="text-[9px] opacity-70">ControlNet+LoRA · 30~60초</span>
                 <span className={`text-[9px] mt-0.5 ${limits.controlNet !== -1 && cnUsed >= limits.controlNet ? 'text-red-400' : 'opacity-50'}`}>{cnLabel}</span>
               </button>
             </div>
             </>)
             })()}
             {renderEngine === 'controlnet' && (
-              <p className="text-[9px] text-violet-400/70 mb-2">3D 모델의 건물 윤곽을 정확히 유지하며 포토리얼 변환합니다. Replicate API 키 필요.</p>
+              <p className="text-[9px] text-violet-400/70 mb-2">3D 도면 기반 ControlNet + 한국 건축 LoRA로 분양 브로셔급 정밀 렌더링을 생성합니다.</p>
+            )}
+            {renderEngine === 'gemini' && (
+              <p className="text-[9px] text-emerald-400/60 mb-2">배치안을 빠르게 비교한 뒤, 확정된 안은 고품질 최종본으로 전환하세요.</p>
             )}
             {/* 렌더링 버튼 (항상 보임) */}
             <div className="flex gap-2">
@@ -964,7 +967,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
                     ? 'bg-gradient-to-r from-violet-600 to-purple-600' 
                     : 'bg-gradient-to-r from-emerald-600 to-teal-600'
                 }`}>
-                {loading && !multiImages ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2` : '생성 중'}</> : renderEngine === 'controlnet' ? '🎯 ControlNet 렌더링' : '🎨 렌더링'}
+                {loading && !multiImages ? <><Loader2 className="h-4 w-4 animate-spin" />{retryCount > 0 ? `재시도 ${retryCount}/2` : '생성 중'}</> : renderEngine === 'controlnet' ? '✨ 고품질 렌더링' : '⚡ 렌더링'}
               </button>
               <button onClick={doMultiRender} disabled={loading} className="py-2.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1 relative" title="정면+조감+입구+인테리어 4장">
                 {loading && multiImages !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : '📐 4장'}
