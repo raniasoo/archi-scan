@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     // 모델 생성 시도
     const crR = await fetch('https://api.replicate.com/v1/models', {
       method: 'POST', headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ owner: acc.username, name: 'korean-arch-lora', description: 'Korean architecture LoRA', visibility: 'private', hardware: 'gpu-a40-small' }),
+      body: JSON.stringify({ owner: acc.username, name: 'korean-arch-lora', description: 'Korean architecture LoRA', visibility: 'private', hardware: 'gpu-t4' }),
     })
     const crD = await crR.json()
     
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     // 모델 생성 (이미 있으면 409 → 무시)
     await fetch('https://api.replicate.com/v1/models', {
       method: 'POST', headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ owner, name: modelName, description: 'Korean architecture LoRA', visibility: 'private', hardware: 'gpu-a40-small' }),
+      body: JSON.stringify({ owner, name: modelName, description: 'Korean architecture LoRA', visibility: 'private', hardware: 'gpu-t4' }),
     })
 
     // 트레이너 버전
