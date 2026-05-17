@@ -2761,6 +2761,9 @@ export default function ArchiScanPage() {
                   zoneName: regulation?.zoneType,
                   northShadow: true,
                   northShadowAngle: 45,
+                  frontSetback: regulation?.setbackFront ?? 3,
+                  sideSetback: regulation?.setbackSide ?? 1.5,
+                  rearSetback: regulation?.setbackRear ?? 2,
                 },
               }}
               onRenderComplete={setAiRenderImage}

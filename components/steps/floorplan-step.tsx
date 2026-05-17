@@ -316,12 +316,12 @@ export function FloorplanStep(props: FloorplanStepProps) {
 
           {/* 아이소메트릭 */}
           {drawingTab === "iso" && (
-            <IsometricView siteArea={renderData.siteArea} buildingCoverage={renderData.coverage} floors={renderData.floors} units={renderData.units} buildingCount={renderData.buildingCount} originalType={renderData.originalType} type={renderData.type} layoutName={renderData.layoutName} zoneType={renderData.zoneType} />
+            <IsometricView siteArea={renderData.siteArea} buildingCoverage={renderData.coverage} floors={renderData.floors} units={renderData.units} buildingCount={renderData.buildingCount} originalType={renderData.originalType} type={renderData.type} layoutName={renderData.layoutName} zoneType={renderData.zoneType} regulation={{ frontSetback: regulation?.setbackFront ?? 3, sideSetback: regulation?.setbackSide ?? 1.5, rearSetback: regulation?.setbackRear ?? 2 }} />
           )}
 
           {/* 투시도 */}
           {drawingTab === "perspective" && (
-            <PerspectiveView siteArea={renderData.siteArea} buildingCoverage={renderData.coverage} floors={renderData.floors} units={renderData.units} buildingCount={renderData.buildingCount} originalType={renderData.originalType} type={renderData.type} layoutName={renderData.layoutName} zoneType={renderData.zoneType} />
+            <PerspectiveView siteArea={renderData.siteArea} buildingCoverage={renderData.coverage} floors={renderData.floors} units={renderData.units} buildingCount={renderData.buildingCount} originalType={renderData.originalType} type={renderData.type} layoutName={renderData.layoutName} zoneType={renderData.zoneType} regulation={{ frontSetback: regulation?.setbackFront ?? 3, sideSetback: regulation?.setbackSide ?? 1.5, rearSetback: regulation?.setbackRear ?? 2 }} />
           )}
 
           {/* 단면도 */}

@@ -41,6 +41,12 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   const bH = geo.buildingHeight
   const fH = params.floorHeight || 3.3
 
+  // ★ 건물 위치 오프셋: 전면/후면 이격거리 차이 보정 (building-volume-3d.tsx와 동일)
+  const frontSB = params.regulation?.frontSetback ?? 3
+  const rearSB = params.regulation?.rearSetback ?? 2
+  const buildableOffsetX = 0 // 좌우 이격 대칭
+  const buildableOffsetZ = (rearSB - frontSB) / 2 // 전면/후면 이격 차이만큼 이동
+
   // 캔버스 + 렌더러
   const canvas = document.createElement('canvas')
   canvas.width = 800; canvas.height = 600
@@ -113,7 +119,7 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
       // 본체
       const boxGeo = new THREE.BoxGeometry(bW, bH, bD)
       const mesh = new THREE.Mesh(boxGeo, finalMat)
-      mesh.position.set(S * blk.x, bH / 2, S * blk.z)
+      mesh.position.set(S * blk.x + buildableOffsetX, bH / 2, S * blk.z + buildableOffsetZ)
       scene.add(mesh)
       // 에지
       scene.add(new THREE.LineSegments(
@@ -129,14 +135,14 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
             new THREE.BoxGeometry(bW * 0.85, 0.15, 1.2),
             balconyMat
           )
-          balcony.position.set(S * blk.x, f * fH, S * blk.z + bD/2 + 0.6)
+          balcony.position.set(S * blk.x + buildableOffsetX, f * fH, S * blk.z + buildableOffsetZ + bD/2 + 0.6)
           scene.add(balcony)
           // 난간
           const rail = new THREE.Mesh(
             new THREE.BoxGeometry(bW * 0.85, 1.0, 0.05),
             railMat
           )
-          rail.position.set(S * blk.x, f * fH + 0.5, S * blk.z + bD/2 + 1.15)
+          rail.position.set(S * blk.x + buildableOffsetX, f * fH + 0.5, S * blk.z + buildableOffsetZ + bD/2 + 1.15)
           scene.add(rail)
         }
       }
@@ -147,14 +153,14 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
           new THREE.BoxGeometry(bW + 0.4, 0.8, 0.08),
           railMat
         )
-        roofRail.position.set(S * blk.x, bH + 0.4, S * blk.z + bD/2 + 0.04)
+        roofRail.position.set(S * blk.x + buildableOffsetX, bH + 0.4, S * blk.z + buildableOffsetZ + bD/2 + 0.04)
         scene.add(roofRail)
         // 측면 난간
         const sideRail = new THREE.Mesh(
           new THREE.BoxGeometry(0.08, 0.8, bD + 0.4),
           railMat
         )
-        sideRail.position.set(S * blk.x + bW/2 + 0.04, bH + 0.4, S * blk.z)
+        sideRail.position.set(S * blk.x + buildableOffsetX + bW/2 + 0.04, bH + 0.4, S * blk.z + buildableOffsetZ)
         scene.add(sideRail)
       }
       
@@ -164,7 +170,7 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
           new THREE.BoxGeometry(Math.min(bW * 0.3, 4), 0.12, 1.8),
           new THREE.MeshStandardMaterial({ color: 0x506068, metalness: 0.3, roughness: 0.4 })
         )
-        canopy.position.set(S * blk.x, fH * 0.82, S * blk.z + bD/2 + 0.9)
+        canopy.position.set(S * blk.x + buildableOffsetX, fH * 0.82, S * blk.z + buildableOffsetZ + bD/2 + 0.9)
         scene.add(canopy)
       }
     }
@@ -201,11 +207,11 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   const isLShape = params.type === 'lshape' || params.originalType === 'lshape'
   const isCourtyard = params.type === 'courtyard' || params.originalType === 'courtyard'
 
-  // 바운딩 박스 (전체 건물)
+  // 바운딩 박스 (전체 건물 — buildableOffset 포함)
   let bbMinX = Infinity, bbMaxX = -Infinity, bbMinZ = Infinity, bbMaxZ = -Infinity
   for (const blk of geo.blocks) {
-    bbMinX = Math.min(bbMinX, S*blk.x - S*blk.w/2); bbMaxX = Math.max(bbMaxX, S*blk.x + S*blk.w/2)
-    bbMinZ = Math.min(bbMinZ, S*blk.z - S*blk.d/2); bbMaxZ = Math.max(bbMaxZ, S*blk.z + S*blk.d/2)
+    bbMinX = Math.min(bbMinX, S*blk.x + buildableOffsetX - S*blk.w/2); bbMaxX = Math.max(bbMaxX, S*blk.x + buildableOffsetX + S*blk.w/2)
+    bbMinZ = Math.min(bbMinZ, S*blk.z + buildableOffsetZ - S*blk.d/2); bbMaxZ = Math.max(bbMaxZ, S*blk.z + buildableOffsetZ + S*blk.d/2)
   }
   const bbW = bbMaxX - bbMinX, bbD = bbMaxZ - bbMinZ, bbCX = (bbMinX+bbMaxX)/2, bbCZ = (bbMinZ+bbMaxZ)/2
 

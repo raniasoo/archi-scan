@@ -15,6 +15,7 @@ interface CaptureParams {
   buildingCount?: number
   originalType?: string
   floorHeight?: number
+  regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number }
 }
 
 export async function captureBuilding3D(params: CaptureParams): Promise<{ angle: string; image: string }[]> {
@@ -62,9 +63,13 @@ export async function captureBuilding3D(params: CaptureParams): Promise<{ angle:
   // 건물 생성 — 모든 타입: 블록 기반 (SVG 도면과 100% 일치)
   const bldMat = new THREE.MeshStandardMaterial({ color: 0xe0e5ec, roughness: 0.3 })
 
+  // ★ buildableOffset: 전면/후면 이격 차이 보정 (building-volume-3d.tsx와 동일)
+  const buildableOffsetX = 0
+  const buildableOffsetZ = ((params.regulation?.rearSetback ?? 2) - (params.regulation?.frontSetback ?? 3)) / 2
+
   for (const blk of geo.blocks) {
     const bW = S * blk.w, bD = S * blk.d
-    const bX = S * blk.x, bZ = S * blk.z
+    const bX = S * blk.x + buildableOffsetX, bZ = S * blk.z + buildableOffsetZ
     const boxGeo = new THREE.BoxGeometry(bW, bH, bD)
     const mesh = new THREE.Mesh(boxGeo, bldMat)
     mesh.position.set(bX, bH / 2, bZ)
@@ -115,7 +120,7 @@ export async function captureBuilding3D(params: CaptureParams): Promise<{ angle:
     )
     // 정면(+Z 방향)에 라벨 배치
     const blk0 = geo.blocks[0]
-    fLabel.position.set(S * (blk0?.x || 0) - S * (blk0?.w || 0.3) * 0.3, f * fH + fH * 0.5, S * 0.4)
+    fLabel.position.set(S * (blk0?.x || 0) + buildableOffsetX - S * (blk0?.w || 0.3) * 0.3, f * fH + fH * 0.5, S * 0.4 + buildableOffsetZ)
     scene.add(fLabel)
   }
 

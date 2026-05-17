@@ -34,7 +34,7 @@ interface ConceptInput {
   cadastralMapUrl?: string
   streetViewUrls?: string[]
   sitePolygon?: number[][]
-  regulation?: { heightLimit?: number; farRatio?: number; zoneName?: string; northShadow?: boolean; northShadowAngle?: number; overlappingRegs?: string[] }
+  regulation?: { heightLimit?: number; farRatio?: number; zoneName?: string; northShadow?: boolean; northShadowAngle?: number; overlappingRegs?: string[]; frontSetback?: number; sideSetback?: number; rearSetback?: number }
 }
 
 export const STYLES = [
@@ -277,6 +277,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
               units: input.units,
               buildingCount: input.buildingCount,
               originalType: (input as any)._originalType || (input as any).originalType || input.buildingType,
+              regulation: input.regulation ? { frontSetback: input.regulation.frontSetback, sideSetback: input.regulation.sideSetback, rearSetback: input.regulation.rearSetback } : undefined,
             })
           }
           setRenderProgress('🎨 AI 포토리얼 변환 중...')
@@ -523,6 +524,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
             units: input.units,
             buildingCount: input.buildingCount,
             originalType: (input as any)._originalType || (input as any).originalType || input.buildingType,
+            regulation: input.regulation ? { frontSetback: input.regulation.frontSetback, sideSetback: input.regulation.sideSetback, rearSetback: input.regulation.rearSetback } : undefined,
           })
           console.log(`[MULTI] 3D captures: ${threeJsCaptures?.length}장`)
         }

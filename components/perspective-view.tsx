@@ -14,6 +14,7 @@ interface PerspectiveViewProps {
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   layoutName?: string
   zoneType?: string
+  regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number }
 }
 
 // 1점 투시 변환: 3D → 2D (소실점 기반)
@@ -93,7 +94,7 @@ function PerspCar({ x, depth, color = "#475569" }: { x: number; depth: number; c
   )
 }
 
-export function PerspectiveView({ siteArea, buildingCoverage, floors, units, buildingCount, originalType, type, layoutName, zoneType }: PerspectiveViewProps) {
+export function PerspectiveView({ siteArea, buildingCoverage, floors, units, buildingCount, originalType, type, layoutName, zoneType, regulation }: PerspectiveViewProps) {
   const W = 400, H = 400
   const floorH = Math.max(25, Math.min(45, 200 / Math.max(floors, 2))) // 층고 (px 스케일로 변환)
   const totalH = floors * floorH

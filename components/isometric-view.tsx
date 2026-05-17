@@ -14,6 +14,7 @@ interface IsometricViewProps {
   type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
   layoutName?: string
   zoneType?: string
+  regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number }
 }
 
 // 2D → 아이소메트릭 변환 (30도 축측투영)
@@ -90,7 +91,7 @@ function IsoCar({ x, y, color = "#475569" }: { x: number; y: number; color?: str
   )
 }
 
-export function IsometricView({ siteArea, buildingCoverage, floors, units, buildingCount, originalType, type, layoutName, zoneType }: IsometricViewProps) {
+export function IsometricView({ siteArea, buildingCoverage, floors, units, buildingCount, originalType, type, layoutName, zoneType, regulation }: IsometricViewProps) {
   const W = 520, H = 440
   const cx = W / 2, cy = H * 0.62
 
@@ -123,9 +124,15 @@ export function IsometricView({ siteArea, buildingCoverage, floors, units, build
       const scaleX = bW / S
       const scaleZ = bD / S
       
+      // ★ buildableOffset: 전면/후면 이격 차이 보정 (building-volume-3d.tsx와 동일)
+      const fSB = regulation?.frontSetback ?? 3
+      const rSB = regulation?.rearSetback ?? 2
+      const offsetX = 0
+      const offsetZ = (rSB - fSB) / 2 * scaleZ
+      
       return bm.map((b, i) => ({
-        x: b.centerXM * scaleX - b.widthM * scaleX / 2,
-        y: b.centerZM * scaleZ - b.depthM * scaleZ / 2,
+        x: b.centerXM * scaleX - b.widthM * scaleX / 2 + offsetX,
+        y: b.centerZM * scaleZ - b.depthM * scaleZ / 2 + offsetZ,
         w: b.widthM * scaleX,
         d: b.depthM * scaleZ,
         h: buildH,
