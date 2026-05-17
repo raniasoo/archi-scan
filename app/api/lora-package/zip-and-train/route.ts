@@ -8,9 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const archiver = require('archiver')
-import { Writable } from 'stream'
+import JSZip from 'jszip'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
@@ -61,12 +59,9 @@ export async function GET(req: NextRequest) {
     }
     const lines = captions.trim().split('\n').filter(l => l.trim())
 
-    // 3. ZIP 생성
-    const chunks: Buffer[] = []
-    const ws = new Writable({ write(c, _, cb) { chunks.push(Buffer.from(c)); cb() } })
-    const arc = archiver('zip', { zlib: { level: 3 } })
-    arc.pipe(ws)
-    arc.append(lines.join('\n'), { name: 'metadata.jsonl' })
+    // 3. ZIP 생성 (JSZip)
+    const zip = new JSZip()
+    zip.file('metadata.jsonl', lines.join('\n'))
 
     let added = 0
     for (let i = 0; i < images.length; i += 30) {
@@ -79,20 +74,18 @@ export async function GET(req: NextRequest) {
         } catch { return null }
       }))
       for (const d of dl) {
-        if (d && d.buf.length > 500) { arc.append(d.buf, { name: d.name }); added++ }
+        if (d && d.buf.length > 500) { zip.file(d.name, d.buf); added++ }
       }
       console.log(`[lora-zip] ${added}/${images.length}`)
     }
 
-    await arc.finalize()
-    await new Promise<void>(r => ws.on('finish', r))
-    const zip = Buffer.concat(chunks)
-    const mb = (zip.length / 1048576).toFixed(1)
+    const zipBuf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 3 } })
+    const mb = (zipBuf.length / 1048576).toFixed(1)
     console.log(`[lora-zip] ZIP: ${mb}MB, ${added} images`)
 
     // 4. 업로드
     const zipName = `lora-korean-arch.zip`
-    const { error: upErr } = await supabase.storage.from(BUCKET).upload(`${FOLDER}/${zipName}`, zip, { contentType: 'application/zip', upsert: true })
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(`${FOLDER}/${zipName}`, zipBuf, { contentType: 'application/zip', upsert: true })
     if (upErr) return NextResponse.json({ error: 'ZIP 업로드 실패', detail: upErr.message }, { status: 500 })
 
     const { data: urlD } = supabase.storage.from(BUCKET).getPublicUrl(`${FOLDER}/${zipName}`)
