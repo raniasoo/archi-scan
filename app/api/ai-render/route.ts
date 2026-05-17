@@ -592,7 +592,7 @@ export async function POST(req: NextRequest) {
         const aContext = angleToContext(a.angle)
         const aPatternPrompt = patternMatchResult ? buildContextualPatternPrompt(patternMatchResult, aContext, 10) : supabasePatternPrompt
         const aPrompt = buildArchitecturePrompt({
-          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, userBuildingCount, regulation, supabasePatternPrompt: aPatternPrompt
+          prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle: a.angle, sceneMode: a.scene, material, userBuildingCount, originalType, regulation, supabasePatternPrompt: aPatternPrompt
         })
         
         const parts: any[] = []
@@ -741,7 +741,7 @@ The entrance must use the SAME materials and style visible in the street-level i
     }
 
     const architecturePrompt = buildArchitecturePrompt({
-      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, regulation, polygonShapeDesc, supabasePatternPrompt
+      prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, originalType, regulation, polygonShapeDesc, supabasePatternPrompt
     })
 
     // Gemini API 호출 — 모델 fallback 체인
@@ -885,6 +885,7 @@ function buildArchitecturePrompt(params: {
   sceneMode?: string
   material?: { type?: string; color?: string; accent?: string }
   userBuildingCount?: number  // 사용자가 수동 입력한 동수
+  originalType?: string       // 클러스터 변환 전 원래 타입
   polygonShapeDesc?: string
   supabasePatternPrompt?: string
   // 법규 검토 데이터
@@ -900,7 +901,7 @@ function buildArchitecturePrompt(params: {
     zoneName?: string          // 용도지역 이름
   }
 }): string {
-  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, regulation, polygonShapeDesc, supabasePatternPrompt } = params
+  const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, material, userBuildingCount, originalType, regulation, polygonShapeDesc, supabasePatternPrompt } = params
 
   const styleMap: Record<string, string> = {
     'modern-luxury': '모던 럭셔리 스타일, 유리 커튼월, 알루미늄 패널, 고급 석재 마감',
