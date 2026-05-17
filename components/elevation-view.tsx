@@ -115,9 +115,24 @@ export function ElevationView({
         <line x1={bldX - 20} y1={groundY + 5} x2={bldX + bldW + 20} y2={groundY + 5}
           stroke="#fbbf24" strokeWidth="0.5" strokeDasharray="6 3" opacity="0.4" />
 
-        {/* 건물 본체 */}
-        <rect x={bldX} y={bldTopY} width={bldW} height={bldH}
-          fill="url(#elev-bld)" stroke="#475569" strokeWidth="0.8" />
+        {/* 건물 본체 — 다중 블록 프로필 */}
+        {bm.length > 1 ? (
+          // ━━━ ㄱ자/ㄷ자: 각 블록을 개별 직사각형으로 그림 ━━━
+          bm.map((b, i) => {
+            const minX = Math.min(...bm.map(bb => face === 'front' ? bb.centerXM - bb.widthM / 2 : bb.centerZM - bb.depthM / 2))
+            const blockFaceW = face === 'front' ? b.widthM : b.depthM
+            const blockFaceX = face === 'front' ? (b.centerXM - b.widthM / 2) : (b.centerZM - b.depthM / 2)
+            const bx = bldX + (blockFaceX - minX) * hScale
+            const bw = blockFaceW * hScale
+            return (
+              <rect key={`blk-${i}`} x={bx} y={bldTopY} width={bw} height={bldH}
+                fill="url(#elev-bld)" stroke="#475569" strokeWidth="0.8" />
+            )
+          })
+        ) : (
+          <rect x={bldX} y={bldTopY} width={bldW} height={bldH}
+            fill="url(#elev-bld)" stroke="#475569" strokeWidth="0.8" />
+        )}
 
         {/* 1층 (상가/로비) */}
         <rect x={bldX} y={groundY - gfH * vScale} width={bldW} height={gfH * vScale}
