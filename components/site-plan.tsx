@@ -122,8 +122,26 @@ export function SitePlan({
   const getBuildingShape = () => {
     const bW = bldZoneW * 0.85
     const bH = bldZoneH * 0.7
-    const bX = bldZoneX + (bldZoneW - bW) / 2
-    const bY = bldZoneY + (bldZoneH - bH) / 2
+    
+    // ━━━ 건축가능영역 무게중심 기준 배치 (불규칙 대지 대응) ━━━
+    // 바운딩 박스 중심 대신, 인셋 폴리곤의 무게중심을 건물 배치 기준점으로 사용
+    let anchorX: number, anchorY: number
+    if (svgPolyCoords.length > 2) {
+      // 인셋 폴리곤의 무게중심
+      const cx = svgPolyCoords.reduce((s, p) => s + p.x, 0) / svgPolyCoords.length
+      const cy = svgPolyCoords.reduce((s, p) => s + p.y, 0) / svgPolyCoords.length
+      const insetRatio = 1 - (avgSetback * svgScale * 2) / Math.max(siteW, siteH)
+      const safeRatio = Math.max(0.6, Math.min(0.95, insetRatio))
+      anchorX = cx  // 폴리곤 무게중심 X
+      anchorY = cy  // 폴리곤 무게중심 Y
+    } else {
+      anchorX = bldZoneX + bldZoneW / 2
+      anchorY = bldZoneY + bldZoneH / 2
+    }
+    
+    // 건물 배치 기준: 무게중심에서 건물 크기의 절반을 빼서 좌상단 계산
+    const bX = anchorX - bW / 2
+    const bY = anchorY - bH / 2
 
     // ━━━ building-geometry 블록 데이터 사용 (3D 모델과 동일) ━━━
     try {
@@ -141,12 +159,19 @@ export function SitePlan({
         const maxZ = Math.max(...bm.map((b: any) => b.centerZM + b.depthM / 2))
         const bbW = maxX - minX, bbH = maxZ - minZ
         
-        // SVG 좌표 스케일
+        // SVG 좌표 스케일 — 건축가능영역에 맞춤
         const scaleX = bW / Math.max(bbW, 1)
         const scaleZ = bH / Math.max(bbH, 1)
         const scale = Math.min(scaleX, scaleZ) * 0.9
-        const ofsX = bX + (bW - bbW * scale) / 2
-        const ofsY = bY + (bH - bbH * scale) / 2
+        let ofsX = bX + (bW - bbW * scale) / 2
+        let ofsY = bY + (bH - bbH * scale) / 2
+        
+        // ━━━ 건축가능영역 내부로 클램핑 ━━━
+        const totalBldW = bbW * scale, totalBldH = bbH * scale
+        if (ofsX < bldZoneX + 3) ofsX = bldZoneX + 3
+        if (ofsY < bldZoneY + 3) ofsY = bldZoneY + 3
+        if (ofsX + totalBldW > bldZoneX + bldZoneW - 3) ofsX = bldZoneX + bldZoneW - totalBldW - 3
+        if (ofsY + totalBldH > bldZoneY + bldZoneH - 3) ofsY = bldZoneY + bldZoneH - totalBldH - 3
         
         const shapes = bm.map((b: any, i: number) => ({
           x: ofsX + (b.centerXM - b.widthM / 2 - minX) * scale,
