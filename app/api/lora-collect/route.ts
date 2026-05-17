@@ -16,7 +16,9 @@ const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_KEY
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-import { TRAINING_POINTS, type TrainingPoint } from '@/lib/lora-training-data'
+import { TRAINING_POINTS, EXTRA_POINTS, type TrainingPoint } from '@/lib/lora-training-data'
+
+const ALL_TRAINING_POINTS = [...TRAINING_POINTS, ...EXTRA_POINTS]
 
 
 // 각 지점에서 3-4 방향으로 촬영하여 총 ~400장 확보
@@ -58,15 +60,15 @@ export async function GET(req: NextRequest) {
 
   if (mode === 'status') {
     return NextResponse.json({
-      totalPoints: TRAINING_POINTS.length,
-      totalImages: expandToMultiAngle(TRAINING_POINTS).length,
+      totalPoints: ALL_TRAINING_POINTS.length,
+      totalImages: expandToMultiAngle(ALL_TRAINING_POINTS).length,
       categories: {
-        villa: TRAINING_POINTS.filter(p => p.category === 'villa').length,
-        apartment: TRAINING_POINTS.filter(p => p.category === 'apartment').length,
-        commercial: TRAINING_POINTS.filter(p => p.category === 'commercial').length,
-        luxury: TRAINING_POINTS.filter(p => p.category === 'luxury').length,
-        officetel: TRAINING_POINTS.filter(p => p.category === 'officetel').length,
-        mixed: TRAINING_POINTS.filter(p => p.category === 'mixed').length,
+        villa: ALL_TRAINING_POINTS.filter(p => p.category === 'villa').length,
+        apartment: ALL_TRAINING_POINTS.filter(p => p.category === 'apartment').length,
+        commercial: ALL_TRAINING_POINTS.filter(p => p.category === 'commercial').length,
+        luxury: ALL_TRAINING_POINTS.filter(p => p.category === 'luxury').length,
+        officetel: ALL_TRAINING_POINTS.filter(p => p.category === 'officetel').length,
+        mixed: ALL_TRAINING_POINTS.filter(p => p.category === 'mixed').length,
       },
       apiKeySet: !!GOOGLE_MAPS_KEY,
       supabaseSet: !!SUPABASE_URL,
@@ -80,7 +82,7 @@ export async function GET(req: NextRequest) {
 
     const batch = parseInt(searchParams.get('batch') || '0')
     const batchSize = 20
-    const allImages = expandToMultiAngle(TRAINING_POINTS)
+    const allImages = expandToMultiAngle(ALL_TRAINING_POINTS)
     const start = batch * batchSize
     const end = Math.min(start + batchSize, allImages.length)
     const batchImages = allImages.slice(start, end)
@@ -124,7 +126,7 @@ export async function GET(req: NextRequest) {
 
   if (mode === 'captions') {
     // 전체 캡션 목록 (Replicate 학습용 metadata.jsonl 형식)
-    const allImages = expandToMultiAngle(TRAINING_POINTS)
+    const allImages = expandToMultiAngle(ALL_TRAINING_POINTS)
     const captions = allImages.map(img => ({
       file_name: `${img.imageId}.jpg`,
       text: img.caption,
@@ -168,7 +170,7 @@ export async function GET(req: NextRequest) {
       captions: '?mode=captions — 전체 캡션 목록 (학습용)',
       'train-config': '?mode=train-config — Replicate 학습 설정',
     },
-    총_지점: TRAINING_POINTS.length,
-    총_이미지: expandToMultiAngle(TRAINING_POINTS).length,
+    총_지점: ALL_TRAINING_POINTS.length,
+    총_이미지: expandToMultiAngle(ALL_TRAINING_POINTS).length,
   })
 }
