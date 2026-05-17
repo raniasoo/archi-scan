@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, buildingCount: userBuildingCount, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation, terrainInfo, referenceImage, threeJsCaptures, originalType } = await req.json()
+    const { prompt, style, address, layoutName, floors, units, siteArea, buildingType, buildingCount: userBuildingCount, coverage, strategy, values, patterns, surroundingContext, cameraAngle, sceneMode, satelliteUrl, cadastralMapUrl, streetViewUrls, sitePolygon, material, multiAngle, regulation, terrainInfo, referenceImage, threeJsCaptures, originalType: _rawOriginalType } = await req.json()
+    const originalType = _rawOriginalType || buildingType || 'tower'
     const ti = terrainInfo as { slopeDirection?: string; elevationDiff?: number; avgSlope?: number } | undefined
 
     // ━━━ Supabase 253패턴 자동 매칭 (모든 렌더링에 공통 적용) ━━━
