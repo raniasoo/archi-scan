@@ -126,17 +126,42 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const { 
-      controlImage,        // base64 data URL (Three.js 3D 캡처)
+      controlImage,        // base64 data URL (Three.js 3D 캡처) — 없으면 서버에서 생성
       controlMode = 'canny-pro' as ControlMode,
       prompt: userPrompt,
       address, layoutName, floors, units, siteArea, buildingType, 
       coverage, cameraAngle, sceneMode, material, surroundingContext,
       style, patterns, strategy, guidance = 30, steps = 50,
       megapixels = '1', outputFormat = 'png',
+      originalType, buildingCount, regulation,
     } = body
 
-    if (!controlImage) {
-      return NextResponse.json({ error: '3D 캡처 이미지(controlImage)가 필요합니다' }, { status: 400 })
+    // ★ 클라이언트 3D 캡처가 없으면 서버에서 building-geometry 기반 제어 이미지 생성
+    let finalControlImage = controlImage
+    if (!finalControlImage && siteArea && floors) {
+      try {
+        const { generateControlImage: genCtrl, svgToPngBase64: svg2png } = await import('@/lib/controlnet-pipeline')
+        const angleMap: Record<string, 'eye-level' | 'birds-eye' | 'entrance' | 'side'> = {
+          'eye-level': 'eye-level', 'birds-eye': 'birds-eye', 'entrance': 'entrance', 'side': 'side',
+        }
+        const ctrlMode = controlMode.includes('depth') ? 'depth' : 'canny'
+        const svg = genCtrl({
+          type: buildingType || 'tower', coverage: coverage || 50, siteArea, floors,
+          units, buildingCount, originalType,
+          angle: angleMap[cameraAngle] || 'eye-level', style, address, regulation,
+        }, ctrlMode as any)
+        const png = svg2png(svg, 1024)
+        if (png) {
+          finalControlImage = png
+          console.log(`[ControlNet] 서버 생성 제어 이미지 사용 (building-geometry ${ctrlMode})`)
+        }
+      } catch (e) {
+        console.warn('[ControlNet] 서버 제어 이미지 생성 실패:', e)
+      }
+    }
+
+    if (!finalControlImage) {
+      return NextResponse.json({ error: '3D 캡처 이미지(controlImage)가 필요합니다. 또는 siteArea, floors를 전달하면 서버에서 자동 생성합니다.' }, { status: 400 })
     }
 
     // 모델 결정
@@ -169,14 +194,14 @@ export async function POST(req: NextRequest) {
 
     // control_image 처리 — data URL → raw URL 업로드
     // Replicate는 base64 data URL을 직접 받거나 URL을 받음
-    let controlImageUrl = controlImage
-    if (controlImage.startsWith('data:')) {
+    let controlImageUrl = finalControlImage
+    if (finalControlImage.startsWith('data:')) {
       // Replicate API는 data URI를 직접 지원
-      controlImageUrl = controlImage
+      controlImageUrl = finalControlImage
     }
 
     console.log(`[ControlNet] Prompt: ${fullPrompt.slice(0, 200)}...`)
-    console.log(`[ControlNet] Control image size: ${Math.round(controlImage.length / 1024)}KB`)
+    console.log(`[ControlNet] Control image size: ${Math.round(finalControlImage.length / 1024)}KB`)
 
     // Replicate prediction 생성 (models endpoint)
     const modelPath = model.replace('/', '/')  // e.g. black-forest-labs/flux-canny-pro
