@@ -991,8 +991,10 @@ export default function ArchiScanPage() {
             floors: layout.floors,
             units: layout.units,
             siteArea: safeNumber(siteArea, 660),
-            buildingType: layout.type || 'tower',
+            buildingType: layout._originalType || layout.type || 'tower',
+            originalType: layout._originalType,
             coverage: layout.coverage,
+            buildingCount: layout.buildingCount,
             cameraAngle: 'eye-level',
             sceneMode: 'afternoon',
             regulation: {
@@ -2742,8 +2744,9 @@ export default function ArchiScanPage() {
                 roi: feasibilityResult?.roi || 0,
                 totalProjectCost: feasibilityResult?.totalCost || 0,
                 strategy,
-                buildingType: selectedLayoutData.type,
+                buildingType: selectedLayoutData._originalType || selectedLayoutData.type,
                 buildingCount: selectedLayoutData.buildingCount,
+                originalType: selectedLayoutData._originalType,
                 isMultiBuilding: selectedLayoutData.type === 'cluster' && (selectedLayoutData._originalType || selectedLayoutData.type) !== 'cluster',
                 values: userValues ? {
                   profitVsQuality: userValues.profitVsQuality,
