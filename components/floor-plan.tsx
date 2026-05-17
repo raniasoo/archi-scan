@@ -438,9 +438,37 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
               const r = toSvg(b.centerXM, b.centerZM, b.widthM, b.depthM)
               return (<g key={i}>
                 <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
-                {isGF ? (
+                {isGF ? (<g>
                   <rect x={r.x + 3} y={r.y + 3} width={r.w - 6} height={r.h - 6} fill={gfF} stroke={gfC} strokeWidth="1" rx="1" />
-                ) : (
+                  {/* 1F 상세: 상가 유닛 구분 */}
+                  {r.w > r.h ? (
+                    // 가로 블록 — 상가 유닛 나눔
+                    Array.from({ length: Math.min(3, Math.floor(r.w / 25)) }, (_, si) => {
+                      const uw = (r.w - 8) / Math.min(3, Math.floor(r.w / 25))
+                      return (<g key={`shop-${si}`}>
+                        <rect x={r.x + 4 + si * uw} y={r.y + 4} width={uw - 2} height={r.h - 8} fill={`${gfC}08`} stroke={gfC} strokeWidth="0.4" strokeDasharray="2 1" />
+                        <text x={r.x + 4 + si * uw + (uw - 2) / 2} y={r.y + r.h / 2} fontSize="5" textAnchor="middle" fill={gfC}>{gfL}{si + 1}</text>
+                        {/* 쇼윈도 마크 */}
+                        <rect x={r.x + 6 + si * uw} y={r.y + r.h - 5} width={uw - 6} height={2} fill={gfC} opacity="0.3" rx="0.5" />
+                      </g>)
+                    })
+                  ) : (
+                    // 세로 블록 — 로비 + 출입구
+                    <g>
+                      <rect x={r.x + 4} y={r.y + 4} width={r.w - 8} height={r.h * 0.4} fill="#06b6d410" stroke="#06b6d4" strokeWidth="0.5" rx="1" />
+                      <text x={r.x + r.w / 2} y={r.y + r.h * 0.2 + 2} fontSize="5.5" textAnchor="middle" fill="#06b6d4" fontWeight="500">로비</text>
+                      {/* 로비 데스크 */}
+                      <rect x={r.x + r.w / 2 - 5} y={r.y + r.h * 0.3} width={10} height={3} rx="1" fill="#06b6d420" stroke="#06b6d4" strokeWidth="0.3" />
+                      {/* 우편함 */}
+                      {r.w > 30 && <rect x={r.x + 6} y={r.y + 6} width={4} height={8} fill="#06b6d415" stroke="#06b6d4" strokeWidth="0.2" rx="0.5" />}
+                      {/* 하단 상가 */}
+                      <rect x={r.x + 4} y={r.y + r.h * 0.45} width={r.w - 8} height={r.h * 0.5} fill={`${gfC}08`} stroke={gfC} strokeWidth="0.4" />
+                      <text x={r.x + r.w / 2} y={r.y + r.h * 0.72} fontSize="5" textAnchor="middle" fill={gfC}>{gfL}</text>
+                      {/* 출입구 */}
+                      <rect x={r.x + r.w / 2 - 5} y={r.y + r.h - 4} width={10} height={4} fill="#2dd4bf40" rx="0.5" />
+                    </g>
+                  )}
+                </g>) : (
                   (() => {
                     // 날개 방향에 따라 세대 배치
                     const isVert = r.h > r.w
@@ -449,18 +477,18 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
                       const uh = (r.h - 6) / Math.max(nUnits, 1)
                       return Array.from({ length: Math.min(nUnits, 4) }, (_, j) => (
                         <UnitInterior key={j} x={r.x + 3} y={r.y + 3 + j * uh} w={r.w - 6} h={uh - 3}
-                          label={`${String.fromCharCode(65 + i * 4 + j)}호`} area={uA} color={c.p} compact={uh < 35} />
+                          label={`${String.fromCharCode(65 + i * 4 + j)}호`} area={uA} color={c.p} compact={uh < 20} />
                       ))
                     } else {
                       const uw = (r.w - 6) / Math.max(nUnits, 1)
                       return Array.from({ length: Math.min(nUnits, 4) }, (_, j) => (
                         <UnitInterior key={j} x={r.x + 3 + j * uw} y={r.y + 3} w={uw - 3} h={r.h - 6}
-                          label={`${String.fromCharCode(65 + i * 4 + j)}호`} area={uA} color={c.p} compact={uw < 35} />
+                          label={`${String.fromCharCode(65 + i * 4 + j)}호`} area={uA} color={c.p} compact={uw < 20} />
                       ))
                     }
                   })()
                 )}
-                {isGF && <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 3} fontSize="7" textAnchor="middle" fill={gfC}>{i === 0 ? '세대동' : gfL}</text>}
+                {isGF && i === 0 && <text x={r.x + r.w / 2} y={r.y - 3} fontSize="5" textAnchor="middle" fill={gfC} opacity="0.6">세대동</text>}
               </g>)
             })}
             {/* 코어 — 교차점 위치 */}
@@ -478,7 +506,7 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
             <rect x={ox + 45} y={oy + 135} width={210} height={40} fill="#64748b08" stroke="#64748b" strokeWidth="0.8" strokeDasharray="3" rx="1" />
             <text x={ox + 150} y={oy + 158} fontSize="8" textAnchor="middle" fill="#64748b">주차장</text>
           </>) : (<>
-            {(() => { const vN = Math.ceil(curU / 2), vh = Math.floor(120 / Math.max(vN, 1)); return Array.from({ length: Math.min(vN, 3) }, (_, i) => (<UnitInterior key={`v${i}`} x={ox + 3} y={oy + 3 + i * vh} w={74} h={vh - 4} label={`${String.fromCharCode(65 + i)}호`} area={uA} color={c.p} compact={vh < 35} />)) })()}
+            {(() => { const vN = Math.ceil(curU / 2), vh = Math.floor(120 / Math.max(vN, 1)); return Array.from({ length: Math.min(vN, 3) }, (_, i) => (<UnitInterior key={`v${i}`} x={ox + 3} y={oy + 3 + i * vh} w={74} h={vh - 4} label={`${String.fromCharCode(65 + i)}호`} area={uA} color={c.p} compact={vh < 20} />)) })()}
             <CoreBlock x={ox + 5} y={oy + 135} w={35} h={40} />
             {(() => { const vN = Math.ceil(curU / 2), hN = curU - vN, hw = Math.floor(210 / Math.max(hN, 1)); return Array.from({ length: Math.min(hN, 4) }, (_, i) => (<UnitInterior key={`h${i}`} x={ox + 45 + i * hw} y={oy + 135} w={hw - 4} h={40} label={`${String.fromCharCode(65 + vN + i)}호`} area={uA} color={c.p} compact />)) })()}
           </>)}
@@ -496,7 +524,7 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
             <text x={ox + bW/2} y={oy + 92} fontSize="8" textAnchor="middle" fill="#64748b">주차장</text>
             <rect x={ox + bW/2 - 10} y={oy + bH - 4} width={20} height={5} fill="#2dd4bf" rx="1" />
           </>) : (<>
-            {(() => { const n = Math.min(curU, 5), uw = Math.floor((bW - 10) / n); return Array.from({ length: n }, (_, i) => (<UnitInterior key={i} x={ox + 5 + i * uw} y={oy + 5} w={uw - 4} h={85} label={`${String.fromCharCode(65 + i)}호`} area={uA} color={c.p} mirror={i % 2 === 1} compact={uw < 45} />)) })()}
+            {(() => { const n = Math.min(curU, 5), uw = Math.floor((bW - 10) / n); return Array.from({ length: n }, (_, i) => (<UnitInterior key={i} x={ox + 5 + i * uw} y={oy + 5} w={uw - 4} h={85} label={`${String.fromCharCode(65 + i)}호`} area={uA} color={c.p} mirror={i % 2 === 1} compact={uw < 25} />)) })()}
             {curU > 5 && <text x={ox + bW/2} y={oy + 98} fontSize="6" textAnchor="middle" fill={c.p}>+ {curU - 5}세대</text>}
             <rect x={ox + 5} y={oy + 95} width={bW - 10} height={28} fill="#64748b10" stroke="#64748b" strokeWidth="0.5" />
             <CoreBlock x={ox + bW/2 - 25} y={oy + 98} w={50} h={22} />
@@ -548,13 +576,13 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
                       const uh = (r.h - 6) / n
                       return Array.from({ length: n }, (_, j) => (
                         <UnitInterior key={j} x={r.x + 3} y={r.y + 3 + j * uh} w={r.w - 6} h={uh - 3}
-                          label={`${String.fromCharCode(65 + i * n + j)}호`} area={uA} color={c.p} compact={uh < 30 || r.w - 6 < 30} />
+                          label={`${String.fromCharCode(65 + i * n + j)}호`} area={uA} color={c.p} compact={uh < 20 || r.w - 6 < 20} />
                       ))
                     }
                     const uw = (r.w - 6) / n
                     return Array.from({ length: n }, (_, j) => (
                       <UnitInterior key={j} x={r.x + 3 + j * uw} y={r.y + 3} w={uw - 3} h={r.h - 6}
-                        label={`${String.fromCharCode(65 + i * n + j)}호`} area={uA} color={c.p} compact={uw < 30 || r.h - 6 < 30} />
+                        label={`${String.fromCharCode(65 + i * n + j)}호`} area={uA} color={c.p} compact={uw < 20 || r.h - 6 < 20} />
                     ))
                   })()
                 )}

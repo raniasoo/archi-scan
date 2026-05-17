@@ -2578,8 +2578,8 @@ export default function ArchiScanPage() {
               <div className="flex items-center gap-3 text-[11px]">
                 {regulation && (
                   <>
-                    <span className="text-muted-foreground">건폐 <span className="text-foreground font-semibold">{regulation.maxCoverageRatio || 60}%</span></span>
-                    <span className="text-muted-foreground">용적 <span className="text-foreground font-semibold">{regulation.maxFloorAreaRatio || 200}%</span></span>
+                    <span className="text-muted-foreground">건폐 <span className="text-foreground font-semibold">{selectedLayoutData?.coverage || regulation.maxCoverageRatio || 60}%</span></span>
+                    <span className="text-muted-foreground">용적 <span className={`font-semibold ${selectedLayoutData && selectedLayoutData.gfa && siteArea ? (Math.round(selectedLayoutData.gfa / parseFloat(siteArea) * 100) > (regulation.maxFloorAreaRatio || 200) ? 'text-red-500' : 'text-foreground') : 'text-foreground'}`}>{selectedLayoutData && selectedLayoutData.gfa && siteArea ? Math.round(selectedLayoutData.gfa / parseFloat(siteArea) * 100) : (regulation.maxFloorAreaRatio || 200)}%</span></span>
                     <span className="text-muted-foreground">높이 <span className="text-foreground font-semibold">{regulation.maxHeight && Number(regulation.maxHeight) > 0 ? `${Number(regulation.maxHeight)}m` : '제한없음'}</span></span>
                   </>
                 )}
