@@ -197,71 +197,147 @@ export async function POST(req: NextRequest) {
     const bldgStroke = '#ff8c00'
     
     if (bt === 'lshape') {
-      // ㄱ자형: 다동일 수 있음 (대규모 대지)
-      const bldgCount = (units && floors && siteArea && siteArea > 1500 && units > 20) 
-        ? Math.max(2, Math.ceil(units / (6 * (floors || 3))))
-        : 1
-      
-      if (bldgCount <= 2) {
-        // 1-2동: 큰 L자 하나 또는 대칭 두 개
-        const wing1W = iw * 0.3, wing1H = ih * 0.7
-        const wing2W = iw * 0.7, wing2H = ih * 0.3
-        const ox = Math.min(...ixs) + iw * 0.1
-        const oy = Math.min(...iys) + ih * 0.1
-        return `
-  <rect x="${ox}" y="${oy}" width="${wing1W}" height="${wing1H}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
-  <rect x="${ox}" y="${oy + wing1H - wing2H}" width="${wing2W}" height="${wing2H}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
-  <text x="${ox + wing1W/2}" y="${oy + wing1H/2}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F</text>
-  <text x="${ox + wing2W/2}" y="${oy + wing1H - wing2H/2}" text-anchor="middle" fill="#fff" font-size="11" font-family="sans-serif">ㄱ-SHAPE</text>`
-      } else {
-        // 3동 이상: 작은 L자 여러개 배치
-        const cols = Math.min(bldgCount, 3)
-        const rows = Math.ceil(bldgCount / cols)
-        const cellW = iw * 0.75 / cols
-        const cellH = ih * 0.7 / rows
-        const startX = Math.min(...ixs) + iw * 0.12
-        const startY = Math.min(...iys) + ih * 0.15
-        let shapes = ''
-        let drawn = 0
-        for (let r = 0; r < rows && drawn < bldgCount; r++) {
-          for (let c = 0; c < cols && drawn < bldgCount; c++) {
-            const cx2 = startX + c * cellW + cellW * 0.1
-            const cy2 = startY + r * cellH + cellH * 0.1
-            const lw = cellW * 0.35, lh = cellH * 0.7, lw2 = cellW * 0.7, lh2 = cellH * 0.3
-            shapes += '<rect x="' + cx2 + '" y="' + cy2 + '" width="' + lw + '" height="' + lh + '" fill="' + bldgColor + '" stroke="' + bldgStroke + '" stroke-width="1.5" rx="1"/>'
-            shapes += '<rect x="' + cx2 + '" y="' + (cy2 + lh - lh2) + '" width="' + lw2 + '" height="' + lh2 + '" fill="' + bldgColor + '" stroke="' + bldgStroke + '" stroke-width="1.5" rx="1"/>'
-            drawn++
-          }
+      // ━━━ building-geometry 블록 기반 SVG (3D/SVG 도면과 100% 일치) ━━━
+      const geo = getBuildingDimensionsInMeters({
+        type: bt as any, coverage: coverage || 50, siteArea: siteArea || 500,
+        floors: f, buildingCount: userBuildingCount, originalType: originalType || bt,
+      })
+      const bm = geo.blocksInMeters
+      if (bm && bm.length > 0) {
+        // 블록 바운딩 박스 (미터)
+        let mMinX = Infinity, mMaxX = -Infinity, mMinZ = Infinity, mMaxZ = -Infinity
+        for (const b of bm) {
+          mMinX = Math.min(mMinX, b.centerXM - b.widthM / 2)
+          mMaxX = Math.max(mMaxX, b.centerXM + b.widthM / 2)
+          mMinZ = Math.min(mMinZ, b.centerZM - b.depthM / 2)
+          mMaxZ = Math.max(mMaxZ, b.centerZM + b.depthM / 2)
         }
-        return shapes + '<text x="' + icx + '" y="' + icy + '" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">' + f + 'F × ' + bldgCount + ' ㄱ</text>'
+        const mW = mMaxX - mMinX, mD = mMaxZ - mMinZ
+        // 건축 가능 영역(iw×ih)의 75%에 맞춰 스케일링
+        const fitScale = Math.min(iw * 0.75 / mW, ih * 0.75 / mD)
+        let shapes = ''
+        for (const b of bm) {
+          const rx = icx + (b.centerXM - (mMinX + mW / 2)) * fitScale - b.widthM * fitScale / 2
+          const ry = icy + (b.centerZM - (mMinZ + mD / 2)) * fitScale - b.depthM * fitScale / 2
+          const rw = b.widthM * fitScale, rh = b.depthM * fitScale
+          shapes += `<rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>`
+        }
+        shapes += `<text x="${icx}" y="${icy}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F</text>`
+        shapes += `<text x="${icx}" y="${icy + 16}" text-anchor="middle" fill="#fff" font-size="11" font-family="sans-serif">ㄱ-SHAPE</text>`
+        return shapes
       }
+      // fallback: geo 없으면 단순 사각형
+      const bs = Math.min(iw, ih) * 0.4
+      return `<rect x="${icx-bs/2}" y="${icy-bs/2}" width="${bs}" height="${bs}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
+  <text x="${icx}" y="${icy+4}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F</text>`
     } else if (bt === 'linear') {
-      // 판상형: 2-3동의 긴 직사각형이 평행 배치
-      const bldgCount = Math.max(2, Math.min(3, Math.ceil((units || 30) / ((floors || 3) * 12))))
-      const bw = iw * 0.85
-      const bh = ih * 0.15  // 얇은 직사각형
-      const gap = (ih * 0.7 - bh * bldgCount) / (bldgCount - 1 || 1)
-      const startY = Math.min(...iys) + ih * 0.15
-      const ox = icx - bw/2
-      let rects = ''
-      for (let i = 0; i < bldgCount; i++) {
-        const ry = startY + i * (bh + gap)
-        rects += '<rect x="' + ox + '" y="' + ry + '" width="' + bw + '" height="' + bh + '" fill="' + bldgColor + '" stroke="' + bldgStroke + '" stroke-width="2" rx="2"/>'
+      // ━━━ building-geometry 블록 기반 ━━━
+      const geo = getBuildingDimensionsInMeters({
+        type: bt as any, coverage: coverage || 50, siteArea: siteArea || 500,
+        floors: f, buildingCount: userBuildingCount, originalType: originalType || bt,
+      })
+      const bm = geo.blocksInMeters
+      if (bm && bm.length > 0) {
+        let mMinX = Infinity, mMaxX = -Infinity, mMinZ = Infinity, mMaxZ = -Infinity
+        for (const b of bm) {
+          mMinX = Math.min(mMinX, b.centerXM - b.widthM / 2)
+          mMaxX = Math.max(mMaxX, b.centerXM + b.widthM / 2)
+          mMinZ = Math.min(mMinZ, b.centerZM - b.depthM / 2)
+          mMaxZ = Math.max(mMaxZ, b.centerZM + b.depthM / 2)
+        }
+        const mW = mMaxX - mMinX, mD = mMaxZ - mMinZ
+        const fitScale = Math.min(iw * 0.75 / mW, ih * 0.75 / mD)
+        let shapes = ''
+        for (const b of bm) {
+          const rx = icx + (b.centerXM - (mMinX + mW / 2)) * fitScale - b.widthM * fitScale / 2
+          const ry = icy + (b.centerZM - (mMinZ + mD / 2)) * fitScale - b.depthM * fitScale / 2
+          shapes += `<rect x="${rx}" y="${ry}" width="${b.widthM * fitScale}" height="${b.depthM * fitScale}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>`
+        }
+        shapes += `<text x="${icx}" y="${icy}" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">${f}F × ${bm.length} LINEAR</text>`
+        return shapes
       }
-      return rects + '<text x="' + icx + '" y="' + (startY + (bldgCount * (bh + gap) - gap) / 2 + 4) + '" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">' + f + 'F × ' + bldgCount + ' LINEAR</text>'
+      // fallback
+      const bw = iw * 0.85, bh = ih * 0.15
+      return `<rect x="${icx-bw/2}" y="${icy-bh/2}" width="${bw}" height="${bh}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
+  <text x="${icx}" y="${icy+4}" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">${f}F LINEAR</text>`
     } else if (bt === 'courtyard') {
+      // ━━━ building-geometry 블록 기반 ━━━
+      const geo = getBuildingDimensionsInMeters({
+        type: bt as any, coverage: coverage || 50, siteArea: siteArea || 500,
+        floors: f, buildingCount: userBuildingCount, originalType: originalType || bt,
+      })
+      const bm = geo.blocksInMeters
+      if (bm && bm.length > 0) {
+        let mMinX = Infinity, mMaxX = -Infinity, mMinZ = Infinity, mMaxZ = -Infinity
+        for (const b of bm) {
+          mMinX = Math.min(mMinX, b.centerXM - b.widthM / 2)
+          mMaxX = Math.max(mMaxX, b.centerXM + b.widthM / 2)
+          mMinZ = Math.min(mMinZ, b.centerZM - b.depthM / 2)
+          mMaxZ = Math.max(mMaxZ, b.centerZM + b.depthM / 2)
+        }
+        const mW = mMaxX - mMinX, mD = mMaxZ - mMinZ
+        const fitScale = Math.min(iw * 0.75 / mW, ih * 0.75 / mD)
+        let shapes = ''
+        for (const b of bm) {
+          const rx = icx + (b.centerXM - (mMinX + mW / 2)) * fitScale - b.widthM * fitScale / 2
+          const ry = icy + (b.centerZM - (mMinZ + mD / 2)) * fitScale - b.depthM * fitScale / 2
+          shapes += `<rect x="${rx}" y="${ry}" width="${b.widthM * fitScale}" height="${b.depthM * fitScale}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>`
+        }
+        // 중정 표시 (블록 안쪽 공간)
+        shapes += `<text x="${icx}" y="${icy}" text-anchor="middle" fill="#22c55e" font-size="10" font-family="sans-serif">COURTYARD</text>`
+        shapes += `<text x="${icx}" y="${icy - 14}" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">${f}F</text>`
+        return shapes
+      }
+      // fallback
       const uw = iw * 0.7, uh = ih * 0.7, t = iw * 0.15
       const ox = icx - uw/2, oy = Math.min(...iys) + ih * 0.15
-      return `
-  <path d="M ${ox} ${oy} L ${ox+uw} ${oy} L ${ox+uw} ${oy+uh} L ${ox+uw-t} ${oy+uh} L ${ox+uw-t} ${oy+t} L ${ox+t} ${oy+t} L ${ox+t} ${oy+uh} L ${ox} ${oy+uh} Z" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2"/>
-  <text x="${icx}" y="${oy + t/2 + 4}" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">${f}F</text>
-  <text x="${icx}" y="${icy}" text-anchor="middle" fill="#22c55e" font-size="10" font-family="sans-serif">COURTYARD</text>`
+      return `<path d="M ${ox} ${oy} L ${ox+uw} ${oy} L ${ox+uw} ${oy+uh} L ${ox+uw-t} ${oy+uh} L ${ox+uw-t} ${oy+t} L ${ox+t} ${oy+t} L ${ox+t} ${oy+uh} L ${ox} ${oy+uh} Z" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2"/>
+  <text x="${icx}" y="${oy + t/2 + 4}" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">${f}F</text>`
     } else if (bt === 'tower') {
+      // ━━━ building-geometry 블록 기반 ━━━
+      const geo = getBuildingDimensionsInMeters({
+        type: bt as any, coverage: coverage || 50, siteArea: siteArea || 500,
+        floors: f, buildingCount: userBuildingCount, originalType: originalType || bt,
+      })
+      const bm = geo.blocksInMeters
+      if (bm && bm.length > 0) {
+        const b = bm[0]
+        const fitScale = Math.min(iw * 0.6 / b.widthM, ih * 0.6 / b.depthM)
+        const rw = b.widthM * fitScale, rh = b.depthM * fitScale
+        return `<rect x="${icx-rw/2}" y="${icy-rh/2}" width="${rw}" height="${rh}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
+  <text x="${icx}" y="${icy + 4}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F</text>`
+      }
       const bs = Math.min(iw, ih) * 0.4
-      return `
-  <rect x="${icx-bs/2}" y="${icy-bs/2}" width="${bs}" height="${bs}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
+      return `<rect x="${icx-bs/2}" y="${icy-bs/2}" width="${bs}" height="${bs}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="2" rx="2"/>
   <text x="${icx}" y="${icy + 4}" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="sans-serif">${f}F</text>`
     } else {
+      // cluster 및 기타 — building-geometry 블록 기반
+      const geo = getBuildingDimensionsInMeters({
+        type: (bt === 'cluster' ? 'cluster' : bt) as any, coverage: coverage || 50, siteArea: siteArea || 500,
+        floors: f, buildingCount: userBuildingCount, originalType: originalType || bt,
+      })
+      const bm = geo.blocksInMeters
+      if (bm && bm.length > 0) {
+        let mMinX = Infinity, mMaxX = -Infinity, mMinZ = Infinity, mMaxZ = -Infinity
+        for (const b of bm) {
+          mMinX = Math.min(mMinX, b.centerXM - b.widthM / 2)
+          mMaxX = Math.max(mMaxX, b.centerXM + b.widthM / 2)
+          mMinZ = Math.min(mMinZ, b.centerZM - b.depthM / 2)
+          mMaxZ = Math.max(mMaxZ, b.centerZM + b.depthM / 2)
+        }
+        const mW = mMaxX - mMinX, mD = mMaxZ - mMinZ
+        const fitScale = Math.min(iw * 0.75 / mW, ih * 0.75 / mD)
+        let shapes = ''
+        bm.forEach((b, i) => {
+          const rx = icx + (b.centerXM - (mMinX + mW / 2)) * fitScale - b.widthM * fitScale / 2
+          const ry = icy + (b.centerZM - (mMinZ + mD / 2)) * fitScale - b.depthM * fitScale / 2
+          shapes += `<rect x="${rx}" y="${ry}" width="${b.widthM * fitScale}" height="${b.depthM * fitScale}" fill="${bldgColor}" stroke="${bldgStroke}" stroke-width="1.5" rx="2"/>`
+          shapes += `<text x="${rx + b.widthM * fitScale / 2}" y="${ry + b.depthM * fitScale / 2 + 4}" text-anchor="middle" fill="#fff" font-size="9" font-family="sans-serif">${String.fromCharCode(65 + i)}</text>`
+        })
+        shapes += `<text x="${icx}" y="${icy - (mD * fitScale / 2) - 8}" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="sans-serif">${f}F × ${bm.length}</text>`
+        return shapes
+      }
+      // fallback
       const cols = 3, rows = 2
       const gx = iw * 0.08, gy = ih * 0.08
       const bw = (iw * 0.8 - gx * (cols-1)) / cols
