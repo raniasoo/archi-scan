@@ -361,10 +361,24 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     // 카메라 — 건물 크기 기준 줌 (대지가 아닌 건물에 맞춤)
     const bldgSpan = Math.max(bbW, bbD, bH) * 1.6
     const cam = new THREE.OrthographicCamera(-bldgSpan, bldgSpan, bldgSpan*0.7, -bldgSpan*0.5, 0.1, S*10)
-    // ㄱ자형: L의 안쪽(오목한 면)에서 보면 두 날개가 선명
-    const camX = (isLShape || isCourtyard) ? bbMinX - bbW*0.5 : bbMaxX + bbW*0.5
-    const camZ = (isLShape || isCourtyard) ? bbMaxZ + bbD*0.3 : bbMaxZ + bbD*0.3
-    cam.position.set(camX, bldgSpan*0.7, camZ); cam.lookAt(bbCX, bH*0.3, bbCZ)
+    if (isLShape) {
+      // ㄱ자형: 내부 오목면 45° — 두 날개 균형 있게 보이는 최적 각도
+      // 수직동 정면 + 수평동 측면이 동시에 보이도록 남서쪽 대각선 위치
+      const dist = Math.max(bbW, bbD) * 0.8
+      const camX = bbCX - dist * 0.65  // 왼쪽으로 (수직 날개 정면 보임)
+      const camZ = bbCZ + dist * 0.55  // 앞쪽으로 (수평 날개 측면 보임)
+      cam.position.set(camX, bldgSpan*0.65, camZ)
+      cam.lookAt(bbCX + bbW*0.05, bH*0.25, bbCZ - bbD*0.05) // 살짝 오른쪽+위로 바라봄
+    } else if (isCourtyard) {
+      // 중정형: ㄷ자 안쪽이 보이는 각도
+      const dist = Math.max(bbW, bbD) * 0.7
+      cam.position.set(bbCX - dist*0.5, bldgSpan*0.65, bbCZ + dist*0.6)
+      cam.lookAt(bbCX, bH*0.25, bbCZ)
+    } else {
+      const camX = bbMaxX + bbW*0.5
+      const camZ = bbMaxZ + bbD*0.3
+      cam.position.set(camX, bldgSpan*0.7, camZ); cam.lookAt(bbCX, bH*0.3, bbCZ)
+    }
     renderer.render(scene, cam)
     results.push({ type: 'isometric', label: '아이소메트릭', image: canvas.toDataURL('image/png') })
   }
@@ -480,9 +494,23 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     // 카메라 — 건물 크기 기준, ㄱ자형은 L 안쪽에서
     const cam = new THREE.PerspectiveCamera(40, 800/600, 0.1, S*10)
     const pDist = Math.max(bbW, bbD, bH) * 2.0
-    const pCamX = (isLShape || isCourtyard) ? bbMinX - pDist*0.3 : bbMaxX + pDist*0.3
-    const pCamZ = bbMaxZ + pDist*0.4
-    cam.position.set(pCamX, bH*1.0, pCamZ); cam.lookAt(bbCX, bH*0.3, bbCZ)
+    if (isLShape) {
+      // ㄱ자형: 내부 오목면에서 약 40° 대각선 — 두 날개 균형 + 원근감
+      const pCamX = bbCX - pDist * 0.35
+      const pCamZ = bbMaxZ + pDist * 0.45
+      cam.position.set(pCamX, bH*0.9, pCamZ)
+      cam.lookAt(bbCX + bbW*0.05, bH*0.25, bbCZ)
+    } else if (isCourtyard) {
+      const pCamX = bbMinX - pDist*0.25
+      const pCamZ = bbMaxZ + pDist*0.45
+      cam.position.set(pCamX, bH*1.0, pCamZ)
+      cam.lookAt(bbCX, bH*0.3, bbCZ)
+    } else {
+      const pCamX = bbMaxX + pDist*0.3
+      const pCamZ = bbMaxZ + pDist*0.4
+      cam.position.set(pCamX, bH*1.0, pCamZ)
+      cam.lookAt(bbCX, bH*0.3, bbCZ)
+    }
     renderer.render(scene, cam)
     results.push({ type: 'perspective', label: '투시도', image: canvas.toDataURL('image/png') })
   }
