@@ -46,3 +46,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, method: 'training', id: tD.id, status: tD.status, checkUrl: `?action=check&id=${tD.id}`, zipUrl: ZIP_URL })
   } catch (e) { return NextResponse.json({ error: String(e) }) }
 }
+// rebuild Sun May 17 11:26:09 UTC 2026
