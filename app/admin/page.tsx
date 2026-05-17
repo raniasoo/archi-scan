@@ -484,7 +484,7 @@ export default function AdminPage() {
                             사용량 초기화 ▾
                           </button>
                           {resetMenuUser === p.id && (
-                            <div className="absolute right-0 top-8 z-50 w-52 bg-card border border-border rounded-xl shadow-xl p-2 space-y-1">
+                            <div className="absolute right-0 bottom-8 z-50 w-52 bg-card border border-border rounded-xl shadow-xl p-2 space-y-1">
                               <p className="text-[10px] text-muted-foreground px-2 pb-1">초기화할 항목 선택</p>
                               {[
                                 { key: 'analysis', label: '📊 분석 사용량', desc: '월간 분석 횟수' },
