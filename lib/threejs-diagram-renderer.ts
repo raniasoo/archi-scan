@@ -46,48 +46,89 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   canvas.width = 800; canvas.height = 600
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, alpha: true })
   renderer.setSize(800, 600)
-  renderer.setClearColor(0xffffff, 1)
+  renderer.setClearColor(0x141a26, 1)
 
   const results: DiagramResult[] = []
 
-  // ━━━ 공통 장면 구성 함수 ━━━
-  function buildScene(bgColor: number = 0xffffff) {
+  // ━━━ 공통 장면 구성 함수 (다크 테마) ━━━
+  function buildScene(bgColor: number = 0x141a26) {
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(bgColor)
-    const amb = new THREE.AmbientLight(0xffffff, 0.7)
+    const amb = new THREE.AmbientLight(0x8899bb, 0.6)
     scene.add(amb)
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8)
+    const dir = new THREE.DirectionalLight(0xffeedd, 0.9)
     dir.position.set(S, S * 2, S)
     scene.add(dir)
+    const fill = new THREE.DirectionalLight(0x4466aa, 0.3)
+    fill.position.set(-S, S, -S)
+    scene.add(fill)
     return scene
   }
 
-  // ━━━ 건물 메쉬 생성 (공유) ━━━
-  // 모든 타입에서 geo.blocks 기반 BoxGeometry 사용 → SVG 도면과 100% 일치
-  function addBuilding(scene: any, mat: any) {
+  // ━━━ 창문 텍스처 생성 ━━━
+  function makeWindowTex(floorCount: number, cols: number = 6): HTMLCanvasElement {
+    const c = document.createElement('canvas')
+    c.width = 512; c.height = 512
+    const ctx = c.getContext('2d')!
+    // 벽체
+    ctx.fillStyle = '#c8d0d8'; ctx.fillRect(0, 0, 512, 512)
+    // 1층 상가 (오렌지)
+    const fh = 512 / floorCount
+    ctx.fillStyle = '#d4845a'; ctx.fillRect(0, 512 - fh, 512, fh)
+    // 상층 창문
+    const ww = Math.floor(512 / cols * 0.6), wh = Math.floor(fh * 0.55)
+    const gx = 512 / cols, gy = fh
+    for (let row = 0; row < floorCount - 1; row++) {
+      for (let col = 0; col < cols; col++) {
+        const wx = col * gx + (gx - ww) / 2
+        const wy = row * gy + (gy - wh) / 2
+        ctx.fillStyle = '#7aa4cc'; ctx.fillRect(wx, wy, ww, wh)
+        ctx.fillStyle = '#a0c4e4'; ctx.fillRect(wx + 2, wy + 2, ww - 4, wh / 2 - 2)
+      }
+    }
+    // 1층 상가 창문 (큰 유리)
+    for (let col = 0; col < Math.ceil(cols / 2); col++) {
+      const wx = col * (gx * 2) + gx * 0.2
+      const wy = 512 - fh + fh * 0.15
+      ctx.fillStyle = '#e8c070'; ctx.fillRect(wx, wy, gx * 1.6, fh * 0.65)
+    }
+    return c
+  }
+
+  // ━━━ 건물 메쉬 생성 (창문 텍스처 포함) ━━━
+  function addBuilding(scene: any, mat: any, useWindowTex: boolean = false) {
     for (const blk of geo.blocks) {
       const bW = S * blk.w, bD = S * blk.d
+      let finalMat = mat
+      if (useWindowTex) {
+        const cols = Math.max(3, Math.round(bW / 3))
+        const wTex = new THREE.CanvasTexture(makeWindowTex(params.floors, cols))
+        finalMat = new THREE.MeshStandardMaterial({
+          map: wTex, roughness: 0.3, metalness: 0.1,
+          color: 0xe0e5ec,
+        })
+      }
       const boxGeo = new THREE.BoxGeometry(bW, bH, bD)
-      const mesh = new THREE.Mesh(boxGeo, mat)
+      const mesh = new THREE.Mesh(boxGeo, finalMat)
       mesh.position.set(S * blk.x, bH / 2, S * blk.z)
       scene.add(mesh)
+      // 에지 (밝은 색)
       scene.add(new THREE.LineSegments(
         new THREE.EdgesGeometry(boxGeo),
-        new THREE.LineBasicMaterial({ color: 0x333333 })
+        new THREE.LineBasicMaterial({ color: 0x4a6080, transparent: true, opacity: 0.4 })
       ))
-      // 에지 위치 동기화
       const edges = scene.children[scene.children.length - 1]
       edges.position.copy(mesh.position)
     }
   }
 
-  // ━━━ 텍스트 라벨 생성 ━━━
-  function addLabel(scene: any, text: string, x: number, y: number, z: number, size: number = 2, color: string = '#333333') {
+  // ━━━ 텍스트 라벨 생성 (다크 테마용) ━━━
+  function addLabel(scene: any, text: string, x: number, y: number, z: number, size: number = 2, color: string = '#b0c0d0') {
     const c = document.createElement('canvas')
-    c.width = 256; c.height = 64
+    c.width = 512; c.height = 64
     const ctx = c.getContext('2d')!
     ctx.fillStyle = color; ctx.font = `bold ${Math.round(size * 8)}px sans-serif`
-    ctx.textAlign = 'center'; ctx.fillText(text, 128, 44)
+    ctx.textAlign = 'center'; ctx.fillText(text, 256, 44)
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }))
     sprite.position.set(x, y, z)
     sprite.scale.set(size * 3, size * 0.8, 1)
@@ -108,6 +149,16 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   const bldMat = new THREE.MeshStandardMaterial({ color: 0xc8d0d8, roughness: 0.4 })
   const typeKR: Record<string,string> = { tower:'타워형', linear:'판상형', lshape:'ㄱ자형', courtyard:'중정형', cluster:'클러스터형' }
   const typeLabel = typeKR[params.type] || params.type
+  const isLShape = params.type === 'lshape' || params.originalType === 'lshape'
+  const isCourtyard = params.type === 'courtyard' || params.originalType === 'courtyard'
+
+  // 바운딩 박스 (전체 건물)
+  let bbMinX = Infinity, bbMaxX = -Infinity, bbMinZ = Infinity, bbMaxZ = -Infinity
+  for (const blk of geo.blocks) {
+    bbMinX = Math.min(bbMinX, S*blk.x - S*blk.w/2); bbMaxX = Math.max(bbMaxX, S*blk.x + S*blk.w/2)
+    bbMinZ = Math.min(bbMinZ, S*blk.z - S*blk.d/2); bbMaxZ = Math.max(bbMaxZ, S*blk.z + S*blk.d/2)
+  }
+  const bbW = bbMaxX - bbMinX, bbD = bbMaxZ - bbMinZ, bbCX = (bbMinX+bbMaxX)/2, bbCZ = (bbMinZ+bbMaxZ)/2
 
   // ━━━ 알렉산더 패턴 시각 요소 추출 ━━━
   const pv = getPatternVisuals({
@@ -183,29 +234,36 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   // ① 배치도 (Site Plan) — 위에서 내려다 봄
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
-    const scene = buildScene(0xf5f5f0)
-    // 대지
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(S, S), new THREE.MeshStandardMaterial({ color: 0xe8e0d8 }))
+    const scene = buildScene(0x141a26)
+    // 대지 (다크)
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(S*1.3, S*1.3), new THREE.MeshStandardMaterial({ color: 0x1e2836, roughness: 0.9 }))
     ground.rotation.x = -Math.PI / 2; ground.position.y = -0.1; scene.add(ground)
-    // 대지 경계선
+    // 대지 경계선 (밝은 파란)
     const boundary = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a,b]) => new THREE.Vector3(a*S/2, 0.1, b*S/2))
-    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(boundary), new THREE.LineBasicMaterial({ color: 0x2266cc, linewidth: 2 })))
-    // 건물 (위에서 볼 건물 높이를 낮게)
-    const topMat = new THREE.MeshStandardMaterial({ color: 0x90a0b0, roughness: 0.3 })
-    addBuilding(scene, topMat)
-    // 도로
-    const road = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.2, params.regulation?.roadWidth || 6),
-      new THREE.MeshStandardMaterial({ color: 0x555555 }))
-    road.rotation.x = -Math.PI / 2; road.position.set(0, -0.05, S/2 + (params.regulation?.roadWidth || 6)/2 + 2); scene.add(road)
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(boundary), new THREE.LineBasicMaterial({ color: 0x3b82f6 })))
+    // 건물 (창문 텍스처)
+    addBuilding(scene, bldMat, true)
+    // 도로 (진한 회색 + 차선)
+    const roadW = params.regulation?.roadWidth || 8
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.3, roadW), new THREE.MeshStandardMaterial({ color: 0x2a2e38 }))
+    road.rotation.x = -Math.PI / 2; road.position.set(0, -0.05, S/2 + roadW/2 + 2); scene.add(road)
+    // 차선
+    const lane = new THREE.Mesh(new THREE.PlaneGeometry(S*0.9, 0.3), new THREE.MeshBasicMaterial({ color: 0xffcc00 }))
+    lane.rotation.x = -Math.PI / 2; lane.position.set(0, 0, S/2 + roadW/2 + 2); scene.add(lane)
+    // 조경 (나무)
+    const treeMat = new THREE.MeshStandardMaterial({ color: 0x2d7a2d })
+    for (const [tx, tz] of [[bbMinX - 3, bbMinZ], [bbMaxX + 2, bbCZ], [bbCX, bbMinZ - 3]] as [number,number][]) {
+      const canopy = new THREE.Mesh(new THREE.SphereGeometry(1.8, 8, 6), treeMat)
+      canopy.position.set(tx, 2.5, tz); scene.add(canopy)
+    }
     // 라벨
-    addLabel(scene, `${typeLabel} 배치도`, 0, bH + 3, -S/2 - 2, 2.5, '#333333')
-    addLabel(scene, 'N ↑', -S/2 + 2, bH + 2, -S/2 + 2, 2, '#2266cc')
-    addLabel(scene, '도로', 0, 1, S/2 + (params.regulation?.roadWidth || 6)/2 + 2, 1.5, '#666666')
+    addLabel(scene, `${typeLabel} 배치도`, 0, bH + 3, -S/2 - 2, 2.5, '#8ab4f8')
+    addLabel(scene, 'N ↑', S/2 - 2, bH + 2, -S/2 + 2, 2, '#34d399')
+    addLabel(scene, `도로 (${roadW}m)`, 0, 1, S/2 + roadW/2 + 2, 1.2, '#9ca3af')
     // 알렉산더 패턴 요소
     addPatternElements(scene, 'plan')
-    addPatternLabels(scene, -S/2 - 5, bH + 8, 0)
-    // 카메라 (위에서)
-    const cam = new THREE.OrthographicCamera(-S*0.8, S*0.8, S*0.6, -S*0.8, 0.1, S*10)
+    // 카메라
+    const cam = new THREE.OrthographicCamera(-S*0.85, S*0.85, S*0.6, -S*0.85, 0.1, S*10)
     cam.position.set(0, S * 2, 0.01); cam.lookAt(0, 0, 0)
     renderer.render(scene, cam)
     results.push({ type: 'site-plan', label: '배치도', image: canvas.toDataURL('image/png') })
@@ -215,153 +273,158 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   // ② 아이소메트릭 (Isometric) — 45도 경사
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
-    const scene = buildScene(0xf8f8ff)
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(S*1.5, S*1.5), new THREE.MeshStandardMaterial({ color: 0xd8e8d0 }))
+    const scene = buildScene(0x141a26)
+    // 지면 (다크)
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(S*2, S*2), new THREE.MeshStandardMaterial({ color: 0x1a2430 }))
     ground.rotation.x = -Math.PI / 2; scene.add(ground)
-    addBuilding(scene, bldMat)
-    
-    // 층 구분선 (건물 외벽에 수평선)
-    // 층 구분선 & 라벨 — 모든 블록에 대해 그리기
-    for (const blk of geo.blocks) {
-      const bkW = S * blk.w, bkD = S * blk.d
-      const bkX = S * blk.x, bkZ = S * blk.z
-      for (let f = 0; f <= params.floors; f++) {
-        const y = f * fH
-        // 정면 층 구분선
-        const pts1 = [new THREE.Vector3(bkX - bkW/2, y, bkZ + bkD/2 + 0.1), new THREE.Vector3(bkX + bkW/2, y, bkZ + bkD/2 + 0.1)]
-        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts1), new THREE.LineBasicMaterial({ color: 0x666666 })))
-        // 측면 층 구분선
-        const pts2 = [new THREE.Vector3(bkX + bkW/2 + 0.1, y, bkZ - bkD/2), new THREE.Vector3(bkX + bkW/2 + 0.1, y, bkZ + bkD/2)]
-        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), new THREE.LineBasicMaterial({ color: 0x666666 })))
-      }
-    }
-    
-    // 전체 건물 바운딩 박스 계산 (치수선·라벨용)
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity
-    for (const blk of geo.blocks) {
-      const bkX = S * blk.x, bkW = S * blk.w, bkZ = S * blk.z, bkD = S * blk.d
-      minX = Math.min(minX, bkX - bkW/2); maxX = Math.max(maxX, bkX + bkW/2)
-      minZ = Math.min(minZ, bkZ - bkD/2); maxZ = Math.max(maxZ, bkZ + bkD/2)
-    }
-    const totalW = maxX - minX, totalD = maxZ - minZ
-    
-    // 층수 라벨 (건물 우측에 크게)
+    // 대지 경계 (바닥 그리드)
+    const bndPts = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a,b]) => new THREE.Vector3(a*S/2, 0.05, b*S/2))
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(bndPts), new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.5 })))
+    // 건물 (창문 텍스처)
+    addBuilding(scene, bldMat, true)
+    // 도로
+    const roadW = params.regulation?.roadWidth || 8
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(S*1.5, roadW), new THREE.MeshStandardMaterial({ color: 0x2a2e38 }))
+    road.rotation.x = -Math.PI / 2; road.position.set(0, 0.02, S/2 + roadW/2 + 1); scene.add(road)
+    const lane = new THREE.Mesh(new THREE.PlaneGeometry(S*1.2, 0.2), new THREE.MeshBasicMaterial({ color: 0xffcc00 }))
+    lane.rotation.x = -Math.PI / 2; lane.position.set(0, 0.03, S/2 + roadW/2 + 1); scene.add(lane)
+    // 층수 라벨
     for (let f = 0; f < params.floors; f++) {
-      addLabel(scene, `${f+1}F`, maxX + 3, f * fH + fH/2, maxZ + 1, 2.5, '#2255aa')
+      addLabel(scene, `${f+1}F`, bbMaxX + 3, f * fH + fH/2, bbMaxZ + 1, 2, '#60a5fa')
     }
-    
     // 타이틀
-    addLabel(scene, `${typeLabel} · ${params.floors}층 ${params.units || 1}세대`, 0, bH + 5, 0, 3, '#222222')
-    
-    // 치수선 (전체 건물 범위 기준)
-    const dimOff = 5
-    addDimLine(scene, [minX, 0, maxZ + dimOff], [maxX, 0, maxZ + dimOff], `${totalW.toFixed(1)}m`)
-    addDimLine(scene, [maxX + dimOff, 0, minZ], [maxX + dimOff, 0, maxZ], `${totalD.toFixed(1)}m`)
-    addDimLine(scene, [maxX + dimOff + 2, 0, maxZ], [maxX + dimOff + 2, bH, maxZ], `H=${bH.toFixed(1)}m`, 2)
-    
-    // 건축면적 표시
-    const fpArea = Math.round(geo.totalFootprint)
-    addLabel(scene, `건축면적 ${fpArea}㎡`, 0, -2, maxZ + dimOff + 3, 2, '#006644')
-    
-    // 알렉산더 패턴 요소
+    addLabel(scene, `${typeLabel} · ${params.floors}층 ${params.units || 1}세대`, bbCX, bH + 5, bbCZ, 2.5, '#e0e8f0')
+    // 치수선
+    const dimOff = 4
+    addDimLine(scene, [bbMinX, 0, bbMaxZ + dimOff], [bbMaxX, 0, bbMaxZ + dimOff], `${bbW.toFixed(1)}m`)
+    addDimLine(scene, [bbMaxX + dimOff, 0, bbMinZ], [bbMaxX + dimOff, 0, bbMaxZ], `${bbD.toFixed(1)}m`)
+    addDimLine(scene, [bbMaxX + dimOff + 2, 0, bbMaxZ], [bbMaxX + dimOff + 2, bH, bbMaxZ], `H=${bH.toFixed(1)}m`, 2)
+    // 건축면적
+    addLabel(scene, `건축면적 ${Math.round(geo.totalFootprint)}㎡`, bbCX, -2, bbMaxZ + dimOff + 3, 1.8, '#34d399')
+    // 알렉산더 패턴
     addPatternElements(scene, 'iso')
-    addPatternLabels(scene, -S*0.6, bH + 8, -S*0.3)
-    
-    // 카메라 (아이소메트릭 — 약간 더 멀리)
-    const d = S * 1.5
+    // 카메라 — ㄱ자형은 두 날개가 모두 보이는 각도
+    const d = Math.max(S, bH) * 1.4
     const cam = new THREE.OrthographicCamera(-d, d, d*0.7, -d*0.5, 0.1, S*10)
-    cam.position.set(S*0.9, S*0.8, S*0.9); cam.lookAt(0, bH*0.3, 0)
+    // ㄱ자/중정형: 왼쪽 뒤에서 보면 두 날개가 모두 보임
+    const camAngle = (isLShape || isCourtyard) ? { x: -S*0.7, z: S*1.0 } : { x: S*0.9, z: S*0.9 }
+    cam.position.set(camAngle.x, S*0.8, camAngle.z); cam.lookAt(bbCX, bH*0.3, bbCZ)
     renderer.render(scene, cam)
     results.push({ type: 'isometric', label: '아이소메트릭', image: canvas.toDataURL('image/png') })
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ③ 단면도 (Section) — 옆에서 자른 단면
+  // ③ 단면도 (Section) — 다크 테마, 층별 색상
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
-    const scene = buildScene(0xffffff)
-    // 전체 건물 바운딩 박스 (단면 폭 계산)
-    let secMinX = Infinity, secMaxX = -Infinity
-    for (const blk of geo.blocks) {
-      const bkX = S * blk.x, bkW = S * blk.w
-      secMinX = Math.min(secMinX, bkX - bkW/2); secMaxX = Math.max(secMaxX, bkX + bkW/2)
+    const scene = buildScene(0x141a26)
+    const bW = bbW
+    // 건물 단면 — 층별 색상
+    for (let f = 0; f < params.floors; f++) {
+      const isGround = f === 0
+      const floorColor = isGround ? 0xd4845a : 0x8090a8
+      const floorGeo = new THREE.PlaneGeometry(bW, fH)
+      const floorMesh = new THREE.Mesh(floorGeo, new THREE.MeshBasicMaterial({ color: floorColor, side: THREE.DoubleSide, transparent: true, opacity: 0.7 }))
+      floorMesh.position.set(bbCX, f * fH + fH/2, 0); scene.add(floorMesh)
+      // 윤곽선
+      scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(floorGeo), new THREE.LineBasicMaterial({ color: 0x4a6080 })))
+      scene.children[scene.children.length-1].position.copy(floorMesh.position)
+      // 층 라벨
+      addLabel(scene, `${f+1}F`, bbCX - bW/2 - 3, f*fH+fH/2, 0, 1.5, isGround ? '#f59e0b' : '#60a5fa')
+      // 층고 표시 (첫 층만)
+      if (f === 0) addLabel(scene, `1F ${(fH*1.3).toFixed(1)}m`, bbCX + bW/2 + 5, fH/2, 0, 1.2, '#f59e0b')
+      if (f === 1) addLabel(scene, `기준층 ${fH.toFixed(1)}m`, bbCX + bW/2 + 5, f*fH+fH/2, 0, 1.2, '#9ca3af')
     }
-    const bW = secMaxX - secMinX
-    // 건물 단면 (직사각형으로 표현)
-    const secGeo = new THREE.PlaneGeometry(bW, bH)
-    const secMat = new THREE.MeshBasicMaterial({ color: 0xd0d8e0, side: THREE.DoubleSide })
-    const secMesh = new THREE.Mesh(secGeo, secMat)
-    secMesh.position.set(0, bH/2, 0); scene.add(secMesh)
-    // 윤곽선
-    scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(secGeo), new THREE.LineBasicMaterial({ color: 0x333333 })))
-    scene.children[scene.children.length-1].position.copy(secMesh.position)
-    // 층 구분선
-    for (let f = 0; f <= params.floors; f++) {
-      const y = f * fH
-      const pts = [new THREE.Vector3(-bW/2, y, 0), new THREE.Vector3(bW/2, y, 0)]
-      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
-        new THREE.LineBasicMaterial({ color: f === 0 ? 0x333333 : 0x999999 })))
-      if (f < params.floors) addLabel(scene, `${f+1}F`, -bW/2-3, y+fH/2, 0, 1.5, '#555555')
-    }
-    // 지하 (해칭)
-    const ugGeo = new THREE.PlaneGeometry(bW * 0.8, fH * 0.8)
-    const ugMesh = new THREE.Mesh(ugGeo, new THREE.MeshBasicMaterial({ color: 0xeee8dd }))
-    ugMesh.position.set(0, -fH*0.5, 0); scene.add(ugMesh)
-    addLabel(scene, 'B1F 주차장', 0, -fH*0.5, 0, 1.2, '#886644')
+    // 옥상
+    const roofLine = [new THREE.Vector3(bbCX - bW/2, bH, 0), new THREE.Vector3(bbCX + bW/2, bH, 0)]
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(roofLine), new THREE.LineBasicMaterial({ color: 0x34d399 })))
+    addLabel(scene, '기계실', bbCX, bH + fH*0.3, 0, 1, '#6b7280')
+    // 지하
+    const ugGeo = new THREE.PlaneGeometry(bW * 0.85, fH * 0.8)
+    const ugMesh = new THREE.Mesh(ugGeo, new THREE.MeshBasicMaterial({ color: 0x2a3040, side: THREE.DoubleSide }))
+    ugMesh.position.set(bbCX, -fH*0.5, 0); scene.add(ugMesh)
+    scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(ugGeo), new THREE.LineBasicMaterial({ color: 0x4a5568 })))
+    scene.children[scene.children.length-1].position.copy(ugMesh.position)
+    addLabel(scene, 'B1F 주차장', bbCX, -fH*0.5, 0, 1.2, '#a78bfa')
     // 지면선
-    const glPts = [new THREE.Vector3(-bW, 0, 0), new THREE.Vector3(bW, 0, 0)]
-    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(glPts), new THREE.LineBasicMaterial({ color: 0x44aa44, linewidth: 2 })))
-    addLabel(scene, 'GL', bW+2, 0.5, 0, 1, '#44aa44')
+    const glPts = [new THREE.Vector3(bbCX - bW*0.8, 0, 0), new THREE.Vector3(bbCX + bW*0.8, 0, 0)]
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(glPts), new THREE.LineBasicMaterial({ color: 0x34d399 })))
+    addLabel(scene, 'GL', bbCX + bW*0.8 + 2, 0.5, 0, 1, '#34d399')
     // 높이 치수
-    addDimLine(scene, [bW/2+2, 0, 0], [bW/2+2, bH, 0], `${bH.toFixed(1)}m`, 1)
-    addLabel(scene, `단면도 · ${typeLabel}`, 0, bH+4, 0, 2, '#333333')
+    addDimLine(scene, [bbCX + bW/2+3, 0, 0], [bbCX + bW/2+3, bH, 0], `${bH.toFixed(1)}m`, 1)
+    // 도로면 표시
+    const roadLine = [new THREE.Vector3(bbCX + bW*0.6, 0, 0), new THREE.Vector3(bbCX + bW*0.8, 0, 0)]
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(roadLine), new THREE.LineBasicMaterial({ color: 0x6b7280 })))
+    addLabel(scene, `도로 ${(params.regulation?.roadWidth || 8)}m`, bbCX + bW*0.8 + 2, -0.5, 0, 1, '#6b7280')
+    addLabel(scene, `단면도 · ${typeLabel}`, bbCX, bH+4, 0, 2.2, '#e0e8f0')
     // 카메라
-    const cam = new THREE.OrthographicCamera(-bW*1.2, bW*1.2, bH*1.3, -fH*1.5, -10, 100)
-    cam.position.set(0, bH/2, 10); cam.lookAt(0, bH/2, 0)
+    const secScale = Math.max(bW, bH) * 1.3
+    const cam = new THREE.OrthographicCamera(-secScale, secScale, secScale*0.7, -secScale*0.4, -10, 100)
+    cam.position.set(bbCX, bH/2, 10); cam.lookAt(bbCX, bH/2, 0)
     renderer.render(scene, cam)
     results.push({ type: 'section', label: '단면도', image: canvas.toDataURL('image/png') })
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ④ 입면도 (Elevation) — 정면에서 봄
+  // ④ 입면도 (Elevation) — 다크 테마, 창문 텍스처
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
-    const scene = buildScene(0xffffff)
-    addBuilding(scene, new THREE.MeshStandardMaterial({ color: 0xd8dce0, roughness: 0.3 }))
-    // 지면선
-    const glPts = [new THREE.Vector3(-S*0.6, 0, S*0.4), new THREE.Vector3(S*0.6, 0, S*0.4)]
-    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(glPts), new THREE.LineBasicMaterial({ color: 0x44aa44 })))
+    const scene = buildScene(0x141a26)
+    addBuilding(scene, bldMat, true)
+    // 지면선 (초록)
+    const glPts = [new THREE.Vector3(-S*0.7, 0, bbMaxZ + 0.5), new THREE.Vector3(S*0.7, 0, bbMaxZ + 0.5)]
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(glPts), new THREE.LineBasicMaterial({ color: 0x34d399 })))
+    // 높이 제한선 (빨간 점선 — 캔버스 기반 대시)
+    const hlY = params.regulation?.roadWidth ? Math.min(30, params.regulation.roadWidth * 1.5 + 6) : 30
+    const hlPts = [new THREE.Vector3(-S*0.6, hlY, bbMaxZ + 0.5), new THREE.Vector3(S*0.6, hlY, bbMaxZ + 0.5)]
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(hlPts), new THREE.LineBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.5 })))
+    addLabel(scene, `높이한도 ${hlY}m`, S*0.4, hlY + 1.5, bbMaxZ + 0.5, 1.2, '#ef4444')
     // 층 라벨
     for (let f = 0; f < params.floors; f++) {
-      addLabel(scene, `${f+1}F`, -S*0.4, f*fH+fH/2, S*0.4, 1.2, '#555555')
+      addLabel(scene, `${f+1}F`, bbMinX - 3, f*fH+fH/2, bbMaxZ + 0.5, 1.2, '#60a5fa')
     }
-    addLabel(scene, `정면 입면도 · ${typeLabel}`, 0, bH+3, S*0.4, 2, '#333333')
-    // 카메라 (정면)
-    const cam = new THREE.OrthographicCamera(-S*0.7, S*0.7, bH*1.2, -fH, -S, S*3)
-    cam.position.set(0, bH*0.4, S*1.5); cam.lookAt(0, bH*0.4, 0)
+    addLabel(scene, `정면 입면도 · ${typeLabel}`, bbCX, bH+3, bbMaxZ + 0.5, 2.2, '#e0e8f0')
+    // 폭 치수
+    addDimLine(scene, [bbMinX, -1, bbMaxZ + 0.5], [bbMaxX, -1, bbMaxZ + 0.5], `${bbW.toFixed(1)}m`)
+    // 카메라 — ㄱ자형은 넓은 면(수평 날개)이 보이도록 정면
+    const elScale = Math.max(bbW, bH) * 1.1
+    const cam = new THREE.OrthographicCamera(-elScale, elScale, elScale*0.8, -elScale*0.2, -S*2, S*3)
+    cam.position.set(bbCX, bH*0.4, bbMaxZ + S*1.5); cam.lookAt(bbCX, bH*0.4, bbCZ)
     renderer.render(scene, cam)
     results.push({ type: 'elevation', label: '입면도', image: canvas.toDataURL('image/png') })
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⑤ 투시도 (Perspective) — 원근감
+  // ⑤ 투시도 (Perspective) — 다크 테마, 원근감
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
-    const scene = buildScene(0xeef2f8)
-    // 지면
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(S*3, S*3), new THREE.MeshStandardMaterial({ color: 0xd0dac0 }))
+    const scene = buildScene(0x141a26)
+    // 지면 (다크)
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(S*3, S*3), new THREE.MeshStandardMaterial({ color: 0x1a2430 }))
     ground.rotation.x = -Math.PI / 2; scene.add(ground)
-    addBuilding(scene, bldMat)
-    // 도로
-    const road = new THREE.Mesh(new THREE.PlaneGeometry(S*2, params.regulation?.roadWidth || 6),
-      new THREE.MeshStandardMaterial({ color: 0x444444 }))
-    road.rotation.x = -Math.PI / 2; road.position.set(0, 0.05, S/2+5); scene.add(road)
-    addLabel(scene, `투시도 · ${typeLabel} · ${params.floors}층 ${params.units || 1}세대`, 0, bH+4, 0, 2.5, '#333333')
-    // 알렉산더 패턴 요소
+    // 건물 (창문 텍스처)
+    addBuilding(scene, bldMat, true)
+    // 도로 + 차선
+    const roadW = params.regulation?.roadWidth || 8
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(S*2.5, roadW), new THREE.MeshStandardMaterial({ color: 0x2a2e38 }))
+    road.rotation.x = -Math.PI / 2; road.position.set(0, 0.02, S/2 + roadW/2 + 1); scene.add(road)
+    const lane = new THREE.Mesh(new THREE.PlaneGeometry(S*2, 0.2), new THREE.MeshBasicMaterial({ color: 0xffcc00 }))
+    lane.rotation.x = -Math.PI / 2; lane.position.set(0, 0.03, S/2 + roadW/2 + 1); scene.add(lane)
+    // 나무
+    const treeMat = new THREE.MeshStandardMaterial({ color: 0x2d7a2d })
+    for (const [tx, tz] of [[-S*0.35, S*0.15], [S*0.4, -S*0.2]] as [number,number][]) {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 2, 6), new THREE.MeshStandardMaterial({ color: 0x6b4423 }))
+      trunk.position.set(tx, 1, tz); scene.add(trunk)
+      const canopy = new THREE.Mesh(new THREE.SphereGeometry(2, 8, 6), treeMat)
+      canopy.position.set(tx, 3.5, tz); scene.add(canopy)
+    }
+    addLabel(scene, `투시도 · ${typeLabel}`, bbCX, bH+5, bbCZ, 2.5, '#e0e8f0')
+    // 알렉산더 패턴
     addPatternElements(scene, 'perspective')
-    // 카메라 (원근)
+    // 카메라 — ㄱ자형은 ㄱ 형태가 보이는 좌측 상단 뷰
     const cam = new THREE.PerspectiveCamera(35, 800/600, 0.1, S*10)
-    cam.position.set(S*0.6, bH*0.8, S*0.9); cam.lookAt(0, bH*0.25, 0)
+    const pCamX = (isLShape || isCourtyard) ? -S*0.5 : S*0.6
+    cam.position.set(pCamX, bH*0.9, S*1.0); cam.lookAt(bbCX, bH*0.25, bbCZ)
     renderer.render(scene, cam)
     results.push({ type: 'perspective', label: '투시도', image: canvas.toDataURL('image/png') })
   }
