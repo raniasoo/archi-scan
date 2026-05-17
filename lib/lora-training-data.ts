@@ -219,3 +219,68 @@ export const EXTRA_POINTS: TrainingPoint[] = [
 {lat:37.5845,lng:126.9834,category:'luxury',district:'종로구 가회동',caption:'Gahoe-dong luxury traditional hanok, fully restored with modern amenities, stone wall courtyard, traditional Korean roof tiles, Bukchon Hanok Village'},
 {lat:37.5289,lng:127.0534,category:'officetel',district:'강남구 대치동',caption:'Daechi-dong officetel, education district, 16-story tower, academy workers and students, study-focused amenities, Korean cram school neighborhood'},
 ]
+
+// ━━━ 추가 데이터 — 하이엔드 주택 + 추가 지역 (51개 → 총 250개) ━━━
+export const LUXURY_EXTRA: TrainingPoint[] = [
+// ★ 하이엔드 아파트 단지 (최신 트렌드)
+{lat:37.5335,lng:127.0028,category:'luxury',district:'용산구 한남동 한남더힐',caption:'Hannam The Hill luxury apartment complex, curved organic facade design, open balconies, premium landscaping, hilltop location, Han River view, Daewoo E&C built, ultra-premium Korean residential landmark'},
+{lat:37.5348,lng:127.0065,category:'luxury',district:'용산구 한남동 나인원한남',caption:'Nine One Hannam luxury apartment, 9 towers up to 9 floors, 185 exclusive units, penthouse and duplex units, gated community with gallery and restaurant, premium Han River view Korean luxury living'},
+{lat:37.5182,lng:127.0541,category:'luxury',district:'강남구 청담동 PH129',caption:'PH129 The Penthouse Cheongdam, ultra-luxury apartment with Han River view, duplex penthouse units up to 407sqm, premium materials, Cheongdam luxury brand street nearby, highest price Korean apartment'},
+{lat:37.5195,lng:127.0523,category:'luxury',district:'강남구 청담동 에테르노',caption:'Eterno Cheongdam luxury apartment, modern high-end residential, premium facade design, exclusive amenities, Cheongdam-dong luxury district, Korean ultra-premium housing'},
+{lat:37.5434,lng:127.0445,category:'luxury',district:'성동구 성수동 아크로서울포레스트',caption:'Acro Seoul Forest luxury apartment, premium high-rise overlooking Seoul Forest park, modern glass facade, rooftop garden, young affluent demographic, trendy Seongsu neighborhood'},
+{lat:37.5445,lng:127.0467,category:'luxury',district:'성동구 성수동 갤러리아포레',caption:'Galleria Foret luxury apartment in Seongsu, art-inspired design, gallery space in lobby, premium finishes, Seoul Forest proximity, cultural luxury living'},
+{lat:37.5456,lng:127.0423,category:'luxury',district:'성동구 성수동 트리마제',caption:'Trimage luxury apartment in Seongsu, triple tower design, premium river and forest views, high-end amenities, young executive housing, modern Korean luxury'},
+{lat:37.5078,lng:126.9912,category:'luxury',district:'서초구 반포동 아크로리버파크',caption:'Acro River Park luxury apartment, premium Han River front location, modern tower design, underground parking, community garden, Banpo premium address'},
+{lat:37.5067,lng:126.9889,category:'luxury',district:'서초구 반포동 레미안원베일리',caption:'Raemian One Bailey luxury apartment in Banpo, Samsung C&T premium brand, modern high-rise towers, Han River panoramic view, top Korean apartment complex'},
+{lat:37.5056,lng:126.9934,category:'luxury',district:'서초구 반포동 래미안원펜타스',caption:'Raemian One Pentas luxury apartment, newest Banpo premium complex, cutting-edge design, underground amenity floor, rooftop sky lounge, premium Korean living'},
+{lat:37.5323,lng:127.0045,category:'luxury',district:'용산구 한남동 브라이튼N40',caption:'Brighton N40 Hannam luxury residence, boutique high-end housing, modern minimalist facade, private garden, exclusive neighborhood near UN Village'},
+{lat:37.5312,lng:127.0078,category:'luxury',district:'용산구 한남동 파르크한남',caption:'Parc Hannam luxury apartment, European-style courtyard design, premium stone facade, manicured gardens, diplomatic quarter, exclusive Han-nam address'},
+{lat:37.5334,lng:127.0098,category:'luxury',district:'용산구 한남동 라테라스한남',caption:'La Terrace Hannam luxury residence, terraced hillside design, panoramic Han River views, private outdoor spaces, premium materials, exclusive gated community'},
+{lat:37.5201,lng:127.0512,category:'luxury',district:'강남구 청담동 마크힐스',caption:'Mark Hills Cheongdam luxury apartment, premium facade with stone cladding, penthouse units, Cheongdam luxury shopping nearby, high-net-worth residents'},
+{lat:37.5198,lng:127.0489,category:'luxury',district:'강남구 청담동 상지리츠카일룸',caption:'Sangji Ritz Carleum Cheongdam luxury, hotel-style service apartment, premium lobby, concierge service, Cheongdam brand street, Korean ultra-premium residential'},
+// ★ 평창동/성북동 고급주택 (도로변 좌표로 Street View 가능)
+{lat:37.5934,lng:126.9689,category:'luxury',district:'종로구 평창동 대로변',caption:'Pyeongchang-dong luxury residential street, high stone walls enclosing private mansions, mature pine trees visible above walls, security cameras, luxury SUVs, Bukhansan mountain backdrop, elite Seoul neighborhood'},
+{lat:37.5945,lng:126.9734,category:'luxury',district:'종로구 평창동 북악빌리지',caption:'Bukak Village Pyeongchang-dong luxury townhouse complex, modern Korean architecture, private gardens, mountain trail access, 4-unit exclusive development, premium materials'},
+{lat:37.5956,lng:126.9756,category:'luxury',district:'종로구 평창동 상부',caption:'Upper Pyeongchang-dong luxury area, large lot single family homes, traditional Korean pine gardens behind high walls, mountain panorama, quiet exclusive street'},
+{lat:37.5967,lng:126.9823,category:'luxury',district:'성북구 성북동 대사관로',caption:'Seongbuk-dong embassy road luxury residential, grand mansions behind stone walls, foreign embassy buildings, diplomatic quarter, classical architecture, old money Seoul neighborhood'},
+{lat:37.5978,lng:126.9867,category:'luxury',district:'성북구 성북동 선잠로',caption:'Seongbuk-dong Seonjam-ro luxury homes, traditional elite neighborhood, large estates with servant quarters, Korean-Western fusion mansions, century-old trees'},
+{lat:37.5312,lng:127.0123,category:'luxury',district:'용산구 한남동 UN빌리지',caption:'UN Village Hannam luxury residential, gated hilltop community, international-style mansions, panoramic Seoul and Han River views, embassy staff housing, exclusive address'},
+{lat:37.5323,lng:127.0134,category:'luxury',district:'용산구 UN빌리지 상부',caption:'Upper UN Village luxury houses, architect-designed residences, full glass facades with privacy screening, infinity pools visible, landscaped terraces, ultra-premium Seoul living'},
+// ★ 추가 빌라 (미커버 지역)
+{lat:37.5156,lng:127.0834,category:'villa',district:'송파구 석촌동',caption:'Seokchon-dong Korean villa near Lotte Tower, 4-story multi-family, modern renovation with stone accent, Seokchon Lake walking distance, premium Songpa area villa'},
+{lat:37.5445,lng:126.9445,category:'villa',district:'용산구 원효로',caption:'Wonhyo-ro Korean villa, 3-story walk-up near Yongsan station redevelopment area, aging building, construction activity nearby, transitioning neighborhood'},
+{lat:37.5567,lng:126.9567,category:'villa',district:'마포구 도화동',caption:'Dohwa-dong Korean villa, 4-story residential near Mapo station, recently renovated exterior, new windows, mixed age buildings on street'},
+{lat:37.6178,lng:127.0389,category:'villa',district:'성북구 하월곡동',caption:'Hawolgok-dong Korean villa near Korea University, 5-story student housing, many AC units, convenience store ground floor, steep hill road'},
+{lat:37.4912,lng:127.0712,category:'villa',district:'강남구 개포동',caption:'Gaepo-dong Korean villa amid redevelopment, old villas next to new apartment construction, transitioning area, demolition notices, mixed landscape'},
+{lat:37.5834,lng:127.0534,category:'villa',district:'동대문구 이문동',caption:'Imun-dong Korean villa near university, 4-story aging multi-family, affordable student housing, small convenience shops, quiet residential pocket'},
+{lat:37.4623,lng:127.0234,category:'villa',district:'서초구 내곡동',caption:'Naegok-dong Korean villa, 3-story suburban residential, near Umyeonsan mountain, new construction mixed with old, quiet area with nature access'},
+{lat:37.5089,lng:126.8456,category:'villa',district:'양천구 신월동',caption:'Sinwol-dong Korean villa, 4-story walk-up, affordable western Seoul housing, wide street, older neighborhood, practical design'},
+// ★ 추가 아파트 (최신 단지)
+{lat:37.5178,lng:127.0312,category:'apartment',district:'강남구 압구정동',caption:'Apgujeong-dong apartment complex awaiting redevelopment, classic 1970s Korean apartment, low-rise compared to surroundings, Hyundai apartment area, premium Gangnam address'},
+{lat:37.5234,lng:127.0756,category:'apartment',district:'강남구 일원동',caption:'Irwon-dong apartment complex near Samsung Medical Center, 20-story residential towers, well-established neighborhood, family-oriented community, southern Gangnam'},
+{lat:37.4978,lng:126.9267,category:'apartment',district:'동작구 흑석동',caption:'Heukseok-dong apartment, Chung-Ang University area, new redevelopment towers, Han River view from upper floors, student and family mixed neighborhood'},
+{lat:37.5723,lng:126.9623,category:'apartment',district:'용산구 효창동',caption:'Hyochang-dong apartment, mid-rise complex near Hyochang Park, older buildings with renovation potential, urban renewal candidate area'},
+{lat:37.6234,lng:127.0289,category:'apartment',district:'강북구 미아동',caption:'Mia-dong apartment complex, large-scale 1990s development, 15-story uniform towers, community park, neighborhood commercial, northern Seoul suburban apartment'},
+// ★ 추가 상가 (특화 상권)
+{lat:37.5234,lng:127.0478,category:'commercial',district:'강남구 역삼동 테헤란로',caption:'Teheran-ro Korean commercial, IT startup corridor, modern glass office buildings, franchise cafes at ground floor, business district commercial, tech worker area'},
+{lat:37.5145,lng:127.0612,category:'commercial',district:'강남구 삼성동 봉은사로',caption:'Bongeunsa-ro commercial building, COEX nearby, convention center area, international restaurants, business hotel ground floor, corporate event district'},
+{lat:37.5567,lng:126.9478,category:'commercial',district:'용산구 이촌동 상가',caption:'Ichon-dong neighborhood commercial, riverside area, Japanese restaurant street, quiet upscale commercial, diplomatic community shopping area'},
+{lat:37.5489,lng:126.9289,category:'commercial',district:'마포구 공덕동',caption:'Gongdeok-dong Korean commercial, triple subway station area, new mixed-use towers, franchise restaurants, office worker lunch crowd, transit hub commercial'},
+{lat:37.4956,lng:127.0612,category:'commercial',district:'강남구 대치동 학원가',caption:'Daechi-dong academy street commercial, Korean cram school district, hundreds of education academies, student-oriented shops, unique Korean commercial culture'},
+// ★ 추가 오피스텔
+{lat:37.5045,lng:127.0234,category:'officetel',district:'서초구 서초동 법조타운',caption:'Seocho legal district officetel, law firm workers housing, modern 18-story tower, professional amenities, Supreme Court neighborhood, Korean legal district'},
+{lat:37.5289,lng:127.0367,category:'officetel',district:'강남구 역삼동 스타트업',caption:'Yeoksam startup district officetel, co-living and co-working hybrid, modern glass tower, rooftop terrace, young entrepreneur housing, Korean tech startup culture'},
+// ★ 추가 혼합용도
+{lat:37.5134,lng:127.0567,category:'mixed',district:'강남구 삼성동 코엑스',caption:'COEX area mixed-use building, convention center district, hotel and retail at base, serviced apartment above, international business travelers, Korean MICE district'},
+{lat:37.5556,lng:126.9712,category:'mixed',district:'중구 남산',caption:'Namsan area mixed-use, boutique hotel and restaurant at ground floor, residential above, Namsan Tower view, traditional neighborhood with modern renovation, Seoul tourist area'},
+{lat:37.5078,lng:127.0312,category:'mixed',district:'서초구 서래마을',caption:'Seorae Village mixed-use, French community area, French bakery and restaurant at ground, residential above, European atmosphere in Seoul, international residential neighborhood'},
+]
+
+// 최종 5개 추가 → 총 250개
+export const FINAL_EXTRA: TrainingPoint[] = [
+{lat:37.5378,lng:127.0034,category:'luxury',district:'용산구 한남동 디에이치한남',caption:'DH Hannam redevelopment site, massive urban renewal project, 5988 units planned, construction cranes and fencing, future premium Korean apartment landmark, Hyundai Engineering'},
+{lat:37.5189,lng:127.0567,category:'luxury',district:'강남구 청담동 더갤러리파크',caption:'The Gallery Park Cheongdam luxury, art-integrated residential, gallery space ground floor, premium duplex units, Cheongdam art district, Korean cultural luxury'},
+{lat:37.5289,lng:126.9289,category:'villa',district:'마포구 아현동',caption:'Ahyeon-dong Korean villa, hillside walk-up being redeveloped, old villas beside new apartment towers, gentrifying neighborhood, dramatic urban transformation'},
+{lat:37.4189,lng:127.1289,category:'apartment',district:'성남시 분당구 백현동',caption:'Baekhyeon-dong Pangyo apartment, tech startup workers housing, modern 30-story towers, premium amenities, smart city infrastructure, Pangyo Techno Valley'},
+{lat:37.5834,lng:126.9178,category:'commercial',district:'서대문구 북아현뉴타운',caption:'Bugahyeon new town commercial, newly built mixed-use at redevelopment area, modern franchise shops, new residential towers above, Korean urban renewal commercial'},
+]

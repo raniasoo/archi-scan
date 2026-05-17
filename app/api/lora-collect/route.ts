@@ -16,9 +16,9 @@ const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_KEY
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-import { TRAINING_POINTS, EXTRA_POINTS, type TrainingPoint } from '@/lib/lora-training-data'
+import { TRAINING_POINTS, EXTRA_POINTS, LUXURY_EXTRA, FINAL_EXTRA, type TrainingPoint } from '@/lib/lora-training-data'
 
-const ALL_TRAINING_POINTS = [...TRAINING_POINTS, ...EXTRA_POINTS]
+const ALL_TRAINING_POINTS = [...TRAINING_POINTS, ...EXTRA_POINTS, ...LUXURY_EXTRA, ...FINAL_EXTRA]
 
 
 // 각 지점에서 3-4 방향으로 촬영하여 총 ~400장 확보
