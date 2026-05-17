@@ -491,8 +491,9 @@ export default function AdminPage() {
                               </button>
                               {resetMenuUser === p.id && (<>
                                 <div className="fixed inset-0 z-40" onClick={() => setResetMenuUser(null)} />
-                                <div className="absolute left-0 bottom-full mb-2 z-50 w-56 bg-card border border-border rounded-xl shadow-2xl p-2 space-y-1">
-                              <p className="text-[10px] text-muted-foreground px-2 pb-1">초기화할 항목 선택</p>
+                                <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-64 bg-card border border-border rounded-xl shadow-2xl p-3 space-y-1">
+                                <p className="text-xs font-semibold text-foreground px-1 pb-1">{p.name || p.email} 초기화</p>
+                                <p className="text-[10px] text-muted-foreground px-1 pb-2">초기화할 항목을 선택하세요</p>
                               {[
                                 { key: 'analysis', label: '📊 분석 사용량', desc: '월간 분석 횟수' },
                                 { key: 'render_gemini', label: '⚡ Gemini 렌더링', desc: '빠른 미리보기 횟수' },
