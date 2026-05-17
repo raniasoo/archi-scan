@@ -72,6 +72,7 @@ export default function AdminPage() {
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
   const [expandedInquiry, setExpandedInquiry] = useState<string | null>(null)
   const [replyNote, setReplyNote] = useState("")
+  const [resetMenuUser, setResetMenuUser] = useState<string | null>(null)
 
   // ━━━ 관리자 로그인 ━━━
   const [adminAuth, setAdminAuth] = useState(false)
@@ -475,16 +476,45 @@ export default function AdminPage() {
                               💎 Enterprise
                             </button>
                           )}
+                          <div className="relative">
                           <button
-                            onClick={async () => {
-                              if (!confirm(`${p.name || p.email}의 사용량을 초기화하시겠습니까?`)) return
-                              await adminFetch("PATCH", { type: "reset_usage", userId: p.id })
-                              fetchData()
-                            }}
+                            onClick={() => setResetMenuUser(resetMenuUser === p.id ? null : p.id)}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"
                           >
-                            사용량 초기화
+                            사용량 초기화 ▾
                           </button>
+                          {resetMenuUser === p.id && (
+                            <div className="absolute right-0 top-8 z-50 w-52 bg-card border border-border rounded-xl shadow-xl p-2 space-y-1">
+                              <p className="text-[10px] text-muted-foreground px-2 pb-1">초기화할 항목 선택</p>
+                              {[
+                                { key: 'analysis', label: '📊 분석 사용량', desc: '월간 분석 횟수' },
+                                { key: 'render_gemini', label: '⚡ Gemini 렌더링', desc: '빠른 미리보기 횟수' },
+                                { key: 'render_controlnet', label: '✨ ControlNet 렌더링', desc: '고품질 렌더링 횟수' },
+                              ].map(item => (
+                                <button key={item.key} onClick={async () => {
+                                  await adminFetch("PATCH", { type: "reset_usage", userId: p.id, targets: [item.key] })
+                                  setResetMenuUser(null)
+                                  fetchData()
+                                }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-secondary/50 text-left">
+                                  <div>
+                                    <div className="font-medium text-foreground">{item.label}</div>
+                                    <div className="text-[10px] text-muted-foreground">{item.desc}</div>
+                                  </div>
+                                </button>
+                              ))}
+                              <div className="border-t border-border/50 pt-1 mt-1">
+                                <button onClick={async () => {
+                                  if (!confirm(`${p.name || p.email}의 모든 사용량을 초기화하시겠습니까?`)) return
+                                  await adminFetch("PATCH", { type: "reset_usage", userId: p.id, targets: ['analysis', 'render_gemini', 'render_controlnet'] })
+                                  setResetMenuUser(null)
+                                  fetchData()
+                                }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-red-500/10 text-left text-red-400 font-medium">
+                                  🔄 전체 초기화
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          </div>
                         </div>
                         <div className="text-[10px] text-muted-foreground/50 truncate">ID: {p.id}</div>
                       </div>

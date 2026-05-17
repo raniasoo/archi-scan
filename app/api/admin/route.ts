@@ -172,29 +172,43 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
-    // ── 사용량 초기화 (렌더링 횟수 포함) ──
+    // ── 사용량 초기화 (항목 선택 가능) ──
     if (type === "reset_usage") {
-      const { userId } = body
+      const { userId, targets } = body
+      // targets: ['analysis', 'render_gemini', 'render_controlnet'] — 없으면 전체
       if (!userId) {
         return NextResponse.json({ error: "userId is required" }, { status: 400 })
       }
 
-      // 1. 기존 사용량 초기화
-      const { error } = await supabase.rpc('admin_update_profile', {
-        admin_secret: 'archiscan-admin-2026',
-        target_user_id: userId,
-        reset_usage: true,
-      })
+      const resetTargets: string[] = targets || ['analysis', 'render_gemini', 'render_controlnet']
+      const results: string[] = []
 
-      // 2. 렌더링 횟수도 초기화
-      await supabase.from("profiles").update({
-        render_gemini: 0,
-        render_controlnet: 0,
-        render_month: new Date().toISOString().slice(0, 7),
-      }).eq("id", userId)
+      // 1. 분석 사용량 초기화
+      if (resetTargets.includes('analysis')) {
+        const { error } = await supabase.rpc('admin_update_profile', {
+          admin_secret: 'archiscan-admin-2026',
+          target_user_id: userId,
+          reset_usage: true,
+        })
+        if (!error) results.push('분석 사용량')
+      }
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-      return NextResponse.json({ success: true, message: '사용량 + 렌더링 횟수 초기화 완료' })
+      // 2. 렌더링 횟수 초기화
+      const renderUpdate: Record<string, any> = {}
+      if (resetTargets.includes('render_gemini')) {
+        renderUpdate.render_gemini = 0
+        results.push('Gemini 렌더링')
+      }
+      if (resetTargets.includes('render_controlnet')) {
+        renderUpdate.render_controlnet = 0
+        results.push('ControlNet 렌더링')
+      }
+      if (Object.keys(renderUpdate).length > 0) {
+        renderUpdate.render_month = new Date().toISOString().slice(0, 7)
+        await supabase.from("profiles").update(renderUpdate).eq("id", userId)
+      }
+
+      return NextResponse.json({ success: true, message: `${results.join(', ')} 초기화 완료` })
     }
 
     // ── 공지사항 관리 ──
