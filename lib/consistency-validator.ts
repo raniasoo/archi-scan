@@ -151,7 +151,8 @@ export interface ConsistencyIssue {
   valueA: string | number             // A의 값
   valueB: string | number             // B의 값
   message: string                     // 설명
-  fix?: string                        // 자동 수정 제안
+  fix?: string                        // 수정 방법 안내
+  targetStep?: string                 // 수정을 위해 이동할 단계 (예: 'layouts', 'ai-hub')
 }
 
 export interface ConsistencyReport {
@@ -291,6 +292,8 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
           field: '동수',
           valueA: s.layout.buildingCount, valueB: s.aiRendering.buildingCount,
           message: `배치안 ${s.layout.buildingCount}동 ≠ AI 렌더링 ${s.aiRendering.buildingCount}동`,
+          fix: 'AI 탭에서 렌더링을 재생성하세요',
+          targetStep: 'ai-hub',
         })
       }
     }
@@ -318,6 +321,8 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
         field: '건폐율',
         valueA: s.layout.coverage, valueB: s.drawings.coverage,
         message: `배치안 건폐율 ${s.layout.coverage}% ≠ 도면 ${s.drawings.coverage}%`,
+          fix: '배치 탭에서 건폐율을 조정하세요',
+          targetStep: 'layouts',
       })
     }
     
@@ -387,6 +392,8 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
           field: '건축면적',
           valueA: Math.round(expectedFootprint), valueB: Math.round(geo.totalFootprint),
           message: `배치안 건축면적 ${Math.round(expectedFootprint)}㎡ vs 3D 지오메트리 ${Math.round(geo.totalFootprint)}㎡ (${Math.round(Math.abs(geo.totalFootprint - expectedFootprint) / expectedFootprint * 100)}% 차이)`,
+          fix: '배치 탭에서 건폐율/대지면적을 확인하세요',
+          targetStep: 'layouts',
         })
       }
     } catch { /* building-geometry 계산 실패 시 무시 */ }
@@ -408,6 +415,8 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
         field: '세대수',
         valueA: s.layout.units, valueB: fpTotalUnits,
         message: `배치안 ${s.layout.units}세대 vs 평면설계 ${fpTotalUnits}세대 (${Math.round(Math.abs(fpTotalUnits - s.layout.units) / s.layout.units * 100)}% 차이)`,
+          fix: '배치 탭에서 세대수를 조정하세요',
+          targetStep: 'layouts',
       })
     }
     
@@ -446,6 +455,8 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
         field: '세대수',
         valueA: s.layout.units, valueB: s.financial.units,
         message: `배치안 ${s.layout.units}세대 ≠ 사업성 ${s.financial.units}세대 → 분양수익 오차`,
+          fix: '배치안을 재선택하면 사업성이 자동 갱신됩니다',
+          targetStep: 'layouts',
       })
     }
   }
@@ -473,6 +484,8 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
           field: '사선제한 판정',
           valueA: '제약 있음', valueB: '제약 없음',
           message: `재검증 결과 사선제한이 실질적 제약인데 배치안에는 미반영 (${solarCheck.reductionPercent}% 감소)`,
+          fix: '배치 탭에서 층수를 낮추세요',
+          targetStep: 'layouts',
         })
       }
     }
@@ -544,6 +557,8 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
       field: '연면적 계산',
       valueA: Math.round(expectedGFA), valueB: Math.round(s.layout.gfa),
       message: `건폐율×층수로 계산한 연면적 ${Math.round(expectedGFA)}㎡ vs 배치안 표시 ${Math.round(s.layout.gfa)}㎡ (${Math.round(Math.abs(expectedGFA - s.layout.gfa) / expectedGFA * 100)}% 차이)`,
+          fix: '배치 탭에서 층수 또는 건폐율을 조정하세요',
+          targetStep: 'layouts',
     })
   }
   
@@ -556,6 +571,8 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
       field: '주차대수',
       valueA: requiredParking, valueB: s.layout.parking,
       message: `필요 주차 ${requiredParking}대 > 계획 ${s.layout.parking}대`,
+          fix: '배치 탭에서 주차대수를 확인하세요',
+          targetStep: 'layouts',
     })
   }
   
@@ -567,6 +584,8 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
       field: '_originalType',
       valueA: 'cluster', valueB: 'undefined',
       message: `클러스터 변환되었으나 _originalType이 없어 원래 배치유형을 알 수 없음`,
+          fix: '배치안을 재선택하면 자동으로 해결됩니다',
+          targetStep: 'layouts',
       fix: '클러스터 변환 전에 _originalType = layout.type 저장',
     })
   }

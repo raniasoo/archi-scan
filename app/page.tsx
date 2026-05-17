@@ -1721,19 +1721,26 @@ export default function ArchiScanPage() {
     const warnings = report.issues.filter(i => i.severity === 'warning')
     
     if (errors.length > 0) {
-      // 오류가 있으면 토스트로 경고 후 진행 (차단하지는 않음)
       const firstError = errors[0]
       toast.error(`⚠️ 데이터 불일치 ${errors.length}건 발견`, {
         description: firstError.message + (firstError.fix ? ` → ${firstError.fix}` : ''),
         duration: 6000,
+        action: firstError.targetStep ? {
+          label: '수정하러 가기',
+          onClick: () => setCurrentStep(firstError.targetStep!),
+        } : undefined,
       })
     } else if (warnings.length > 0) {
-      // 경고 내용을 구체적으로 표시
-      const warnMessages = warnings.slice(0, 3).map(w => `• ${w.message}`).join('\n')
-      const extra = warnings.length > 3 ? `\n외 ${warnings.length - 3}건` : ''
+      const first = warnings[0]
+      const fixText = first.fix ? `\n💡 ${first.fix}` : ''
+      const otherCount = warnings.length > 1 ? `\n외 ${warnings.length - 1}건` : ''
       toast.warning(`일관성 점수 ${report.score}점 · ${warnings.length}건 권장 수정`, {
-        description: warnMessages + extra,
-        duration: 6000,
+        description: `• ${first.message}${fixText}${otherCount}`,
+        duration: 8000,
+        action: first.targetStep ? {
+          label: '수정하기',
+          onClick: () => setCurrentStep(first.targetStep!),
+        } : undefined,
       })
     }
     
