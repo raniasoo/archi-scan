@@ -8,7 +8,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import archiver from 'archiver'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const archiver = require('archiver')
 import { Writable } from 'stream'
 
 export const maxDuration = 300
