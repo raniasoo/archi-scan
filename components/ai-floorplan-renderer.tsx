@@ -283,6 +283,22 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
   const buildingArea = footprint
   const useMap: Record<string, string> = { house: 'single-family', villa: 'multi-family', apartment: 'apartment', commercial: 'officetel' }
   
+  // ━━━ building-geometry Single Source of Truth ━━━
+  const geoWidth = (() => {
+    try {
+      const { getBuildingDimensionsInMeters } = require('@/lib/building-geometry')
+      const geo = getBuildingDimensionsInMeters({
+        type: props.type || 'tower', coverage: buildingCoverage || 50,
+        siteArea, floors, buildingCount: bc,
+      })
+      if (geo.blocksInMeters?.length > 0) {
+        const b = geo.blocksInMeters[0]
+        return { w: b.widthM, d: b.depthM }
+      }
+    } catch {}
+    return { w: Math.sqrt(buildingArea * 1.3), d: Math.sqrt(buildingArea / 1.3) }
+  })()
+
   const optimizedMix = useMemo(() => {
     try {
       return optimizeUnitMix({
@@ -290,8 +306,8 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
         totalUnits: unitsPerBuilding,
         floors,
         buildingArea,
-        buildingWidth: Math.sqrt(buildingArea * 1.3),
-        buildingDepth: Math.sqrt(buildingArea / 1.3),
+        buildingWidth: geoWidth.w,
+        buildingDepth: geoWidth.d,
         targetUnitSize: targetUnitSize || 'mixed',
         primaryOrientation: 'south',
         southOpen: true,
