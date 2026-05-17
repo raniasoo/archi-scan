@@ -109,6 +109,7 @@ const ReportStep = dynamic(() => import("@/components/steps/report-step").then(m
 const DataVerification = dynamic(() => import("@/components/data-verification").then(m => ({ default: m.DataVerification })), { loading: LoadingBox })
 const AIHub = dynamic(() => import("@/components/ai-hub").then(m => ({ default: m.AIHub })), { loading: LoadingBox })
 const EditorOverlay = dynamic(() => import("@/components/editor-overlay").then(m => ({ default: m.EditorOverlay })), { ssr: false })
+const CrossValidationPanel = dynamic(() => import("@/components/cross-validation-panel").then(m => ({ default: m.CrossValidationPanel })), { ssr: false })
 
 // ── 동적 임포트: 내보내기 함수 (사용 시에만 로드) ──
 const loadExportFunctions = () => import("@/lib/report-export")
@@ -2767,6 +2768,38 @@ export default function ArchiScanPage() {
               savedMultiImages={aiMultiImages}
               onMultiImagesComplete={setAiMultiImages}
               onInteriorComparisonComplete={setAiInteriorComparison}
+            />
+
+            {/* ④ 교차 검증 — SVG/3D ↔ AI 렌더링 일관성 */}
+            <CrossValidationPanel
+              svgParams={{
+                type: selectedLayoutData.type,
+                originalType: selectedLayoutData._originalType,
+                coverage: selectedLayoutData.coverage,
+                siteArea: siteAreaNum,
+                floors: selectedLayoutData.floors,
+                units: selectedLayoutData.units || 0,
+                buildingCount: selectedLayoutData.buildingCount,
+                parking: selectedLayoutData.parking,
+                gfa: selectedLayoutData.gfa,
+              }}
+              aiParams={{
+                buildingType: selectedLayoutData._originalType || selectedLayoutData.type,
+                originalType: selectedLayoutData._originalType,
+                coverage: selectedLayoutData.coverage,
+                siteArea: siteAreaNum,
+                floors: selectedLayoutData.floors,
+                units: selectedLayoutData.units || 0,
+                buildingCount: selectedLayoutData.buildingCount,
+              }}
+              regulation={{
+                maxCoverageRatio: regulation?.maxCoverageRatio,
+                maxFloorAreaRatio: regulation?.maxFloorAreaRatio,
+                maxHeight: regulation?.maxHeight,
+                maxFloors: regulation?.maxFloors,
+              }}
+              hasAiRender={!!aiRenderImage}
+              has3dCapture={true}
             />
 
             {/* 하단 CTA — 평면도 → 사업성 */}
