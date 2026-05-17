@@ -59,53 +59,16 @@ export async function captureBuilding3D(params: CaptureParams): Promise<{ angle:
     new THREE.LineBasicMaterial({ color: 0x60a5fa })
   ))
 
-  // 건물 생성 — L/U 단일 형태 또는 블록
-  const fp = Math.max(coverage, 20) / 100
+  // 건물 생성 — 모든 타입: 블록 기반 (SVG 도면과 100% 일치)
   const bldMat = new THREE.MeshStandardMaterial({ color: 0xe0e5ec, roughness: 0.3 })
 
-  const isLU = type !== 'cluster' && (type === 'lshape' || type === 'courtyard')
-  
-  if (isLU) {
-    const shape = new THREE.Shape()
-    if (type === 'lshape') {
-      const wt = Math.sqrt(fp) * 0.42 * S
-      const H = 0.4 * fp * S * S / wt
-      const V = 0.6 * fp * S * S / wt + wt
-      shape.moveTo(-H/2, V/2 - wt)
-      shape.lineTo(H/2 - wt, V/2 - wt)
-      shape.lineTo(H/2 - wt, -V/2)
-      shape.lineTo(H/2, -V/2)
-      shape.lineTo(H/2, V/2)
-      shape.lineTo(-H/2, V/2)
-      shape.closePath()
-    } else {
-      const wt = Math.sqrt(fp) * 0.33 * S
-      const totalW = 0.36 * fp * S * S / wt
-      const totalD = 0.32 * fp * S * S / wt + wt
-      shape.moveTo(-totalW/2, -totalD/2)
-      shape.lineTo(-totalW/2 + wt, -totalD/2)
-      shape.lineTo(-totalW/2 + wt, totalD/2 - wt)
-      shape.lineTo(totalW/2 - wt, totalD/2 - wt)
-      shape.lineTo(totalW/2 - wt, -totalD/2)
-      shape.lineTo(totalW/2, -totalD/2)
-      shape.lineTo(totalW/2, totalD/2)
-      shape.lineTo(-totalW/2, totalD/2)
-      shape.closePath()
-    }
-    const extGeo = new THREE.ExtrudeGeometry(shape, { depth: bH, bevelEnabled: false })
-    extGeo.rotateX(-Math.PI / 2)
-    const mesh = new THREE.Mesh(extGeo, bldMat)
+  for (const blk of geo.blocks) {
+    const bW = S * blk.w, bD = S * blk.d
+    const bX = S * blk.x, bZ = S * blk.z
+    const boxGeo = new THREE.BoxGeometry(bW, bH, bD)
+    const mesh = new THREE.Mesh(boxGeo, bldMat)
+    mesh.position.set(bX, bH / 2, bZ)
     scene.add(mesh)
-  } else {
-    // 블록 기반
-    for (const blk of geo.blocks) {
-      const bW = S * blk.w, bD = S * blk.d
-      const bX = S * blk.x, bZ = S * blk.z
-      const boxGeo = new THREE.BoxGeometry(bW, bH, bD)
-      const mesh = new THREE.Mesh(boxGeo, bldMat)
-      mesh.position.set(bX, bH / 2, bZ)
-      scene.add(mesh)
-    }
   }
 
   // 도로

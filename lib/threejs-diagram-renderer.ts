@@ -49,7 +49,6 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   renderer.setClearColor(0xffffff, 1)
 
   const results: DiagramResult[] = []
-  const fp = Math.max(params.coverage, 20) / 100
 
   // ━━━ 공통 장면 구성 함수 ━━━
   function buildScene(bgColor: number = 0xffffff) {
@@ -64,48 +63,21 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   }
 
   // ━━━ 건물 메쉬 생성 (공유) ━━━
+  // 모든 타입에서 geo.blocks 기반 BoxGeometry 사용 → SVG 도면과 100% 일치
   function addBuilding(scene: any, mat: any) {
-    const isLU = params.type !== 'cluster' && (params.type === 'lshape' || params.type === 'courtyard')
-    if (isLU) {
-      const shape = new THREE.Shape()
-      if (params.type === 'lshape') {
-        const wt = Math.sqrt(fp) * 0.42 * S
-        const H = 0.4 * fp * S * S / wt
-        const V = 0.6 * fp * S * S / wt + wt
-        shape.moveTo(-H/2, V/2 - wt); shape.lineTo(H/2 - wt, V/2 - wt)
-        shape.lineTo(H/2 - wt, -V/2); shape.lineTo(H/2, -V/2)
-        shape.lineTo(H/2, V/2); shape.lineTo(-H/2, V/2); shape.closePath()
-      } else {
-        const wt = Math.sqrt(fp) * 0.33 * S
-        const W = 0.36 * fp * S * S / wt, D = 0.32 * fp * S * S / wt + wt
-        shape.moveTo(-W/2, -D/2); shape.lineTo(-W/2+wt, -D/2)
-        shape.lineTo(-W/2+wt, D/2-wt); shape.lineTo(W/2-wt, D/2-wt)
-        shape.lineTo(W/2-wt, -D/2); shape.lineTo(W/2, -D/2)
-        shape.lineTo(W/2, D/2); shape.lineTo(-W/2, D/2); shape.closePath()
-      }
-      const extGeo = new THREE.ExtrudeGeometry(shape, { depth: bH, bevelEnabled: false })
-      extGeo.rotateX(-Math.PI / 2)
-      scene.add(new THREE.Mesh(extGeo, mat))
-      // 에지
+    for (const blk of geo.blocks) {
+      const bW = S * blk.w, bD = S * blk.d
+      const boxGeo = new THREE.BoxGeometry(bW, bH, bD)
+      const mesh = new THREE.Mesh(boxGeo, mat)
+      mesh.position.set(S * blk.x, bH / 2, S * blk.z)
+      scene.add(mesh)
       scene.add(new THREE.LineSegments(
-        new THREE.EdgesGeometry(extGeo),
-        new THREE.LineBasicMaterial({ color: 0x333333, linewidth: 1 })
+        new THREE.EdgesGeometry(boxGeo),
+        new THREE.LineBasicMaterial({ color: 0x333333 })
       ))
-    } else {
-      for (const blk of geo.blocks) {
-        const bW = S * blk.w, bD = S * blk.d
-        const boxGeo = new THREE.BoxGeometry(bW, bH, bD)
-        const mesh = new THREE.Mesh(boxGeo, mat)
-        mesh.position.set(S * blk.x, bH / 2, S * blk.z)
-        scene.add(mesh)
-        scene.add(new THREE.LineSegments(
-          new THREE.EdgesGeometry(boxGeo),
-          new THREE.LineBasicMaterial({ color: 0x333333 })
-        ))
-        // 에지 위치 동기화
-        const edges = scene.children[scene.children.length - 1]
-        edges.position.copy(mesh.position)
-      }
+      // 에지 위치 동기화
+      const edges = scene.children[scene.children.length - 1]
+      edges.position.copy(mesh.position)
     }
   }
 
@@ -249,38 +221,47 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     addBuilding(scene, bldMat)
     
     // 층 구분선 (건물 외벽에 수평선)
-    const blk0 = geo.blocks[0]
-    const bW = S * (blk0?.w || 0.5), bD = S * (blk0?.d || 0.5)
-    for (let f = 0; f <= params.floors; f++) {
-      const y = f * fH
-      // 정면 층 구분선
-      const pts1 = [new THREE.Vector3(-bW/2, y, bD/2 + 0.1), new THREE.Vector3(bW/2, y, bD/2 + 0.1)]
-      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts1), new THREE.LineBasicMaterial({ color: 0x666666 })))
-      // 측면 층 구분선
-      const pts2 = [new THREE.Vector3(bW/2 + 0.1, y, -bD/2), new THREE.Vector3(bW/2 + 0.1, y, bD/2)]
-      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), new THREE.LineBasicMaterial({ color: 0x666666 })))
+    // 층 구분선 & 라벨 — 모든 블록에 대해 그리기
+    for (const blk of geo.blocks) {
+      const bkW = S * blk.w, bkD = S * blk.d
+      const bkX = S * blk.x, bkZ = S * blk.z
+      for (let f = 0; f <= params.floors; f++) {
+        const y = f * fH
+        // 정면 층 구분선
+        const pts1 = [new THREE.Vector3(bkX - bkW/2, y, bkZ + bkD/2 + 0.1), new THREE.Vector3(bkX + bkW/2, y, bkZ + bkD/2 + 0.1)]
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts1), new THREE.LineBasicMaterial({ color: 0x666666 })))
+        // 측면 층 구분선
+        const pts2 = [new THREE.Vector3(bkX + bkW/2 + 0.1, y, bkZ - bkD/2), new THREE.Vector3(bkX + bkW/2 + 0.1, y, bkZ + bkD/2)]
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), new THREE.LineBasicMaterial({ color: 0x666666 })))
+      }
     }
     
-    // 층수 라벨 (건물 정면 우측에 크게 — 카메라에서 보이는 위치)
+    // 전체 건물 바운딩 박스 계산 (치수선·라벨용)
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity
+    for (const blk of geo.blocks) {
+      const bkX = S * blk.x, bkW = S * blk.w, bkZ = S * blk.z, bkD = S * blk.d
+      minX = Math.min(minX, bkX - bkW/2); maxX = Math.max(maxX, bkX + bkW/2)
+      minZ = Math.min(minZ, bkZ - bkD/2); maxZ = Math.max(maxZ, bkZ + bkD/2)
+    }
+    const totalW = maxX - minX, totalD = maxZ - minZ
+    
+    // 층수 라벨 (건물 우측에 크게)
     for (let f = 0; f < params.floors; f++) {
-      addLabel(scene, `${f+1}F`, bW/2 + 3, f * fH + fH/2, bD/2 + 1, 2.5, '#2255aa')
+      addLabel(scene, `${f+1}F`, maxX + 3, f * fH + fH/2, maxZ + 1, 2.5, '#2255aa')
     }
     
     // 타이틀
     addLabel(scene, `${typeLabel} · ${params.floors}층 ${params.units || 1}세대`, 0, bH + 5, 0, 3, '#222222')
     
-    // 치수선 (굵게, 건물에서 떨어진 위치)
-    // 가로 (건물 폭)
+    // 치수선 (전체 건물 범위 기준)
     const dimOff = 5
-    addDimLine(scene, [-bW/2, 0, bD/2 + dimOff], [bW/2, 0, bD/2 + dimOff], `${bW.toFixed(1)}m`)
-    // 세로 (건물 깊이)  
-    addDimLine(scene, [bW/2 + dimOff, 0, -bD/2], [bW/2 + dimOff, 0, bD/2], `${bD.toFixed(1)}m`)
-    // 높이
-    addDimLine(scene, [bW/2 + dimOff + 2, 0, bD/2], [bW/2 + dimOff + 2, bH, bD/2], `H=${bH.toFixed(1)}m`, 2)
+    addDimLine(scene, [minX, 0, maxZ + dimOff], [maxX, 0, maxZ + dimOff], `${totalW.toFixed(1)}m`)
+    addDimLine(scene, [maxX + dimOff, 0, minZ], [maxX + dimOff, 0, maxZ], `${totalD.toFixed(1)}m`)
+    addDimLine(scene, [maxX + dimOff + 2, 0, maxZ], [maxX + dimOff + 2, bH, maxZ], `H=${bH.toFixed(1)}m`, 2)
     
     // 건축면적 표시
     const fpArea = Math.round(geo.totalFootprint)
-    addLabel(scene, `건축면적 ${fpArea}㎡`, 0, -2, bD/2 + dimOff + 3, 2, '#006644')
+    addLabel(scene, `건축면적 ${fpArea}㎡`, 0, -2, maxZ + dimOff + 3, 2, '#006644')
     
     // 알렉산더 패턴 요소
     addPatternElements(scene, 'iso')
@@ -299,8 +280,13 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
     const scene = buildScene(0xffffff)
-    const blk0 = geo.blocks[0]
-    const bW = S * (blk0?.w || 0.5), bD = S * (blk0?.d || 0.5)
+    // 전체 건물 바운딩 박스 (단면 폭 계산)
+    let secMinX = Infinity, secMaxX = -Infinity
+    for (const blk of geo.blocks) {
+      const bkX = S * blk.x, bkW = S * blk.w
+      secMinX = Math.min(secMinX, bkX - bkW/2); secMaxX = Math.max(secMaxX, bkX + bkW/2)
+    }
+    const bW = secMaxX - secMinX
     // 건물 단면 (직사각형으로 표현)
     const secGeo = new THREE.PlaneGeometry(bW, bH)
     const secMat = new THREE.MeshBasicMaterial({ color: 0xd0d8e0, side: THREE.DoubleSide })
