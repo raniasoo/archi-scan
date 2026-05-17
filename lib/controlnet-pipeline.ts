@@ -107,12 +107,11 @@ export function generateControlImage(input: ControlNetInput, mode: 'depth' | 'ca
     const projectedBlocks = geo.blocks.map(blk => {
       const bW = S * blk.w, bD = S * blk.d
       const bX = S * blk.x, bZ = S * blk.z + offsetZ
-      // X: 화면 가로 (건물 폭)
-      const screenScale = Math.min((W * 0.7) / bbW, maxBH / bH)
+      // X: 화면 가로 (건물 폭) / Y: 화면 세로 (건물 높이)
+      const screenScale = Math.min((W * 0.7) / Math.max(bbW, 1), maxBH / Math.max(bH, 1))
       const sx = vpX + (bX - bbCX) * screenScale
       const sw = bW * screenScale
-      // Y: 화면 세로 (건물 높이)
-      const sh = bH * screenScale / bH * maxBH
+      const sh = bH * screenScale  // 건물 높이 (pixels)
       const sy = groundY - sh
       // 깊이감 (Z → X 오프셋)
       const zOff = (bZ - bbCZ) * screenScale * depthFactor

@@ -33,22 +33,33 @@ export async function GET(req: NextRequest) {
 
   if (mode === 'control-only') {
     // 제어 이미지만 생성하여 반환 (디버깅/미리보기용)
-    const input: ControlNetInput = {
-      type: searchParams.get('type') || 'tower',
-      coverage: parseInt(searchParams.get('coverage') || '50'),
-      siteArea: parseInt(searchParams.get('siteArea') || '500'),
-      floors: parseInt(searchParams.get('floors') || '5'),
-      units: parseInt(searchParams.get('units') || '20'),
-      buildingCount: parseInt(searchParams.get('buildingCount') || '1'),
-      originalType: searchParams.get('originalType') || undefined,
-      angle: (searchParams.get('angle') as any) || 'eye-level',
-      style: searchParams.get('style') || 'modern-luxury',
+    try {
+      const input: ControlNetInput = {
+        type: searchParams.get('type') || 'tower',
+        coverage: parseInt(searchParams.get('coverage') || '50'),
+        siteArea: parseInt(searchParams.get('siteArea') || '500'),
+        floors: parseInt(searchParams.get('floors') || '5'),
+        units: parseInt(searchParams.get('units') || '20'),
+        buildingCount: parseInt(searchParams.get('buildingCount') || '1'),
+        originalType: searchParams.get('originalType') || undefined,
+        angle: (searchParams.get('angle') as any) || 'eye-level',
+        style: searchParams.get('style') || 'modern-luxury',
+      }
+      const controlMode = searchParams.get('controlMode') === 'depth' ? 'depth' : 'canny'
+      const svg = generateControlImage(input, controlMode as any)
+      // SVG에 NaN 체크
+      if (svg.includes('NaN') || svg.includes('Infinity')) {
+        return NextResponse.json({ error: 'SVG에 NaN/Infinity 값 포함', svgPreview: svg.slice(0, 1000) })
+      }
+      let png: string | null = null
+      try { png = svgToPngBase64(svg, 1024) } catch (pngErr) {
+        return NextResponse.json({ error: 'SVG→PNG 변환 실패', detail: String(pngErr), svgPreview: svg.slice(0, 1000) })
+      }
+      const prompt = buildControlNetPrompt(input)
+      return NextResponse.json({ success: true, svgLength: svg.length, pngLength: png?.length || 0, prompt: prompt.slice(0, 300) })
+    } catch (e) {
+      return NextResponse.json({ error: 'control-only 실패', detail: String(e) }, { status: 500 })
     }
-    const controlMode = searchParams.get('controlMode') === 'depth' ? 'depth' : 'canny'
-    const svg = generateControlImage(input, controlMode as any)
-    const png = svgToPngBase64(svg, 1024)
-    const prompt = buildControlNetPrompt(input)
-    return NextResponse.json({ svg: svg.slice(0, 500) + '...', pngBase64: png?.slice(0, 100) + '...', pngLength: png?.length, prompt })
   }
 
   return NextResponse.json({ error: 'mode 파라미터 필요: check | control-only' }, { status: 400 })
