@@ -1728,9 +1728,12 @@ export default function ArchiScanPage() {
         duration: 6000,
       })
     } else if (warnings.length > 0) {
-      toast.warning(`일관성 점수 ${report.score}점`, {
-        description: `${warnings.length}건 권장 수정 사항이 있습니다`,
-        duration: 4000,
+      // 경고 내용을 구체적으로 표시
+      const warnMessages = warnings.slice(0, 3).map(w => `• ${w.message}`).join('\n')
+      const extra = warnings.length > 3 ? `\n외 ${warnings.length - 3}건` : ''
+      toast.warning(`일관성 점수 ${report.score}점 · ${warnings.length}건 권장 수정`, {
+        description: warnMessages + extra,
+        duration: 6000,
       })
     }
     
