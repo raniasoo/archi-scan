@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sparkles, Copy, Check, Loader2, X, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
 import { captureBuilding3D } from "@/lib/offscreen-3d-capture"
@@ -180,7 +180,7 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
   const [style, setStyle] = useState(optimal.style)
   const { requireFeature, canUseFeature } = useSubscription()
   
-  // ★ 렌더링 횟수 추적 (월간 리셋)
+  // ★ 렌더링 횟수 추적 (localStorage + Supabase 동기화)
   const getRenderUsage = () => {
     try {
       const stored = localStorage.getItem('archi-render-usage')
@@ -196,8 +196,16 @@ export function AIHub({ input, onRenderComplete, previousRenderImage, savedMulti
     usage.month = new Date().toISOString().slice(0, 7)
     usage[engine] = (usage[engine] || 0) + 1
     try { localStorage.setItem('archi-render-usage', JSON.stringify(usage)) } catch {}
+    // Supabase에도 저장 (관리자 초기화 가능)
+    fetch('/api/render-usage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ engine }) }).catch(() => {})
     return usage
   }
+  // 초기 로드: 서버 데이터로 localStorage 동기화 (관리자 초기화 반영)
+  useEffect(() => {
+    fetch('/api/render-usage').then(r => r.json()).then(d => {
+      if (d.month) try { localStorage.setItem('archi-render-usage', JSON.stringify(d)) } catch {}
+    }).catch(() => {})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [angle, setAngle] = useState(optimal.angle)
   const [scene, setScene] = useState(optimal.scene)
   const [materialId, setMaterialId] = useState<string | null>(optimal.material)

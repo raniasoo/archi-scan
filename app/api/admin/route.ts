@@ -172,21 +172,29 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
-    // ── 사용량 초기화 ──
+    // ── 사용량 초기화 (렌더링 횟수 포함) ──
     if (type === "reset_usage") {
       const { userId } = body
       if (!userId) {
         return NextResponse.json({ error: "userId is required" }, { status: 400 })
       }
 
+      // 1. 기존 사용량 초기화
       const { error } = await supabase.rpc('admin_update_profile', {
         admin_secret: 'archiscan-admin-2026',
         target_user_id: userId,
         reset_usage: true,
       })
 
+      // 2. 렌더링 횟수도 초기화
+      await supabase.from("profiles").update({
+        render_gemini: 0,
+        render_controlnet: 0,
+        render_month: new Date().toISOString().slice(0, 7),
+      }).eq("id", userId)
+
       if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-      return NextResponse.json({ success: true })
+      return NextResponse.json({ success: true, message: '사용량 + 렌더링 횟수 초기화 완료' })
     }
 
     // ── 공지사항 관리 ──
