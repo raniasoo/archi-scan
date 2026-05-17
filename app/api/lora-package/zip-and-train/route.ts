@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const { data: files } = await supabase.storage.from(BUCKET).list(FOLDER, { limit: 1000 })
     if (!files) return NextResponse.json({ error: 'Storage 조회 실패' }, { status: 500 })
 
-    const images = files.filter(f => f.name.endsWith('.jpg')).slice(0, 150) // 150장 (300초 내 완료 보장)
+    const images = files.filter(f => f.name.endsWith('.jpg')).slice(0, 50) // 50장 (타임아웃 확실 방지, 추후 증량)
     const metas = files.filter(f => f.name.startsWith('meta_batch_'))
     console.log(`[lora-zip] ${images.length} images, ${metas.length} meta files`)
 
