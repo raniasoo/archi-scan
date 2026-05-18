@@ -1434,6 +1434,29 @@ export default function ArchiScanPage() {
           }
         })
         .catch(() => {})
+
+      // ★ 토지 실거래 매매내역 자동 조회 → 토지가 보정
+      fetch('/api/land-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: roadAddr || address, sigunguCd: sgCd, months: 6 }),
+      })
+        .then(r => r.json())
+        .then(landResult => {
+          if (landResult.success && landResult.source === 'realTransaction' && landResult.avgPricePerM2 > 0) {
+            const realPriceWon = landResult.avgPricePerM2 * 10000
+            setLandPriceData(prev => ({
+              ...prev,
+              pricePerM2: realPriceWon,
+              source: `실거래(${landResult.count}건)`,
+              message: `토지 실거래 ${landResult.count}건 평균 ${landResult.avgPricePerM2.toLocaleString()}만/㎡ (${landResult.period})`,
+            }))
+            console.log(`[LAND-TXN] ✅ 토지 실거래가 적용: ${landResult.avgPricePerM2.toLocaleString()}만/㎡ (${landResult.count}건)`)
+          } else {
+            console.log(`[LAND-TXN] fallback 유지: ${landResult.source || 'unknown'}`)
+          }
+        })
+        .catch(() => console.log('[LAND-TXN] API 실패 → 공시지가 유지'))
     }
   }
 
