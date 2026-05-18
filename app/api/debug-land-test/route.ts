@@ -18,8 +18,6 @@ const REGION_CODES: Record<string, string> = {
 
 const TEST_ADDRESSES = [
   { name: '강남구 역삼동', district: '강남구' },
-  { name: '마포구 합정동', district: '마포구' },
-  { name: '노원구 상계동', district: '노원구' },
 ]
 
 interface TxnResult {
@@ -77,7 +75,7 @@ async function testOneAddress(district: string): Promise<TxnResult> {
       if (tc === 0 && allTxns.length === 0) continue  // 이 달 데이터 없음 → 다음 달
       
       // 첫 번째 XML 샘플 저장 (디버그)
-      if (allTxns.length === 0 && !firstXmlSample) firstXmlSample = xml.substring(0, 500)
+      if (allTxns.length === 0 && !firstXmlSample) firstXmlSample = xml.substring(0, 1500)
 
       const re = /<item>([\s\S]*?)<\/item>/g
       let m
@@ -106,7 +104,7 @@ async function testOneAddress(district: string): Promise<TxnResult> {
         address: district, regionCode, count: 0,
         avgPricePerM2: 0, minPrice: 0, maxPrice: 0,
         source: 'NO_DATA', topTransactions: [],
-        error: `12개월 조회 결과 0건 (code=${regionCode}, lastYm=${lastYm}) xmlSample=${firstXmlSample.substring(0, 200)}`
+        error: `0건 (code=${regionCode}, lastYm=${lastYm}) xmlSample=${firstXmlSample.substring(0, 800)}`
       }
     }
 
