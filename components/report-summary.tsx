@@ -1053,7 +1053,51 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
   </div>
 
   <div class="section">
-    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '11' : '10'}</span> 결론 및 제안</div>
+    <!-- BOQ 물량 요약 -->
+    <div class="page-break-before"></div>
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '11' : '10'}</span> BOQ 물량 및 공정 개요</div>
+    
+    <div class="stat-box" style="margin-bottom: 12px;">
+      <div class="highlight-title">📦 개략 공사비 산출</div>
+      <table style="width:100%; border-collapse:collapse; font-size:10pt; margin-top:8px;">
+        <tr style="background:#f5f0eb; font-weight:bold;"><td style="padding:6px; border:1px solid #e0d6cc;">공종</td><td style="padding:6px; border:1px solid #e0d6cc; text-align:right;">비중</td><td style="padding:6px; border:1px solid #e0d6cc; text-align:right;">개략 금액</td></tr>
+        <tr><td style="padding:5px; border:1px solid #e0d6cc;">구조 공사 (RC조)</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">35%</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">${(financials.constructionCost * 0.35 / 100000000).toFixed(1)}억원</td></tr>
+        <tr><td style="padding:5px; border:1px solid #e0d6cc;">건축 공사 (마감)</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">30%</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">${(financials.constructionCost * 0.30 / 100000000).toFixed(1)}억원</td></tr>
+        <tr><td style="padding:5px; border:1px solid #e0d6cc;">설비 공사 (MEP)</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">20%</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">${(financials.constructionCost * 0.20 / 100000000).toFixed(1)}억원</td></tr>
+        <tr><td style="padding:5px; border:1px solid #e0d6cc;">간접비 (관리/설계/감리)</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">15%</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">${(financials.constructionCost * 0.15 / 100000000).toFixed(1)}억원</td></tr>
+        <tr style="background:#f5f0eb; font-weight:bold;"><td style="padding:6px; border:1px solid #e0d6cc;">합계</td><td style="padding:6px; border:1px solid #e0d6cc; text-align:right;">100%</td><td style="padding:6px; border:1px solid #e0d6cc; text-align:right;">${(financials.constructionCost / 100000000).toFixed(1)}억원</td></tr>
+      </table>
+    </div>
+
+    <div class="stat-box" style="margin-bottom: 12px;">
+      <div class="highlight-title">📅 예상 사업 일정</div>
+      <table style="width:100%; border-collapse:collapse; font-size:10pt; margin-top:8px;">
+        <tr style="background:#f5f0eb; font-weight:bold;"><td style="padding:6px; border:1px solid #e0d6cc;">단계</td><td style="padding:6px; border:1px solid #e0d6cc; text-align:right;">기간</td><td style="padding:6px; border:1px solid #e0d6cc;">비고</td></tr>
+        <tr><td style="padding:5px; border:1px solid #e0d6cc;">설계 (기본+실시)</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">${layout.floors > 10 ? '7' : layout.floors > 5 ? '5.5' : '4.5'}개월</td><td style="padding:5px; border:1px solid #e0d6cc;">사전기획 → 기본설계 → 실시설계</td></tr>
+        <tr><td style="padding:5px; border:1px solid #e0d6cc;">인허가</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">${layout.floors > 10 ? '2.5' : '2'}개월</td><td style="padding:5px; border:1px solid #e0d6cc;">건축허가 신청 → 심의 → 착공신고</td></tr>
+        <tr><td style="padding:5px; border:1px solid #e0d6cc;">공사</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">${layout.floors > 10 ? Math.round(layout.floors * 0.7 + 10) : layout.floors > 5 ? Math.round(layout.floors * 0.5 + 8) : Math.round(layout.floors * 0.5 + 6)}개월</td><td style="padding:5px; border:1px solid #e0d6cc;">기초 → 골조 → 마감 → 조경</td></tr>
+        <tr><td style="padding:5px; border:1px solid #e0d6cc;">준공/입주</td><td style="padding:5px; border:1px solid #e0d6cc; text-align:right;">2개월</td><td style="padding:5px; border:1px solid #e0d6cc;">사용승인 → 하자보수 → 입주</td></tr>
+        <tr style="background:#f5f0eb; font-weight:bold;"><td style="padding:6px; border:1px solid #e0d6cc;">총 사업기간</td><td style="padding:6px; border:1px solid #e0d6cc; text-align:right;">${layout.floors > 10 ? Math.round(layout.floors * 0.7 + 21.5) : layout.floors > 5 ? Math.round(layout.floors * 0.5 + 17.5) : Math.round(layout.floors * 0.5 + 14.5)}개월</td><td style="padding:6px; border:1px solid #e0d6cc;">약 ${layout.floors > 10 ? Math.round((layout.floors * 0.7 + 21.5)/12*10)/10 : layout.floors > 5 ? Math.round((layout.floors * 0.5 + 17.5)/12*10)/10 : Math.round((layout.floors * 0.5 + 14.5)/12*10)/10}년</td></tr>
+      </table>
+    </div>
+
+    <div class="stat-box" style="margin-bottom: 12px;">
+      <div class="highlight-title">☀️ 일조 분석 (서울 기준)</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; font-size:10pt;">
+        <div style="background:#faf8f5; padding:8px; border-radius:6px; text-align:center;">
+          <div style="font-size:9pt; color:#8a8075;">남향 일조</div>
+          <div style="font-size:14pt; font-weight:bold; color:#22c55e;">약 ${layout.floors <= 5 ? '5~7' : '4~6'}시간</div>
+        </div>
+        <div style="background:#faf8f5; padding:8px; border-radius:6px; text-align:center;">
+          <div style="font-size:9pt; color:#8a8075;">북측 사선</div>
+          <div style="font-size:14pt; font-weight:bold; color:#${(layout.floors * 3.3) <= 9 ? '22c55e' : 'f59e0b'};">${(layout.floors * 3.3) <= 9 ? '적합' : `이격 ${(1.5 + (layout.floors * 3.3 - 9) * 0.51).toFixed(1)}m`}</div>
+        </div>
+      </div>
+      <p style="font-size:9pt; color:#8a8075; margin-top:6px;">건물 높이 ${(layout.floors * 3.3).toFixed(1)}m (${layout.floors}층 × 3.3m). 동지 기준 최소 일조 4시간 확보 필요.</p>
+    </div>
+
+    <!-- 결론 및 제안 -->
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '12' : '11'}</span> 결론 및 제안</div>
     
     <div class="stat-box" style="margin-bottom: 20px;">
       <p style="line-height: 1.8;">
