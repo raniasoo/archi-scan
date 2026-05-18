@@ -742,3 +742,91 @@ export function generateFullDXF(params: {
   // 기존 DXF의 ENDSEC 전에 스케줄 삽입
   return baseDXF.replace('  0\nENDSEC\n  0\nEOF', scheduleEntities + '  0\nENDSEC\n  0\nEOF')
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Phase 5: 구조 계산 DXF 테이블
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { calculateStructure, type StructuralCalc } from './structural-calc'
+
+/** 구조 계산 결과를 DXF 텍스트로 생성 */
+function dxfStructuralTable(calc: StructuralCalc, startX: number, startY: number): string {
+  let out = ''
+  const rowH = 400, colW = 2500
+  let y = startY
+  
+  // ━━━ 구조 개요 ━━━
+  out += dxfText(startX, y, '[ STRUCTURAL SUMMARY ]', 300, 'A-TITLE')
+  y -= 500
+  out += dxfText(startX, y, `Fck=${calc.summary.fck}MPa  Fy=${calc.summary.fy}MPa  Total=${Math.round(calc.summary.totalWeight)}kN  Soil=${calc.summary.soilPressure}kN/m2`, 150, 'A-DIMS')
+  y -= 600
+  
+  // ━━━ 기둥 스케줄 ━━━
+  out += dxfText(startX, y, '[ COLUMN SCHEDULE ]', 300, 'A-TITLE')
+  y -= 500
+  const cHeaders = ['NO', 'SIZE(mm)', 'MAIN BAR', 'TIE BAR', 'LOCATION', 'LOAD RATIO']
+  cHeaders.forEach((h, i) => { out += dxfText(startX + i * colW, y, h, 180, 'A-DIMS') })
+  y -= rowH
+  out += dxfLine(startX, y + 350, startX + colW * cHeaders.length, y + 350, 'A-DIMS')
+  
+  for (const c of calc.columns) {
+    const cols = [c.id, `${c.width}×${c.depth}`, c.mainBar, c.tieBar, c.location, `${(c.loadRatio*100).toFixed(0)}%`]
+    cols.forEach((v, i) => { out += dxfText(startX + i * colW, y, v, 150, 'A-COLS') })
+    y -= rowH
+  }
+  y -= 400
+  
+  // ━━━ 보 스케줄 ━━━
+  out += dxfText(startX, y, '[ BEAM SCHEDULE ]', 300, 'A-TITLE')
+  y -= 500
+  const bHeaders = ['NO', 'SIZE(mm)', 'TOP BAR', 'BOT BAR', 'STIRRUP', 'SPAN', 'DIR']
+  bHeaders.forEach((h, i) => { out += dxfText(startX + i * colW, y, h, 180, 'A-DIMS') })
+  y -= rowH
+  out += dxfLine(startX, y + 350, startX + colW * bHeaders.length, y + 350, 'A-DIMS')
+  
+  for (const b of calc.beams) {
+    const cols = [b.id, `${b.width}×${b.depth}`, b.topBar, b.bottomBar, b.stirrup, `${b.span}`, b.direction]
+    cols.forEach((v, i) => { out += dxfText(startX + i * colW, y, v, 150, 'A-COLS') })
+    y -= rowH
+  }
+  y -= 400
+  
+  // ━━━ 슬래브 + 기초 ━━━
+  out += dxfText(startX, y, '[ SLAB ]', 300, 'A-TITLE')
+  y -= 500
+  out += dxfText(startX, y, `Type=${calc.slab.type}  THK=${calc.slab.thickness}mm  Top=${calc.slab.topMesh}  Bot=${calc.slab.bottomMesh}`, 150, 'A-DIMS')
+  y -= 600
+  
+  out += dxfText(startX, y, '[ FOUNDATION ]', 300, 'A-TITLE')
+  y -= 500
+  out += dxfText(startX, y, `Type=${calc.foundation.type}  THK=${calc.foundation.thickness}mm  Depth=${calc.foundation.depth}mm`, 150, 'A-DIMS')
+  y -= 400
+  out += dxfText(startX, y, `Bot=${calc.foundation.bottomBar}  Top=${calc.foundation.topBar}`, 150, 'A-DIMS')
+  
+  return out
+}
+
+/** Phase 5 통합: Phase 2+3+4+5 DXF */
+export function generateCompleteDXF(params: {
+  type: string; coverage: number; siteArea: number; floors: number
+  units: number; unitArea: number; layoutName: string; address?: string
+}): string {
+  const fullDXF = generateFullDXF(params)
+  if (!fullDXF) return ''
+  
+  try {
+    const { getBuildingDimensionsInMeters: getBDM } = require('./building-geometry')
+    const geo = getBDM({ type: params.type, coverage: params.coverage, siteArea: params.siteArea, floors: params.floors })
+    const bm = geo.blocksInMeters
+    if (!bm || bm.length === 0) return fullDXF
+    
+    const mainBlock = bm.reduce((a: any, b: any) => (a.widthM * a.depthM > b.widthM * b.depthM ? a : b))
+    const { generateStructuralGrid: genGrid } = require('./structural-grid')
+    const grid = genGrid({ widthM: mainBlock.widthM, depthM: mainBlock.depthM, unitAreaM2: params.unitArea, floors: params.floors })
+    
+    const calc = calculateStructure(grid, params.floors, params.siteArea)
+    const structEntities = dxfStructuralTable(calc, 0, -12000)
+    
+    return fullDXF.replace('  0\nENDSEC\n  0\nEOF', structEntities + '  0\nENDSEC\n  0\nEOF')
+  } catch { return fullDXF }
+}

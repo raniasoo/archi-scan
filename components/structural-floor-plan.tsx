@@ -2,8 +2,9 @@
 
 import { generateStructuralGrid, WALL_RC, WALL_PARTITION, COLUMN_SIZE, type StructuralGrid, type Room } from "@/lib/structural-grid"
 import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
-import { generateFullDXF, downloadDXF } from "@/lib/dxf-generator"
+import { generateCompleteDXF, downloadDXF } from "@/lib/dxf-generator"
 import { generateSchedules } from "@/lib/schedule-generator"
+import { calculateStructure } from "@/lib/structural-calc"
 
 interface Props {
   type: string
@@ -72,7 +73,7 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
           </span>
         </div>
         <button onClick={() => {
-          const dxf = generateFullDXF({
+          const dxf = generateCompleteDXF({
             type, coverage, siteArea, floors, units, unitArea,
             layoutName: `${type} ${floors}층`,
           })
@@ -343,6 +344,73 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
                     </tr>
                   ))}</tbody>
                 </table>
+              </div>
+            </details>
+          </div>
+        )
+      })()}
+
+      {/* Phase 5: 구조 계산 */}
+      {(() => {
+        const calc = calculateStructure(grid, floors, siteArea)
+        return (
+          <div className="mt-3 space-y-2 px-1">
+            <details className="group">
+              <summary className="text-[10px] font-semibold text-red-400 cursor-pointer">🏗️ 구조 계산 (Fck {calc.summary.fck}MPa / Fy {calc.summary.fy}MPa)</summary>
+              <div className="mt-1 space-y-2">
+                {/* 기둥 */}
+                <div className="overflow-x-auto">
+                  <div className="text-[9px] text-red-300 font-semibold mb-0.5">기둥 (Column)</div>
+                  <table className="w-full text-[9px] text-muted-foreground">
+                    <thead><tr className="border-b border-white/10">
+                      <th className="py-0.5 px-1 text-left">NO</th><th className="px-1">단면</th>
+                      <th className="px-1">주근</th><th className="px-1">띠근</th><th className="px-1">위치</th><th className="px-1">축하중비</th>
+                    </tr></thead>
+                    <tbody>{calc.columns.map(c => (
+                      <tr key={c.id} className="border-b border-white/5">
+                        <td className="py-0.5 px-1 text-red-300">{c.id}</td>
+                        <td className="px-1 text-center">{c.width}×{c.depth}</td>
+                        <td className="px-1">{c.mainBar}</td><td className="px-1">{c.tieBar}</td>
+                        <td className="px-1">{c.location}</td>
+                        <td className="px-1 text-center">{(c.loadRatio*100).toFixed(0)}%</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                {/* 보 */}
+                <div className="overflow-x-auto">
+                  <div className="text-[9px] text-orange-300 font-semibold mb-0.5">보 (Beam)</div>
+                  <table className="w-full text-[9px] text-muted-foreground">
+                    <thead><tr className="border-b border-white/10">
+                      <th className="py-0.5 px-1 text-left">NO</th><th className="px-1">단면</th>
+                      <th className="px-1">상부근</th><th className="px-1">하부근</th><th className="px-1">전단근</th><th className="px-1">경간</th>
+                    </tr></thead>
+                    <tbody>{calc.beams.map(b => (
+                      <tr key={b.id} className="border-b border-white/5">
+                        <td className="py-0.5 px-1 text-orange-300">{b.id}</td>
+                        <td className="px-1 text-center">{b.width}×{b.depth}</td>
+                        <td className="px-1">{b.topBar}</td><td className="px-1">{b.bottomBar}</td>
+                        <td className="px-1">{b.stirrup}</td>
+                        <td className="px-1 text-center">{(b.span/1000).toFixed(1)}m</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                {/* 슬래브 + 기초 */}
+                <div className="grid grid-cols-2 gap-2 text-[9px] text-muted-foreground">
+                  <div className="bg-white/5 rounded p-1.5">
+                    <div className="text-cyan-300 font-semibold mb-0.5">슬래브 (Slab)</div>
+                    <div>{calc.slab.type} · {calc.slab.thickness}mm</div>
+                    <div>상부 {calc.slab.topMesh}</div>
+                    <div>하부 {calc.slab.bottomMesh}</div>
+                  </div>
+                  <div className="bg-white/5 rounded p-1.5">
+                    <div className="text-yellow-300 font-semibold mb-0.5">기초 (Foundation)</div>
+                    <div>{calc.foundation.type} · {calc.foundation.thickness}mm</div>
+                    <div>근입 {calc.foundation.depth}mm</div>
+                    <div>하부 {calc.foundation.bottomBar}</div>
+                  </div>
+                </div>
               </div>
             </details>
           </div>
