@@ -189,17 +189,48 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
               <text x={rx + rw / 2} y={ry + rh / 2 + 6} textAnchor="middle"
                 fontSize="5.5" fill={color} opacity="0.7">{room.area.toFixed(1)}㎡</text>
 
-              {/* 문 */}
+              {/* 문 (건축 도면 스타일: 벽 개구부 + 스윙호) */}
               {room.hasDoor && (() => {
-                const doorW = 6
-                let dx: number, dy: number, dw: number, dh: number
+                const doorLen = Math.min(rw, rh) * 0.35 // 문 크기 = 방 크기의 35%
+                const doorT = 2.5 // 문 두께
+                let cx: number, cy: number, arcPath: string, gapRect: any
+                
                 switch (room.doorSide) {
-                  case 'top': dx = rx + rw / 2 - doorW; dy = ry - 1; dw = doorW * 2; dh = 2; break
-                  case 'bottom': dx = rx + rw / 2 - doorW; dy = ry + rh - 1; dw = doorW * 2; dh = 2; break
-                  case 'left': dx = rx - 1; dy = ry + rh / 2 - doorW; dw = 2; dh = doorW * 2; break
-                  case 'right': dx = rx + rw - 1; dy = ry + rh / 2 - doorW; dw = 2; dh = doorW * 2; break
+                  case 'top':
+                    cx = rx + rw * 0.35; cy = ry
+                    gapRect = { x: cx, y: cy - doorT / 2, w: doorLen, h: doorT }
+                    arcPath = `M${cx},${cy} L${cx},${cy - doorLen} A${doorLen},${doorLen} 0 0,1 ${cx + doorLen},${cy}`
+                    break
+                  case 'bottom':
+                    cx = rx + rw * 0.35; cy = ry + rh
+                    gapRect = { x: cx, y: cy - doorT / 2, w: doorLen, h: doorT }
+                    arcPath = `M${cx},${cy} L${cx},${cy + doorLen} A${doorLen},${doorLen} 0 0,0 ${cx + doorLen},${cy}`
+                    break
+                  case 'left':
+                    cx = rx; cy = ry + rh * 0.35
+                    gapRect = { x: cx - doorT / 2, y: cy, w: doorT, h: doorLen }
+                    arcPath = `M${cx},${cy} L${cx - doorLen},${cy} A${doorLen},${doorLen} 0 0,0 ${cx},${cy + doorLen}`
+                    break
+                  case 'right':
+                  default:
+                    cx = rx + rw; cy = ry + rh * 0.35
+                    gapRect = { x: cx - doorT / 2, y: cy, w: doorT, h: doorLen }
+                    arcPath = `M${cx},${cy} L${cx + doorLen},${cy} A${doorLen},${doorLen} 0 0,1 ${cx},${cy + doorLen}`
+                    break
                 }
-                return <rect x={dx!} y={dy!} width={dw!} height={dh!} fill="#fbbf24" opacity="0.6" rx="0.5" />
+                return (
+                  <g>
+                    {/* 벽 개구부 (흰색으로 벽 끊기) */}
+                    <rect x={gapRect.x} y={gapRect.y} width={gapRect.w} height={gapRect.h} fill="#0f1729" />
+                    {/* 문짝 (노란 선) */}
+                    <line x1={cx} y1={cy} 
+                      x2={room.doorSide === 'top' || room.doorSide === 'bottom' ? cx + doorLen : cx}
+                      y2={room.doorSide === 'left' || room.doorSide === 'right' ? cy + doorLen : cy}
+                      stroke="#fbbf24" strokeWidth="1.5" />
+                    {/* 스윙 호 (점선) */}
+                    <path d={arcPath} fill="none" stroke="#fbbf24" strokeWidth="0.8" strokeDasharray="2,2" opacity="0.7" />
+                  </g>
+                )
               })()}
 
               {/* 창문 */}
