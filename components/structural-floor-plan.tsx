@@ -2,7 +2,8 @@
 
 import { generateStructuralGrid, WALL_RC, WALL_PARTITION, COLUMN_SIZE, type StructuralGrid, type Room } from "@/lib/structural-grid"
 import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
-import { generateStructuralDXF, downloadDXF } from "@/lib/dxf-generator"
+import { generateFullDXF, downloadDXF } from "@/lib/dxf-generator"
+import { generateSchedules } from "@/lib/schedule-generator"
 
 interface Props {
   type: string
@@ -71,7 +72,7 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
           </span>
         </div>
         <button onClick={() => {
-          const dxf = generateStructuralDXF({
+          const dxf = generateFullDXF({
             type, coverage, siteArea, floors, units, unitArea,
             layoutName: `${type} ${floors}층`,
           })
@@ -279,6 +280,74 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
           </span>
         ))}
       </div>
+
+      {/* Phase 4: 창호·마감 스케줄 */}
+      {(() => {
+        const sch = generateSchedules(grid)
+        return (
+          <div className="mt-3 space-y-2 px-1">
+            {/* 창호 스케줄 */}
+            <details className="group">
+              <summary className="text-[10px] font-semibold text-blue-400 cursor-pointer">🪟 창호 스케줄 ({sch.windows.length}종)</summary>
+              <div className="mt-1 overflow-x-auto">
+                <table className="w-full text-[9px] text-muted-foreground">
+                  <thead><tr className="border-b border-white/10">
+                    <th className="py-1 px-1 text-left">NO</th><th className="px-1 text-left">타입</th>
+                    <th className="px-1">W×H</th><th className="px-1">재료</th><th className="px-1">유리</th><th className="px-1">수량</th>
+                  </tr></thead>
+                  <tbody>{sch.windows.map(w => (
+                    <tr key={w.id} className="border-b border-white/5">
+                      <td className="py-0.5 px-1 text-blue-300">{w.id}</td><td className="px-1">{w.type}</td>
+                      <td className="px-1 text-center">{w.width}×{w.height}</td><td className="px-1">{w.material}</td>
+                      <td className="px-1">{w.glass}</td><td className="px-1 text-center">{w.count}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            </details>
+            
+            {/* 문 스케줄 */}
+            <details className="group">
+              <summary className="text-[10px] font-semibold text-amber-400 cursor-pointer">🚪 문 스케줄 ({sch.doors.length}종)</summary>
+              <div className="mt-1 overflow-x-auto">
+                <table className="w-full text-[9px] text-muted-foreground">
+                  <thead><tr className="border-b border-white/10">
+                    <th className="py-1 px-1 text-left">NO</th><th className="px-1 text-left">타입</th>
+                    <th className="px-1">W×H</th><th className="px-1">재료</th><th className="px-1">방화</th><th className="px-1">수량</th>
+                  </tr></thead>
+                  <tbody>{sch.doors.map(d => (
+                    <tr key={d.id} className="border-b border-white/5">
+                      <td className="py-0.5 px-1 text-amber-300">{d.id}</td><td className="px-1">{d.type}</td>
+                      <td className="px-1 text-center">{d.width}×{d.height}</td><td className="px-1">{d.material}</td>
+                      <td className="px-1">{d.fireRating}</td><td className="px-1 text-center">{d.count}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            </details>
+            
+            {/* 마감표 */}
+            <details className="group">
+              <summary className="text-[10px] font-semibold text-emerald-400 cursor-pointer">🎨 마감표 ({sch.finishes.length}실)</summary>
+              <div className="mt-1 overflow-x-auto">
+                <table className="w-full text-[9px] text-muted-foreground">
+                  <thead><tr className="border-b border-white/10">
+                    <th className="py-1 px-1 text-left">실명</th><th className="px-1 text-left">바닥</th>
+                    <th className="px-1 text-left">벽</th><th className="px-1 text-left">천장</th><th className="px-1">CH</th>
+                  </tr></thead>
+                  <tbody>{sch.finishes.map((f, i) => (
+                    <tr key={i} className="border-b border-white/5">
+                      <td className="py-0.5 px-1 text-emerald-300">{f.room}</td><td className="px-1">{f.floor}</td>
+                      <td className="px-1">{f.wall}</td><td className="px-1">{f.ceiling}</td>
+                      <td className="px-1 text-center">{f.ceilingHeight}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            </details>
+          </div>
+        )
+      })()}
     </div>
   )
 }

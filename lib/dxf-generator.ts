@@ -644,3 +644,101 @@ export function generateStructuralDXF(params: {
 
   return header + tables + entSection + eof
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Phase 4: 창호·마감 스케줄 DXF 테이블
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { generateSchedules, type WindowSpec, type DoorSpec, type FinishSpec } from './schedule-generator'
+
+/** 스케줄 테이블을 DXF 텍스트로 생성 (타이틀 블록 아래에 배치) */
+function dxfScheduleTable(
+  windows: WindowSpec[], doors: DoorSpec[], finishes: FinishSpec[],
+  startX: number, startY: number
+): string {
+  let out = ''
+  const rowH = 400, colW = 2500, headerH = 500
+  let y = startY
+  
+  // ━━━ 창호 스케줄 ━━━
+  out += dxfText(startX, y, '[ WINDOW SCHEDULE ]', 300, 'A-TITLE')
+  y -= headerH
+  // 헤더
+  const wHeaders = ['NO', 'TYPE', 'W×H (mm)', 'MATERIAL', 'GLASS', 'QTY', 'ROOMS']
+  wHeaders.forEach((h, i) => { out += dxfText(startX + i * colW, y, h, 180, 'A-DIMS') })
+  y -= rowH
+  out += dxfLine(startX, y + 350, startX + colW * wHeaders.length, y + 350, 'A-DIMS')
+  
+  for (const w of windows) {
+    const cols = [w.id, w.type, `${w.width}×${w.height}`, w.material, w.glass, String(w.count), w.rooms.join(',')]
+    cols.forEach((c, i) => { out += dxfText(startX + i * colW, y, c, 150, 'A-WINDOW') })
+    y -= rowH
+  }
+  
+  y -= headerH
+  
+  // ━━━ 문 스케줄 ━━━
+  out += dxfText(startX, y, '[ DOOR SCHEDULE ]', 300, 'A-TITLE')
+  y -= headerH
+  const dHeaders = ['NO', 'TYPE', 'W×H (mm)', 'MATERIAL', 'HARDWARE', 'FIRE', 'QTY']
+  dHeaders.forEach((h, i) => { out += dxfText(startX + i * colW, y, h, 180, 'A-DIMS') })
+  y -= rowH
+  out += dxfLine(startX, y + 350, startX + colW * dHeaders.length, y + 350, 'A-DIMS')
+  
+  for (const d of doors) {
+    const cols = [d.id, d.type, `${d.width}×${d.height}`, d.material, d.hardware, d.fireRating, String(d.count)]
+    cols.forEach((c, i) => { out += dxfText(startX + i * colW, y, c, 150, 'A-DOOR') })
+    y -= rowH
+  }
+  
+  y -= headerH
+  
+  // ━━━ 마감표 ━━━
+  out += dxfText(startX, y, '[ FINISH SCHEDULE ]', 300, 'A-TITLE')
+  y -= headerH
+  const fHeaders = ['ROOM', 'FLOOR', 'WALL', 'CEILING', 'BASE', 'CH(mm)']
+  fHeaders.forEach((h, i) => { out += dxfText(startX + i * colW, y, h, 180, 'A-DIMS') })
+  y -= rowH
+  out += dxfLine(startX, y + 350, startX + colW * fHeaders.length, y + 350, 'A-DIMS')
+  
+  for (const f of finishes) {
+    const cols = [f.room, f.floor, f.wall, f.ceiling, f.baseboard, String(f.ceilingHeight)]
+    cols.forEach((c, i) => { out += dxfText(startX + i * colW, y, c, 120, 'A-ROOM-LABEL') })
+    y -= rowH
+  }
+  
+  return out
+}
+
+/** Phase 4 통합: 구조 DXF + 스케줄 테이블 */
+export function generateFullDXF(params: {
+  type: string; coverage: number; siteArea: number; floors: number
+  units: number; unitArea: number; layoutName: string; address?: string
+}): string {
+  // 기본 구조 DXF (Phase 2+3)
+  const baseDXF = generateStructuralDXF(params)
+  if (!baseDXF) return ''
+  
+  // 구조 그리드 데이터 재생성 (스케줄용)
+  const { getBuildingDimensionsInMeters: getBDM } = require('./building-geometry')
+  const geo = getBDM({ type: params.type, coverage: params.coverage, siteArea: params.siteArea, floors: params.floors })
+  const bm = geo.blocksInMeters
+  if (!bm || bm.length === 0) return baseDXF
+  
+  const mainBlock = bm.reduce((a: any, b: any) => (a.widthM * a.depthM > b.widthM * b.depthM ? a : b))
+  const { generateStructuralGrid: genGrid } = require('./structural-grid')
+  const grid = genGrid({ widthM: mainBlock.widthM, depthM: mainBlock.depthM, unitAreaM2: params.unitArea, floors: params.floors })
+  
+  // 스케줄 생성
+  const schedules = generateSchedules(grid)
+  
+  // 스케줄 테이블 DXF (타이틀 블록 아래)
+  const totalW = grid.totalWidthM * 1000
+  const scheduleEntities = dxfScheduleTable(
+    schedules.windows, schedules.doors, schedules.finishes,
+    0, -4000  // 타이틀 블록 아래 2000mm
+  )
+  
+  // 기존 DXF의 ENDSEC 전에 스케줄 삽입
+  return baseDXF.replace('  0\nENDSEC\n  0\nEOF', scheduleEntities + '  0\nENDSEC\n  0\nEOF')
+}
