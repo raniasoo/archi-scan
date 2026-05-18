@@ -8,6 +8,9 @@ import { calculateStructure } from "@/lib/structural-calc"
 import { generateMEPDesign } from "@/lib/mep-design"
 import { generateIFC, downloadIFC } from "@/lib/ifc-generator"
 import { generateDrawingSet } from "@/lib/drawing-set-generator"
+import dynamic from "next/dynamic"
+import { useState } from "react"
+const DrawingSetViewer = dynamic(() => import("@/components/drawing-set-viewer"), { ssr: false })
 
 interface Props {
   type: string
@@ -37,6 +40,8 @@ const ROOM_COLORS: Record<string, string> = {
 }
 
 export default function StructuralFloorPlan({ type, coverage, siteArea, floors, units, unitArea }: Props) {
+  const [showViewer, setShowViewer] = useState(false)
+  
   // 건물 치수 계산
   const geo = getBuildingDimensionsInMeters({ type: type as any, coverage, siteArea, floors })
   const bm = geo.blocksInMeters
@@ -116,8 +121,18 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
           }} className="px-2 py-1 rounded-lg text-[10px] font-medium bg-teal-500/10 text-teal-400 hover:bg-teal-500/20">
             📦 도면세트
           </button>
+          <button onClick={() => setShowViewer(true)} className="px-2 py-1 rounded-lg text-[10px] font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20">
+            👁️ 미리보기
+          </button>
         </div>
       </div>
+
+      {/* 도면 세트 미리보기 뷰어 */}
+      {showViewer && (() => {
+        const calc = calculateStructure(grid, floors, siteArea)
+        const mep = generateMEPDesign(grid)
+        return <DrawingSetViewer grid={grid} calc={calc} mep={mep} floors={floors} project={`${type} ${floors}층`} onClose={() => setShowViewer(false)} />
+      })()}
 
       <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
         <defs>
