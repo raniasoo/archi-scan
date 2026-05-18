@@ -146,10 +146,37 @@ export function SitePlan({
       anchorX = icx
       anchorY = Math.max(bldZoneY + 10, icy - rearBias)  // 상단 밖으로 안 나가게
       
-      // ━━━ 건물 크기: 인셋 폴리곤 바운딩 박스의 안전 비율 ━━━
-      // 마름모/삼각형 등 불규칙 대지에서도 안정적으로 동작
-      availW = bldZoneW * 0.70  // 바운딩 박스의 70% (마름모에서도 폴리곤 내부)
-      availH = bldZoneH * 0.60  // 바운딩 박스의 60%
+      // ━━━ 건물 크기: 인셋 폴리곤 최대 내접 사각형 ━━━
+      // 마름모/삼각형: 바운딩 박스 비율이 아니라 실제 내접 가능 크기 계산
+      // 무게중심에서 상하좌우로 폴리곤 경계까지의 거리를 측정
+      let safeLeft = Infinity, safeRight = Infinity, safeTop = Infinity, safeBottom = Infinity
+      for (let i = 0; i < insetCoords.length; i++) {
+        const p1 = insetCoords[i]
+        const p2 = insetCoords[(i + 1) % insetCoords.length]
+        // 수평 스캔라인 (centroid Y 높이에서 좌우 경계)
+        if ((p1.y <= icy && p2.y >= icy) || (p2.y <= icy && p1.y >= icy)) {
+          const t = Math.abs(p2.y - p1.y) < 0.1 ? 0.5 : (icy - p1.y) / (p2.y - p1.y)
+          const ix = p1.x + t * (p2.x - p1.x)
+          if (ix < icx) safeLeft = Math.min(safeLeft, icx - ix)
+          else safeRight = Math.min(safeRight, ix - icx)
+        }
+        // 수직 스캔라인 (centroid X 위치에서 상하 경계)
+        if ((p1.x <= icx && p2.x >= icx) || (p2.x <= icx && p1.x >= icx)) {
+          const t = Math.abs(p2.x - p1.x) < 0.1 ? 0.5 : (icx - p1.x) / (p2.x - p1.x)
+          const iy = p1.y + t * (p2.y - p1.y)
+          if (iy < icy) safeTop = Math.min(safeTop, icy - iy)
+          else safeBottom = Math.min(safeBottom, iy - icy)
+        }
+      }
+      // fallback: 바운딩 박스의 절반
+      if (!isFinite(safeLeft)) safeLeft = bldZoneW * 0.35
+      if (!isFinite(safeRight)) safeRight = bldZoneW * 0.35
+      if (!isFinite(safeTop)) safeTop = bldZoneH * 0.30
+      if (!isFinite(safeBottom)) safeBottom = bldZoneH * 0.30
+      
+      // 실제 내접 가능 폭/높이 (여유 10%)
+      availW = (Math.min(safeLeft, safeRight) * 2) * 0.85
+      availH = (Math.min(safeTop, safeBottom) * 2) * 0.85
     } else {
       anchorX = bldZoneX + bldZoneW / 2
       anchorY = bldZoneY + bldZoneH / 2
