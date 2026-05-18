@@ -563,16 +563,22 @@ export function BuildingVolume3D({
 
       /* ── 건물 (PBR + 창문 텍스처) ── */
 
-      // 건물 배치 오프셋: 이격선 내부 중앙에 정확히 배치
-      const buildableOffsetX = 0 // 좌우 이격 대칭
-      const buildableOffsetZ = (rearSB - frontSB) / 2 // 전면/후면 이격 차이만큼 이동
+      // ━━━ 건물을 건축가능영역에 맞춰 스케일링 + 오프셋 ━━━
+      const buildableW = S - 2 * sideSB  // 건축가능 폭
+      const buildableD = S - frontSB - rearSB  // 건축가능 깊이
+      // 건물 전체 바운딩 박스 → 건축가능영역에 맞는 scale 계산
+      const allBlocksMaxX = Math.max(...blocks.map(b => Math.abs(b.x) + b.w / 2)) * S * 2
+      const allBlocksMaxZ = Math.max(...blocks.map(b => Math.abs(b.z) + b.d / 2)) * S * 2
+      const buildScale = Math.min(1.0, Math.min(buildableW / Math.max(allBlocksMaxX, 1), buildableD / Math.max(allBlocksMaxZ, 1)) * 0.92)
+      const buildableOffsetX = 0  // 좌우 이격 대칭
+      const buildableOffsetZ = (rearSB - frontSB) / 2  // 전후 이격 차이 → 중심 이동
 
       // ━━━ 모든 타입: 블록 기반 (geo.blocks → SVG 도면과 100% 일치) ━━━
       blocks.forEach((blk, idx) => {
         const bF = getBlockFloors(idx, floors, layoutType)
         const tH = bF * floorHeight
-        const bW = S * blk.w, bD = S * blk.d
-        const bX = S * blk.x, bZ = S * blk.z
+        const bW = S * blk.w * buildScale, bD = S * blk.d * buildScale
+        const bX = S * blk.x * buildScale, bZ = S * blk.z * buildScale
         info.push({ label: blk.label ?? `동${idx + 1}`, floors: bF })
 
         // ★ BoxGeometry: 6면 정상 UV 매핑 → 창문 텍스처 올바르게 표시
