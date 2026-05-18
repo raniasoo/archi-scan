@@ -141,28 +141,15 @@ export function SitePlan({
       const icx = insetCoords.reduce((s, p) => s + p.x, 0) / insetCoords.length
       const icy = insetCoords.reduce((s, p) => s + p.y, 0) / insetCoords.length
       
-      // ━━━ 최적 배치: 후면 밀착 (도로 반대쪽으로 이동) ━━━
-      // SVG에서 도로는 하단(+Y) → 건물을 상단(-Y) 방향으로 밀어서 전면 여유 확보
-      const rearBias = (bldZoneH * 0.08)  // 건축가능영역 높이의 8%만큼 후면으로
+      // ━━━ 최적 배치: 인셋 centroid + 후면 밀착 ━━━
+      const rearBias = Math.min(bldZoneH * 0.06, 8)  // 최대 8px, 영역의 6%
       anchorX = icx
-      anchorY = icy - rearBias  // 위쪽(후면)으로 이동
+      anchorY = Math.max(bldZoneY + 10, icy - rearBias)  // 상단 밖으로 안 나가게
       
-      // 무게중심에서 폴리곤 각 변까지의 최소 거리 계산 → 내접 가능 크기
-      let minDistX = Infinity, minDistY = Infinity
-      for (let i = 0; i < insetCoords.length; i++) {
-        const p1 = insetCoords[i]
-        const p2 = insetCoords[(i + 1) % insetCoords.length]
-        // 수평 방향 최소 거리 (좌/우 변까지)
-        const edgeMidX = (p1.x + p2.x) / 2
-        const edgeMidY = (p1.y + p2.y) / 2
-        const dx = Math.abs(edgeMidX - icx)
-        const dy = Math.abs(edgeMidY - icy)
-        if (dx > 5) minDistX = Math.min(minDistX, dx)
-        if (dy > 5) minDistY = Math.min(minDistY, dy)
-      }
-      // 폴리곤 내접 가능 영역 (무게중심 기준 좌우/상하)
-      availW = Math.min(minDistX * 2 * 0.8, bldZoneW * 0.85)
-      availH = Math.min(minDistY * 2 * 0.7, bldZoneH * 0.7)
+      // ━━━ 건물 크기: 인셋 폴리곤 바운딩 박스의 안전 비율 ━━━
+      // 마름모/삼각형 등 불규칙 대지에서도 안정적으로 동작
+      availW = bldZoneW * 0.70  // 바운딩 박스의 70% (마름모에서도 폴리곤 내부)
+      availH = bldZoneH * 0.60  // 바운딩 박스의 60%
     } else {
       anchorX = bldZoneX + bldZoneW / 2
       anchorY = bldZoneY + bldZoneH / 2
