@@ -2,6 +2,7 @@
 
 import { generateStructuralGrid, WALL_RC, WALL_PARTITION, COLUMN_SIZE, type StructuralGrid, type Room } from "@/lib/structural-grid"
 import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
+import { generateStructuralDXF, downloadDXF } from "@/lib/dxf-generator"
 
 interface Props {
   type: string
@@ -58,15 +59,26 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
 
   return (
     <div className="w-full">
-      {/* 정보 헤더 */}
-      <div className="flex items-center gap-2 mb-2 px-1">
-        <span className="text-xs font-semibold text-primary">🏗️ 구조 그리드</span>
-        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-          {grid.bayWidthM}m × {grid.bayDepthM}m · {grid.baysX}×{grid.baysY} bay
-        </span>
-        <span className="text-[10px] bg-violet-500/10 text-violet-400 px-1.5 py-0.5 rounded">
-          Alexander {grid.score}점
-        </span>
+      {/* 정보 헤더 + 액션 */}
+      <div className="flex items-center justify-between mb-2 px-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-primary">🏗️ 구조 그리드</span>
+          <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+            {grid.bayWidthM}m × {grid.bayDepthM}m · {grid.baysX}×{grid.baysY} bay
+          </span>
+          <span className="text-[10px] bg-violet-500/10 text-violet-400 px-1.5 py-0.5 rounded">
+            Alexander {grid.score}점
+          </span>
+        </div>
+        <button onClick={() => {
+          const dxf = generateStructuralDXF({
+            type, coverage, siteArea, floors, units, unitArea,
+            layoutName: `${type} ${floors}층`,
+          })
+          downloadDXF(dxf, `structural-${type}-${floors}F.dxf`)
+        }} className="px-2 py-1 rounded-lg text-[10px] font-medium bg-blue-500/10 text-blue-400 hover:bg-blue-500/20">
+          📐 AutoCAD DXF
+        </button>
       </div>
 
       <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">

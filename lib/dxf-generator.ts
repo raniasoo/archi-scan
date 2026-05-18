@@ -399,3 +399,248 @@ export function generateFloorPlanSVGPreview(config: FloorPlanConfig): string {
   <text x="${W/2}" y="${H-6}" textAnchor="middle" fontSize="9" fill="#64748b">${layoutName} · ${floor}층/${totalFloors}층 · ${units}세대</text>
 </svg>`
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Phase 2: 구조 그리드 DXF 내보내기 (AutoCAD 품질)
+// Phase 3: MEP 통합 (PS, 덕트, 분전함)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { generateStructuralGrid, WALL_RC, WALL_PARTITION, COLUMN_SIZE, type StructuralGrid } from './structural-grid'
+import { getBuildingDimensionsInMeters } from './building-geometry'
+
+// CIRCLE 엔티티
+function dxfCircle(cx: number, cy: number, radius: number, layer: string): string {
+  return `  0\nCIRCLE\n  8\n${layer}\n 10\n${fmt(cx)}\n 20\n${fmt(cy)}\n 30\n0.0000\n 40\n${fmt(radius)}\n`
+}
+
+// SOLID (채움 사각형)
+function dxfSolid(x: number, y: number, w: number, h: number, layer: string): string {
+  return `  0\nSOLID\n  8\n${layer}\n 10\n${fmt(x)}\n 20\n${fmt(y)}\n 30\n0.0\n 11\n${fmt(x+w)}\n 21\n${fmt(y)}\n 31\n0.0\n 12\n${fmt(x)}\n 22\n${fmt(y+h)}\n 32\n0.0\n 13\n${fmt(x+w)}\n 23\n${fmt(y+h)}\n 33\n0.0\n`
+}
+
+// 치수선 (간단한 LINE + TEXT)
+function dxfDimLine(x1: number, y1: number, x2: number, y2: number, text: string, offset: number, layer: string): string {
+  const isHoriz = Math.abs(y2 - y1) < 0.01
+  let out = ''
+  if (isHoriz) {
+    out += dxfLine(x1, y1 + offset, x2, y2 + offset, layer)
+    out += dxfLine(x1, y1 + offset - 200, x1, y1 + offset + 200, layer)
+    out += dxfLine(x2, y2 + offset - 200, x2, y2 + offset + 200, layer)
+    out += dxfText((x1+x2)/2, y1 + offset + 100, text, 150, layer)
+  } else {
+    out += dxfLine(x1 + offset, y1, x2 + offset, y2, layer)
+    out += dxfLine(x1 + offset - 200, y1, x1 + offset + 200, y1, layer)
+    out += dxfLine(x2 + offset - 200, y2, x2 + offset + 200, y2, layer)
+    out += dxfText(x1 + offset + 100, (y1+y2)/2, text, 150, layer)
+  }
+  return out
+}
+
+/**
+ * Phase 2: 구조 그리드 기반 AutoCAD DXF 생성
+ * Phase 3: MEP 통합 (PS/덕트/분전함)
+ */
+export function generateStructuralDXF(params: {
+  type: string; coverage: number; siteArea: number; floors: number
+  units: number; unitArea: number; layoutName: string; address?: string
+}): string {
+  const { type, coverage, siteArea, floors, units, unitArea, layoutName, address } = params
+
+  // 건물 치수
+  const geo = getBuildingDimensionsInMeters({ type: type as any, coverage, siteArea, floors })
+  const bm = geo.blocksInMeters
+  if (!bm || bm.length === 0) return ''
+  const mainBlock = bm.reduce((a, b) => (a.widthM * a.depthM > b.widthM * b.depthM ? a : b))
+
+  // 구조 그리드 생성
+  const grid = generateStructuralGrid({
+    widthM: mainBlock.widthM, depthM: mainBlock.depthM,
+    unitAreaM2: unitArea, floors,
+  })
+
+  // DXF 단위: mm (1m = 1000mm)
+  const scale = 1000
+  const totalW = grid.totalWidthM * scale
+  const totalD = grid.totalDepthM * scale
+  const bayW = grid.bayWidthM * scale
+  const bayD = grid.bayDepthM * scale
+  const wallRC = WALL_RC * scale
+  const wallPart = WALL_PARTITION * scale
+  const colSize = COLUMN_SIZE * scale
+
+  // ━━━ 레이어 정의 ━━━
+  const layers: DXFLayer[] = [
+    { name: 'A-GRID', color: 1 },          // 구조 그리드 (빨강)
+    { name: 'A-COLS', color: 7 },           // 기둥 (흰색)
+    { name: 'A-WALL-RC', color: 7 },        // RC벽 (흰색)
+    { name: 'A-WALL-PART', color: 3 },      // 경량벽 (녹색)
+    { name: 'A-ROOM-LABEL', color: 2 },     // 방 라벨 (노랑)
+    { name: 'A-ROOM-AREA', color: 4 },      // 방 면적 (청록)
+    { name: 'A-DIMS', color: 4 },           // 치수선 (청록)
+    { name: 'A-DOOR', color: 2 },           // 문 (노랑)
+    { name: 'A-WINDOW', color: 5 },         // 창문 (파랑)
+    { name: 'A-TITLE', color: 7 },          // 타이틀 블록 (흰색)
+    { name: 'M-PS', color: 1 },             // PS (빨강) — MEP
+    { name: 'M-DUCT', color: 3 },           // 덕트 (녹색) — MEP
+    { name: 'M-ELEC', color: 2 },           // 전기 (노랑) — MEP
+    { name: 'M-PLUMBING', color: 5 },       // 급배수 (파랑) — MEP
+  ]
+
+  let entities = ''
+
+  // ━━━ 구조 그리드 라인 (A-GRID) ━━━
+  for (let i = 0; i <= grid.baysX; i++) {
+    const x = i * bayW
+    entities += dxfLine(x, -500, x, totalD + 500, 'A-GRID')
+    entities += dxfText(x, totalD + 800, String.fromCharCode(65 + i), 300, 'A-GRID')
+  }
+  for (let i = 0; i <= grid.baysY; i++) {
+    const y = totalD - i * bayD
+    entities += dxfLine(-500, y, totalW + 500, y, 'A-GRID')
+    entities += dxfText(-1200, y, String(i + 1), 300, 'A-GRID')
+  }
+
+  // ━━━ 기둥 (A-COLS) — 400×400mm 채움 ━━━
+  for (const col of grid.columns) {
+    const cx = col.x * bayW
+    const cy = totalD - col.y * bayD
+    entities += dxfSolid(cx - colSize/2, cy - colSize/2, colSize, colSize, 'A-COLS')
+    entities += dxfRect(cx - colSize/2, cy - colSize/2, colSize, colSize, 'A-COLS')
+  }
+
+  // ━━━ 방 (벽체 + 라벨 + 면적) ━━━
+  for (const room of grid.rooms) {
+    const rx = room.gridX * bayW
+    const ry = totalD - (room.gridY + room.spanY) * bayD
+    const rw = room.spanX * bayW
+    const rh = room.spanY * bayD
+    const wallLayer = room.wallType === 'rc' ? 'A-WALL-RC' : 'A-WALL-PART'
+    const wallT = room.wallType === 'rc' ? wallRC : wallPart
+
+    // 외벽 (두께 있는 이중선)
+    entities += dxfRect(rx, ry, rw, rh, wallLayer)
+    if (wallT > 50) {
+      entities += dxfRect(rx + wallT, ry + wallT, rw - wallT * 2, rh - wallT * 2, wallLayer)
+    }
+
+    // 방 라벨 (중앙)
+    entities += dxfText(rx + rw / 2 - 400, ry + rh / 2 + 100, room.label, 200, 'A-ROOM-LABEL')
+    entities += dxfText(rx + rw / 2 - 400, ry + rh / 2 - 300, `${room.area.toFixed(1)}m2`, 150, 'A-ROOM-AREA')
+
+    // 문 (Arc 또는 Line)
+    if (room.hasDoor) {
+      const doorW = 900 // 900mm 문
+      let dx: number, dy: number
+      switch (room.doorSide) {
+        case 'top': dx = rx + rw/2 - doorW/2; dy = ry + rh; break
+        case 'bottom': dx = rx + rw/2 - doorW/2; dy = ry; break
+        case 'left': dx = rx; dy = ry + rh/2 - doorW/2; break
+        default: dx = rx + rw; dy = ry + rh/2 - doorW/2; break
+      }
+      if (room.doorSide === 'top' || room.doorSide === 'bottom') {
+        entities += dxfLine(dx, dy, dx + doorW, dy, 'A-DOOR')
+        // 문 스윙 호 (간단한 라인으로)
+        entities += dxfLine(dx, dy, dx + doorW * 0.7, dy + (room.doorSide === 'top' ? -doorW * 0.7 : doorW * 0.7), 'A-DOOR')
+      } else {
+        entities += dxfLine(dx, dy, dx, dy + doorW, 'A-DOOR')
+        entities += dxfLine(dx, dy, dx + (room.doorSide === 'right' ? -doorW * 0.7 : doorW * 0.7), dy + doorW * 0.7, 'A-DOOR')
+      }
+    }
+
+    // 창문 (이중선)
+    for (const side of room.windowSides) {
+      const winLen = Math.min(rw, rh) * 0.6
+      let wx: number, wy: number
+      switch (side) {
+        case 'top': wx = rx + rw/2 - winLen/2; wy = ry + rh; 
+          entities += dxfLine(wx, wy, wx + winLen, wy, 'A-WINDOW')
+          entities += dxfLine(wx, wy - 50, wx + winLen, wy - 50, 'A-WINDOW')
+          break
+        case 'bottom': wx = rx + rw/2 - winLen/2; wy = ry;
+          entities += dxfLine(wx, wy, wx + winLen, wy, 'A-WINDOW')
+          entities += dxfLine(wx, wy + 50, wx + winLen, wy + 50, 'A-WINDOW')
+          break
+        case 'left': wx = rx; wy = ry + rh/2 - winLen/2;
+          entities += dxfLine(wx, wy, wx, wy + winLen, 'A-WINDOW')
+          entities += dxfLine(wx + 50, wy, wx + 50, wy + winLen, 'A-WINDOW')
+          break
+        case 'right': wx = rx + rw; wy = ry + rh/2 - winLen/2;
+          entities += dxfLine(wx, wy, wx, wy + winLen, 'A-WINDOW')
+          entities += dxfLine(wx - 50, wy, wx - 50, wy + winLen, 'A-WINDOW')
+          break
+      }
+    }
+  }
+
+  // ━━━ 치수선 (A-DIMS) ━━━
+  // 상단 bay 치수
+  for (let i = 0; i < grid.baysX; i++) {
+    entities += dxfDimLine(i * bayW, totalD, (i+1) * bayW, totalD, `${grid.bayWidthM.toFixed(1)}m`, 1500, 'A-DIMS')
+  }
+  // 전체 폭
+  entities += dxfDimLine(0, totalD, totalW, totalD, `${grid.totalWidthM.toFixed(1)}m`, 2500, 'A-DIMS')
+  // 좌측 bay 치수
+  for (let i = 0; i < grid.baysY; i++) {
+    entities += dxfDimLine(0, totalD - i * bayD, 0, totalD - (i+1) * bayD, `${grid.bayDepthM.toFixed(1)}m`, -1500, 'A-DIMS')
+  }
+  // 전체 깊이
+  entities += dxfDimLine(0, totalD, 0, 0, `${grid.totalDepthM.toFixed(1)}m`, -2500, 'A-DIMS')
+
+  // ━━━ Phase 3: MEP (Mechanical/Electrical/Plumbing) ━━━
+
+  // PS (Pipe Shaft) — 욕실/주방 근처 수직 배관 샤프트
+  const wetRooms = grid.rooms.filter(r => r.isWet)
+  for (const wet of wetRooms) {
+    const psX = wet.gridX * bayW + (wet.spanX * bayW) - 400
+    const psY = totalD - (wet.gridY + wet.spanY) * bayD + 200
+    const psSize = 300 // 300mm PS
+    entities += dxfRect(psX, psY, psSize, psSize, 'M-PS')
+    entities += dxfLine(psX, psY, psX + psSize, psY + psSize, 'M-PS') // X 표시
+    entities += dxfLine(psX + psSize, psY, psX, psY + psSize, 'M-PS')
+    entities += dxfText(psX - 100, psY - 200, 'PS', 100, 'M-PS')
+  }
+
+  // 덕트 공간 — 주방 상부 (환기)
+  const kitchenRoom = grid.rooms.find(r => r.type === 'kitchen')
+  if (kitchenRoom) {
+    const dX = kitchenRoom.gridX * bayW + 200
+    const dY = totalD - (kitchenRoom.gridY + 1) * bayD + bayD - 500
+    entities += dxfRect(dX, dY, bayW * kitchenRoom.spanX - 400, 300, 'M-DUCT')
+    entities += dxfText(dX + 100, dY + 50, 'DUCT 300x300', 80, 'M-DUCT')
+  }
+
+  // 분전함 — 현관 근처
+  const entrRoom = grid.rooms.find(r => r.type === 'entrance')
+  if (entrRoom) {
+    const eX = entrRoom.gridX * bayW + 200
+    const eY = totalD - (entrRoom.gridY + 1) * bayD + 200
+    entities += dxfRect(eX, eY, 400, 600, 'M-ELEC')
+    entities += dxfText(eX + 50, eY + 200, 'MDB', 100, 'M-ELEC')
+  }
+
+  // 급수 라인 — PS → 주방/욕실 (점선)
+  for (const wet of wetRooms) {
+    const wx = wet.gridX * bayW + wet.spanX * bayW / 2
+    const wy = totalD - (wet.gridY + 0.5) * bayD
+    // PS까지 연결
+    entities += dxfLine(wx, wy, wx + bayW * 0.3, wy, 'M-PLUMBING')
+    entities += dxfLine(wx + bayW * 0.3, wy, wx + bayW * 0.3, wy + bayD * 0.4, 'M-PLUMBING')
+  }
+
+  // ━━━ 타이틀 블록 ━━━
+  const titleX = 0, titleY = -2000
+  entities += dxfRect(titleX, titleY, totalW, 1800, 'A-TITLE')
+  entities += dxfText(titleX + 200, titleY + 1200, `ARCHI-SCAN | ${layoutName}`, 250, 'A-TITLE')
+  entities += dxfText(titleX + 200, titleY + 800, address || '주소 미입력', 150, 'A-TITLE')
+  entities += dxfText(titleX + 200, titleY + 400, `${grid.baysX}x${grid.baysY} BAY (${grid.bayWidthM}m x ${grid.bayDepthM}m) | Alexander ${grid.score}점 | ${grid.rooms.length}실`, 120, 'A-TITLE')
+  entities += dxfText(titleX + totalW - 3000, titleY + 800, `SCALE 1:100`, 150, 'A-TITLE')
+  entities += dxfText(titleX + totalW - 3000, titleY + 400, `DATE: ${new Date().toISOString().slice(0,10)}`, 120, 'A-TITLE')
+
+  // ━━━ DXF 조립 ━━━
+  const header = dxfHeader()
+  const tables = dxfLayers(layers)
+  const entSection = `  0\nSECTION\n  2\nENTITIES\n${entities}  0\nENDSEC\n`
+  const eof = `  0\nEOF\n`
+
+  return header + tables + entSection + eof
+}
