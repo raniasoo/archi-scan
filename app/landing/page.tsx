@@ -6,7 +6,8 @@ import {
   Building2, MapPin, FileText, BarChart3, Sparkles,
   ArrowRight, CheckCircle2, Zap, Shield, Globe2,
   ChevronRight, Play, Star, TrendingUp, Layers,
-  Scale, Brain, Camera, Eye, Download, Lock
+  Scale, Brain, Camera, Eye, Download, Lock,
+  Sun, Ruler, Database
 } from "lucide-react"
 
 /* ─── 카운트업 애니메이션 훅 ─── */
@@ -72,6 +73,8 @@ const PLANS = [
       { text: "AI 렌더링", included: true },
       { text: "PDF 보고서", included: true },
       { text: "국토부 자동조회", included: true },
+      { text: "DXF/IFC 도면 내보내기", included: true },
+      { text: "실거래가 빅데이터", included: true },
       { text: "클라우드 저장", included: true },
       { text: "우선 기술지원", included: false },
     ],
@@ -89,6 +92,8 @@ const PLANS = [
       { text: "AI 렌더링", included: true },
       { text: "PDF 보고서", included: true },
       { text: "국토부 자동조회", included: true },
+      { text: "DXF/IFC 도면 내보내기", included: true },
+      { text: "실거래가 빅데이터", included: true },
       { text: "클라우드 저장", included: true },
       { text: "우선 기술지원", included: true },
     ],
@@ -132,6 +137,24 @@ const FEATURES = [
     title: "국토부 연동",
     desc: "주소 입력만으로 건축물대장·용도지역·공시지가 자동 조회",
     color: "from-sky-500 to-blue-400",
+  },
+  {
+    icon: Ruler,
+    title: "DXF/IFC 도면 자동",
+    desc: "AutoCAD DXF 16레이어 + IFC 2x3 BIM — 구조그리드·창호·마감 포함",
+    color: "from-indigo-500 to-violet-400",
+  },
+  {
+    icon: Database,
+    title: "실거래가 빅데이터",
+    desc: "토지·아파트·오피스텔 실거래 매매내역 자동 조회 → 정확한 사업성",
+    color: "from-teal-500 to-cyan-400",
+  },
+  {
+    icon: Sun,
+    title: "일조/BOQ/공정표",
+    desc: "SunCalc 일조 시뮬레이션 + 29항목 물량산출 + 15단계 공정표 자동",
+    color: "from-yellow-500 to-orange-400",
   },
 ]
 
