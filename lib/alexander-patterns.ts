@@ -259,3 +259,9 @@ export function evaluateAllPatterns(p: {
     topIssues: ap.filter(c=>!c.pass).slice(0,10).map(c=>`#${c.id} ${c.nameKo}: ${c.description}`)
   }
 }
+
+
+// Stub for backward compatibility
+export interface PatternVisuals { patterns: string[] }
+export function getPatternVisuals(): PatternVisuals { return { patterns: [] } }
+

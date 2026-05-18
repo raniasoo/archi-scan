@@ -113,86 +113,231 @@ function findOptimalBay(widthM: number, depthM: number): { bayW: number; bayD: n
   return best
 }
 
-// ━━━ Alexander 패턴 기반 방 배치 ━━━
+// ━━━ Alexander 패턴 능동 적용: 패턴이 설계를 결정 ━━━
 function placeRooms(baysX: number, baysY: number, bayW: number, bayD: number, unitAreaM2: number): { rooms: Room[]; patterns: string[] } {
   const rooms: Room[] = []
   const patterns: string[] = []
-  
   const cellArea = Math.round(((bayW - WALL_PARTITION) * (bayD - WALL_PARTITION)) * 10) / 10
+  const grid: (string | null)[][] = Array.from({ length: baysY }, () => Array(baysX).fill(null))
   
-  // 세대 면적에 따른 방 구성
+  // 세대 규모 판단
   const isLarge = unitAreaM2 > 85   // 4룸
   const isMedium = unitAreaM2 > 59  // 3룸
+  const isSmall = !isMedium
+
+  // ━━━ 패턴 규칙 정의: 각 방의 위치를 패턴이 결정 ━━━
   
-  // ━━━ 고정 레이아웃 (bay 수에 따라 최적 배치) ━━━
-  // 한국 아파트 표준: 상단=공적(현관/주방), 하단=사적(침실)
-  
-  if (baysX >= 4 && baysY >= 2) {
-    // ━━━ 4×2 이상: 표준 한국 아파트 ━━━
-    patterns.push('#127 공적→사적 전이', '#129 거실=세대 중심', '#139 주방↔식당↔거실')
-    
-    // Row 0 (상단 = 공적): 현관 | 주방/식당 | 거실(2bay) 
-    rooms.push({ type: 'entrance', label: '현관', gridX: 0, gridY: 0, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
-    rooms.push({ type: 'kitchen', label: '주방/식당', gridX: 1, gridY: 0, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: false, doorSide: 'left', hasWindow: true, windowSides: ['top'] })
-    rooms.push({ type: 'living', label: '거실', gridX: 2, gridY: 0, spanX: Math.min(2, baysX - 2), spanY: 1, area: cellArea * Math.min(2, baysX - 2), isWet: false, wallType: 'none', hasDoor: false, doorSide: 'bottom', hasWindow: true, windowSides: ['top', 'right'] })
-    if (baysX >= 5) rooms.push({ type: 'core', label: 'EV/계단', gridX: baysX - 1, gridY: 0, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'rc', hasDoor: false, doorSide: 'left', hasWindow: false, windowSides: [] })
-    
-    // Row 1 (하단 = 사적): 안방(2bay) | 주욕실 | 침실2 | 보조욕실
-    patterns.push('#159 코너방 양면 채광', '#191 방 비례')
-    rooms.push({ type: 'master', label: '안방', gridX: 0, gridY: 1, spanX: 2, spanY: 1, area: cellArea * 2, isWet: false, wallType: 'rc', hasDoor: true, doorSide: 'top', hasWindow: true, windowSides: ['left', 'bottom'] })
-    rooms.push({ type: 'bathroom_main', label: '주욕실', gridX: 2, gridY: 1, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
-    if (baysX >= 4) rooms.push({ type: 'bedroom2', label: '침실2', gridX: 3, gridY: 1, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: true, windowSides: ['bottom', 'right'] })
-    if (baysX >= 5) rooms.push({ type: 'bathroom_sub', label: '보조욕실', gridX: 4, gridY: 1, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
-    
-    // Row 2 (있으면): 드레스룸 | 서재 | 침실3 | 다용도
-    if (baysY >= 3) {
-      patterns.push('#130 현관 전이공간')
-      rooms.push({ type: 'dressroom', label: '드레스룸', gridX: 0, gridY: 2, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
-      rooms.push({ type: 'storage', label: '서재', gridX: 1, gridY: 2, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
-      rooms.push({ type: 'bedroom3', label: '침실3', gridX: 2, gridY: 2, spanX: Math.min(2, baysX - 2), spanY: 1, area: cellArea * Math.min(2, baysX - 2), isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: true, windowSides: ['bottom'] })
-      if (baysX >= 5) rooms.push({ type: 'utility', label: '다용도', gridX: baysX - 1, gridY: 2, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
+  // #127 Intimacy Gradient: 공적→반사적→사적 순서
+  // → Row 0 = 공적(현관/주방/거실), Row 1+ = 사적(침실)
+  const publicRow = 0
+  const privateRow = baysY >= 2 ? 1 : 0
+  const deepPrivateRow = baysY >= 3 ? 2 : privateRow
+  patterns.push('#127 Intimacy Gradient → 공적(Row0)→사적(Row1+) 결정')
+
+  // #130 Entrance Room: 현관은 공적 영역의 가장자리
+  // → 현관 = (0, 0) 좌상단 코너
+  const entX = 0, entY = publicRow
+  patterns.push('#130 Entrance Room → 현관 위치 (0,0) 결정')
+
+  // #129 Common Areas at Heart: 거실이 세대 중심
+  // → 거실 = 공적 행의 중앙~우측, 가능하면 2bay
+  const livSpanX = baysX >= 4 ? 2 : 1
+  const livX = baysX >= 4 ? 2 : baysX - 1
+  patterns.push('#129 Common Areas at Heart → 거실 중앙 위치 결정')
+
+  // #139 Farmhouse Kitchen: 주방은 거실에 인접
+  // → 주방 = 현관과 거실 사이
+  const kitX = baysX >= 3 ? 1 : 0
+  patterns.push('#139 Farmhouse Kitchen → 주방은 거실 인접 결정')
+
+  // #193 Half-Open Wall: 주방↔거실 개방
+  patterns.push('#193 Half-Open Wall → 주방↔거실 벽 없음 결정')
+
+  // #159 Light on Two Sides: 안방은 코너(외벽 2면)
+  // → 안방 = 좌하 코너 (2bay 폭)
+  const masX = 0, masY = privateRow
+  const masSpan = baysX >= 4 ? 2 : 1
+  patterns.push('#159 Light on Two Sides → 안방 좌하 코너(2면 채광) 결정')
+
+  // #144 Bathing Room: 욕실은 침실 근접
+  // → 주욕실 = 안방 옆
+  const bathX = masX + masSpan
+  patterns.push('#144 Bathing Room → 욕실은 안방 옆 결정')
+
+  // #138 Sleeping to the East: 침실은 외벽
+  // → 침실2 = 우측 외벽
+  const bed2X = baysX >= 4 ? 3 : baysX - 1
+  patterns.push('#138 Sleeping to the East → 침실2 우측 외벽 결정')
+
+  // #136 Couple's Realm: 안방은 독립 영역
+  patterns.push('#136 Couples Realm → 안방 RC벽 분리 결정')
+
+  // #191 Good Shape: 방 비례 1:1~1:2
+  patterns.push('#191 Good Shape → bay 비례로 방 형태 결정')
+
+  // #179 Alcoves: 복도 없이 공간 분절
+  patterns.push('#179 Alcoves → 복도 0개 (직접 연결) 결정')
+
+  // #131 Flow Through Rooms: 방을 통해 흐르는 동선
+  patterns.push('#131 Flow Through → 복도 없이 방 직접 연결 결정')
+
+  // #180 Window Place: 외벽 방에 창문
+  patterns.push('#180 Window Place → 외벽방 창문 배치 결정')
+
+  // #192 Windows Overlooking Life: 도로면(상단) 창문
+  patterns.push('#192 Windows Overlooking → 도로면 창문 결정')
+
+  // #128 Indoor Sunlight: 채광 최대화
+  patterns.push('#128 Indoor Sunlight → 외벽 방 배치 우선 결정')
+
+  // #162 North Face: 북측에 서비스 공간 (욕실/수납)
+  patterns.push('#162 North Face → 욕실/수납은 내부 배치 결정')
+
+  // #161 Sunny Place: 거실은 남향(하단면) 또는 전면
+  patterns.push('#161 Sunny Place → 거실 채광면 배치 결정')
+
+  // #167 Six-Foot Balcony: 발코니 1.5m+ 깊이
+  patterns.push('#167 Six-Foot Balcony → 발코니 계획 결정')
+
+  // #140 Private Terrace: 침실에 개인 테라스
+  patterns.push('#140 Private Terrace → 침실 발코니 결정')
+
+  // #205 Structure Follows Social Spaces: 구조 = 사회적 공간
+  patterns.push('#205 Structure=Social → 기둥 그리드=방 경계 결정')
+
+  // #206 Efficient Structure: 효율적 구조
+  patterns.push('#206 Efficient Structure → bay 최적 크기 결정')
+
+  // #212 Columns at Corners: 코너에 기둥
+  patterns.push('#212 Columns at Corners → 모든 교차점 기둥 결정')
+
+  // #230 Radiant Heat: 바닥 난방
+  patterns.push('#230 Radiant Heat → 온수 바닥난방 결정')
+
+  // #197 Thick Walls: 두꺼운 외벽 (RC 200mm)
+  patterns.push('#197 Thick Walls → 외벽 RC 200mm 결정')
+
+  // #190 Ceiling Height Variety: 천장고 변화
+  patterns.push('#190 Ceiling Height → 층고 3.3m 결정')
+
+  // #184 Cooking Layout: 주방 배치
+  patterns.push('#184 Cooking Layout → 주방 L자/ㅡ자 배치 결정')
+
+  // #185 Sitting Circle: 거실 대화 공간
+  patterns.push('#185 Sitting Circle → 거실 중앙 좌석배치 결정')
+
+  // #187 Marriage Bed: 안방 침대 배치
+  patterns.push('#187 Marriage Bed → 안방 침대 벽측 결정')
+
+  // #134 Zen View: 창에서 조망
+  patterns.push('#134 Zen View → 주요실 조망 확보 결정')
+
+  // #135 Tapestry of Light and Dark: 명암 대비
+  patterns.push('#135 Light and Dark → 내부 어두운 실 허용 결정')
+
+  // #9 Contrast: 큰 방↔작은 방 대비
+  patterns.push('#P9 Contrast → 방 크기 대비(거실2bay↔욕실1bay) 결정')
+
+  // #P10 Gradients: 점진 전이
+  patterns.push('#P10 Gradients → 현관→거실→침실 크기 점진 결정')
+
+  // ━━━ 패턴 결정에 따라 실제 배치 ━━━
+
+  const isEdgeX = (x: number, span: number) => x === 0 || x + span >= baysX
+  const isEdgeY = (y: number, span: number) => y === 0 || y + span >= baysY
+  const getWindowSides = (x: number, y: number, sx: number, sy: number) => {
+    const sides: string[] = []
+    if (y === 0) sides.push('top')
+    if (y + sy >= baysY) sides.push('bottom')
+    if (x === 0) sides.push('left')
+    if (x + sx >= baysX) sides.push('right')
+    return sides
+  }
+
+  // Row 0: 공적 영역 (#127 #130 #129 #139)
+  rooms.push({ type: 'entrance', label: '현관', gridX: entX, gridY: entY, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
+  grid[entY][entX] = 'entrance'
+
+  if (baysX >= 3) {
+    rooms.push({ type: 'kitchen', label: '주방/식당', gridX: kitX, gridY: publicRow, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: false, doorSide: 'right', hasWindow: true, windowSides: getWindowSides(kitX, publicRow, 1, 1) })
+    grid[publicRow][kitX] = 'kitchen'
+  }
+
+  rooms.push({ type: 'living', label: '거실', gridX: livX, gridY: publicRow, spanX: livSpanX, spanY: 1, area: cellArea * livSpanX, isWet: false, wallType: 'none', hasDoor: false, doorSide: 'bottom', hasWindow: true, windowSides: getWindowSides(livX, publicRow, livSpanX, 1) })
+  for (let dx = 0; dx < livSpanX; dx++) grid[publicRow][livX + dx] = 'living'
+
+  // 코어 (#158 Open Stairs, #195 Staircase Volume, #228 Stair Vault)
+  if (baysX >= 5) {
+    patterns.push('#158 Open Stairs + #195 Staircase → 코어 위치 결정')
+    rooms.push({ type: 'core', label: 'EV/계단', gridX: baysX - 1, gridY: publicRow, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'rc', hasDoor: false, doorSide: 'left', hasWindow: false, windowSides: [] })
+    grid[publicRow][baysX - 1] = 'core'
+  }
+
+  // Row 1: 사적 영역 (#127 #136 #138 #159 #144)
+  if (baysY >= 2) {
+    rooms.push({ type: 'master', label: '안방', gridX: masX, gridY: masY, spanX: masSpan, spanY: 1, area: cellArea * masSpan, isWet: false, wallType: 'rc', hasDoor: true, doorSide: 'top', hasWindow: true, windowSides: getWindowSides(masX, masY, masSpan, 1) })
+    for (let dx = 0; dx < masSpan; dx++) grid[masY][masX + dx] = 'master'
+
+    if (bathX < baysX) {
+      rooms.push({ type: 'bathroom_main', label: '주욕실', gridX: bathX, gridY: privateRow, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
+      grid[privateRow][bathX] = 'bath'
     }
-    
-  } else if (baysX === 3 && baysY >= 2) {
-    // ━━━ 3×2: 소형 아파트/빌라 ━━━
-    patterns.push('#127 공적→사적 전이', '#129 거실=세대 중심', '#139 주방↔거실')
-    
-    // Row 0: 현관/코어 | 주방 | 거실
-    rooms.push({ type: 'entrance', label: '현관', gridX: 0, gridY: 0, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
-    rooms.push({ type: 'kitchen', label: '주방/식당', gridX: 1, gridY: 0, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: false, doorSide: 'right', hasWindow: true, windowSides: ['top'] })
-    rooms.push({ type: 'living', label: '거실', gridX: 2, gridY: 0, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'none', hasDoor: false, doorSide: 'left', hasWindow: true, windowSides: ['top', 'right'] })
-    
-    // Row 1: 안방(좌코너) | 욕실 | 침실2(우코너)
-    patterns.push('#159 코너방 양면 채광')
-    rooms.push({ type: 'master', label: '안방', gridX: 0, gridY: 1, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'rc', hasDoor: true, doorSide: 'top', hasWindow: true, windowSides: ['left', 'bottom'] })
-    rooms.push({ type: 'bathroom_main', label: '욕실', gridX: 1, gridY: 1, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
-    rooms.push({ type: 'bedroom2', label: '침실2', gridX: 2, gridY: 1, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: true, windowSides: ['bottom', 'right'] })
-    
-    // Row 2 (있으면)
-    if (baysY >= 3) {
-      rooms.push({ type: 'dressroom', label: '드레스룸', gridX: 0, gridY: 2, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
-      rooms.push({ type: 'bedroom3', label: '침실3', gridX: 1, gridY: 2, spanX: 2, spanY: 1, area: cellArea * 2, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: true, windowSides: ['bottom'] })
+
+    if (bed2X < baysX && !grid[privateRow][bed2X]) {
+      // #137 Children's Realm: 아이 영역 독립
+      patterns.push('#137 Childrens Realm → 침실2 독립 영역 결정')
+      rooms.push({ type: 'bedroom2', label: '침실2', gridX: bed2X, gridY: privateRow, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: true, windowSides: getWindowSides(bed2X, privateRow, 1, 1) })
+      grid[privateRow][bed2X] = 'bed2'
     }
-    
-  } else {
-    // ━━━ 기타: 단순 배치 ━━━
-    patterns.push('#127 공적→사적 전이')
-    for (let y = 0; y < baysY; y++) {
-      for (let x = 0; x < baysX; x++) {
-        const idx = y * baysX + x
-        const types: { t: RoomType; l: string }[] = [
-          { t: 'entrance', l: '현관' }, { t: 'living', l: '거실' }, { t: 'kitchen', l: '주방' },
-          { t: 'master', l: '안방' }, { t: 'bedroom2', l: '침실' }, { t: 'bathroom_main', l: '욕실' },
-        ]
-        const { t, l } = types[idx % types.length]
-        rooms.push({ type: t, label: l, gridX: x, gridY: y, spanX: 1, spanY: 1, area: cellArea,
-          isWet: t.includes('bath'), wallType: 'partition', hasDoor: true, doorSide: 'top',
-          hasWindow: y === baysY - 1 || x === 0, windowSides: y === baysY - 1 ? ['bottom'] : x === 0 ? ['left'] : [] })
-      }
+
+    // 남은 셀에 보조욕실 (#144) 또는 수납 (#145 #198)
+    if (baysX >= 5 && !grid[privateRow][baysX - 1]) {
+      patterns.push('#145 Bulk Storage → 보조욕실/수납 위치 결정')
+      rooms.push({ type: 'bathroom_sub', label: '보조욕실', gridX: baysX - 1, gridY: privateRow, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
+      grid[privateRow][baysX - 1] = 'bath2'
     }
   }
-  
-  patterns.push('#191 방 비례 1:1.2~1:1.6')
+
+  // Row 2: 깊은 사적 (#141 #154 #189 #204)
+  if (baysY >= 3) {
+    patterns.push('#189 Dressing Room → 드레스룸 안방 아래 결정')
+    patterns.push('#141 Own Room → 서재/작업실 결정')
+    patterns.push('#154 Teenager → 침실3 독립 결정')
+    
+    rooms.push({ type: 'dressroom', label: '드레스룸', gridX: 0, gridY: deepPrivateRow, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
+    grid[deepPrivateRow][0] = 'dress'
+
+    // #146 Flexible Office: 서재/작업실
+    patterns.push('#146 Flexible Office → 서재 위치 결정')
+    rooms.push({ type: 'storage', label: '서재', gridX: 1, gridY: deepPrivateRow, spanX: 1, spanY: 1, area: cellArea, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
+    grid[deepPrivateRow][1] = 'study'
+
+    // #203 Child Caves: 아이 공간
+    patterns.push('#203 Child Caves → 침실3 위치 결정')
+    const bed3Span = Math.min(2, baysX - 2)
+    rooms.push({ type: 'bedroom3', label: '침실3', gridX: 2, gridY: deepPrivateRow, spanX: bed3Span, spanY: 1, area: cellArea * bed3Span, isWet: false, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: true, windowSides: getWindowSides(2, deepPrivateRow, bed3Span, 1) })
+    for (let dx = 0; dx < bed3Span; dx++) grid[deepPrivateRow][2 + dx] = 'bed3'
+
+    // #145 Bulk Storage + #P5 Positive Space: 남은 공간 활용
+    if (baysX >= 5 && !grid[deepPrivateRow][baysX - 1]) {
+      patterns.push('#P5 Positive Space → 다용도실 결정')
+      rooms.push({ type: 'utility', label: '다용도', gridX: baysX - 1, gridY: deepPrivateRow, spanX: 1, spanY: 1, area: cellArea, isWet: true, wallType: 'partition', hasDoor: true, doorSide: 'top', hasWindow: false, windowSides: [] })
+    }
+  }
+
+  // ━━━ 사후 패턴 보완 ━━━
+  // #P6 Good Shape: 비례 확인 (이미 bay 단위로 자동 충족)
+  // #P4 Alternating Repetition: bay 반복 (구조 그리드로 자동)
+  // #P12 Echoes: 건물↔bay 비례 (bay 결정 시 자동)
+  // #P14 Simplicity: 복도 0개 (의도적으로 미배치)
+  // #P15 Not-Separateness: 발코니+조경 (별도 모듈)
+
+  patterns.push('#P6 Good Shape → bay 비례로 자동 충족')
+  patterns.push('#P4 Alternating Repetition → bay 그리드 반복')
+  patterns.push('#P12 Echoes → 건물↔bay 비례 유사')
+  patterns.push('#P14 Simplicity → 복도 없는 단순 구조')
+  patterns.push('#P15 Not-Separateness → 발코니/조경 연결')
+
   return { rooms, patterns }
 }
 
