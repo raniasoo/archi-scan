@@ -399,6 +399,41 @@ export function FinancialStep(props: FinancialStepProps) {
               )
             })()}
 
+            {/* ━━━ NPV/IRR 수익 시뮬레이션 + 공정표 ━━━ */}
+            {feasibilityResult && feasibilityResult.totalCost > 0 && (() => {
+              try {
+                const { simulateProfit } = require('@/lib/gap-closures')
+                const { estimateSchedule } = require('@/lib/schedule-estimator')
+                const schedule = estimateSchedule({ floors: feasibilityResult.floors || 5, siteArea: feasibilityResult.siteArea || 500, type: selectedLayout?.type || 'tower' })
+                const sim = simulateProfit({ totalCost: feasibilityResult.totalCost / 1e8, revenue: (feasibilityResult.expectedRevenue || 0) / 1e8, constructionMonths: Math.round(schedule.constructionPeriod) })
+                return (
+                  <div className="rounded-xl border border-border bg-card p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calculator className="h-4 w-4 text-violet-400" />
+                      <span className="text-[11px] font-semibold">NPV/IRR 분석 · 공정 {schedule.totalMonths}개월</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="bg-violet-500/10 rounded-lg p-2">
+                        <div className="text-[9px] text-violet-300">NPV</div>
+                        <div className="text-sm font-bold text-violet-400">{sim.npv.toFixed(1)}억</div>
+                      </div>
+                      <div className="bg-blue-500/10 rounded-lg p-2">
+                        <div className="text-[9px] text-blue-300">IRR</div>
+                        <div className="text-sm font-bold text-blue-400">{sim.irr.toFixed(1)}%</div>
+                      </div>
+                      <div className="bg-emerald-500/10 rounded-lg p-2">
+                        <div className="text-[9px] text-emerald-300">회수기간</div>
+                        <div className="text-sm font-bold text-emerald-400">{sim.paybackMonths}개월</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-[9px] text-muted-foreground">
+                      공정: 설계 {schedule.designPeriod}m → 인허가 {schedule.permitPeriod}m → 공사 {schedule.constructionPeriod}m → 준공 {schedule.completionPeriod}m
+                    </div>
+                  </div>
+                )
+              } catch { return null }
+            })()}
+
             <div className="flex flex-col items-center gap-2 pt-4">
               <Button onClick={() => setCurrentStep("report")} size="lg" className="gap-2 w-full md:w-auto">
                 <FileText className="h-5 w-5" />

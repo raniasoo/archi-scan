@@ -8,6 +8,9 @@ import { calculateStructure } from "@/lib/structural-calc"
 import { generateMEPDesign } from "@/lib/mep-design"
 import { generateIFC, downloadIFC } from "@/lib/ifc-generator"
 import { generateDrawingSet } from "@/lib/drawing-set-generator"
+import { generateBOQ } from "@/lib/boq-generator"
+import { generateConstructionDetail } from "@/lib/construction-detail"
+import { estimateSchedule } from "@/lib/schedule-estimator"
 import dynamic from "next/dynamic"
 import { useState } from "react"
 const DrawingSetViewer = dynamic(() => import("@/components/drawing-set-viewer"), { ssr: false })
@@ -553,6 +556,77 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
                   <div>소화기: {mep.fire.filter(f => f.type === 'extinguisher').length}개</div>
                   <div>유도등: {mep.fire.filter(f => f.type === 'exit_sign').length}개</div>
                 </div>
+              </div>
+            </details>
+          </div>
+        )
+      })()}
+
+      {/* ━━━ BOQ 물량 산출 ━━━ */}
+      {(() => {
+        const sch2 = generateSchedules(grid)
+        const calc2 = calculateStructure(grid, floors, siteArea)
+        const boq = generateBOQ({ grid, calc: calc2, windows: sch2.windows, doors: sch2.doors, finishes: sch2.finishes, floors, siteArea })
+        return (
+          <div className="mt-2 px-1">
+            <details>
+              <summary className="text-[10px] font-semibold text-emerald-400 cursor-pointer">📦 BOQ 물량 산출 (총 {boq.totalCostBillion}억원 · {boq.items.length}항목 · {(boq.costPerM2/10000).toFixed(0)}만/㎡)</summary>
+              <div className="mt-1 space-y-1 text-[9px] text-slate-400">
+                {['구조', '건축', '설비', '간접비'].map(cat => (
+                  <div key={cat}>
+                    <div className="text-[9px] font-bold text-emerald-300 mb-0.5">{cat === '구조' ? '🏗️' : cat === '건축' ? '🧱' : cat === '설비' ? '⚡' : '📋'} {cat} ({(boq.items.filter(it => it.category === cat).reduce((s, it) => s + it.totalPrice, 0) / 1e8).toFixed(1)}억)</div>
+                    {boq.items.filter(it => it.category === cat && it.quantity > 0).map((it, i) => (
+                      <div key={i} className="flex justify-between pl-2">
+                        <span>{it.item}</span>
+                        <span className="text-emerald-400/70">{it.quantity.toLocaleString()}{it.unit}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </details>
+          </div>
+        )
+      })()}
+
+      {/* ━━━ 실시설계 상세 ━━━ */}
+      {(() => {
+        const detail = generateConstructionDetail({ floors, type })
+        return (
+          <div className="mt-2 px-1">
+            <details>
+              <summary className="text-[10px] font-semibold text-orange-400 cursor-pointer">🧱 실시설계 상세 (벽체{detail.wallSections.length} 방수{detail.waterproofing.length} 단열{detail.insulation.length} 배근{detail.rebarDetails.length})</summary>
+              <div className="mt-1 space-y-1 text-[9px] text-slate-400">
+                {detail.wallSections.map((w, i) => (
+                  <div key={i} className="pl-1"><span className="text-orange-300">{w.id}</span> {w.name} {w.totalThickness}mm U={w.uValue}</div>
+                ))}
+                <div className="text-orange-300/70 text-[8px]">방수: {detail.waterproofing.map(w => w.location).join(' · ')}</div>
+                <div className="text-orange-300/70 text-[8px]">단열: {detail.insulation.map(i => `${i.location} ${i.thickness}mm`).join(' · ')}</div>
+                <div className="text-orange-300/70 text-[8px]">배근: {detail.rebarDetails.map(r => `${r.member}:${r.mainBar}`).join(' · ')}</div>
+              </div>
+            </details>
+          </div>
+        )
+      })()}
+
+      {/* ━━━ 공정표 ━━━ */}
+      {(() => {
+        const schedule = estimateSchedule({ floors, siteArea, type })
+        const colors: Record<string, string> = { design: '#818cf8', permit: '#fbbf24', construction: '#34d399', completion: '#f87171' }
+        return (
+          <div className="mt-2 px-1 mb-2">
+            <details>
+              <summary className="text-[10px] font-semibold text-violet-400 cursor-pointer">📅 공정표 ({schedule.totalMonths}개월 = 설계{schedule.designPeriod}+인허가{schedule.permitPeriod}+공사{schedule.constructionPeriod}+준공{schedule.completionPeriod})</summary>
+              <div className="mt-1 space-y-0.5 text-[9px]">
+                {schedule.phases.map((p, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <span className="w-16 truncate text-slate-500 text-[8px]">{p.name}</span>
+                    <div className="flex-1 h-2.5 bg-white/5 rounded relative">
+                      <div className="absolute h-full rounded" style={{ left: `${p.start/schedule.totalDays*100}%`, width: `${Math.max(p.duration/schedule.totalDays*100, 2)}%`, background: colors[p.category] }} />
+                    </div>
+                    <span className="w-6 text-right text-slate-500 text-[8px]">{Math.round(p.duration/30)}m</span>
+                  </div>
+                ))}
               </div>
             </details>
           </div>
