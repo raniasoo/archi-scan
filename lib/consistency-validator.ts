@@ -215,7 +215,7 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
       systemA: '법규', systemB: '배치안',
       field: '용적률',
       valueA: s.regulation.maxFloorAreaRatio, valueB: actualFAR,
-      message: `실제 용적률 ${actualFAR}%가 법정 한도 ${s.regulation.maxFloorAreaRatio}%를 초과`,
+      message: `실제 용적률 ${checkFAR}%가 법정 한도 ${s.regulation.maxFloorAreaRatio}%를 초과`,
       fix: `연면적을 ${Math.floor(s.siteArea * s.regulation.maxFloorAreaRatio / 100)}㎡ 이하로 축소`,
     })
   }
@@ -588,6 +588,52 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
           targetStep: 'layouts',
       fix: '클러스터 변환 전에 _originalType = layout.type 저장',
     })
+  }
+
+  // ━━━ 법규 적합성 추가 검증 ━━━
+  // LEGAL-01: 주차대수 vs 세대수 비율 (최소 세대당 1대)
+  if (s.layout.parking < s.layout.units) {
+    issues.push({
+      id: 'LEGAL-01', severity: 'warning',
+      systemA: '법규', systemB: '배치안',
+      field: '주차대수', valueA: s.layout.units, valueB: s.layout.parking,
+      message: `세대수 ${s.layout.units}대 > 주차 ${s.layout.parking}대 (세대당 1대 미달)`,
+      fix: '배치 탭에서 주차대수를 늘리세요',
+      targetStep: 'layouts',
+    })
+  }
+
+  // LEGAL-02: 용적률 한도 초과 확인
+  const checkFAR = Math.round(s.layout.gfa / s.siteArea * 100)
+  const farLimit = s.regulation?.maxFloorAreaRatio || 200
+  if (checkFAR > farLimit) {
+    issues.push({
+      id: 'LEGAL-02', severity: 'error',
+      systemA: '배치안', systemB: '법규',
+      field: '용적률 초과', valueA: `${checkFAR}%`, valueB: `${farLimit}%`,
+      message: `용적률 ${checkFAR}%가 한도 ${farLimit}%를 초과합니다`,
+      fix: '배치 탭에서 층수를 줄이세요',
+      targetStep: 'layouts',
+    })
+  }
+
+  // ━━━ 설계-배치 일관성 추가 ━━━
+  // STRAT-01: 설계 전략 ↔ 배치 특성 매칭
+  if (s.designStrategy && s.layout.type) {
+    const strategy = s.designStrategy
+    const type = s.layout.type
+    const mismatch = (strategy === 'view-priority' && type === 'courtyard') ||
+                     (strategy === 'privacy-priority' && type === 'tower' && s.layout.floors > 7)
+    if (mismatch) {
+      issues.push({
+        id: 'STRAT-01', severity: 'warning',
+        systemA: '설계 전략', systemB: '배치안',
+        field: '전략-배치 매칭', valueA: strategy, valueB: type,
+        message: `설계 전략 '${strategy}'과 배치유형 '${type}'의 적합도가 낮습니다`,
+        fix: '설계 탭에서 전략을 변경하거나 배치를 조정하세요',
+        targetStep: 'design',
+      })
+    }
   }
   
   return issues
