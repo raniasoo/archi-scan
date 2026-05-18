@@ -56,9 +56,10 @@ async function testOneAddress(district: string): Promise<TxnResult> {
   try {
     const now = new Date()
     const allTxns: any[] = []
+    let firstXmlSample = ''
     
-    // 최근 3개월 조회
-    for (let i = 0; i < 3; i++) {
+    // 최근 12개월 조회 (실거래 데이터 지연 대응)
+    for (let i = 1; i <= 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`
       const url = `${API_URL}?serviceKey=${encodeURIComponent(API_KEY)}&LAWD_CD=${regionCode}&DEAL_YMD=${ym}&pageNo=1&numOfRows=30`
@@ -67,16 +68,23 @@ async function testOneAddress(district: string): Promise<TxnResult> {
       if (!res.ok) continue
       const xml = await res.text()
       
-      // 에러 체크
-      if (xml.includes('<returnAuthMsg>') && xml.includes('SERVICE_KEY')) {
-        const errMsg = xml.match(/<returnAuthMsg>([^<]*)</)
+      // 에러 체크 + 원문 디버그
+      if (xml.includes('SERVICE_KEY') || xml.includes('SERVICE ERROR') || xml.includes('<errMsg>')) {
         return {
           address: district, regionCode, count: 0,
           avgPricePerM2: 0, minPrice: 0, maxPrice: 0,
           source: 'AUTH_ERROR', topTransactions: [],
-          error: `인증 오류: ${errMsg?.[1] || 'SERVICE_KEY_ERROR'}`
+          error: `API오류 ym=${ym} xml=${xml.substring(0, 400)}`
         }
       }
+
+      // totalCount 확인
+      const tcMatch = xml.match(/<totalCount>(\d+)</)
+      const tc = tcMatch ? parseInt(tcMatch[1]) : -1
+      if (tc === 0 && allTxns.length === 0) continue  // 이 달 데이터 없음 → 다음 달
+      
+      // 첫 번째 XML 샘플 저장 (디버그)
+      if (allTxns.length === 0 && !firstXmlSample) firstXmlSample = xml.substring(0, 500)
 
       const re = /<item>([\s\S]*?)<\/item>/g
       let m
@@ -98,11 +106,14 @@ async function testOneAddress(district: string): Promise<TxnResult> {
     }
 
     if (allTxns.length === 0) {
+      // 마지막 조회 URL 디버그
+      const d = new Date(now.getFullYear(), now.getMonth() - 6, 1)
+      const lastYm = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`
       return {
         address: district, regionCode, count: 0,
         avgPricePerM2: 0, minPrice: 0, maxPrice: 0,
         source: 'NO_DATA', topTransactions: [],
-        error: '해당 기간 거래 데이터 없음'
+        error: `12개월 조회 결과 0건 (code=${regionCode}, lastYm=${lastYm}) xmlSample=${firstXmlSample.substring(0, 200)}`
       }
     }
 
