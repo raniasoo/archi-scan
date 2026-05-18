@@ -140,8 +140,12 @@ export function SitePlan({
       // 인셋 폴리곤의 무게중심
       const icx = insetCoords.reduce((s, p) => s + p.x, 0) / insetCoords.length
       const icy = insetCoords.reduce((s, p) => s + p.y, 0) / insetCoords.length
+      
+      // ━━━ 최적 배치: 후면 밀착 (도로 반대쪽으로 이동) ━━━
+      // SVG에서 도로는 하단(+Y) → 건물을 상단(-Y) 방향으로 밀어서 전면 여유 확보
+      const rearBias = (bldZoneH * 0.08)  // 건축가능영역 높이의 8%만큼 후면으로
       anchorX = icx
-      anchorY = icy
+      anchorY = icy - rearBias  // 위쪽(후면)으로 이동
       
       // 무게중심에서 폴리곤 각 변까지의 최소 거리 계산 → 내접 가능 크기
       let minDistX = Infinity, minDistY = Infinity

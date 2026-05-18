@@ -563,15 +563,35 @@ export function BuildingVolume3D({
 
       /* ── 건물 (PBR + 창문 텍스처) ── */
 
-      // ━━━ 건물을 건축가능영역에 맞춰 스케일링 + 오프셋 ━━━
-      const buildableW = S - 2 * sideSB  // 건축가능 폭
-      const buildableD = S - frontSB - rearSB  // 건축가능 깊이
-      // 건물 전체 바운딩 박스 → 건축가능영역에 맞는 scale 계산
+      // ━━━ 최적 건물 배치 알고리즘 ━━━
+      // 원칙 1: 후면 밀착 → 전면 조경/진입 공간 확보
+      // 원칙 2: 좌우 균등 → 양 측면 이격 동일
+      // 원칙 3: 건축가능영역 내 100% 수용
+      
+      const buildableW = S - 2 * sideSB
+      const buildableD = S - frontSB - rearSB
       const allBlocksMaxX = Math.max(...blocks.map(b => Math.abs(b.x) + b.w / 2)) * S * 2
       const allBlocksMaxZ = Math.max(...blocks.map(b => Math.abs(b.z) + b.d / 2)) * S * 2
       const buildScale = Math.min(1.0, Math.min(buildableW / Math.max(allBlocksMaxX, 1), buildableD / Math.max(allBlocksMaxZ, 1)) * 0.92)
-      const buildableOffsetX = 0  // 좌우 이격 대칭
-      const buildableOffsetZ = (rearSB - frontSB) / 2  // 전후 이격 차이 → 중심 이동
+
+      // 건물 실제 크기 (스케일 적용 후)
+      const scaledBldW = allBlocksMaxX * buildScale
+      const scaledBldD = allBlocksMaxZ * buildScale
+
+      // ━━━ 최적 배치 위치 계산 ━━━
+      // X축: 좌우 균등 (대칭)
+      const buildableOffsetX = 0
+      
+      // Z축: 후면 밀착 배치 (한국 건축 관행)
+      // 건축가능영역: sbRear(-S/2+rearSB) ~ sbFront(S/2-frontSB)
+      // 건물 후면을 건축가능영역 후면에서 여유 1m만 두고 배치
+      const buildableCenterZ = (rearSB - frontSB) / 2  // 건축가능영역 중심
+      const rearMargin = Math.min(1.0, (buildableD - scaledBldD) * 0.15) // 후면 여유 15% or 1m
+      const optimalZ = buildableCenterZ - (buildableD - scaledBldD) / 2 + rearMargin  // 후면 밀착
+      
+      // 전면 여유 공간 계산 (조경/주차/진입용)
+      const frontYardDepth = buildableD - scaledBldD - rearMargin
+      const buildableOffsetZ = frontYardDepth > 2 ? optimalZ : buildableCenterZ  // 전면 2m 미만이면 중앙 배치
 
       // ━━━ 모든 타입: 블록 기반 (geo.blocks → SVG 도면과 100% 일치) ━━━
       blocks.forEach((blk, idx) => {
