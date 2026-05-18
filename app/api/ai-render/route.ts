@@ -3,6 +3,8 @@ import { Resvg } from '@resvg/resvg-js'
 import { matchPatterns, buildPatternPrompt } from '@/lib/pattern-matcher'
 import { buildContextualPatternPrompt, angleToContext } from '@/lib/pattern-prompt-builder'
 import { getBuildingDimensionsInMeters } from '@/lib/building-geometry'
+import { generateStructuralGrid } from '@/lib/structural-grid'
+import { generateSchedules } from '@/lib/schedule-generator'
 
 // ━━━ Vercel 타임아웃 확장 (기본 60초 → 최대 300초) ━━━
 export const maxDuration = 300  // 5분 — Gemini 이미지 생성은 최대 90초/건
@@ -1419,6 +1421,27 @@ ${regulation.overlappingRegs?.length ? `- Special zones: ${regulation.overlappin
 DESIGN DIRECTION:
 ${strategyStyle || 'Modern residential design'}
 ${materialHint ? `\nMATERIALS AND FINISH:\n${materialHint}` : ''}
+${(() => {
+    // ━━━ 실시설계 데이터 → AI 프롬프트 자동 주입 (Phase 4~6) ━━━
+    try {
+      const mainBlock = geoBlocks.reduce((a: any, b: any) => (a.widthM * a.depthM > b.widthM * b.depthM ? a : b))
+      const grid = generateStructuralGrid({ widthM: mainBlock.widthM, depthM: mainBlock.depthM, unitAreaM2: Math.round(footprint * f / Math.max(u, 1)), floors: f })
+      const sch = generateSchedules(grid)
+      
+      const winDesc = sch.windows.map(w => `${w.id}: ${w.type} ${w.width}×${w.height}mm (${w.material}, ${w.glass}) ×${w.count}`).join('; ')
+      const doorDesc = sch.doors.filter(d => d.type === '현관문' || d.type === '방화문').map(d => `${d.type} ${d.width}mm ${d.material}`).join('; ')
+      const extFinish = sch.finishes.find(f => f.roomType === 'entrance')
+      
+      return `
+CONSTRUCTION DETAILS (from actual design documents — render these accurately):
+- Windows: ${winDesc}
+- Entrance: ${doorDesc || '스틸 방화문 1000mm + 디지털 도어락'}
+- Facade: ${extFinish ? `Ground floor: ${extFinish.floor} finish` : 'Ground floor: stone or tile'}, Upper floors: plaster/tile
+- Balcony: Glass railing 1.2m with aluminum frame, ${f <= 3 ? '1.5m deep' : '1.2m deep'}
+- Roof: Flat roof with ${f <= 5 ? 'glass parapet railing + rooftop garden planter boxes' : 'mechanical penthouse + parapet'}
+- Interior visible through windows: ${sch.finishes.find(f => f.roomType === 'living')?.floor || '강마루'} flooring, ${sch.finishes.find(f => f.roomType === 'living')?.wall || '실크벽지'} walls`
+    } catch { return '' }
+  })()}
 ${atmosphereHints.length > 0 ? `\nATMOSPHERE:\n${atmosphereHints.map(h => `- ${h}`).join('\n')}` : ''}
 ${patternHints.length > 0 ? `\nMUST INCLUDE THESE ELEMENTS (Christopher Alexander's Pattern Language):\n${patternHints.map(h => `- ${h}`).join('\n')}` : ''}
 ${supabasePatternPrompt || ''}
