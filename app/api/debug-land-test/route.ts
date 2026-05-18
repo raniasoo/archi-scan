@@ -18,15 +18,8 @@ const REGION_CODES: Record<string, string> = {
 
 const TEST_ADDRESSES = [
   { name: '강남구 역삼동', district: '강남구' },
-  { name: '서초구 반포동', district: '서초구' },
-  { name: '송파구 잠실동', district: '송파구' },
-  { name: '용산구 한남동', district: '용산구' },
   { name: '마포구 합정동', district: '마포구' },
-  { name: '성동구 성수동', district: '성동구' },
-  { name: '영등포구 여의도동', district: '영등포구' },
-  { name: '종로구 평창동', district: '종로구' },
   { name: '노원구 상계동', district: '노원구' },
-  { name: '강서구 화곡동', district: '강서구' },
 ]
 
 interface TxnResult {
@@ -58,8 +51,8 @@ async function testOneAddress(district: string): Promise<TxnResult> {
     const allTxns: any[] = []
     let firstXmlSample = ''
     
-    // 최근 12개월 조회 (실거래 데이터 지연 대응)
-    for (let i = 1; i <= 12; i++) {
+    // 최근 6개월 조회 (실거래 데이터 지연 대응)
+    for (let i = 1; i <= 6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`
       const url = `${API_URL}?serviceKey=${encodeURIComponent(API_KEY)}&LAWD_CD=${regionCode}&DEAL_YMD=${ym}&pageNo=1&numOfRows=30`
