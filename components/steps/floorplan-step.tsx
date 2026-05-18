@@ -18,6 +18,7 @@ const SectionView = dynamic(() => import("@/components/section-view").then(m => 
 const ElevationView = dynamic(() => import("@/components/elevation-view").then(m => ({ default: m.ElevationView })), { ssr: false, loading: LoadingBox })
 const PerspectiveView = dynamic(() => import("@/components/perspective-view").then(m => ({ default: m.PerspectiveView })), { ssr: false, loading: LoadingBox })
 const SitePlan = dynamic(() => import("@/components/site-plan").then(m => ({ default: m.SitePlan })), { ssr: false, loading: LoadingBox })
+const StructuralFloorPlan = dynamic(() => import("@/components/structural-floor-plan"), { ssr: false, loading: LoadingBox })
 const AIFloorPlan = dynamic(() => import("@/components/ai-floorplan-renderer").then(m => ({ default: m.AIFloorPlan })), { ssr: false, loading: LoadingBox })
 const ThreeJSDiagrams = dynamic(() => import("@/components/threejs-diagrams").then(m => ({ default: m.ThreeJSDiagrams })), { ssr: false, loading: LoadingBox })
 
@@ -127,6 +128,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
   const tabs = [
     { id: "floor" as const, label: "기본 평면" },
     { id: "ai-generate" as const, label: "📐 상세평면도" },
+    { id: "structural" as const, label: "🏗️ 구조그리드" },
     { id: "3d-unified" as const, label: "🧊 3D 도면" },
     { id: "site" as const, label: "배치도" },
     { id: "iso" as const, label: "아이소" },
@@ -268,6 +270,18 @@ export function FloorplanStep(props: FloorplanStepProps) {
                 side: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 1.5 : 1,
                 rear: (molit.zoneCode || regulation?.zoneType)?.includes('residential') ? 2 : 1.5,
               }}
+            />
+          )}
+
+          {/* 🏗️ 구조 그리드 평면도 */}
+          {drawingTab === "structural" && (
+            <StructuralFloorPlan
+              type={renderData.type}
+              coverage={renderData.coverage}
+              siteArea={renderData.siteArea}
+              floors={renderData.floors}
+              units={renderData.units}
+              unitArea={Math.round((renderData.siteArea * renderData.coverage / 100 * renderData.floors) / Math.max(renderData.units, 1))}
             />
           )}
 
