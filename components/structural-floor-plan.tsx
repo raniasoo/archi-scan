@@ -7,6 +7,7 @@ import { generateSchedules } from "@/lib/schedule-generator"
 import { calculateStructure } from "@/lib/structural-calc"
 import { generateMEPDesign } from "@/lib/mep-design"
 import { generateIFC, downloadIFC } from "@/lib/ifc-generator"
+import { generateDrawingSet } from "@/lib/drawing-set-generator"
 
 interface Props {
   type: string
@@ -94,6 +95,25 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
             downloadIFC(ifcData, `archi-scan-${type}-${floors}F.ifc`)
           }} className="px-2 py-1 rounded-lg text-[10px] font-medium bg-purple-500/10 text-purple-400 hover:bg-purple-500/20">
             🏛️ IFC
+          </button>
+          <button onClick={async () => {
+            const calc = calculateStructure(grid, floors, siteArea)
+            const mep = generateMEPDesign(grid)
+            const sheets = generateDrawingSet({
+              grid, calc, mep, floors, floorHeight: 3300,
+              project: `${type} ${floors}층`,
+              address: '',
+            })
+            const JSZip = (await import('jszip')).default
+            const zip = new JSZip()
+            for (const s of sheets) zip.file(s.filename, s.content)
+            const blob = await zip.generateAsync({ type: 'blob' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url; a.download = `ArchiScan-DrawingSet-${sheets.length}sheets.zip`; a.click()
+            URL.revokeObjectURL(url)
+          }} className="px-2 py-1 rounded-lg text-[10px] font-medium bg-teal-500/10 text-teal-400 hover:bg-teal-500/20">
+            📦 도면세트
           </button>
         </div>
       </div>
