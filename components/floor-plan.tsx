@@ -246,6 +246,9 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
   const curU = isGF ? gfU : upU
   const tGFA = (gfa || (tU * 59)) / bc
   const uA = Math.round(tGFA / Math.max(tU, 1))
+  // 다중 블록에서 블록당 면적 (중정형 등에서 1세대가 3블록에 걸칠 때)
+  const blockCount = (() => { try { const { getBuildingDimensionsInMeters } = require('@/lib/building-geometry'); return getBuildingDimensionsInMeters({ type, coverage, siteArea, floors: totalFloors }).blocksInMeters.length } catch { return 1 } })()
+  const blockArea = blockCount > 1 && tU <= blockCount ? Math.round(uA / blockCount) : uA
 
   const gc = () => {
     switch (strategy) {
@@ -477,13 +480,13 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
                       const uh = (r.h - 6) / Math.max(nUnits, 1)
                       return Array.from({ length: Math.min(nUnits, 4) }, (_, j) => (
                         <UnitInterior key={j} x={r.x + 3} y={r.y + 3 + j * uh} w={r.w - 6} h={uh - 3}
-                          label={`${String.fromCharCode(65 + i * 4 + j)}호`} area={uA} color={c.p} compact={uh < 20} />
+                          label={`${String.fromCharCode(65 + i * 4 + j)}호`} area={blockArea} color={c.p} compact={uh < 20} />
                       ))
                     } else {
                       const uw = (r.w - 6) / Math.max(nUnits, 1)
                       return Array.from({ length: Math.min(nUnits, 4) }, (_, j) => (
                         <UnitInterior key={j} x={r.x + 3 + j * uw} y={r.y + 3} w={uw - 3} h={r.h - 6}
-                          label={`${String.fromCharCode(65 + i * 4 + j)}호`} area={uA} color={c.p} compact={uw < 20} />
+                          label={`${String.fromCharCode(65 + i * 4 + j)}호`} area={blockArea} color={c.p} compact={uw < 20} />
                       ))
                     }
                   })()
@@ -576,13 +579,13 @@ export function FloorPlan({ type, floor, totalFloors, strategy = "profitability"
                       const uh = (r.h - 6) / n
                       return Array.from({ length: n }, (_, j) => (
                         <UnitInterior key={j} x={r.x + 3} y={r.y + 3 + j * uh} w={r.w - 6} h={uh - 3}
-                          label={`${String.fromCharCode(65 + i * n + j)}호`} area={uA} color={c.p} compact={uh < 20 || r.w - 6 < 20} />
+                          label={`${String.fromCharCode(65 + i * n + j)}호`} area={blockArea} color={c.p} compact={uh < 20 || r.w - 6 < 20} />
                       ))
                     }
                     const uw = (r.w - 6) / n
                     return Array.from({ length: n }, (_, j) => (
                       <UnitInterior key={j} x={r.x + 3 + j * uw} y={r.y + 3} w={uw - 3} h={r.h - 6}
-                        label={`${String.fromCharCode(65 + i * n + j)}호`} area={uA} color={c.p} compact={uw < 20 || r.h - 6 < 20} />
+                        label={`${String.fromCharCode(65 + i * n + j)}호`} area={blockArea} color={c.p} compact={uw < 20 || r.h - 6 < 20} />
                     ))
                   })()
                 )}
