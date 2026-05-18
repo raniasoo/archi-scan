@@ -53,12 +53,13 @@ export async function GET() {
   }
 
   const out: any[] = []
-  const testSet = TESTS.slice(0, 3) // 3주소만 (타임아웃 방지)
+  const testSet = TESTS // 전체 10주소
   for (const t of testSet) {
     let all: any[] = []
     let lastE = ''
     let lastRaw = ''
-    for (const ym of yms) {
+    // 2개월만 조회 (타임아웃 방지)
+    for (const ym of yms.slice(0, 2)) {
       const r = await query(t.code, ym)
       if (r.e) lastE = r.e
       if (r.raw) lastRaw = r.raw
