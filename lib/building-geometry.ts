@@ -65,10 +65,29 @@ export function getBuildingGeometry(params: {
         break
       }
       case 'lshape': {
-        const wt = Math.sqrt(fp) * 0.42
+        // ㄱ자형: 날개 두께 + 최대 비율 제한 (현실적 건물 형태)
+        const wt = Math.max(Math.sqrt(fp) * 0.42, 0.18)
         wingThickness = wt
-        const H = 0.4 * fp / wt
-        const V = 0.6 * fp / wt + wt
+        
+        // 수평/수직 날개 면적 배분 (40:60)
+        let H = 0.4 * fp / wt   // 수평 날개 길이
+        let V = 0.6 * fp / wt + wt  // 수직 날개 길이 (코너 포함)
+        
+        // ━━━ 비율 제한: 날개 길이/두께 최대 3.5:1 ━━━
+        const maxRatio = 3.5
+        if (V / wt > maxRatio) {
+          V = wt * maxRatio
+          // 남은 면적을 수평 날개로 재배분
+          const usedArea = wt * V + wt * H - wt * wt // 코너 중복 제거
+          const targetArea = fp
+          if (usedArea < targetArea) {
+            H = H + (targetArea - usedArea) / wt
+          }
+        }
+        if (H / wt > maxRatio) {
+          H = wt * maxRatio
+        }
+        
         const longX = H / 2 - wt / 2
         const shortZ = -(V / 2 - wt / 2)
         blocks = [
