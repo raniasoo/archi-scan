@@ -624,3 +624,33 @@ export function applyPatternModifiers(rooms: RoomDef[], selectedPatterns: string
 
   return modified
 }
+
+// ━━━ 구조그리드 통합 템플릿 ━━━
+// structural-grid 엔진의 결과를 RoomDef[] 형식으로 변환하여 상세평면도에서 사용
+import { generateStructuralGrid, gridToRoomDefs } from './structural-grid'
+import { getBuildingDimensionsInMeters } from './building-geometry'
+
+export function getStructuralTemplate(params: {
+  type: string; coverage: number; siteArea: number; floors: number; unitArea: number
+}): { rooms: RoomDef[]; widthM: number; depthM: number; bayInfo: string; score: number; patterns: string[] } | null {
+  try {
+    const geo = getBuildingDimensionsInMeters({ type: params.type as any, coverage: params.coverage, siteArea: params.siteArea, floors: params.floors })
+    const bm = geo.blocksInMeters
+    if (!bm || bm.length === 0) return null
+    
+    const mainBlock = bm.reduce((a, b) => (a.widthM * a.depthM > b.widthM * b.depthM ? a : b))
+    const grid = generateStructuralGrid({
+      widthM: mainBlock.widthM, depthM: mainBlock.depthM,
+      unitAreaM2: params.unitArea, floors: params.floors,
+    })
+    
+    const { rooms, widthM, depthM } = gridToRoomDefs(grid)
+    return {
+      rooms: rooms as RoomDef[],
+      widthM, depthM,
+      bayInfo: `${grid.bayWidthM}m × ${grid.bayDepthM}m · ${grid.baysX}×${grid.baysY} bay`,
+      score: grid.score,
+      patterns: grid.patterns,
+    }
+  } catch { return null }
+}

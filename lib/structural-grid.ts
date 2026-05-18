@@ -260,3 +260,37 @@ export function generateStructuralGrid(params: {
     rooms, columns, score, patterns,
   }
 }
+
+// ━━━ 상세평면도 통합: StructuralGrid → RoomDef[] 변환 ━━━
+// floorplan-templates의 RoomDef 형식과 호환
+const ROOM_FILLS: Record<string, string> = {
+  living: '#dcfce7', kitchen: '#fef3c7', dining: '#fef3c7',
+  master: '#ede9fe', bedroom2: '#e0e7ff', bedroom3: '#e0e7ff',
+  bathroom_main: '#cffafe', bathroom_sub: '#cffafe',
+  entrance: '#f1f5f9', corridor: '#f8fafc', dressroom: '#fae8ff',
+  utility: '#f5f5f4', storage: '#f5f5f4', core: '#e2e8f0',
+}
+
+const ROOM_FURNITURE: Record<string, string> = {
+  living: 'sofa', kitchen: 'kitchen', master: 'bed-double',
+  bedroom2: 'bed-single', bedroom3: 'bed-single',
+  bathroom_main: 'bath', bathroom_sub: 'bath',
+  dressroom: 'closet', entrance: 'shoes',
+}
+
+export function gridToRoomDefs(grid: StructuralGrid): { rooms: Array<{ name: string; rx: number; ry: number; rw: number; rh: number; fill: string; furniture?: string }>; widthM: number; depthM: number } {
+  const totalW = grid.totalWidthM
+  const totalD = grid.totalDepthM
+  
+  const rooms = grid.rooms.map(room => ({
+    name: room.label,
+    rx: (room.gridX * grid.bayWidthM) / totalW,
+    ry: (room.gridY * grid.bayDepthM) / totalD,
+    rw: (room.spanX * grid.bayWidthM) / totalW,
+    rh: (room.spanY * grid.bayDepthM) / totalD,
+    fill: ROOM_FILLS[room.type] || '#f8fafc',
+    furniture: ROOM_FURNITURE[room.type],
+  }))
+  
+  return { rooms, widthM: totalW, depthM: totalD }
+}

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react"
 import { Sparkles, Maximize2, X, ArrowLeft, ChevronDown, Zap } from "lucide-react"
-import { getCatalog, getTypes, getSizeSpec, getVariants, applyPatternModifiers, type RoomDef } from "@/lib/floorplan-templates"
+import { getCatalog, getTypes, getSizeSpec, getVariants, applyPatternModifiers, type RoomDef, getStructuralTemplate } from "@/lib/floorplan-templates"
 import { optimizeUnitMix, formatUnitMixSummary, type UnitMix } from "@/lib/floorplan-optimizer"
 
 const WALL_EXT = 3, WALL_INT = 1.5
@@ -364,8 +364,30 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
   const [selectedMix, setSelectedMix] = useState(aiPreset ? '⚡ AI 최적' : autoLabel)
 
   const firstKey = Object.keys(mixPresets)[0] || autoLabel
-  const currentMix = (mixPresets[selectedMix] || mixPresets[firstKey] || autoPreset).map((m,i) => ({...m, variant: 'ABCD'[(i+variantIdx)%4]}))
+  const isStructural = selectedMix === '🏗️ 구조그리드'
+  const currentMix = isStructural ? autoPreset : (mixPresets[selectedMix] || mixPresets[firstKey] || autoPreset).map((m,i) => ({...m, variant: 'ABCD'[(i+variantIdx)%4]}))
   const layout = useMemo(() => {
+    // 구조그리드 통합 모드
+    if (isStructural) {
+      const st = getStructuralTemplate({
+        type: props.type || 'tower', coverage: props.coverage || 60,
+        siteArea: props.siteArea || 500, floors: props.floors || 5,
+        unitArea: areaPerUnit,
+      })
+      if (st && st.rooms.length > 0) {
+        // StructuralGrid rooms → 단일 유닛으로 변환
+        const unitW = Math.round(st.widthM)
+        const unitH = Math.round(st.depthM)
+        return {
+          bW: unitW, bD: unitH, coreX: 0, coreW: 0,
+          units: [{
+            id: 'SG', type: '구조그리드', size: 'L' as const, variant: 'A',
+            x: 0, y: 0, w: unitW, h: unitH, rooms: st.rooms as RoomDef[],
+          }],
+          structural: { bayInfo: st.bayInfo, score: st.score, patterns: st.patterns },
+        }
+      }
+    }
     const base = buildFloor(currentMix, props.type)
     // 패턴 선택이 있으면 각 세대의 실 배치에 반영
     if (selectedPatterns?.length) {
@@ -375,7 +397,7 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
       }))
     }
     return base
-  }, [selectedMix, variantIdx, unitsPerFloor, areaPerUnit, selectedPatterns])
+  }, [selectedMix, variantIdx, unitsPerFloor, areaPerUnit, selectedPatterns, isStructural])
 
   // AI 최적 선택 시 자동 전환
   const isAiMix = selectedMix === '⚡ AI 최적'
@@ -411,7 +433,27 @@ export function AIFloorPlan(props: AIFloorPlanProps) {
                 {k}
               </button>
             ))}
+            <button onClick={()=>{setSelectedMix('🏗️ 구조그리드');setVariantIdx(0);setSelectedUnit(null)}}
+              className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-medium ${isStructural?'bg-violet-600 text-white':'bg-violet-500/10 text-violet-400'}`}>
+              🏗️ 구조그리드
+            </button>
           </div>
+
+          {/* 구조그리드 통합 배너 */}
+          {isStructural && (layout as any).structural && (
+            <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 px-3 py-2 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold text-violet-400">🏗️ 구조 모듈 그리드 통합</span>
+                <span className="text-[9px] bg-violet-500/10 text-violet-300 px-1.5 py-0.5 rounded">{(layout as any).structural.bayInfo}</span>
+                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">Alexander {(layout as any).structural.score}점</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {(layout as any).structural.patterns.map((p: string, i: number) => (
+                  <span key={i} className="text-[8px] text-violet-400/70">{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Phase 2: AI 최적화 요약 배너 */}
           {isAiMix && optimizedMix && optimizedMix.length > 0 && (
