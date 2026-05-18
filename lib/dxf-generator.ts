@@ -484,6 +484,8 @@ export function generateStructuralDXF(params: {
     { name: 'M-DUCT', color: 3 },           // 덕트 (녹색) — MEP
     { name: 'M-ELEC', color: 2 },           // 전기 (노랑) — MEP
     { name: 'M-PLUMBING', color: 5 },       // 급배수 (파랑) — MEP
+    { name: 'A-HATCH', color: 8 },            // 해칭 (회색) — 습식 공간
+    { name: 'A-WALL-EXT', color: 7 },         // 외벽 (흰색, 굵은선)
   ]
 
   let entities = ''
@@ -626,6 +628,33 @@ export function generateStructuralDXF(params: {
     entities += dxfLine(wx, wy, wx + bayW * 0.3, wy, 'M-PLUMBING')
     entities += dxfLine(wx + bayW * 0.3, wy, wx + bayW * 0.3, wy + bayD * 0.4, 'M-PLUMBING')
   }
+
+  // ━━━ 습식 공간 해칭 (45도 대각선 패턴) ━━━
+  for (const wet of wetRooms) {
+    const hx = wet.gridX * bayW
+    const hy = totalD - (wet.gridY + wet.spanY) * bayD
+    const hw = wet.spanX * bayW
+    const hh = wet.spanY * bayD
+    const hatchSpacing = 150 // 150mm 간격
+    for (let d = 0; d < hw + hh; d += hatchSpacing) {
+      const x1 = hx + Math.min(d, hw)
+      const y1 = hy + Math.max(0, d - hw)
+      const x2 = hx + Math.max(0, d - hh)
+      const y2 = hy + Math.min(d, hh)
+      entities += dxfLine(x1, y1, x2, y2, 'A-HATCH')
+    }
+  }
+
+  // ━━━ 외벽 (굵은 이중선 — A-WALL-EXT 레이어) ━━━
+  // 상하좌우 외벽 200mm
+  entities += dxfLine(0, 0, totalW, 0, 'A-WALL-EXT')
+  entities += dxfLine(0, wallRC, totalW, wallRC, 'A-WALL-EXT')
+  entities += dxfLine(0, totalD, totalW, totalD, 'A-WALL-EXT')
+  entities += dxfLine(0, totalD - wallRC, totalW, totalD - wallRC, 'A-WALL-EXT')
+  entities += dxfLine(0, 0, 0, totalD, 'A-WALL-EXT')
+  entities += dxfLine(wallRC, 0, wallRC, totalD, 'A-WALL-EXT')
+  entities += dxfLine(totalW, 0, totalW, totalD, 'A-WALL-EXT')
+  entities += dxfLine(totalW - wallRC, 0, totalW - wallRC, totalD, 'A-WALL-EXT')
 
   // ━━━ 타이틀 블록 ━━━
   const titleX = 0, titleY = -2000
