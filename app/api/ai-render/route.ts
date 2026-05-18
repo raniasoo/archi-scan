@@ -3,6 +3,7 @@ import { Resvg } from '@resvg/resvg-js'
 import { matchPatterns, buildPatternPrompt } from '@/lib/pattern-matcher'
 import { buildContextualPatternPrompt, angleToContext } from '@/lib/pattern-prompt-builder'
 import { getBuildingDimensionsInMeters } from '@/lib/building-geometry'
+import { generateEdgeMap, getEdgeMapMode } from '@/lib/edge-map-generator'
 import { generateStructuralGrid } from '@/lib/structural-grid'
 import { generateSchedules } from '@/lib/schedule-generator'
 
@@ -514,6 +515,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ━━━ ControlNet 스타일 엣지맵 생성 ━━━
+    try {
+      const edgeMode = getEdgeMapMode(cameraAngle)
+      const edgeSvg = generateEdgeMap({
+        type: buildingType || 'tower', coverage: coverage || 50,
+        siteArea: siteArea || 500, floors: floors || 3,
+        units, buildingCount: userBuildingCount,
+        originalType, mode: edgeMode,
+      })
+      if (edgeSvg) {
+        const edgePng = svgToPngBase64(edgeSvg, 400)
+        if (edgePng) {
+          refImages.push({ base64: edgePng, mimeType: 'image/png', label: 'edge-map' })
+          console.log(`[GEMINI] edge-map (${edgeMode}) generated ✅`)
+        }
+      }
+    } catch (e) {
+      console.warn('[GEMINI] edge-map generation failed:', e)
+    }
+
     async function fetchImage(url: string, label: string) {
       try {
         const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
@@ -616,6 +637,7 @@ export async function POST(req: NextRequest) {
 ${eyeLevelRefs.map((r, i) => `Image ${i+1}: ${
   r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' :
   r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows building footprints (orange shapes). Match these shapes EXACTLY.' :
+  r.label === 'edge-map' ? `★ ARCHITECTURAL EDGE MAP — This is a technical drawing showing the building outline, floor levels, and window positions. Use this as a STRUCTURAL GUIDE for the rendering. The white lines show where walls, floors, and windows should be. Match the proportions and floor count EXACTLY.` :
   r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — Eye-level photo of the ACTUAL neighborhood. Match styles, materials, road width, atmosphere.` :
   r.label === 'height-reference' ? `HEIGHT REFERENCE — Building is EXACTLY ${floors || 3} floors (${((floors || 3) * 3.3).toFixed(1)}m). Match this height.` :
   r.label === '3d-bird-eye' ? `★★★ 3D MODEL (BIRD-EYE VIEW) — This 3D model shows the EXACT building shape, position, and floor count. MATCH THIS PRECISELY.` :
@@ -795,7 +817,7 @@ The entrance must use the SAME materials and style visible in the street-level i
             parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
           }
           parts.push({ text: `REFERENCE IMAGES (${refImages.length}):
-${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows the exact lot boundary (blue), setback line (orange dashed), AND the BUILDING FOOTPRINTS (orange filled shapes). The ORANGE SHAPES show EXACTLY where and what shape the buildings must be. The rendered buildings MUST match these orange footprint shapes — same position, same shape (L-shaped, linear, U-shaped, etc.), same number of buildings. This is the MOST IMPORTANT reference image.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label === 'height-reference' ? `★★★ HEIGHT REFERENCE DIAGRAM — This diagram shows the EXACT correct height of the building. The building has EXACTLY ${floors || 3} floors and is ${((floors || 3) * 3.3).toFixed(1)}m tall. Compare with the person (1.7m) and tree. The building is ${(floors || 3) <= 3 ? 'SHORTER than nearby trees — it is a LOW building' : 'about the same height as trees'}. DO NOT generate a taller building. COUNT THE FLOORS in this diagram and match them EXACTLY.` : r.label === '3d-bird-eye' ? `★★★ 3D MODEL BIRD-EYE — EXACT building shape/position/floors. MATCH PRECISELY. Building has EXACTLY ${floors || 3} floors.` : r.label === '3d-front' ? `★★★ 3D MODEL FRONT — Count floor slabs: EXACTLY ${floors || 3}. NO rooftop structures.` : r.label === '3d-side' ? `3D MODEL SIDE — Building depth/height profile.` : r.label === '3d-top-down' ? `★★★ 3D MODEL TOP-DOWN — EXACT footprint. THIS IS GROUND TRUTH for the building shape.` : r.label === '3d-depth-map' ? `3D DEPTH MAP — White=building silhouette. Match PRECISELY.` : r.label === 'shape-reference' ? `★★★ BUILDING SHAPE REFERENCE — THIS IS THE MOST CRITICAL IMAGE. The ORANGE shapes show the EXACT footprint of each building as seen from ABOVE (bird's eye). Your rendered buildings MUST match these shapes EXACTLY. ${buildingType === 'lshape' ? 'Each building is L-SHAPED (ㄱ자형) — two wings meeting at 90°. If your buildings look like simple rectangles from above, they are WRONG.' : buildingType === 'linear' ? 'Each building is a LONG HORIZONTAL BAR. If your buildings look square from above, they are WRONG.' : buildingType === 'courtyard' ? 'Each building forms a U-SHAPE around a central garden. The garden MUST be visible from above.' : ''} Check your output against this reference before finalizing.` : r.label}`).join('\n')}
+${refImages.map((r, i) => `Image ${i+1}: ${r.label === 'satellite' ? 'SATELLITE/AERIAL PHOTO — shows the actual site from above. Match the real surrounding buildings (their roofs, colors, heights), roads, vegetation, and terrain slope visible here.' : r.label === 'cadastral' ? 'CADASTRAL MAP — shows the exact lot boundary shape.' : r.label === 'cadastral-polygon' ? 'BUILDING LAYOUT DIAGRAM — Shows the exact lot boundary (blue), setback line (orange dashed), AND the BUILDING FOOTPRINTS (orange filled shapes). The ORANGE SHAPES show EXACTLY where and what shape the buildings must be. The rendered buildings MUST match these orange footprint shapes — same position, same shape (L-shaped, linear, U-shaped, etc.), same number of buildings. This is the MOST IMPORTANT reference image.' : r.label.startsWith('street-view') ? `STREET VIEW (${r.label.replace('street-view-', '')} direction) — This is an eye-level photo of the ACTUAL neighborhood. Match the building styles, materials, colors, road width, vegetation, and atmosphere shown here. The new building should look like it belongs in THIS neighborhood.` : r.label === 'previous-render-reference' ? 'PREVIOUS RENDERING — Use as STYLE REFERENCE: match architectural style, materials, colors. Generate similar look from requested angle.' : r.label === 'height-reference' ? `★★★ HEIGHT REFERENCE DIAGRAM — This diagram shows the EXACT correct height of the building. The building has EXACTLY ${floors || 3} floors and is ${((floors || 3) * 3.3).toFixed(1)}m tall. Compare with the person (1.7m) and tree. The building is ${(floors || 3) <= 3 ? 'SHORTER than nearby trees — it is a LOW building' : 'about the same height as trees'}. DO NOT generate a taller building. COUNT THE FLOORS in this diagram and match them EXACTLY.` : r.label === '3d-bird-eye' ? `★★★ 3D MODEL BIRD-EYE — EXACT building shape/position/floors. MATCH PRECISELY. Building has EXACTLY ${floors || 3} floors.` : r.label === '3d-front' ? `★★★ 3D MODEL FRONT — Count floor slabs: EXACTLY ${floors || 3}. NO rooftop structures.` : r.label === '3d-side' ? `3D MODEL SIDE — Building depth/height profile.` : r.label === '3d-top-down' ? `★★★ 3D MODEL TOP-DOWN — EXACT footprint. THIS IS GROUND TRUTH for the building shape.` : r.label === '3d-depth-map' ? `3D DEPTH MAP — White=building silhouette. Match PRECISELY.` : r.label === 'shape-reference' ? `★★★ BUILDING SHAPE REFERENCE — THIS IS THE MOST CRITICAL IMAGE. The ORANGE shapes show the EXACT footprint of each building as seen from ABOVE (bird's eye). Your rendered buildings MUST match these shapes EXACTLY. ${buildingType === 'lshape' ? 'Each building is L-SHAPED (ㄱ자형) — two wings meeting at 90°. If your buildings look like simple rectangles from above, they are WRONG.' : buildingType === 'linear' ? 'Each building is a LONG HORIZONTAL BAR. If your buildings look square from above, they are WRONG.' : buildingType === 'courtyard' ? 'Each building forms a U-SHAPE around a central garden. The garden MUST be visible from above.' : ''} Check your output against this reference before finalizing.` : r.label === 'edge-map' ? `★ ARCHITECTURAL EDGE MAP — Technical drawing showing building outline, floors, windows. Use as STRUCTURAL GUIDE. Match proportions and ${floors || 3} floors EXACTLY.` : r.label}`).join('\n')}
 The rendering MUST reflect what is shown in these reference images. Do NOT ignore them.` })
         }
         
