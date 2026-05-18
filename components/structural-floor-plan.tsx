@@ -54,13 +54,14 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
   // SVG 좌표 계산
   const margin = 50  // 치수선 공간
   const px = 18      // 1m = 18px
+  const corridorPx = 1.2 * px // 복도 높이 (1.2m)
   const svgW = grid.totalWidthM * px + margin * 2
-  const svgH = grid.totalDepthM * px + margin * 2 + 30  // 하단 정보 공간
+  const svgH = grid.totalDepthM * px + margin * 2 + 30 + corridorPx
 
   const ox = margin   // 원점 X
   const oy = margin   // 원점 Y
   const gW = grid.totalWidthM * px
-  const gH = grid.totalDepthM * px
+  const gH = grid.totalDepthM * px + corridorPx
 
   return (
     <div className="w-full">
@@ -162,10 +163,29 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
           </text>
         ))}
 
+        {/* ━━━ 복도 (공적→사적 전이 공간) ━━━ */}
+        {(() => {
+          const corridorH = 1.2 * px // 복도 폭 1.2m
+          const corridorY = oy + grid.bayDepthM * px * 1 // row 0 아래
+          return (
+            <g>
+              {/* 복도 배경 */}
+              <rect x={ox} y={corridorY} width={gW} height={corridorH} fill="#1e293b" stroke="#334155" strokeWidth="0.5" />
+              {/* 복도 패턴 (중앙 점선) */}
+              <line x1={ox + 5} y1={corridorY + corridorH / 2} x2={ox + gW - 5} y2={corridorY + corridorH / 2} stroke="#475569" strokeWidth="0.5" strokeDasharray="3,3" />
+              {/* 복도 라벨 */}
+              <text x={ox + gW / 2} y={corridorY + corridorH / 2 + 2.5} textAnchor="middle" fontSize="5" fill="#94a3b8" fontWeight="500">복도 / 홀</text>
+              {/* 복도 치수 */}
+              <text x={ox - 6} y={corridorY + corridorH / 2 + 2} textAnchor="end" fontSize="4" fill="#64748b">1.2m</text>
+            </g>
+          )
+        })()}
+
         {/* ━━━ 방 영역 ━━━ */}
         {grid.rooms.map((room, i) => {
+          const corridorOffset = room.gridY >= 1 ? 1.2 * px : 0 // 사적 영역은 복도만큼 아래로
           const rx = ox + room.gridX * grid.bayWidthM * px
-          const ry = oy + room.gridY * grid.bayDepthM * px
+          const ry = oy + room.gridY * grid.bayDepthM * px + corridorOffset
           const rw = room.spanX * grid.bayWidthM * px
           const rh = room.spanY * grid.bayDepthM * px
           const color = ROOM_COLORS[room.type] || '#475569'
