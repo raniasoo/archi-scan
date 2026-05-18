@@ -161,3 +161,40 @@ export function analyzeMarket(params: {
     confidence: city === '서울' && district ? 'high' : city ? 'medium' : 'low',
   }
 }
+
+// ━━━ 토지 실거래 API 연동 (서버사이드) ━━━
+export async function analyzeMarketWithRealData(params: {
+  address: string; siteArea: number; floors: number; type: string; far?: number
+  baseUrl?: string
+}): Promise<MarketAnalysis & { landTransactionSource: string; landRealPrice?: number }> {
+  const base = analyzeMarket(params)
+
+  // 토지 실거래 API 호출 시도
+  try {
+    const apiUrl = params.baseUrl || (typeof window !== 'undefined' ? '' : 'https://www.archiscan.kr')
+    const res = await fetch(`${apiUrl}/api/land-transaction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: params.address, months: 6 }),
+      signal: AbortSignal.timeout(15000),
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      if (data.success && data.source === 'realTransaction' && data.avgPricePerM2 > 0) {
+        // 실거래가로 토지가 보정
+        return {
+          ...base,
+          estimatedLandPrice: data.avgPricePerM2,
+          landTransactionSource: 'realTransaction',
+          landRealPrice: data.avgPricePerM2,
+          confidence: 'high',
+        }
+      }
+    }
+  } catch {
+    // API 실패 시 fallback 유지
+  }
+
+  return { ...base, landTransactionSource: 'fallback' }
+}
