@@ -70,14 +70,15 @@ async function fetchTransactions(regionCode: string, dealYmd: string): Promise<T
     while ((m = re.exec(xml)) !== null) {
       const s = m[1]
       const v = (tag: string) => { const x = s.match(new RegExp(`<${tag}>([^<]*)</${tag}`)); return x ? x[1].trim() : '' }
-      const amt = parseInt(v('거래금액').replace(/,/g, '')) || 0
-      const area = parseFloat(v('거래면적')) || 0
+      // 영문 camelCase 태그명 (국토부 API 실제 응답)
+      const amt = parseInt(v('dealAmount').replace(/,/g, '')) || 0
+      const area = parseFloat(v('dealArea')) || 0
       if (amt > 0 && area > 0) {
         items.push({
           amount: amt, area, pricePerM2: Math.round(amt / area),
-          date: `${v('년')}.${v('월').padStart(2,'0')}.${v('일').padStart(2,'0')}`,
-          landUse: v('용도지역'), landType: v('지목'),
-          dong: v('법정동'), jibun: v('지번'),
+          date: `${v('dealYear')}.${v('dealMonth').padStart(2,'0')}.${v('dealDay').padStart(2,'0')}`,
+          landUse: v('landUse'), landType: v('jimok'),
+          dong: v('umdNm'), jibun: v('jibun'),
         })
       }
     }
