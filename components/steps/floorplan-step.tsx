@@ -21,6 +21,7 @@ const SitePlan = dynamic(() => import("@/components/site-plan").then(m => ({ def
 const StructuralFloorPlan = dynamic(() => import("@/components/structural-floor-plan"), { ssr: false, loading: LoadingBox })
 const AIFloorPlan = dynamic(() => import("@/components/ai-floorplan-renderer").then(m => ({ default: m.AIFloorPlan })), { ssr: false, loading: LoadingBox })
 const ThreeJSDiagrams = dynamic(() => import("@/components/threejs-diagrams").then(m => ({ default: m.ThreeJSDiagrams })), { ssr: false, loading: LoadingBox })
+const SunlightPanel = dynamic(() => import("@/components/sunlight-panel"), { ssr: false, loading: LoadingBox })
 
 export interface FloorplanStepProps {
   selectedLayoutData: LayoutOption
@@ -130,6 +131,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
     { id: "ai-generate" as const, label: "📐 상세평면도" },
     { id: "structural" as const, label: "🏗️ 구조그리드" },
     { id: "3d-unified" as const, label: "🧊 3D 도면" },
+    { id: "sunlight" as const, label: "☀️ 일조분석" },
     { id: "site" as const, label: "배치도" },
     { id: "iso" as const, label: "아이소" },
     { id: "perspective" as const, label: "투시도" },
@@ -301,6 +303,15 @@ export function FloorplanStep(props: FloorplanStepProps) {
                 rearSetback: regulation?.setbackRear ?? 2,
                 roadWidth: regulation?.roadWidth || 8,
               }}
+            />
+          )}
+
+          {/* ☀️ 일조 시뮬레이션 */}
+          {drawingTab === "sunlight" && (
+            <SunlightPanel
+              buildingHeight={renderData.floors * 3.3}
+              floors={renderData.floors}
+              setbackNorth={regulation?.setbackRear ?? 2}
             />
           )}
 
