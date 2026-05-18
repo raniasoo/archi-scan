@@ -31,9 +31,9 @@ async function query(code: string, ym: string) {
     while ((m = re.exec(x)) !== null) {
       const s = m[1]
       const v = (t: string) => { const z = s.match(new RegExp(`<${t}>([^<]*)</${t}`)); return z ? z[1].trim() : '' }
-      const a = parseInt(v('거래금액').replace(/,/g, '')) || 0
-      const ar = parseFloat(v('거래면적')) || 0
-      if (a > 0 && ar > 0) items.push({ a, ar, p: Math.round(a / ar), d: v('법정동'), j: v('지번'), dt: `${v('년')}.${v('월')}.${v('일')}` })
+      const a = parseInt(v('dealAmount').replace(/,/g, '')) || 0
+      const ar = parseFloat(v('dealArea')) || 0
+      if (a > 0 && ar > 0) items.push({ a, ar, p: Math.round(a / ar), d: v('umdNm'), j: v('jibun'), dt: `${v('dealYear')}.${v('dealMonth')}.${v('dealDay')}`, lu: v('landUse'), jm: v('jimok') })
     }
     const cd = x.match(/<resultCode>(\d+)<\/resultCode>/)?.[1]
     const mg = x.match(/<resultMsg>([^<]*)<\/resultMsg>/)?.[1]
