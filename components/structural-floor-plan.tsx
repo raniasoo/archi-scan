@@ -5,6 +5,8 @@ import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
 import { generateCompleteDXF, downloadDXF } from "@/lib/dxf-generator"
 import { generateSchedules } from "@/lib/schedule-generator"
 import { calculateStructure } from "@/lib/structural-calc"
+import { generateMEPDesign } from "@/lib/mep-design"
+import { generateIFC, downloadIFC } from "@/lib/ifc-generator"
 
 interface Props {
   type: string
@@ -72,15 +74,28 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
             Alexander {grid.score}점
           </span>
         </div>
-        <button onClick={() => {
-          const dxf = generateCompleteDXF({
-            type, coverage, siteArea, floors, units, unitArea,
-            layoutName: `${type} ${floors}층`,
-          })
-          downloadDXF(dxf, `structural-${type}-${floors}F.dxf`)
-        }} className="px-2 py-1 rounded-lg text-[10px] font-medium bg-blue-500/10 text-blue-400 hover:bg-blue-500/20">
-          📐 AutoCAD DXF
-        </button>
+        <div className="flex gap-1">
+          <button onClick={() => {
+            const dxf = generateCompleteDXF({
+              type, coverage, siteArea, floors, units, unitArea,
+              layoutName: `${type} ${floors}층`,
+            })
+            downloadDXF(dxf, `structural-${type}-${floors}F.dxf`)
+          }} className="px-2 py-1 rounded-lg text-[10px] font-medium bg-blue-500/10 text-blue-400 hover:bg-blue-500/20">
+            📐 DXF
+          </button>
+          <button onClick={() => {
+            const calc = calculateStructure(grid, floors, siteArea)
+            const ifcData = generateIFC({
+              grid, calc, floors, floorHeight: 3.3,
+              projectName: `${type} ${floors}층`,
+              address: '',
+            })
+            downloadIFC(ifcData, `archi-scan-${type}-${floors}F.ifc`)
+          }} className="px-2 py-1 rounded-lg text-[10px] font-medium bg-purple-500/10 text-purple-400 hover:bg-purple-500/20">
+            🏛️ IFC
+          </button>
+        </div>
       </div>
 
       <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
@@ -410,6 +425,47 @@ export default function StructuralFloorPlan({ type, coverage, siteArea, floors, 
                     <div>근입 {calc.foundation.depth}mm</div>
                     <div>하부 {calc.foundation.bottomBar}</div>
                   </div>
+                </div>
+              </div>
+            </details>
+          </div>
+        )
+      })()}
+
+      {/* Phase 6: MEP 상세 */}
+      {(() => {
+        const mep = generateMEPDesign(grid)
+        return (
+          <div className="mt-3 space-y-2 px-1">
+            <details className="group">
+              <summary className="text-[10px] font-semibold text-cyan-400 cursor-pointer">⚡ MEP 상세 (전기 {mep.summary.outlets}구 · 소방 {mep.summary.sprinklers}SP · PS {mep.summary.psCount}개)</summary>
+              <div className="mt-1 grid grid-cols-2 gap-2 text-[9px] text-muted-foreground">
+                <div className="bg-yellow-500/5 rounded p-1.5">
+                  <div className="text-yellow-300 font-semibold mb-0.5">⚡ 전기</div>
+                  <div>회로: {mep.summary.circuits}개</div>
+                  <div>콘센트: {mep.summary.outlets}구</div>
+                  <div>스위치: {mep.summary.switches}개</div>
+                  <div>TV/LAN: {mep.electrical.filter(e => e.type === 'tv' || e.type === 'data').length}개</div>
+                </div>
+                <div className="bg-blue-500/5 rounded p-1.5">
+                  <div className="text-blue-300 font-semibold mb-0.5">🔧 급배수</div>
+                  <div>PS: {mep.summary.psCount}개소</div>
+                  <div>급수: {mep.plumbing.filter(p => p.type === 'cold').length}경로</div>
+                  <div>온수: {mep.plumbing.filter(p => p.type === 'hot').length}경로</div>
+                  <div>배수: {mep.plumbing.filter(p => p.type === 'drain').length}경로</div>
+                </div>
+                <div className="bg-green-500/5 rounded p-1.5">
+                  <div className="text-green-300 font-semibold mb-0.5">🌀 환기</div>
+                  <div>급기: {mep.hvac.filter(h => h.type === 'diffuser').length}개소</div>
+                  <div>배기: {mep.hvac.filter(h => h.type === 'exhaust').length}개소</div>
+                  <div>덕트: {mep.summary.ductLength}m</div>
+                </div>
+                <div className="bg-red-500/5 rounded p-1.5">
+                  <div className="text-red-300 font-semibold mb-0.5">🧯 소방</div>
+                  <div>감지기: {mep.summary.detectors}개</div>
+                  <div>스프링클러: {mep.summary.sprinklers}개</div>
+                  <div>소화기: {mep.fire.filter(f => f.type === 'extinguisher').length}개</div>
+                  <div>유도등: {mep.fire.filter(f => f.type === 'exit_sign').length}개</div>
                 </div>
               </div>
             </details>
