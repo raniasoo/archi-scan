@@ -120,26 +120,54 @@ export function SitePlan({
 
   // 배치 유형별 건물 형태 — building-geometry Single Source of Truth
   const getBuildingShape = () => {
-    const bW = bldZoneW * 0.85
-    const bH = bldZoneH * 0.7
+    // ━━━ 건축가능영역(인셋 폴리곤) 기준 건물 배치 ━━━
+    // 인셋 폴리곤의 무게중심 + 폴리곤 내접 가능 크기로 배치
     
-    // ━━━ 건축가능영역 무게중심 기준 배치 (불규칙 대지 대응) ━━━
-    // 바운딩 박스 중심 대신, 인셋 폴리곤의 무게중심을 건물 배치 기준점으로 사용
     let anchorX: number, anchorY: number
+    let availW: number, availH: number
+    
     if (svgPolyCoords.length > 2) {
-      // 인셋 폴리곤의 무게중심
+      // 인셋 폴리곤 재계산
       const cx = svgPolyCoords.reduce((s, p) => s + p.x, 0) / svgPolyCoords.length
       const cy = svgPolyCoords.reduce((s, p) => s + p.y, 0) / svgPolyCoords.length
       const insetRatio = 1 - (avgSetback * svgScale * 2) / Math.max(siteW, siteH)
       const safeRatio = Math.max(0.6, Math.min(0.95, insetRatio))
-      anchorX = cx  // 폴리곤 무게중심 X
-      anchorY = cy  // 폴리곤 무게중심 Y
+      const insetCoords = svgPolyCoords.map(p => ({
+        x: cx + (p.x - cx) * safeRatio,
+        y: cy + (p.y - cy) * safeRatio,
+      }))
+      
+      // 인셋 폴리곤의 무게중심
+      const icx = insetCoords.reduce((s, p) => s + p.x, 0) / insetCoords.length
+      const icy = insetCoords.reduce((s, p) => s + p.y, 0) / insetCoords.length
+      anchorX = icx
+      anchorY = icy
+      
+      // 무게중심에서 폴리곤 각 변까지의 최소 거리 계산 → 내접 가능 크기
+      let minDistX = Infinity, minDistY = Infinity
+      for (let i = 0; i < insetCoords.length; i++) {
+        const p1 = insetCoords[i]
+        const p2 = insetCoords[(i + 1) % insetCoords.length]
+        // 수평 방향 최소 거리 (좌/우 변까지)
+        const edgeMidX = (p1.x + p2.x) / 2
+        const edgeMidY = (p1.y + p2.y) / 2
+        const dx = Math.abs(edgeMidX - icx)
+        const dy = Math.abs(edgeMidY - icy)
+        if (dx > 5) minDistX = Math.min(minDistX, dx)
+        if (dy > 5) minDistY = Math.min(minDistY, dy)
+      }
+      // 폴리곤 내접 가능 영역 (무게중심 기준 좌우/상하)
+      availW = Math.min(minDistX * 2 * 0.8, bldZoneW * 0.85)
+      availH = Math.min(minDistY * 2 * 0.7, bldZoneH * 0.7)
     } else {
       anchorX = bldZoneX + bldZoneW / 2
       anchorY = bldZoneY + bldZoneH / 2
+      availW = bldZoneW * 0.85
+      availH = bldZoneH * 0.7
     }
     
-    // 건물 배치 기준: 무게중심에서 건물 크기의 절반을 빼서 좌상단 계산
+    const bW = availW
+    const bH = availH
     const bX = anchorX - bW / 2
     const bY = anchorY - bH / 2
 
