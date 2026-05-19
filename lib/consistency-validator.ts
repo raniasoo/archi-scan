@@ -134,6 +134,12 @@ export interface SystemSnapshot {
     gfa: number                       // 사업성 계산에 사용된 연면적
     units: number                     // 사업성 계산에 사용된 세대수
   }
+
+  // ── ⑩ 대지조건 (NEW) ──
+  siteConditions?: {
+    slope?: number; soilCode?: string; elevation?: number
+    floodRisk?: string; seismicRisk?: string; buildabilityScore?: number
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -636,6 +642,50 @@ function runChecks(s: SystemSnapshot): ConsistencyIssue[] {
     }
   }
   
+  // ━━━ 대지조건 교차 검증 (NEW) ━━━
+  if (s.siteConditions) {
+    const sc = s.siteConditions
+    const slope = sc.slope || 0
+    const soilCode = sc.soilCode || 'SAND'
+    const floodRisk = sc.floodRisk || 'low'
+
+    // SITE-01: 경사지에 적합한 배치 유형인가?
+    if (slope > 15 && s.layout.type !== 'terrace' && s.layout.type !== 'cluster') {
+      issues.push({
+        id: 'SITE-01', severity: 'warning',
+        systemA: '대지조건', systemB: '배치안',
+        field: '경사↔배치', valueA: `경사${slope}%`, valueB: s.layout.type,
+        message: `급경사 ${slope}%에서 ${s.layout.type}형 배치는 절토량 과다 — 테라스형 권장`,
+        fix: '배치안에서 테라스형 또는 클러스터형을 선택하세요',
+        targetStep: 'layouts',
+      })
+    }
+
+    // SITE-02: 침수 위험 지역에 필로티형이 아닌가?
+    if ((floodRisk === 'high' || floodRisk === 'very-high') && s.layout.type !== 'piloti') {
+      issues.push({
+        id: 'SITE-02', severity: floodRisk === 'very-high' ? 'error' : 'warning',
+        systemA: '대지조건', systemB: '배치안',
+        field: '침수↔배치', valueA: `침수${floodRisk}`, valueB: s.layout.type,
+        message: `침수 ${floodRisk} 지역에서 1층 주거 배치 → 필로티형 권장`,
+        fix: '배치안에서 필로티형을 선택하세요',
+        targetStep: 'layouts',
+      })
+    }
+
+    // SITE-03: 연약지반에 고층 계획
+    if ((soilCode === 'FILL' || soilCode === 'SILT') && s.layout.floors > 7) {
+      issues.push({
+        id: 'SITE-03', severity: 'warning',
+        systemA: '대지조건', systemB: '배치안',
+        field: '토질↔층수', valueA: soilCode, valueB: `${s.layout.floors}층`,
+        message: `${soilCode === 'FILL' ? '매립토' : '연약지반'}에 ${s.layout.floors}층은 파일기초 비용 급증`,
+        fix: '층수를 낮추거나 지반보강 비용을 사업성에 반영하세요',
+        targetStep: 'layouts',
+      })
+    }
+  }
+  
   return issues
 }
 
@@ -675,7 +725,7 @@ export function validateConsistency(snapshot: SystemSnapshot): ConsistencyReport
   
   // 시스템별 상태
   const systemNames = ['법규', '배치안', 'AI렌더링', '인테리어렌더링', '도면', '3D모델', 
-                        '알렉산더패턴', '평면설계', '사업성', '일조사선']
+                        '알렉산더패턴', '평면설계', '사업성', '일조사선', '대지조건']
   const systemStatus: ConsistencyReport['systemStatus'] = {}
   
   for (const name of systemNames) {

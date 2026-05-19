@@ -31,6 +31,7 @@ export interface QAReport {
     compatibility: number
     professional: number
     compliance: number
+    site: number
     overall: number
   }
   grade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' | 'F'
@@ -240,8 +241,9 @@ export function evaluateQuality(params: {
   floors: number
   siteArea: number
   coverage: number
+  siteConditions?: { slope?: number; soilCode?: string; floodRisk?: string; seismicRisk?: string; buildabilityScore?: number; elevation?: number }
 }): QAReport {
-  const { grid, calc, mep, windows, doors, finishes, dxfContent, ifcContent, sheetCount, floors, siteArea, coverage } = params
+  const { grid, calc, mep, windows, doors, finishes, dxfContent, ifcContent, sheetCount, floors, siteArea, coverage, siteConditions } = params
 
   const allChecks = [
     ...checkAccuracy(grid, calc, floors, siteArea),
@@ -250,6 +252,54 @@ export function evaluateQuality(params: {
     ...checkProfessional(dxfContent, sheetCount, grid),
     ...checkCompliance(grid, calc, mep, floors, siteArea, coverage),
   ]
+
+  // ★ 대지조건 검증 항목 추가
+  if (siteConditions && siteConditions.elevation !== undefined) {
+    const sc = siteConditions
+    const slope = sc.slope || 0
+    const soilCode = sc.soilCode || 'SAND'
+    const floodRisk = sc.floodRisk || 'low'
+    const seismicRisk = sc.seismicRisk || 'low'
+    const buildScore = sc.buildabilityScore ?? 100
+
+    // SITE-01: 건축 적합도
+    allChecks.push({ category: '대지', item: '건축 적합도', pass: buildScore >= 50,
+      score: buildScore, detail: `${buildScore}점 (${buildScore >= 85 ? '최적' : buildScore >= 70 ? '양호' : buildScore >= 50 ? '보통' : '주의'})`,
+      severity: buildScore < 50 ? 'critical' : 'minor' })
+
+    // SITE-02: 경사도 적합
+    allChecks.push({ category: '대지', item: '경사도 적합', pass: slope <= 25,
+      score: slope <= 5 ? 100 : slope <= 10 ? 85 : slope <= 15 ? 70 : slope <= 25 ? 50 : 30,
+      detail: `경사 ${slope}% (${slope < 5 ? '평탄' : slope < 10 ? '완경사' : slope < 20 ? '급경사' : '산악'})`,
+      severity: slope > 25 ? 'critical' : slope > 15 ? 'major' : 'minor' })
+
+    // FND-01: 토질↔기초 정합성
+    const foundationType = soilCode === 'FILL' || soilCode === 'SILT' ? '파일기초' : soilCode === 'CLAY' ? '매트+보강' : '매트기초'
+    const calcFoundation = calc.foundation.type
+    allChecks.push({ category: '대지', item: '기초 적정성', pass: true,
+      score: soilCode === 'FILL' || soilCode === 'SILT' ? 60 : 100,
+      detail: `${soilCode} → ${foundationType} 추천 (계산: ${calcFoundation})`,
+      severity: soilCode === 'FILL' ? 'major' : 'minor' })
+
+    // FND-02: 침하 위험
+    const settlement = soilCode === 'FILL' ? 260 : soilCode === 'SILT' ? 160 : soilCode === 'CLAY' ? 49 : 17
+    allChecks.push({ category: '대지', item: '침하 위험', pass: settlement <= 50,
+      score: settlement <= 25 ? 100 : settlement <= 50 ? 80 : settlement <= 100 ? 50 : 30,
+      detail: `추정 침하 ${settlement}mm (50mm 이하 적합)`,
+      severity: settlement > 100 ? 'critical' : settlement > 50 ? 'major' : 'minor' })
+
+    // EQ-01: 내진 적합
+    allChecks.push({ category: '대지', item: '내진 설계', pass: true,
+      score: seismicRisk === 'high' ? 70 : 100,
+      detail: `지진 위험 ${seismicRisk} ${floors >= 3 ? '→ 내진 설계 의무' : ''}`,
+      severity: seismicRisk === 'high' ? 'major' : 'minor' })
+
+    // FLD-01: 침수 위험
+    allChecks.push({ category: '대지', item: '침수 위험', pass: floodRisk !== 'very-high',
+      score: floodRisk === 'very-high' ? 30 : floodRisk === 'high' ? 60 : floodRisk === 'medium' ? 80 : 100,
+      detail: `침수 ${floodRisk} ${floodRisk !== 'low' ? '→ GL높이/배수 강화' : ''}`,
+      severity: floodRisk === 'very-high' ? 'critical' : floodRisk === 'high' ? 'major' : 'minor' })
+  }
 
   // 카테고리별 점수 계산
   const byCategory = (cat: string) => {
@@ -264,12 +314,13 @@ export function evaluateQuality(params: {
     compatibility: byCategory('호환성'),
     professional: byCategory('전문성'),
     compliance: byCategory('법규'),
+    site: byCategory('대지'),
     overall: 0,
   }
   scores.overall = Math.round(
-    scores.accuracy * 0.25 + scores.completeness * 0.25 +
-    scores.compatibility * 0.20 + scores.professional * 0.15 +
-    scores.compliance * 0.15
+    scores.accuracy * 0.22 + scores.completeness * 0.22 +
+    scores.compatibility * 0.18 + scores.professional * 0.13 +
+    scores.compliance * 0.13 + scores.site * 0.12
   )
 
   const grade = scores.overall >= 95 ? 'A+' : scores.overall >= 90 ? 'A' : scores.overall >= 85 ? 'B+' : scores.overall >= 80 ? 'B' : scores.overall >= 70 ? 'C' : scores.overall >= 60 ? 'D' : 'F'
