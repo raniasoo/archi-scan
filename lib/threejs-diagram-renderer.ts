@@ -18,6 +18,7 @@ export interface DiagramParams {
   floorHeight?: number
   regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number; roadWidth?: number }
   sitePolygon?: { coords: [number, number][]; centroid: [number, number] }
+  terrain?: { elevations: number[][]; gridSize: number; minElevation: number; maxElevation: number; areaWidth: number }
 }
 
 export type DiagramType = 'site-plan' | 'isometric' | 'section' | 'elevation' | 'perspective'
@@ -299,8 +300,35 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     console.log(`[3D] 지적도 폴리곤 적용: ${polyMeterCoords.length}개 꼭짓점`)
   }
 
-  // 지적도 폴리곤 기반 대지 메시 생성
+  // 지적도 폴리곤 기반 대지 메시 생성 (+ 지형 표고)
   function createSiteGround(color: number, yPos: number): THREE.Mesh {
+    // 지형 데이터가 있으면 displacement 적용
+    if (params.terrain && params.terrain.elevations.length >= 2) {
+      const t = params.terrain
+      const gs = t.gridSize
+      const aW = t.areaWidth || S * 1.3
+      const geo = new THREE.PlaneGeometry(aW, aW, gs - 1, gs - 1)
+      const posAttr = geo.attributes.position
+      const baseE = t.minElevation
+      for (let i = 0; i < posAttr.count; i++) {
+        const col = i % gs
+        const row = Math.floor(i / gs)
+        const elev = (t.elevations[row]?.[col] ?? baseE) - baseE
+        posAttr.setZ(i, elev * 0.5) // 0.5배 스케일 (과장 방지)
+      }
+      posAttr.needsUpdate = true
+      geo.computeVertexNormals()
+      const mat = new THREE.MeshStandardMaterial({
+        color, roughness: 0.9, side: THREE.DoubleSide,
+        flatShading: true, // 지형 음영 강조
+      })
+      const mesh = new THREE.Mesh(geo, mat)
+      mesh.rotation.x = -Math.PI / 2
+      mesh.position.y = yPos
+      console.log(`[3D] 지형 표고 적용: ${gs}×${gs} 격자, 고도 ${t.minElevation}~${t.maxElevation}m`)
+      return mesh
+    }
+    
     if (polyMeterCoords && polyMeterCoords.length >= 3) {
       // 실제 폴리곤 형상 사용
       const shape = new THREE.Shape()

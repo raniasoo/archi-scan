@@ -15,6 +15,7 @@ interface ThreeJSDiagramsProps {
   floorHeight?: number
   regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number; roadWidth?: number }
   sitePolygon?: { coords: [number, number][]; centroid: [number, number] }
+  terrain?: { elevations: number[][]; gridSize: number; minElevation: number; maxElevation: number; areaWidth: number }
 }
 
 export function ThreeJSDiagrams(props: ThreeJSDiagramsProps) {
