@@ -2791,12 +2791,6 @@ export default function ArchiScanPage() {
         {/* Step: Strategy Selection */}
         {currentStep === "strategy" && (
           <>
-          {/* ★ 대지조건분석 요약 — 전략 선택 시 참고 */}
-          {siteConditions.elevation !== undefined && (
-            <div className="px-4 mb-3">
-              <SiteAnalysisPanel siteConditions={siteConditions} address={address} />
-            </div>
-          )}
           <StrategyStep
             address={address} siteArea={siteArea} strategy={strategy}
             setStrategy={setStrategy} designApproach={designApproach}
