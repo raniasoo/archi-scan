@@ -44,14 +44,14 @@ function useInView(threshold = 0.2) {
 /* ─── 요금제 데이터 ─── */
 const PLANS = [
   {
-    name: "무료",
-    price: "₩0",
+    name: "Basic",
+    price: "별도 협의",
     period: "",
-    desc: "소규모 검토에 적합",
-    cta: "무료로 시작",
+    desc: "소규모 검토·개인 건축사",
+    cta: "문의하기",
     highlight: false,
     features: [
-      { text: "월 10회 사업성 분석", included: true },
+      { text: "사업성 분석", included: true },
       { text: "AI 배치안 비교", included: true },
       { text: "AI 렌더링", included: true },
       { text: "PDF 보고서", included: true },
@@ -62,15 +62,15 @@ const PLANS = [
   },
   {
     name: "Pro",
-    price: "₩29,000",
-    period: "/월",
-    desc: "개인 디벨로퍼·건축사",
-    cta: "Pro 시작하기",
+    price: "별도 협의",
+    period: "",
+    desc: "디벨로퍼·건축사사무소",
+    cta: "문의하기",
     highlight: true,
     features: [
-      { text: "월 30회 사업성 분석", included: true },
+      { text: "사업성 분석 확장", included: true },
       { text: "AI 배치안 비교", included: true },
-      { text: "AI 렌더링", included: true },
+      { text: "AI 렌더링 확장", included: true },
       { text: "PDF 보고서", included: true },
       { text: "국토부 자동조회", included: true },
       { text: "DXF/IFC 도면 내보내기", included: true },
@@ -81,15 +81,15 @@ const PLANS = [
   },
   {
     name: "Enterprise",
-    price: "₩99,000",
-    period: "/월",
-    desc: "건축사사무소·시행사 팀",
-    cta: "Enterprise 시작",
+    price: "별도 협의",
+    period: "",
+    desc: "시행사·대형 건축사사무소",
+    cta: "문의하기",
     highlight: false,
     features: [
       { text: "무제한 사업성 분석", included: true },
       { text: "AI 배치안 비교", included: true },
-      { text: "AI 렌더링", included: true },
+      { text: "AI 렌더링 무제한", included: true },
       { text: "PDF 보고서", included: true },
       { text: "국토부 자동조회", included: true },
       { text: "DXF/IFC 도면 내보내기", included: true },
@@ -206,9 +206,9 @@ export default function LandingPage() {
             "applicationCategory": "BusinessApplication",
             "operatingSystem": "Web",
             "offers": [
-              { "@type": "Offer", "name": "무료", "price": "0", "priceCurrency": "KRW", "description": "월 10회 분석" },
-              { "@type": "Offer", "name": "Pro", "price": "29000", "priceCurrency": "KRW", "description": "월 30회 분석" },
-              { "@type": "Offer", "name": "Enterprise", "price": "99000", "priceCurrency": "KRW", "description": "무제한 분석" }
+              { "@type": "Offer", "name": "Basic", "price": "0", "priceCurrency": "KRW", "description": "별도 협의" },
+              { "@type": "Offer", "name": "Pro", "price": "0", "priceCurrency": "KRW", "description": "별도 협의" },
+              { "@type": "Offer", "name": "Enterprise", "price": "0", "priceCurrency": "KRW", "description": "별도 협의" }
             ],
             "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.8", "ratingCount": "127" },
             "featureList": "AI 건축 렌더링, 법규 자동 검토, 배치안 설계, 사업성 분석, PDF 보고서, 인테리어 투시도"
@@ -224,7 +224,7 @@ export default function LandingPage() {
           {
             "@type": "FAQPage",
             "mainEntity": [
-              { "@type": "Question", "name": "Archi-Scan은 무료인가요?", "acceptedAnswer": { "@type": "Answer", "text": "네, 월 10회까지 무료로 사용 가능합니다. Pro 플랜(₩29,000/월)은 30회, Enterprise(₩99,000/월)는 무제한입니다." }},
+              { "@type": "Question", "name": "Archi-Scan 요금은 어떻게 되나요?", "acceptedAnswer": { "@type": "Answer", "text": "요금제는 프로젝트 규모와 사용 목적에 따라 별도 협의로 진행됩니다. 문의하기를 통해 맞춤 견적을 받아보세요." }},
               { "@type": "Question", "name": "어떤 지역을 분석할 수 있나요?", "acceptedAnswer": { "@type": "Answer", "text": "대한민국 전 지역의 주소를 입력하면 국토부 실데이터 기반으로 자동 분석합니다." }},
               { "@type": "Question", "name": "AI 건축 렌더링은 어떻게 생성하나요?", "acceptedAnswer": { "@type": "Answer", "text": "12종 인테리어 스타일과 11종 외관 스타일을 선택하면 Gemini AI가 포토리얼 이미지를 자동 생성합니다. 정면, 조감도, 입구, 인테리어 4장을 한 번에 생성할 수 있습니다." }},
               { "@type": "Question", "name": "사업성 분석의 정확도는?", "acceptedAnswer": { "@type": "Answer", "text": "국토부 공시지가, 실거래가, 건축물대장 실데이터를 기반으로 분석하며, 전문 건축사가 검증한 로직을 사용합니다." }}
@@ -560,7 +560,7 @@ export default function LandingPage() {
             <a href="/auth/login" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-sm hover:from-teal-400 hover:to-emerald-400 transition-all shadow-lg shadow-teal-500/25">
               🛋️ 인테리어 렌더링 체험하기
             </a>
-            <p className="text-xs text-white/30 mt-2">무료 10회 · 가입 즉시 사용</p>
+            <p className="text-xs text-white/30 mt-2">요금제 별도 협의 · 맞춤 견적 제공</p>
           </div>
         </div>
       </section>
@@ -611,8 +611,9 @@ export default function LandingPage() {
           <div className="text-center mb-14">
             <span className="text-xs text-teal-400 font-semibold tracking-widest uppercase">Pricing</span>
             <h2 className="text-3xl md:text-4xl font-extrabold mt-3">
-              <span className="bg-gradient-to-r from-teal-300 to-emerald-400 bg-clip-text text-transparent">합리적인</span> 요금제
+              요금제는 <span className="bg-gradient-to-r from-teal-300 to-emerald-400 bg-clip-text text-transparent">별도 협의</span>
             </h2>
+            <p className="text-sm text-white/40 mt-3 max-w-lg mx-auto">프로젝트 규모와 사용 목적에 맞춰 최적의 플랜을 제안해 드립니다</p>
           </div>
           <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {PLANS.map((p) => (
@@ -637,7 +638,7 @@ export default function LandingPage() {
                 <p className="text-sm text-white/40 mt-2 mb-6">{p.desc}</p>
 
                 <Link
-                  href="/auth/login?signup=1"
+                  href="/contact"
                   className={`block w-full text-center py-3 rounded-xl font-semibold text-sm transition-all ${
                     p.highlight
                       ? "bg-gradient-to-r from-teal-400 to-emerald-500 text-white shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40"

@@ -92,7 +92,7 @@ export default function RootLayout({
                 '@type': 'Offer',
                 price: '0',
                 priceCurrency: 'KRW',
-                description: '무료 체험 가능',
+                description: '요금제 별도 협의',
               },
               aggregateRating: {
                 '@type': 'AggregateRating',

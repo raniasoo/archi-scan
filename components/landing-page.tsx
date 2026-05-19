@@ -297,32 +297,33 @@ export function LandingPage({ onStart }: LandingPageProps) {
         <div className="max-w-4xl mx-auto px-5">
           <div className="text-center mb-10">
             <p className="text-xs font-semibold text-primary tracking-widest uppercase mb-3">요금제</p>
-            <h2 className="text-2xl md:text-3xl font-bold">시작은 무료, 성장에 맞춰</h2>
+            <h2 className="text-2xl md:text-3xl font-bold">요금제는 별도 협의</h2>
+            <p className="text-sm text-muted-foreground mt-2">프로젝트 규모와 사용 목적에 맞춰 최적의 플랜을 제안해 드립니다</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-4">
             {[
               {
-                name: "무료",
-                price: "₩0",
+                name: "Basic",
+                price: "별도 협의",
                 period: "",
-                features: ["프로젝트 3건", "기본 배치안 4종", "PDF 보고서", "국토부 자동 조회", "AI 기능 일 3회"],
-                cta: "무료로 시작",
+                features: ["사업성 분석", "기본 배치안 4종", "PDF 보고서", "국토부 자동 조회", "AI 렌더링"],
+                cta: "문의하기",
                 highlight: false,
               },
               {
-                name: "프로",
-                price: "₩29,900",
-                period: "/월",
-                features: ["프로젝트 무제한", "AI 렌더링 무제한", "AI 설계상담 무제한", "AI 사업 제안서", "분담금 시뮬레이션", "클라우드 저장"],
-                cta: "프로 시작하기",
+                name: "Pro",
+                price: "별도 협의",
+                period: "",
+                features: ["사업성 분석 확장", "AI 렌더링 확장", "AI 설계상담", "AI 사업 제안서", "분담금 시뮬레이션", "클라우드 저장"],
+                cta: "문의하기",
                 highlight: true,
               },
               {
-                name: "엔터프라이즈",
-                price: "문의",
+                name: "Enterprise",
+                price: "별도 협의",
                 period: "",
-                features: ["팀 협업", "API 접근", "커스텀 보고서", "전담 매니저", "SLA 보장"],
+                features: ["무제한 분석", "팀 협업", "API 접근", "커스텀 보고서", "전담 매니저", "SLA 보장"],
                 cta: "문의하기",
                 highlight: false,
               },
