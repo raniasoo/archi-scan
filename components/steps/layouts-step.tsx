@@ -87,6 +87,10 @@ export interface LayoutsStepProps {
   loadLayoutOptimizer: () => Promise<any>
   handleSelectLayout: (id: number) => void
   onAiRenderComplete?: (imageData: string) => void
+  // TestFit 엔진 연동
+  unitMixPreset?: string
+  testfitData?: { unitMix: any; parking: any; mixedUse: any }
+  onUnitMixPresetChange?: (preset: string) => void
 }
 
 export function LayoutsStep(props: LayoutsStepProps) {
@@ -99,6 +103,7 @@ export function LayoutsStep(props: LayoutsStepProps) {
     feasibilityResult, optimizationResult, molitSupplementData, loadLayoutOptimizer,
     handleSelectLayout,
   } = props
+  const { unitMixPreset, testfitData, onUnitMixPresetChange } = props
 
   const [showDetails, setShowDetails] = useState(false)
   const [showComparison, setShowComparison] = useState(false)
@@ -423,6 +428,56 @@ export function LayoutsStep(props: LayoutsStepProps) {
             </div>
             {layout._userEdited && (
               <p className="text-[9px] text-amber-400 mt-2 text-center">⚡ 수동 조정됨 — AI 렌더링에 반영됩니다</p>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* ━━━ TestFit: 세대 믹스 프리셋 ━━━ */}
+      {selectedLayout && selectedLayoutData && onUnitMixPresetChange && (() => {
+        const presets = [
+          { id: 'young-single', label: '청년', icon: '👤' },
+          { id: 'newlywed', label: '신혼', icon: '💑' },
+          { id: 'family', label: '가족', icon: '👨‍👩‍👧' },
+          { id: 'premium', label: '프리미엄', icon: '💎' },
+          { id: 'mixed', label: '균형', icon: '⚖️' },
+          { id: 'rental', label: '임대', icon: '🏢' },
+        ]
+        const um = testfitData?.unitMix
+        return (
+          <div className="rounded-xl border border-border bg-card/50 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-foreground">🏠 세대 믹스</span>
+              {um && <span className="text-[10px] text-muted-foreground">{um.totalUnits}세대 · 평균 {um.avgUnitArea?.toFixed(0)}㎡</span>}
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {presets.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => onUnitMixPresetChange(p.id)}
+                  className={`flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-medium transition-all ${
+                    unitMixPreset === p.id
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                  }`}
+                >
+                  {p.icon} {p.label}
+                </button>
+              ))}
+            </div>
+            {um && um.units && um.units.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {um.units.filter((u: any) => u.count > 0).map((u: any, i: number) => (
+                  <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-secondary/50 text-muted-foreground">
+                    {u.type.name} {u.count}호 ({u.type.area}㎡)
+                  </span>
+                ))}
+              </div>
+            )}
+            {um && (
+              <div className="mt-1.5 text-[9px] text-emerald-500 font-medium">
+                예상 분양수입 {(um.estimatedRevenue / 100000000).toFixed(1)}억원 · {um.demographics}
+              </div>
             )}
           </div>
         )

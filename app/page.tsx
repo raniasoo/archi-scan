@@ -112,6 +112,7 @@ const DataVerification = dynamic(() => import("@/components/data-verification").
 const AIHub = dynamic(() => import("@/components/ai-hub").then(m => ({ default: m.AIHub })), { loading: LoadingBox })
 const EditorOverlay = dynamic(() => import("@/components/editor-overlay").then(m => ({ default: m.EditorOverlay })), { ssr: false })
 const CrossValidationPanel = dynamic(() => import("@/components/cross-validation-panel").then(m => ({ default: m.CrossValidationPanel })), { ssr: false })
+import { calculateUnitMix, generateParkingLayout, generateMixedUse, UNIT_MIX_PRESETS, type UnitMixResult, type ParkingLayout, type MixedUseProgram } from "@/lib/testfit-features"
 
 // ── 동적 임포트: 내보내기 함수 (사용 시에만 로드) ──
 const loadExportFunctions = () => import("@/lib/report-export")
@@ -779,6 +780,14 @@ export default function ArchiScanPage() {
   const [siteCoords, setSiteCoords] = useState<{ lng: number, lat: number } | null>(null)
   const [show3DVolume, setShow3DVolume] = useState(false)
   const [showEditorOverlay, setShowEditorOverlay] = useState(false)
+  
+  // ━━━ TestFit 엔진 상태 ━━━
+  const [unitMixPreset, setUnitMixPreset] = useState<string>('mixed')
+  const [testfitData, setTestfitData] = useState<{
+    unitMix: UnitMixResult | null
+    parking: ParkingLayout | null
+    mixedUse: MixedUseProgram | null
+  }>({ unitMix: null, parking: null, mixedUse: null })
   const [showBrandingEditor, setShowBrandingEditor] = useState(false)
   const [branding, setBranding] = useState<BrandingConfig | null>(null)
   
@@ -2024,9 +2033,39 @@ export default function ArchiScanPage() {
   const handleSelectLayout = (id: number) => {
     setSelectedLayout(id)
     setSelectedFloor(1)
+    // ★ TestFit 엔진 초기화 — 배치안 선택 시 즉시 실행
+    const layout = layouts.find(l => l.id === id)
+    if (layout) {
+      try {
+        const siteAreaNum = parseFloat(siteArea) || 660
+        const exclusiveArea = layout.gfa * 0.65
+        const preset = UNIT_MIX_PRESETS[unitMixPreset] || UNIT_MIX_PRESETS['mixed']
+        const unitMix = calculateUnitMix({
+          totalExclusiveArea: exclusiveArea,
+          mix: preset.mix,
+          basePricePerM2: effectiveSalesPrice || 5000000,
+        })
+        const parking = generateParkingLayout({
+          requiredSpaces: layout.parking || Math.ceil(layout.units * (regulation?.parkingRatio || 1)),
+          siteArea: siteAreaNum,
+          buildingFootprint: siteAreaNum * layout.coverage / 100,
+          floors: layout.floors,
+          floodRisk: siteConditions?.floodRisk,
+        })
+        const mixedUse = generateMixedUse({
+          siteArea: siteAreaNum,
+          totalFloors: layout.floors,
+          coverage: layout.coverage,
+          zoneType: regulation?.zoneType || 'residential-2',
+        })
+        setTestfitData({ unitMix, parking, mixedUse })
+      } catch (e) {
+        console.warn('[TestFit] 초기화 실패:', e)
+      }
+    }
   }
 
-  // 배치안 수동 조정 핸들러
+  // 배치안 수동 조정 핸들러 — TestFit 엔진 자동 연동
   const handleUpdateLayout = (layoutId: number, updates: { floors?: number; units?: number; buildingCount?: number }) => {
     setLayouts(prev => prev.map(layout => {
       if (layout.id !== layoutId) return layout
@@ -2041,6 +2080,33 @@ export default function ArchiScanPage() {
       const newGfa = buildingArea * newFloors
       const newParking = Math.ceil(newUnits * (regulation?.parkingRatio || 1))
       
+      // ★ TestFit 엔진 백그라운드 실행
+      try {
+        const exclusiveArea = newGfa * 0.65
+        const preset = UNIT_MIX_PRESETS[unitMixPreset] || UNIT_MIX_PRESETS['mixed']
+        const unitMix = calculateUnitMix({
+          totalExclusiveArea: exclusiveArea,
+          mix: preset.mix,
+          basePricePerM2: effectiveSalesPrice || 5000000,
+        })
+        const parking = generateParkingLayout({
+          requiredSpaces: newParking,
+          siteArea: siteAreaNum,
+          buildingFootprint: buildingArea,
+          floors: newFloors,
+          floodRisk: siteConditions?.floodRisk,
+        })
+        const mixedUse = generateMixedUse({
+          siteArea: siteAreaNum,
+          totalFloors: newFloors,
+          coverage: layout.coverage,
+          zoneType: regulation?.zoneType || 'residential-2',
+        })
+        setTestfitData({ unitMix, parking, mixedUse })
+      } catch (e) {
+        console.warn('[TestFit] 엔진 실행 실패:', e)
+      }
+      
       return {
         ...layout,
         floors: newFloors,
@@ -2051,6 +2117,28 @@ export default function ArchiScanPage() {
         _userEdited: true,
       }
     }))
+  }
+  
+  // ★ 세대 믹스 프리셋 변경 핸들러
+  const handleUnitMixPresetChange = (preset: string) => {
+    setUnitMixPreset(preset)
+    // 선택된 배치안이 있으면 즉시 재계산
+    const layout = layouts.find(l => l.id === selectedLayout)
+    if (layout) {
+      try {
+        const siteAreaNum = parseFloat(siteArea) || 660
+        const exclusiveArea = layout.gfa * 0.65
+        const presetData = UNIT_MIX_PRESETS[preset] || UNIT_MIX_PRESETS['mixed']
+        const unitMix = calculateUnitMix({
+          totalExclusiveArea: exclusiveArea,
+          mix: presetData.mix,
+          basePricePerM2: effectiveSalesPrice || 5000000,
+        })
+        setTestfitData(prev => ({ ...prev, unitMix }))
+      } catch (e) {
+        console.warn('[TestFit] 프리셋 변경 실패:', e)
+      }
+    }
   }
 
   // 추천 배치안 찾기
@@ -2999,6 +3087,9 @@ export default function ArchiScanPage() {
                 return ctx.fullPrompt || undefined
               } catch { return undefined }
             })()}
+            unitMixPreset={unitMixPreset}
+            testfitData={testfitData}
+            onUnitMixPresetChange={handleUnitMixPresetChange}
           />
         </>)}
 
