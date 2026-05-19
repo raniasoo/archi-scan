@@ -44,9 +44,9 @@ export function getBuildingGeometry(params: {
   let wingThickness = 0
   let effectiveBuildingCount = 1
 
-  // 클러스터 (다동) — 동적 계산
-  if (type === 'cluster' && buildingCount > 1) {
-    blocks = getClusterBlocks(buildingCount, originalType || 'tower', coverage)
+  // 다동 배치 — type이 cluster가 아니더라도 buildingCount > 1이면 다동 분리
+  if (buildingCount > 1) {
+    blocks = getClusterBlocks(buildingCount, originalType || type || 'tower', coverage)
     effectiveBuildingCount = buildingCount
   } else {
     // 단동 타입별 계산
