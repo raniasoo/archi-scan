@@ -193,7 +193,7 @@ export function SitePlan({
     try {
       const { getBuildingDimensionsInMeters } = require('@/lib/building-geometry')
       const geo = getBuildingDimensionsInMeters({
-        type, coverage, siteArea, floors, buildingCount, originalType: type,
+        type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType: originalType || type,
       })
       const bm = geo.blocksInMeters
       if (bm && bm.length > 0) {
