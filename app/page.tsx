@@ -579,6 +579,22 @@ function generateLayouts(
     layouts.push(terrace)
   }
 
+  // ★ 오피스텔형 — 수익형 (수익/면적극대 전략)
+  if (strategy === "profitability" || strategy === "area-maximize") {
+    const officetel = calculateLayout(
+      "officetel",
+      "오피스텔 (수익형)",
+      52,
+      Math.ceil(effectiveMaxFloors * 0.9),
+      "중복도형 오피스텔 배치로 소형 유닛 극대화, 임대 수익률 최적화"
+    )
+    officetel.id = 9
+    officetel.features.push('오피스텔')
+    officetel.features.push('전용률 52%')
+    officetel.features.push('임대 수익형')
+    layouts.push(officetel)
+  }
+
   // ============================================================
   // ★ 대규모 대지 + 다세대 + 저층 → 다동 클러스터 자동 전환
   // AI 렌더링 프롬프트와 동일 조건 (도면 일치)

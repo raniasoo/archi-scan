@@ -172,6 +172,14 @@ export function getBuildingGeometry(params: {
         blocks = [{ x: 0, z: 0, w, d, label: 'PILOTI' }]
         break
       }
+      case 'officetel': {
+        // 오피스텔: 중복도형 (가로가 긴 직사각형, 양쪽에 유닛)
+        const otRatio = 2.5  // 오피스텔은 세장비 높음
+        const otW = Math.sqrt(fp * otRatio)
+        const otD = fp / otW
+        blocks = [{ x: 0, z: 0, w: otW, d: otD, label: 'OFFICETEL' }]
+        break
+      }
       case 'terrace': {
         // 테라스형: 계단식 후퇴 (경사지 대응)
         const stepCount = 3
