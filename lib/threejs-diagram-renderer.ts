@@ -118,14 +118,35 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
           map: wTex, roughness: 0.3, metalness: 0.1, color: 0xe0e5ec,
         })
       }
-      // 본체
-      const boxGeo = new THREE.BoxGeometry(bW, bH, bD)
-      const mesh = new THREE.Mesh(boxGeo, finalMat)
+      // 본체 — ㄱ자형이면 L-shape, 아니면 Box
+      const isL = isLShape && blk.w > blk.d * 0.8
+      let buildingGeo: THREE.BufferGeometry
+      if (isL) {
+        // ㄱ자(L) 형상: ExtrudeGeometry 사용
+        const shape = new THREE.Shape()
+        const hw = bW / 2, hd = bD / 2
+        const armW = bW * 0.4  // ㄱ자 팔 폭
+        const armD = bD * 0.5  // ㄱ자 팔 깊이
+        shape.moveTo(-hw, -hd)
+        shape.lineTo(hw, -hd)
+        shape.lineTo(hw, -hd + armD)
+        shape.lineTo(-hw + armW, -hd + armD)
+        shape.lineTo(-hw + armW, hd)
+        shape.lineTo(-hw, hd)
+        shape.closePath()
+        const extrudeSettings = { depth: bH, bevelEnabled: false }
+        buildingGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings)
+        buildingGeo.rotateX(-Math.PI / 2) // Y축이 위를 향하도록
+        buildingGeo.translate(0, bH / 2, 0)
+      } else {
+        buildingGeo = new THREE.BoxGeometry(bW, bH, bD)
+      }
+      const mesh = new THREE.Mesh(buildingGeo, finalMat)
       mesh.position.set(S * blk.x + buildableOffsetX, bH / 2, S * blk.z + buildableOffsetZ)
       scene.add(mesh)
       // 에지
       scene.add(new THREE.LineSegments(
-        new THREE.EdgesGeometry(boxGeo),
+        new THREE.EdgesGeometry(buildingGeo),
         new THREE.LineBasicMaterial({ color: 0x4a6080, transparent: true, opacity: 0.4 })
       ))
       scene.children[scene.children.length - 1].position.copy(mesh.position)
