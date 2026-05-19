@@ -105,6 +105,7 @@ const InputStep = dynamic(() => import("@/components/steps/input-step").then(m =
 const StrategyStep = dynamic(() => import("@/components/steps/strategy-step").then(m => ({ default: m.StrategyStep })), { loading: LoadingBox })
 const RegulationStep = dynamic(() => import("@/components/steps/regulation-step").then(m => ({ default: m.RegulationStep })), { loading: LoadingBox })
 import { SiteAnalysisPanel } from "@/components/site-analysis-panel"
+import { recommendByPatterns, adjustByProperties, autoRedesign } from "@/lib/pattern-driven-layout"
 const FinancialStep = dynamic(() => import("@/components/steps/financial-step").then(m => ({ default: m.FinancialStep })), { loading: LoadingBox })
 const ReportStep = dynamic(() => import("@/components/steps/report-step").then(m => ({ default: m.ReportStep })), { loading: LoadingBox })
 const DataVerification = dynamic(() => import("@/components/data-verification").then(m => ({ default: m.DataVerification })), { loading: LoadingBox })
@@ -637,6 +638,63 @@ function generateLayouts(
   // 법규 준수안이 없으면 첫 번째 안을 추천 (fallback)
   if (!recommendationSet && layouts.length > 0) {
     layouts[0].recommendation.isRecommended = true
+  }
+  
+  // ━━━ Alexander 253패턴 기반 배치 유형 추천 ━━━
+  const patternRecs = recommendByPatterns({
+    siteArea, floors: effectiveMaxFloors, units: 50,
+    slope: siteConditions?.slope, soilCode: siteConditions?.soilCode,
+    floodRisk: siteConditions?.floodRisk,
+  })
+  
+  // 패턴 추천 점수가 높은 유형을 추천안으로 설정
+  if (patternRecs.length > 0) {
+    const bestType = patternRecs[0].type
+    const bestLayout = layouts.find(l => l.type === bestType)
+    if (bestLayout) {
+      layouts.forEach(l => l.recommendation.isRecommended = false)
+      bestLayout.recommendation.isRecommended = true
+      bestLayout.recommendation.reason = `Alexander 패턴 추천 (${patternRecs[0].score}점): ${patternRecs[0].reasons[0]}`
+    }
+  }
+  
+  // ━━━ 15속성 기반 건폐율/층수 보정 ━━━
+  for (const layout of layouts) {
+    const adj = adjustByProperties({
+      type: layout.type, coverage: layout.coverage, floors: layout.floors, siteArea,
+    })
+    if (adj.adjustments.length > 0) {
+      layout.coverage = Math.min(analysis.maxCoverage, adj.coverage)
+      layout.floors = Math.min(effectiveMaxFloors, adj.floors)
+      // 재계산
+      const fp = siteArea * layout.coverage / 100
+      layout.gfa = fp * layout.floors
+      layout.units = Math.max(1, Math.round(layout.gfa * 0.65 / 85))
+      layout.parking = Math.ceil(layout.units * analysis.parkingRatio)
+    }
+  }
+  
+  // ━━━ 자동 재설계 (Alexander 점수 80 미만 시) ━━━
+  for (const layout of layouts) {
+    // 간이 Alexander 점수 추정 (실제 evaluateAllPatterns 대신 빠른 추정)
+    const typeScore = patternRecs.find(r => r.type === layout.type)?.score ?? 70
+    if (typeScore < 80) {
+      const redesign = autoRedesign({
+        type: layout.type, coverage: layout.coverage, floors: layout.floors,
+        siteArea, currentScore: typeScore,
+      })
+      if (redesign.result.wasRedesigned) {
+        layout.coverage = Math.min(analysis.maxCoverage, redesign.coverage)
+        layout.floors = Math.min(effectiveMaxFloors, redesign.floors)
+        const fp = siteArea * layout.coverage / 100
+        layout.gfa = fp * layout.floors
+        layout.units = Math.max(1, Math.round(layout.gfa * 0.65 / 85))
+        layout.parking = Math.ceil(layout.units * analysis.parkingRatio)
+        if (!layout.features.includes('🔄 패턴 재설계')) {
+          layout.features.push('🔄 패턴 재설계')
+        }
+      }
+    }
   }
   
   return layouts
