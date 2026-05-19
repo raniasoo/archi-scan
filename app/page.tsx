@@ -186,7 +186,16 @@ function generateLayouts(
   regulation: ZoningRegulation, 
   strategy: DesignStrategy,
   userValues?: UserValues,
-  designApproach?: 'quantitative' | 'alexander' | 'combined'
+  designApproach?: 'quantitative' | 'alexander' | 'combined',
+  siteConditions?: {
+    slope?: number           // 경사도 (%)
+    slopeDirection?: string  // 경사 방향
+    soilCode?: string        // 토질 코드 (ROCK/SAND/CLAY/SILT/FILL)
+    elevation?: number       // 표고 (m)
+    seismicRisk?: string     // 지진 위험 (low/medium/high)
+    floodRisk?: string       // 침수 위험 (low/medium/high/very-high)
+    buildabilityScore?: number // 건축 적합도 (0~100)
+  }
 ): LayoutOption[] {
   const params = STRATEGY_PARAMETERS[strategy]
   const analysis = analyzeRegulations(siteArea, regulation)
@@ -196,18 +205,41 @@ function generateLayouts(
   
   // ============================================================
   // 알렉산더 3축 슬라이더 → 배치안 파라미터 조절
-  // profitVsQuality: 0=수익극대화 → 높은건폐율, 100=거주품질 → 낮은건폐율+여유공간
-  // privacyVsCommunity: 0=프라이버시 → 동간격↑, 100=커뮤니티 → 공유공간↑
-  // efficiencyVsSpace: 0=효율 → 빈틈없는배치, 100=여유 → 넉넉한외부공간
   // ============================================================
   const pq = userValues?.profitVsQuality ?? 50
   const pc = userValues?.privacyVsCommunity ?? 50
   const es = userValues?.efficiencyVsSpace ?? 50
   
   // 슬라이더 기반 보정 계수 (0.85 ~ 1.15 범위)
-  const coverageAdj = 1.15 - (pq + es) / 200 * 0.30      // 품질↑/여유↑ → 건폐율↓
-  const floorAdj = 1.10 - pq / 100 * 0.20                 // 품질↑ → 층수↓ (여유있는 스케일)
-  const openSpaceAdj = 1.0 + (pq + es) / 200 * 0.30       // 품질↑/여유↑ → 외부공간↑
+  const coverageAdj = 1.15 - (pq + es) / 200 * 0.30
+  const floorAdj = 1.10 - pq / 100 * 0.20
+  const openSpaceAdj = 1.0 + (pq + es) / 200 * 0.30
+
+  // ============================================================
+  // ★ 대지 조건 → 배치안 파라미터 조절 (NEW)
+  // ============================================================
+  const slope = siteConditions?.slope ?? 0
+  const soilCode = siteConditions?.soilCode ?? 'SAND'
+  const elevation = siteConditions?.elevation ?? 30
+  const seismicRisk = siteConditions?.seismicRisk ?? 'low'
+  const floodRisk = siteConditions?.floodRisk ?? 'low'
+  const buildability = siteConditions?.buildabilityScore ?? 100
+
+  // 경사도 → 건폐율/층수 보정
+  // 급경사(15%+) → 건폐율↓(절토 최소화), 층수↓(옹벽 비용)
+  const slopeCoverageAdj = slope > 15 ? 0.80 : slope > 10 ? 0.88 : slope > 5 ? 0.95 : 1.0
+  const slopeFloorAdj = slope > 15 ? 0.70 : slope > 10 ? 0.85 : 1.0
+
+  // 토질 → 층수 제한
+  // 매립/실트 → 고층 불리 (파일비용 급증), 암반 → 고층 유리
+  const soilFloorAdj = soilCode === 'FILL' ? 0.6 : soilCode === 'SILT' ? 0.7 : soilCode === 'CLAY' ? 0.85 : soilCode === 'ROCK' ? 1.1 : 1.0
+
+  // 침수 위험 → 건폐율↓(배수 공간 확보), 1층 GL 높이
+  const floodCoverageAdj = floodRisk === 'very-high' ? 0.85 : floodRisk === 'high' ? 0.92 : 1.0
+  const floodGLHeight = floodRisk === 'very-high' ? 600 : floodRisk === 'high' ? 500 : floodRisk === 'medium' ? 300 : 150
+
+  // 지진 → 구조 비용 → 소형 세대 선호 (구조 효율)
+  const seismicUnitAdj = seismicRisk === 'high' ? 0.9 : 1.0
   
   // 법규 한도 계산 (regulation이 불완전할 경우 안전 기본값)
   const maxCoverage = regulation?.maxCoverageRatio ?? 60
@@ -248,9 +280,9 @@ function generateLayouts(
   ): LayoutOption => {
     const typeChars = LAYOUT_TYPE_CHARACTERISTICS[typeId] || LAYOUT_TYPE_CHARACTERISTICS.tower
     
-    // 전략 파라미터 적용
-    const coverage = Math.min(maxCoverage, Math.round(coverageBase * params.coverageMultiplier * coverageAdj))
-    const floors = Math.min(effectiveMaxFloors, Math.round(floorBase * params.floorMultiplier * floorAdj))
+    // 전략 파라미터 + 대지 조건 적용
+    const coverage = Math.min(maxCoverage, Math.round(coverageBase * params.coverageMultiplier * coverageAdj * slopeCoverageAdj * floodCoverageAdj))
+    const floors = Math.min(effectiveMaxFloors, Math.round(floorBase * params.floorMultiplier * floorAdj * slopeFloorAdj * soilFloorAdj))
     const buildingArea = (siteArea * coverage) / 100
     const gfa = buildingArea * floors
     const openSpace = Math.round((100 - coverage) * params.openSpaceRatio * openSpaceAdj * 100) / 100
@@ -320,6 +352,15 @@ function generateLayouts(
     if (!isLegallyCompliant) {
       features.unshift("법규 조정됨")
     }
+    
+    // ★ 대지 조건 경고 (NEW)
+    if (slope > 15) features.push(`⚠️ 급경사 ${slope}%`)
+    else if (slope > 5) features.push(`경사 ${slope}%`)
+    if (soilCode === 'FILL') features.push('⚠️ 매립지')
+    else if (soilCode === 'SILT') features.push('⚠️ 연약지반')
+    if (floodRisk === 'very-high') features.push('🌊 침수위험')
+    else if (floodRisk === 'high') features.push('🌊 침수주의')
+    if (floodGLHeight > 150) features.push(`GL+${floodGLHeight}mm`)
     
     // Phase 1: 일조사선 제약 표시
     if (isResidentialZone && solarEnvelope.isConstraining) {
@@ -502,27 +543,35 @@ function generateLayouts(
     layouts.push(tShape)
   }
 
-  // 필로티형 — 1층 개방 (주차효율/거주성 전략)
-  if (strategy === "parking-efficient" || strategy === "livability") {
+  // 필로티형 — 1층 개방 (주차효율/거주성 전략 + ★침수위험 시 자동 추가)
+  if (strategy === "parking-efficient" || strategy === "livability" || floodRisk === 'high' || floodRisk === 'very-high') {
     const piloti = calculateLayout(
       "piloti",
+      floodRisk === 'very-high' ? "필로티형 (침수 대응)" :
+      floodRisk === 'high' ? "필로티형 (침수 안전)" :
       getLayoutName("piloti", "필로티형 (1층 개방)"),
       43,
       Math.ceil(effectiveMaxFloors * 0.85),
-      "1층 필로티로 주차/커뮤니티 공간 확보, 상층부 주거 프라이버시 강화"
+      floodRisk === 'very-high' || floodRisk === 'high'
+        ? `침수 위험(${floodRisk})에 대응하여 1층 필로티로 주차/설비 배치, 주거는 2층 이상으로 안전 확보`
+        : "1층 필로티로 주차/커뮤니티 공간 확보, 상층부 주거 프라이버시 강화"
     )
     piloti.id = 7
     layouts.push(piloti)
   }
 
-  // 테라스형 — 경사지 대응 (거주성/조망 전략)
-  if (strategy === "livability" || strategy === "view-priority") {
+  // 테라스형 — 경사지 대응 (거주성/조망 전략 + ★경사 10%+ 시 자동 추가)
+  if (strategy === "livability" || strategy === "view-priority" || slope > 10) {
     const terrace = calculateLayout(
       "terrace",
+      slope > 15 ? "테라스형 (급경사 대응)" :
+      slope > 10 ? "테라스형 (경사지 최적)" :
       "테라스형 (계단식)",
       38,
       Math.ceil(effectiveMaxFloors * 0.6),
-      "계단식 후퇴 배치로 전 세대 테라스 정원과 탁 트인 조망 확보"
+      slope > 10
+        ? `경사도 ${slope}%에 최적화된 계단식 배치로 절토량 최소화, 전 세대 테라스 정원 확보`
+        : "계단식 후퇴 배치로 전 세대 테라스 정원과 탁 트인 조망 확보"
     )
     terrace.id = 8
     layouts.push(terrace)
@@ -639,6 +688,10 @@ export default function ArchiScanPage() {
   const [showDxfPreview, setShowDxfPreview] = useState(false)
   const [layoutViewMode, setLayoutViewMode] = useState<"card" | "compare">("card")
   const [sitePolygon, setSitePolygon] = useState<{ coords: [number, number][], centroid: [number, number] } | null>(null)
+  const [siteConditions, setSiteConditions] = useState<{
+    slope?: number; slopeDirection?: string; soilCode?: string; elevation?: number
+    seismicRisk?: string; floodRisk?: string; buildabilityScore?: number
+  }>({})
   const [analysisRawData, setAnalysisRawData] = useState<any>(null)
   const [siteCoords, setSiteCoords] = useState<{ lng: number, lat: number } | null>(null)
   const [show3DVolume, setShow3DVolume] = useState(false)
@@ -955,6 +1008,39 @@ export default function ArchiScanPage() {
     }
     fetchPolygon()
   }, [siteCoords, address])
+
+  // ★ Auto-fetch terrain/soil data for site conditions
+  useEffect(() => {
+    if (!siteCoords) return
+    fetch(`/api/terrain?lat=${siteCoords.lat}&lng=${siteCoords.lng}&size=5&area=100`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          // 토질 추정 (표고+경사 기반)
+          const e = data.centerElevation, s = data.slope
+          const soilCode = e > 200 && s > 15 ? 'ROCK' : e > 100 && s > 10 ? 'GRAVEL' : e > 30 ? 'SAND' : e > 10 ? 'CLAY' : e <= 5 ? 'FILL' : 'SILT'
+          // 침수 위험
+          const floodScore = (e <= 5 ? 40 : e <= 10 ? 30 : e <= 20 ? 15 : 0) + (s < 1 ? 20 : s < 2 ? 10 : 0)
+          const floodRisk = floodScore >= 60 ? 'very-high' : floodScore >= 40 ? 'high' : floodScore >= 20 ? 'medium' : 'low'
+          // 지진 (서울=II, 경북/경남/부산=I)
+          const seismicRisk = (address.includes('경북') || address.includes('경남') || address.includes('부산') || address.includes('울산') || address.includes('대구')) ? 'high' : 'low'
+          // 건축 적합도
+          let buildScore = 100
+          if (soilCode === 'FILL') buildScore -= 40
+          else if (soilCode === 'SILT') buildScore -= 30
+          if (s > 20) buildScore -= 25
+          if (floodRisk === 'very-high') buildScore -= 20
+
+          setSiteConditions({
+            slope: s, slopeDirection: data.slopeDirection,
+            soilCode, elevation: e, seismicRisk, floodRisk,
+            buildabilityScore: Math.max(10, buildScore),
+          })
+          console.log(`[SITE-COND] ✅ 대지조건 분석: 표고${e}m 경사${s}% 토질${soilCode} 침수${floodRisk} 지진${seismicRisk} 적합도${buildScore}점`)
+        }
+      })
+      .catch(() => {})
+  }, [siteCoords])
 
   // ━━━ 중앙 분양가/공사비 단가 (Single Source of Truth) ━━━
   // 모든 컴포넌트가 이 값을 사용해야 ROI 일치 보장
@@ -1528,7 +1614,7 @@ export default function ArchiScanPage() {
     try {
       // Generate layouts first (synchronous calculation)
       const area = Number(siteArea)
-      const generatedLayouts = generateLayouts(area, regulation, strategy, userValues, designApproach)
+      const generatedLayouts = generateLayouts(area, regulation, strategy, userValues, designApproach, siteConditions)
       
       // 알렉산더/조합 모드: 배치안을 패턴 기반 이름으로 변환
       if (designApproach !== 'quantitative') {
