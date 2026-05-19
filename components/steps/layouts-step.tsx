@@ -185,9 +185,14 @@ export function LayoutsStep(props: LayoutsStepProps) {
             </div>
             <div className="flex gap-3">
               <LayoutSketch type={bannerLayout._originalType || bannerLayout.type || 'tower'} size={64} className="shrink-0 opacity-70" siteArea={siteAreaNum} coverage={bannerLayout.coverage} floors={bannerLayout.floors} buildingCount={bannerLayout.buildingCount} />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {getLayoutStory(bannerLayout, strategy)}
-              </p>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {getLayoutStory(bannerLayout, strategy)}
+                </p>
+                {bannerLayout.recommendation?.reason && (
+                  <p className="text-[10px] text-amber-400/80 mt-1">🏛️ {bannerLayout.recommendation.reason}</p>
+                )}
+              </div>
             </div>
           </div>
         )
@@ -253,9 +258,13 @@ export function LayoutsStep(props: LayoutsStepProps) {
                 </div>
 
                 {/* 스토리 한 줄 */}
-                <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed line-clamp-2">
+                <p className="text-[11px] text-muted-foreground mb-2 leading-relaxed line-clamp-2">
                   {getLayoutStory(layout, strategy)}
                 </p>
+                {/* Alexander 패턴 추천 이유 */}
+                {layout.recommendation?.reason && (
+                  <p className="text-[9px] text-amber-400/70 mb-2 line-clamp-1">🏛️ {layout.recommendation.reason}</p>
+                )}
 
                 {/* 핵심 수치 3개 */}
                 <div className="grid grid-cols-3 gap-2 mb-3">

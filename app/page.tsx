@@ -672,6 +672,13 @@ function generateLayouts(
       bestLayout.recommendation.isRecommended = true
       bestLayout.recommendation.reason = `Alexander 패턴 추천 (${patternRecs[0].score}점): ${patternRecs[0].reasons[0]}`
     }
+    // 모든 배치안에 패턴 이유 추가
+    for (const layout of layouts) {
+      const rec = patternRecs.find(r => r.type === layout.type)
+      if (rec && !layout.recommendation.reason) {
+        layout.recommendation.reason = `패턴 적합도 ${rec.score}점: ${rec.reasons[0]}`
+      }
+    }
   }
   
   // ━━━ 15속성 기반 건폐율/층수 보정 ━━━

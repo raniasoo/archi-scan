@@ -9,7 +9,7 @@ import type { LayoutScores } from "@/lib/design-strategy"
 interface LayoutOption {
   id: number
   name: string
-  type: "tower" | "courtyard" | "lshape" | "linear" | "cluster"
+  type: string
   description: string
   coverage: number
   units: number
@@ -27,6 +27,7 @@ interface LayoutCardProps {
   onSelect: () => void
   scores?: LayoutScores
   isRecommended?: boolean
+  recommendation?: { reason?: string; isRecommended?: boolean }
 }
 
 // Safe number helper for scores
@@ -204,6 +205,13 @@ export function LayoutCard({
             <span className="text-sm font-semibold text-foreground">
               {layout.gfa.toLocaleString()}㎡ ({Math.round(layout.gfa / siteArea * 100)}%)
             </span>
+          </div>
+        )}
+
+        {/* Alexander 패턴 추천 이유 (1줄) */}
+        {recommendation?.reason && (
+          <div className="mb-3 px-2 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/20">
+            <span className="text-[11px] text-amber-300">🏛️ {recommendation.reason}</span>
           </div>
         )}
 
