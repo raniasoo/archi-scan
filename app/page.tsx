@@ -473,7 +473,61 @@ function generateLayouts(
     cluster.id = 5
     layouts.push(cluster)
   }
+
+  // ━━━ 신규 4가지 배치안 (TestFit 수준 확장) ━━━
   
+  // Y자형 — 3방향 조망 (조망/프라이버시 전략)
+  if (strategy === "view-priority" || strategy === "livability") {
+    const yShape = calculateLayout(
+      "y-shape",
+      "Y자형 (3방향 조망)",
+      42,
+      Math.ceil(effectiveMaxFloors * 0.7),
+      "120° 간격 3개 날개로 전 세대 3방향 조망과 채광 확보"
+    )
+    yShape.id = 6
+    layouts.push(yShape)
+  }
+
+  // T자형 — 도로 정면 활용 (면적극대/수익 전략)
+  if (strategy === "area-maximize" || strategy === "profitability") {
+    const tShape = calculateLayout(
+      "t-shape",
+      "T자형 (도로 정면)",
+      48,
+      Math.ceil(effectiveMaxFloors * 0.8),
+      "도로면 정면성을 극대화하고 후면에 조용한 주거공간 확보"
+    )
+    tShape.id = 6
+    layouts.push(tShape)
+  }
+
+  // 필로티형 — 1층 개방 (주차효율/거주성 전략)
+  if (strategy === "parking-efficient" || strategy === "livability") {
+    const piloti = calculateLayout(
+      "piloti",
+      getLayoutName("piloti", "필로티형 (1층 개방)"),
+      43,
+      Math.ceil(effectiveMaxFloors * 0.85),
+      "1층 필로티로 주차/커뮤니티 공간 확보, 상층부 주거 프라이버시 강화"
+    )
+    piloti.id = 7
+    layouts.push(piloti)
+  }
+
+  // 테라스형 — 경사지 대응 (거주성/조망 전략)
+  if (strategy === "livability" || strategy === "view-priority") {
+    const terrace = calculateLayout(
+      "terrace",
+      "테라스형 (계단식)",
+      38,
+      Math.ceil(effectiveMaxFloors * 0.6),
+      "계단식 후퇴 배치로 전 세대 테라스 정원과 탁 트인 조망 확보"
+    )
+    terrace.id = 8
+    layouts.push(terrace)
+  }
+
   // ============================================================
   // ★ 대규모 대지 + 다세대 + 저층 → 다동 클러스터 자동 전환
   // AI 렌더링 프롬프트와 동일 조건 (도면 일치)

@@ -137,6 +137,59 @@ export function getBuildingGeometry(params: {
         effectiveBuildingCount = n
         break
       }
+      // ━━━ 신규 4가지 건물 유형 (TestFit 수준 확장) ━━━
+      case 'y-shape': {
+        // Y자형: 120° 간격 3개 날개 (3방향 조망)
+        const wt = Math.sqrt(fp) * 0.35
+        wingThickness = wt
+        const wingLen = fp / (3 * wt) * 0.9
+        const r120 = (2 * Math.PI) / 3
+        blocks = [0, 1, 2].map((i) => {
+          const angle = -Math.PI / 2 + i * r120
+          const cx = Math.cos(angle) * wingLen * 0.35
+          const cz = Math.sin(angle) * wingLen * 0.35
+          return { x: cx, z: cz, w: wt, d: wingLen * 0.7, label: i === 0 ? 'Y자형' : '' }
+        })
+        break
+      }
+      case 't-shape': {
+        // T자형: 상단 가로바 + 하단 세로바 (도로 정면 활용)
+        const wt = Math.sqrt(fp) * 0.38
+        wingThickness = wt
+        const topW = fp * 0.55 / wt  // 가로바 폭
+        const stemH = fp * 0.45 / wt // 세로바 높이
+        blocks = [
+          { x: 0, z: -(stemH / 2 + wt / 2), w: topW, d: wt, label: 'T자형' },
+          { x: 0, z: wt / 2, w: wt, d: stemH, label: '' },
+        ]
+        break
+      }
+      case 'piloti': {
+        // 필로티형: 1층 개방 + 상층 주거 (타워와 비슷하나 1층 필로티)
+        const ratio = 1.3
+        const w = Math.sqrt(fp * ratio)
+        const d = fp / w
+        blocks = [{ x: 0, z: 0, w, d, label: 'PILOTI' }]
+        break
+      }
+      case 'terrace': {
+        // 테라스형: 계단식 후퇴 (경사지 대응)
+        const stepCount = 3
+        const baseW = Math.sqrt(fp * 1.5)
+        const baseD = fp / (baseW * 0.8)
+        blocks = []
+        for (let s = 0; s < stepCount; s++) {
+          const scale = 1 - s * 0.15
+          const stepW = baseW * scale
+          const stepD = baseD / stepCount
+          blocks.push({
+            x: 0, z: s * stepD * 0.6,
+            w: stepW, d: stepD * 0.8,
+            label: s === 0 ? '테라스형' : '',
+          })
+        }
+        break
+      }
       default: {
         const s = Math.sqrt(fp)
         blocks = [{ x: 0, z: 0, w: s, d: s }]
