@@ -687,13 +687,13 @@ function generateLayouts(
       type: layout.type, coverage: layout.coverage, floors: layout.floors, siteArea,
     })
     if (adj.adjustments.length > 0) {
-      layout.coverage = Math.min(analysis.maxCoverage, adj.coverage)
+      layout.coverage = Math.min(maxCoverage, adj.coverage)
       layout.floors = Math.min(effectiveMaxFloors, adj.floors)
       // 재계산
       const fp = siteArea * layout.coverage / 100
       layout.gfa = fp * layout.floors
       layout.units = Math.max(1, Math.round(layout.gfa * 0.65 / 85))
-      layout.parking = Math.ceil(layout.units * analysis.parkingRatio)
+      layout.parking = Math.ceil(layout.units * (regulation.parkingRatio ?? 1.0))
     }
   }
   
@@ -707,12 +707,12 @@ function generateLayouts(
         siteArea, currentScore: typeScore,
       })
       if (redesign.result.wasRedesigned) {
-        layout.coverage = Math.min(analysis.maxCoverage, redesign.coverage)
+        layout.coverage = Math.min(maxCoverage, redesign.coverage)
         layout.floors = Math.min(effectiveMaxFloors, redesign.floors)
         const fp = siteArea * layout.coverage / 100
         layout.gfa = fp * layout.floors
         layout.units = Math.max(1, Math.round(layout.gfa * 0.65 / 85))
-        layout.parking = Math.ceil(layout.units * analysis.parkingRatio)
+        layout.parking = Math.ceil(layout.units * (regulation.parkingRatio ?? 1.0))
         if (!layout.features.includes('🔄 패턴 재설계')) {
           layout.features.push('🔄 패턴 재설계')
         }
