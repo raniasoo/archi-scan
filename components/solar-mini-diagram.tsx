@@ -118,10 +118,10 @@ export function SolarMiniDiagram({
         {/* 건물 */}
         <rect x={bldgX} y={bldgY} width={bldgW} height={bldgH}
           fill={bldgColor} opacity={0.8} rx={1} />
-        {/* 건물 높이 텍스트 */}
+        {/* 건물 높이 텍스트 — 실제 층수 표시 */}
         <text x={bldgX + bldgW / 2} y={bldgY + bldgH / 2 + 2} fontSize={6}
           textAnchor="middle" fill="white" fontWeight="bold">
-          {effectiveMaxFloors}층
+          {Math.round(buildingHeight / 3.3)}층
         </text>
         <text x={bldgX - 2} y={bldgY + bldgH / 2 + 2} fontSize={4.5}
           textAnchor="end" fill={bldgColor}>
