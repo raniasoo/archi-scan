@@ -21,6 +21,7 @@ interface EdgeMapParams {
   buildingCount?: number
   originalType?: string
   mode: 'footprint' | 'elevation' | 'section'
+  sitePolygon?: { coords: [number, number][]; centroid: [number, number] }
 }
 
 // ━━━ 조감도용 건물 배치 엣지맵 ━━━
@@ -43,8 +44,24 @@ function generateFootprintEdgeMap(params: EdgeMapParams): string {
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`
   svg += `<rect width="${W}" height="${H}" fill="#000"/>`
 
-  // 대지 경계
-  svg += `<rect x="${ox}" y="${oy}" width="${siteW * scale}" height="${siteH * scale}" fill="none" stroke="#333" stroke-width="2" stroke-dasharray="8,4"/>`
+  // 대지 경계 (실제 폴리곤 또는 직사각형)
+  if (params.sitePolygon && params.sitePolygon.coords.length >= 3) {
+    const [cLng, cLat] = params.sitePolygon.centroid
+    const LNG_M = Math.cos(cLat * Math.PI / 180) * 111319
+    const meterCoords = params.sitePolygon.coords.map(([lng, lat]) => ({
+      x: (lng - cLng) * LNG_M,
+      y: -(lat - cLat) * 111319,
+    }))
+    const xs = meterCoords.map(p => p.x), ys = meterCoords.map(p => p.y)
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys)
+    const polyScale = Math.min((W - pad * 2) / (maxX - minX), (H - pad * 2) / (maxY - minY))
+    const polyOx = (W - (maxX - minX) * polyScale) / 2
+    const polyOy = (H - (maxY - minY) * polyScale) / 2
+    const points = meterCoords.map(p => `${polyOx + (p.x - minX) * polyScale},${polyOy + (p.y - minY) * polyScale}`).join(' ')
+    svg += `<polygon points="${points}" fill="none" stroke="#555" stroke-width="2"/>`
+  } else {
+    svg += `<rect x="${ox}" y="${oy}" width="${siteW * scale}" height="${siteH * scale}" fill="none" stroke="#333" stroke-width="2" stroke-dasharray="8,4"/>`
+  }
 
   // 건물 블록 (흰색 = 건물, 검은색 = 배경)
   const totalBlockW = blocks.reduce((s, b) => s + b.widthM, 0)

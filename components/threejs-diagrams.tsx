@@ -14,6 +14,7 @@ interface ThreeJSDiagramsProps {
   originalType?: string
   floorHeight?: number
   regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number; roadWidth?: number }
+  sitePolygon?: { coords: [number, number][]; centroid: [number, number] }
 }
 
 export function ThreeJSDiagrams(props: ThreeJSDiagramsProps) {

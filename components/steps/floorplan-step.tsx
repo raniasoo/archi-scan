@@ -297,6 +297,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
               units={renderData.units}
               buildingCount={renderData.buildingCount}
               originalType={renderData.originalType}
+              sitePolygon={sitePolygon ?? undefined}
               regulation={{
                 frontSetback: regulation?.setbackFront ?? 3,
                 sideSetback: regulation?.setbackSide ?? 1.5,

@@ -17,6 +17,7 @@ export interface DiagramParams {
   originalType?: string
   floorHeight?: number
   regulation?: { frontSetback?: number; sideSetback?: number; rearSetback?: number; roadWidth?: number }
+  sitePolygon?: { coords: [number, number][]; centroid: [number, number] }
 }
 
 export type DiagramType = 'site-plan' | 'isometric' | 'section' | 'elevation' | 'perspective'
@@ -285,17 +286,63 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
     }
   }
 
+  // ━━━ 실제 지적도 폴리곤 → Three.js 좌표 변환 ━━━
+  let polyMeterCoords: { x: number; z: number }[] | null = null
+  if (params.sitePolygon && params.sitePolygon.coords.length >= 3) {
+    const [cLng, cLat] = params.sitePolygon.centroid
+    const LNG_M = Math.cos(cLat * Math.PI / 180) * 111319
+    const LAT_M = 111319
+    polyMeterCoords = params.sitePolygon.coords.map(([lng, lat]) => ({
+      x: (lng - cLng) * LNG_M,
+      z: -(lat - cLat) * LAT_M, // Z축 반전 (Three.js는 -Z가 북쪽)
+    }))
+    console.log(`[3D] 지적도 폴리곤 적용: ${polyMeterCoords.length}개 꼭짓점`)
+  }
+
+  // 지적도 폴리곤 기반 대지 메시 생성
+  function createSiteGround(color: number, yPos: number): THREE.Mesh {
+    if (polyMeterCoords && polyMeterCoords.length >= 3) {
+      // 실제 폴리곤 형상 사용
+      const shape = new THREE.Shape()
+      shape.moveTo(polyMeterCoords[0].x, polyMeterCoords[0].z)
+      for (let i = 1; i < polyMeterCoords.length; i++) {
+        shape.lineTo(polyMeterCoords[i].x, polyMeterCoords[i].z)
+      }
+      shape.lineTo(polyMeterCoords[0].x, polyMeterCoords[0].z)
+      const geo = new THREE.ShapeGeometry(shape)
+      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness: 0.9, side: THREE.DoubleSide }))
+      mesh.rotation.x = -Math.PI / 2
+      mesh.position.y = yPos
+      return mesh
+    } else {
+      // 정방형 근사 (폴리곤 없을 때)
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.3, S * 1.3), new THREE.MeshStandardMaterial({ color, roughness: 0.9 }))
+      mesh.rotation.x = -Math.PI / 2
+      mesh.position.y = yPos
+      return mesh
+    }
+  }
+
+  // 지적도 경계선 생성
+  function createSiteBoundary(): THREE.Line {
+    let pts: THREE.Vector3[]
+    if (polyMeterCoords && polyMeterCoords.length >= 3) {
+      pts = [...polyMeterCoords, polyMeterCoords[0]].map(p => new THREE.Vector3(p.x, 0.15, p.z))
+    } else {
+      pts = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a,b]) => new THREE.Vector3(a*S/2, 0.15, b*S/2))
+    }
+    return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x3b82f6, linewidth: 2 }))
+  }
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ① 배치도 (Site Plan) — 위에서 내려다 봄
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
     const scene = buildScene(0x141a26)
-    // 대지 (다크)
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(S*1.3, S*1.3), new THREE.MeshStandardMaterial({ color: 0x1e2836, roughness: 0.9 }))
-    ground.rotation.x = -Math.PI / 2; ground.position.y = -0.1; scene.add(ground)
-    // 대지 경계선 (밝은 파란)
-    const boundary = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a,b]) => new THREE.Vector3(a*S/2, 0.1, b*S/2))
-    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(boundary), new THREE.LineBasicMaterial({ color: 0x3b82f6 })))
+    // 대지 (실제 지적도 폴리곤 또는 정방형)
+    scene.add(createSiteGround(0x1e2836, -0.1))
+    // 대지 경계선 (실제 지적도 폴리곤)
+    scene.add(createSiteBoundary())
     // 건물 (창문 텍스처)
     addBuilding(scene, bldMat, true)
     // 도로 (진한 회색 + 차선)
@@ -330,8 +377,9 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
   {
     const scene = buildScene(0x141a26)
     // 지면 (다크)
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(S*2, S*2), new THREE.MeshStandardMaterial({ color: 0x1a2430 }))
-    ground.rotation.x = -Math.PI / 2; scene.add(ground)
+    const ground = createSiteGround(0x1a2430, 0)
+    scene.add(ground)
+    scene.add(createSiteBoundary())
     // 대지 경계 (바닥 그리드)
     const bndPts = [[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]].map(([a,b]) => new THREE.Vector3(a*S/2, 0.05, b*S/2))
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(bndPts), new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.5 })))
