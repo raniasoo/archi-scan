@@ -1,5 +1,6 @@
 /**
 import { getBuildingDimensionsInMeters } from "@/lib/building-geometry"
+import { type PlacementResult, toGeometryCompat } from "@/lib/layout-placement-engine"
  * DXF (Drawing Exchange Format) Generator for Archi-Scan
  * AutoCAD 호환 DXF R12 포맷 생성
  */
@@ -406,7 +407,7 @@ export function generateFloorPlanSVGPreview(config: FloorPlanConfig): string {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import { generateStructuralGrid, WALL_RC, WALL_PARTITION, COLUMN_SIZE, type StructuralGrid } from './structural-grid'
-import { getBuildingDimensionsInMeters } from './building-geometry'
+// getBuildingDimensionsInMeters already imported at top; PlacementResult from layout-placement-engine
 
 // CIRCLE 엔티티
 function dxfCircle(cx: number, cy: number, radius: number, layer: string): string {
@@ -443,11 +444,15 @@ function dxfDimLine(x1: number, y1: number, x2: number, y2: number, text: string
 export function generateStructuralDXF(params: {
   type: string; coverage: number; siteArea: number; floors: number
   units: number; unitArea: number; layoutName: string; address?: string
+  /** SSOT: 배치 엔진 결과 (있으면 이것을 사용) */
+  placement?: PlacementResult
 }): string {
-  const { type, coverage, siteArea, floors, units, unitArea, layoutName, address } = params
+  const { type, coverage, siteArea, floors, units, unitArea, layoutName, address, placement } = params
 
-  // 건물 치수
-  const geo = getBuildingDimensionsInMeters({ type: type as any, coverage, siteArea, floors })
+  // 건물 치수 — 배치 엔진 SSOT 우선, 없으면 기존 방식
+  const geo = placement
+    ? toGeometryCompat(placement)
+    : getBuildingDimensionsInMeters({ type: type as any, coverage, siteArea, floors })
   const bm = geo.blocksInMeters
   if (!bm || bm.length === 0) return ''
   const mainBlock = bm.reduce((a, b) => (a.widthM * a.depthM > b.widthM * b.depthM ? a : b))
@@ -743,14 +748,16 @@ function dxfScheduleTable(
 export function generateFullDXF(params: {
   type: string; coverage: number; siteArea: number; floors: number
   units: number; unitArea: number; layoutName: string; address?: string
+  placement?: PlacementResult
 }): string {
   // 기본 구조 DXF (Phase 2+3)
   const baseDXF = generateStructuralDXF(params)
   if (!baseDXF) return ''
   
-  // 구조 그리드 데이터 재생성 (스케줄용)
-  const { getBuildingDimensionsInMeters: getBDM } = require('./building-geometry')
-  const geo = getBDM({ type: params.type, coverage: params.coverage, siteArea: params.siteArea, floors: params.floors })
+  // 구조 그리드 데이터 재생성 (스케줄용) — SSOT 우선
+  const geo = params.placement
+    ? toGeometryCompat(params.placement)
+    : getBuildingDimensionsInMeters({ type: params.type as any, coverage: params.coverage, siteArea: params.siteArea, floors: params.floors })
   const bm = geo.blocksInMeters
   if (!bm || bm.length === 0) return baseDXF
   
@@ -839,13 +846,16 @@ function dxfStructuralTable(calc: StructuralCalc, startX: number, startY: number
 export function generateCompleteDXF(params: {
   type: string; coverage: number; siteArea: number; floors: number
   units: number; unitArea: number; layoutName: string; address?: string
+  placement?: PlacementResult
 }): string {
   const fullDXF = generateFullDXF(params)
   if (!fullDXF) return ''
   
   try {
-    const { getBuildingDimensionsInMeters: getBDM } = require('./building-geometry')
-    const geo = getBDM({ type: params.type, coverage: params.coverage, siteArea: params.siteArea, floors: params.floors })
+    // SSOT 우선
+    const geo = params.placement
+      ? toGeometryCompat(params.placement)
+      : getBuildingDimensionsInMeters({ type: params.type as any, coverage: params.coverage, siteArea: params.siteArea, floors: params.floors })
     const bm = geo.blocksInMeters
     if (!bm || bm.length === 0) return fullDXF
     

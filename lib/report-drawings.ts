@@ -110,54 +110,40 @@ interface DrawingInput {
   sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
 }
 
-// ===== 배치도 SVG =====
+// ===== 배치도 SVG — 배치 엔진 SSOT 사용 =====
 export function generateSitePlanSvg(d: DrawingInput): string {
   const W = 360, H = 300, PAD = 35
   
-  // 실제 필지 형상 변환
-  const hasPolygon = d.sitePolygon && d.sitePolygon.coords.length > 2
-  let siteW: number, siteH: number, siteX: number, siteY: number, scale: number
-  let polyPoints = ''
-
-  if (hasPolygon) {
-    const [cLng, cLat] = d.sitePolygon!.centroid
-    const LM = Math.cos(cLat * Math.PI / 180) * 111319
-    const mCoords = d.sitePolygon!.coords.map(([lng, lat]) => [(lng - cLng) * LM, -(lat - cLat) * 111319])
-    const xs = mCoords.map(c => c[0]), ys = mCoords.map(c => c[1])
-    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys)
-    const rW = maxX - minX || 1, rH = maxY - minY || 1
-    scale = Math.min((W - PAD * 2) / rW, (H - PAD * 2 - 30) / rH)
-    siteW = rW * scale; siteH = rH * scale
-    siteX = (W - siteW) / 2; siteY = PAD
-    polyPoints = mCoords.map(([mx, my]) => `${siteX + (mx - minX) * scale},${siteY + (my - minY) * scale}`).join(' ')
-  } else {
-    const siteRealW = Math.sqrt(d.siteArea * 1.25)
-    const siteRealH = d.siteArea / siteRealW
-    scale = Math.min((W - PAD * 2) / siteRealW, (H - PAD * 2 - 30) / siteRealH)
-    siteW = siteRealW * scale; siteH = siteRealH * scale
-    siteX = (W - siteW) / 2; siteY = PAD
-  }
+  // ━━━ Single Source of Truth: 배치 엔진 호출 ━━━
+  const { computePlacement, toSvgCoords } = require('./layout-placement-engine')
+  const placement = computePlacement({
+    sitePolygon: d.sitePolygon,
+    siteArea: d.siteArea,
+    buildingType: d.type,
+    coverage: d.buildingCoverage,
+    floors: d.floors,
+    setbacks: d.setbacks,
+    roadWidth: d.roadWidth,
+  })
+  const svg = toSvgCoords(placement, W, H, PAD)
+  const { siteX, siteY, siteW, siteH, svgScale: scale, buildings: svgBuildings } = svg
+  const hasPolygon = placement.site.isRealPolygon
 
   const sf = d.setbacks.front * scale, ss = d.setbacks.side * scale, sr = d.setbacks.rear * scale
-  const bldZoneX = siteX + ss, bldZoneY = siteY + sr
-  const bldZoneW = siteW - ss * 2, bldZoneH = siteH - sf - sr
-  const bW = bldZoneW * 0.8, bH = bldZoneH * 0.65
-  const bX = bldZoneX + (bldZoneW - bW) / 2, bY = bldZoneY + (bldZoneH - bH) / 2
-  const siteRealW = Math.sqrt(d.siteArea * 1.25), siteRealH = d.siteArea / siteRealW
 
   const siteSvg = hasPolygon
-    ? `<polygon points="${polyPoints}" fill="#f1f5f9" stroke="#3b82f6" stroke-width="1.5"/>`
+    ? `<polygon points="${svg.sitePolygonPoints}" fill="#f1f5f9" stroke="#3b82f6" stroke-width="1.5"/>`
     : `<rect x="${siteX}" y="${siteY}" width="${siteW}" height="${siteH}" fill="#f1f5f9" stroke="#3b82f6" stroke-width="1.5"/>`
 
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
   <style>text{font-family:sans-serif;}</style>
   <!-- 대지 -->
   ${siteSvg}
-  <!-- 이격거리선 -->
-  <rect x="${bldZoneX}" y="${bldZoneY}" width="${bldZoneW}" height="${bldZoneH}" fill="none" stroke="#22d3ee" stroke-width="0.7" stroke-dasharray="4 3" opacity="0.6"/>
-  <!-- 건물 -->
-  <rect x="${bX}" y="${bY}" width="${bW}" height="${bH}" fill="#dbeafe" stroke="#2563eb" stroke-width="1.2"/>
-  <text x="${bX + bW / 2}" y="${bY + bH / 2 + 3}" text-anchor="middle" font-size="8" fill="#1e40af" font-weight="600">${d.layoutName}</text>
+  <!-- 이격거리선 — 배치 엔진 SSOT -->
+  <polygon points="${svg.buildablePolygonPoints}" fill="none" stroke="#22d3ee" stroke-width="0.7" stroke-dasharray="4 3" opacity="0.6"/>
+  <!-- 건물 — 배치 엔진 좌표 -->
+  ${svgBuildings.map((b: any, i: number) => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="#dbeafe" stroke="#2563eb" stroke-width="1.2"/>`).join('\n  ')}
+  <text x="${svgBuildings[0]?.x + (svgBuildings[0]?.w || 0) / 2}" y="${svgBuildings[0]?.y + (svgBuildings[0]?.h || 0) / 2 + 3}" text-anchor="middle" font-size="8" fill="#1e40af" font-weight="600">${d.layoutName}</text>
   <!-- 주차 진입 -->
   <rect x="${siteX + 4}" y="${siteY + siteH - sf - 12}" width="${siteW * 0.25}" height="10" fill="#f1f5f9" stroke="#94a3b8" stroke-width="0.5" rx="2"/>
   <text x="${siteX + 4 + siteW * 0.125}" y="${siteY + siteH - sf - 5}" text-anchor="middle" font-size="5" fill="#64748b">지하주차</text>
@@ -169,8 +155,8 @@ export function generateSitePlanSvg(d: DrawingInput): string {
   <text x="${siteX + siteW / 2}" y="${siteY + siteH + 11}" text-anchor="middle" font-size="5" fill="#64748b">도로 (${d.roadWidth}m)</text>
   <!-- 치수 -->
   <line x1="${siteX}" y1="${siteY - 8}" x2="${siteX + siteW}" y2="${siteY - 8}" stroke="#ef4444" stroke-width="0.4"/>
-  <text x="${siteX + siteW / 2}" y="${siteY - 10}" text-anchor="middle" font-size="5" fill="#ef4444">${siteRealW.toFixed(1)}m</text>
-  <text x="${siteX - 8}" y="${siteY + siteH / 2}" text-anchor="middle" font-size="5" fill="#ef4444" transform="rotate(-90,${siteX - 8},${siteY + siteH / 2})">${siteRealH.toFixed(1)}m</text>
+  <text x="${siteX + siteW / 2}" y="${siteY - 10}" text-anchor="middle" font-size="5" fill="#ef4444">${placement.site.width.toFixed(1)}m</text>
+  <text x="${siteX - 8}" y="${siteY + siteH / 2}" text-anchor="middle" font-size="5" fill="#ef4444" transform="rotate(-90,${siteX - 8},${siteY + siteH / 2})">${placement.site.depth.toFixed(1)}m</text>
   <!-- 이격 치수 -->
   <text x="${siteX + siteW / 2}" y="${siteY + siteH - sf / 2 + 2}" text-anchor="middle" font-size="4.5" fill="#0891b2" opacity="0.7">전면 ${d.setbacks.front}m</text>
   <text x="${siteX + siteW / 2}" y="${siteY + sr / 2 + 2}" text-anchor="middle" font-size="4.5" fill="#0891b2" opacity="0.7">후면 ${d.setbacks.rear}m</text>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { X, RotateCcw, ZoomIn, ZoomOut, Camera, Loader2 } from "lucide-react"
 
 import { getBuildingGeometry, getClusterBlocks, type BuildingBlock } from "@/lib/building-geometry"
+import { computePlacement, type PlacementResult } from "@/lib/layout-placement-engine"
 import { getPatternVisuals } from "@/lib/alexander-patterns"
 import { STYLES } from "@/components/ai-hub"
 import { getRenderLimits, getRenderUsageLabel } from "@/lib/subscription-plans"
@@ -348,7 +349,23 @@ export function BuildingVolume3D({
       try { THREE = await import('three') } catch (e: any) { setError(e.message); setLoaded(true); return }
       if (!mounted || !canvasRef.current) return
 
-      // 공유 유틸리티에서 건물 치수 계산 (도면 7종과 동일)
+      // ━━━ Single Source of Truth: 배치 엔진 호출 ━━━
+      const placementResult = computePlacement({
+        sitePolygon,
+        siteArea,
+        buildingType: layoutType,
+        originalType: originalType || layoutType,
+        buildingCount,
+        coverage,
+        floors,
+        floorHeight,
+        setbacks: {
+          front: regulation?.frontSetback ?? 3,
+          side: regulation?.sideSetback ?? 1.5,
+          rear: regulation?.rearSetback ?? 2,
+        },
+        roadWidth: regulation?.roadWidth ?? 8,
+      })
       const geo = getBuildingGeometry({ type: layoutType, coverage, siteArea, floors, buildingCount, originalType, floorHeight })
       const blocks: Block[] = geo.blocks
       const info: { label: string; floors: number }[] = []
@@ -563,37 +580,23 @@ export function BuildingVolume3D({
 
       /* ── 건물 (PBR + 창문 텍스처) ── */
 
-      // ━━━ 최적 건물 배치 알고리즘 ━━━
-      // 원칙 1: 후면 밀착 → 전면 조경/진입 공간 확보
-      // 원칙 2: 좌우 균등 → 양 측면 이격 동일
-      // 원칙 3: 건축가능영역 내 100% 수용
-      
+      // ━━━ Single Source of Truth: 배치 엔진의 buildScale 사용 ━━━
+      const buildScale = placementResult.buildScale
+
+      // 건축가능영역 중심 오프셋 (한국 건축 관행: 후면 밀착)
       const buildableW = S - 2 * sideSB
       const buildableD = S - frontSB - rearSB
+      const buildableCenterZ = (rearSB - frontSB) / 2
       const allBlocksMaxX = Math.max(...blocks.map(b => Math.abs(b.x) + b.w / 2)) * S * 2
       const allBlocksMaxZ = Math.max(...blocks.map(b => Math.abs(b.z) + b.d / 2)) * S * 2
-      const buildScale = Math.min(1.0, Math.min(buildableW / Math.max(allBlocksMaxX, 1), buildableD / Math.max(allBlocksMaxZ, 1)) * 0.92)
-
-      // 건물 실제 크기 (스케일 적용 후)
-      const scaledBldW = allBlocksMaxX * buildScale
       const scaledBldD = allBlocksMaxZ * buildScale
-
-      // ━━━ 최적 배치 위치 계산 ━━━
-      // X축: 좌우 균등 (대칭)
-      const buildableOffsetX = 0
-      
-      // Z축: 후면 밀착 배치 (한국 건축 관행)
-      // 건축가능영역: sbRear(-S/2+rearSB) ~ sbFront(S/2-frontSB)
-      // 건물 후면을 건축가능영역 후면에서 여유 1m만 두고 배치
-      const buildableCenterZ = (rearSB - frontSB) / 2  // 건축가능영역 중심
-      const rearMargin = Math.min(1.0, (buildableD - scaledBldD) * 0.15) // 후면 여유 15% or 1m
-      const optimalZ = buildableCenterZ - (buildableD - scaledBldD) / 2 + rearMargin  // 후면 밀착
-      
-      // 전면 여유 공간 계산 (조경/주차/진입용)
+      const rearMargin = Math.min(1.0, (buildableD - scaledBldD) * 0.15)
+      const optimalZ = buildableCenterZ - (buildableD - scaledBldD) / 2 + rearMargin
       const frontYardDepth = buildableD - scaledBldD - rearMargin
-      const buildableOffsetZ = frontYardDepth > 2 ? optimalZ : buildableCenterZ  // 전면 2m 미만이면 중앙 배치
+      const buildableOffsetX = 0
+      const buildableOffsetZ = frontYardDepth > 2 ? optimalZ : buildableCenterZ
 
-      // ━━━ 모든 타입: 블록 기반 (geo.blocks → SVG 도면과 100% 일치) ━━━
+      // ━━━ 배치 엔진 좌표 사용: 모든 블록 배치 ━━━
       blocks.forEach((blk, idx) => {
         const bF = getBlockFloors(idx, floors, layoutType)
         const tH = bF * floorHeight
