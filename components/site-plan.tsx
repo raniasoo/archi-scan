@@ -228,12 +228,71 @@ export function SitePlan({
         if (ofsX + totalBldW > bldZoneX + bldZoneW - 3) ofsX = bldZoneX + bldZoneW - totalBldW - 3
         if (ofsY + totalBldH > bldZoneY + bldZoneH - 3) ofsY = bldZoneY + bldZoneH - totalBldH - 3
         
-        const shapes = bm.map((b: any, i: number) => ({
+        let shapes = bm.map((b: any, i: number) => ({
           x: ofsX + (b.centerXM - b.widthM / 2 - minX) * scale,
           y: ofsY + (b.centerZM - b.depthM / 2 - minZ) * scale,
           w: b.widthM * scale,
           h: b.depthM * scale,
         }))
+        
+        // ★ 폴리곤 스캔라인 — 각 건물을 인셋 폴리곤 내부에 맞춤
+        if (svgPolyCoords.length > 2 && shapes.length > 1) {
+          const insetRatio = 1 - (avgSetback * svgScale * 2) / Math.max(siteW, siteH)
+          const safeR = Math.max(0.6, Math.min(0.95, insetRatio))
+          const pcx = svgPolyCoords.reduce((s, p) => s + p.x, 0) / svgPolyCoords.length
+          const pcy = svgPolyCoords.reduce((s, p) => s + p.y, 0) / svgPolyCoords.length
+          const insetPoly = svgPolyCoords.map(p => ({
+            x: pcx + (p.x - pcx) * safeR,
+            y: pcy + (p.y - pcy) * safeR,
+          }))
+          
+          // 행별로 그룹핑 (같은 y좌표 = 같은 행)
+          const rowGroups: Map<number, typeof shapes> = new Map()
+          for (const s of shapes) {
+            const rowKey = Math.round(s.y * 10)
+            if (!rowGroups.has(rowKey)) rowGroups.set(rowKey, [])
+            rowGroups.get(rowKey)!.push(s)
+          }
+          
+          const adjustedShapes: typeof shapes = []
+          for (const [, rowShapes] of rowGroups) {
+            const midY = rowShapes[0].y + rowShapes[0].h / 2
+            
+            // 이 Y높이에서 폴리곤 좌우 경계 찾기
+            let xIntersections: number[] = []
+            for (let i = 0; i < insetPoly.length; i++) {
+              const p1 = insetPoly[i], p2 = insetPoly[(i + 1) % insetPoly.length]
+              if ((p1.y <= midY && p2.y >= midY) || (p2.y <= midY && p1.y >= midY)) {
+                const t = Math.abs(p2.y - p1.y) < 0.01 ? 0.5 : (midY - p1.y) / (p2.y - p1.y)
+                xIntersections.push(p1.x + t * (p2.x - p1.x))
+              }
+            }
+            
+            if (xIntersections.length >= 2) {
+              const polyLeft = Math.min(...xIntersections) + 5
+              const polyRight = Math.max(...xIntersections) - 5
+              const polyWidth = polyRight - polyLeft
+              
+              // 이 행의 건물들 총 폭
+              const totalRowW = rowShapes.reduce((s, sh) => s + sh.w, 0) + (rowShapes.length - 1) * 4
+              const rowScale = totalRowW > polyWidth ? polyWidth / totalRowW : 1.0
+              const startX = polyLeft + (polyWidth - totalRowW * rowScale) / 2
+              
+              let cx = startX
+              for (const sh of rowShapes) {
+                adjustedShapes.push({
+                  ...sh,
+                  x: cx,
+                  w: sh.w * rowScale,
+                })
+                cx += sh.w * rowScale + 4
+              }
+            } else {
+              adjustedShapes.push(...rowShapes)
+            }
+          }
+          shapes = adjustedShapes
+        }
         
         const isCourtyard = type === 'courtyard'
         const courtyard = isCourtyard && bm.length >= 3 ? {
