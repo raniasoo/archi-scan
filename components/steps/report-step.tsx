@@ -83,6 +83,7 @@ export interface ReportStepProps {
   aiMultiImages?: {angle: string; image: string | null}[] | null
   aiInteriorComparison?: {style: string; label: string; image: string}[] | null
   sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
+  siteConditions?: { slope?: number; soilCode?: string; elevation?: number; floodRisk?: string; seismicRisk?: string; buildabilityScore?: number }
   siteCoords?: { lng: number; lat: number } | null
   nearbyAnalysis?: any
   setNearbyAnalysis?: (data: any) => void
@@ -504,6 +505,7 @@ export function ReportStep(props: ReportStepProps) {
                   aiRenderImage={props.aiRenderImage}
                   aiMultiImages={props.aiMultiImages}
                   sitePolygon={props.sitePolygon}
+                  siteConditions={props.siteConditions}
                 />
                 </ReportErrorBoundary>
               </TabsContent>

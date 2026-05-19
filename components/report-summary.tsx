@@ -149,6 +149,7 @@ interface ReportSummaryProps {
   aiRenderImage?: string | null
   aiMultiImages?: {angle: string; image: string | null}[] | null
   sitePolygon?: { coords: [number, number][]; centroid: [number, number] } | null
+  siteConditions?: { slope?: number; soilCode?: string; elevation?: number; floodRisk?: string; seismicRisk?: string; buildabilityScore?: number }
 }
 
 function formatKRW(value: number): string {
@@ -219,7 +220,7 @@ function getRecommendedLayout(layouts: LayoutOption[], siteArea: number): Layout
   return bestLayout
 }
 
-export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility, userValues, designStrategy, aiRenderImage, aiMultiImages, sitePolygon }: ReportSummaryProps) {
+export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regulation, branding, siteVisuals, financialScenarios, onScenariosChange, landPricePerM2, molitData, feasibilityResult: externalFeasibility, userValues, designStrategy, aiRenderImage, aiMultiImages, sitePolygon, siteConditions }: ReportSummaryProps) {
   // molitData 우선 적용 — regulation race condition 방지
   // regulation 한도(buildingCoverageLimit/farLimit)에서 용도지역 역추정 (zone-lookup 미완료 시 안전장치)
   const inferZoneFromLimits = (coverage?: number, far?: number): string => {
@@ -723,6 +724,56 @@ export function ReportSummary({ layout, address, siteArea, gfa, allLayouts, regu
         상기 배치안은 투자수익률, 세대당 주차대수 확보율, 법정 용적률 활용도 등을 종합적으로 고려할 때 가장 적합한 것으로 판단됩니다.
       </p>
     </div>
+  </div>
+  ` : ''}
+
+  ${siteConditions?.elevation !== undefined ? `
+  <div class="section">
+    <div class="section-title"><span class="section-number">${layouts.length > 1 ? '4' : '3.5'}</span> 대지조건 분석</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0;">
+      <div class="highlight" style="padding: 8px 10px;">
+        <div style="font-size: 8pt; color: #64748b;">🏔️ 지형</div>
+        <div style="font-size: 14pt; font-weight: 700;">${siteConditions.elevation}m</div>
+        <div style="font-size: 8pt; color: #64748b;">경사 ${siteConditions.slope || 0}%</div>
+      </div>
+      <div class="highlight" style="padding: 8px 10px;">
+        <div style="font-size: 8pt; color: #64748b;">🪨 토질</div>
+        <div style="font-size: 14pt; font-weight: 700; color: ${siteConditions.soilCode === 'FILL' || siteConditions.soilCode === 'SILT' ? '#ef4444' : '#22c55e'};">${
+          siteConditions.soilCode === 'ROCK' ? '암반' : siteConditions.soilCode === 'GRAVEL' ? '자갈층' : siteConditions.soilCode === 'SAND' ? '모래층' : siteConditions.soilCode === 'CLAY' ? '점토층' : siteConditions.soilCode === 'SILT' ? '실트층' : '매립토'
+        }</div>
+        <div style="font-size: 8pt; color: #64748b;">기초: ${siteConditions.soilCode === 'FILL' || siteConditions.soilCode === 'SILT' ? '파일기초' : siteConditions.soilCode === 'CLAY' ? '매트+보강' : '매트기초'}</div>
+      </div>
+      <div class="highlight" style="padding: 8px 10px;">
+        <div style="font-size: 8pt; color: #64748b;">🌍 지진</div>
+        <div style="font-size: 14pt; font-weight: 700; color: ${siteConditions.seismicRisk === 'high' ? '#ef4444' : '#22c55e'};">${siteConditions.seismicRisk === 'high' ? '위험' : '안전'}</div>
+        <div style="font-size: 8pt; color: #64748b;">${siteConditions.seismicRisk === 'high' ? 'I구역' : 'II구역'}</div>
+      </div>
+      <div class="highlight" style="padding: 8px 10px;">
+        <div style="font-size: 8pt; color: #64748b;">🌊 침수</div>
+        <div style="font-size: 14pt; font-weight: 700; color: ${siteConditions.floodRisk === 'very-high' || siteConditions.floodRisk === 'high' ? '#ef4444' : siteConditions.floodRisk === 'medium' ? '#f59e0b' : '#22c55e'};">${
+          siteConditions.floodRisk === 'very-high' ? '극위험' : siteConditions.floodRisk === 'high' ? '위험' : siteConditions.floodRisk === 'medium' ? '주의' : '안전'
+        }</div>
+        <div style="font-size: 8pt; color: #64748b;">GL+${siteConditions.floodRisk === 'very-high' ? '600' : siteConditions.floodRisk === 'high' ? '500' : siteConditions.floodRisk === 'medium' ? '300' : '150'}mm</div>
+      </div>
+    </div>
+    <div class="highlight" style="padding: 8px 12px; margin-top: 4px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 9pt;">건축 적합도</span>
+        <span style="font-size: 14pt; font-weight: 700; color: ${(siteConditions.buildabilityScore || 100) >= 70 ? '#22c55e' : '#ef4444'};">${siteConditions.buildabilityScore || 100}점</span>
+      </div>
+      ${(() => {
+        let costPct = 0
+        if (siteConditions.soilCode === 'FILL') costPct += 25
+        else if (siteConditions.soilCode === 'SILT') costPct += 18
+        else if (siteConditions.soilCode === 'CLAY') costPct += 8
+        if ((siteConditions.slope || 0) > 15) costPct += 15
+        else if ((siteConditions.slope || 0) > 10) costPct += 8
+        if (siteConditions.floodRisk === 'very-high') costPct += 12
+        else if (siteConditions.floodRisk === 'high') costPct += 5
+        return costPct > 0 ? `<div style="font-size: 8pt; color: #ef4444; margin-top: 4px;">⚠️ 대지조건 추가비용: +${costPct}% (사업성에 반영됨)</div>` : '<div style="font-size: 8pt; color: #22c55e; margin-top: 4px;">✅ 대지조건 양호 — 추가비용 없음</div>'
+      })()}
+    </div>
+    <div style="font-size: 7pt; color: #94a3b8; margin-top: 4px; text-align: center;">※ 표고 기반 추정치입니다. 정확한 토질은 지반조사(시추)가 필요합니다.</div>
   </div>
   ` : ''}
 

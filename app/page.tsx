@@ -1169,9 +1169,36 @@ export default function ArchiScanPage() {
       constructionCostPerM2: effectiveConstructionCost,
     })
     
+    // ★ 대지 추가비용 반영 (site-design-bridge)
+    if (siteConditions.elevation !== undefined && result) {
+      const sc = siteConditions
+      let additionalCostPct = 0
+      // 토질 비용
+      if (sc.soilCode === 'FILL') additionalCostPct += 25
+      else if (sc.soilCode === 'SILT') additionalCostPct += 18
+      else if (sc.soilCode === 'CLAY') additionalCostPct += 8
+      // 경사 비용
+      if ((sc.slope || 0) > 15) additionalCostPct += 15
+      else if ((sc.slope || 0) > 10) additionalCostPct += 8
+      // 침수 비용
+      if (sc.floodRisk === 'very-high') additionalCostPct += 12
+      else if (sc.floodRisk === 'high') additionalCostPct += 5
+      // 지진 비용
+      if (sc.seismicRisk === 'high') additionalCostPct += 5
+      
+      if (additionalCostPct > 0) {
+        const additionalCost = Math.round(result.constructionCost * additionalCostPct / 100)
+        result.constructionCost += additionalCost
+        result.totalCost += additionalCost
+        result.profit = result.totalRevenue - result.totalCost
+        result.roi = result.totalCost > 0 ? Math.round(result.profit / result.totalCost * 1000) / 10 : 0
+        console.log(`[SITE-COST] 대지 추가비용 반영: +${additionalCostPct}% (+${(additionalCost/1e8).toFixed(1)}억) → ROI ${result.roi}%`)
+      }
+    }
+    
     setFeasibilityResult(result)
     console.log('[v0] FeasibilityResult updated:', result, '분양가:', effectiveSalesPrice / 10000, '만/㎡')
-  }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, effectiveSalesPrice, effectiveConstructionCost])
+  }, [selectedLayout, layouts, siteArea, landPriceData.pricePerM2, effectiveSalesPrice, effectiveConstructionCost, siteConditions])
 
   // ━━━ AI 렌더링 이미지 sessionStorage 영속화 ━━━
   // 마운트 시 복원
@@ -3181,6 +3208,7 @@ export default function ArchiScanPage() {
             aiInteriorComparison={aiInteriorComparison}
             sitePolygon={sitePolygon}
             siteCoords={siteCoords}
+            siteConditions={siteConditions}
             nearbyAnalysis={nearbyAnalysis}
             setNearbyAnalysis={setNearbyAnalysis}
           />
