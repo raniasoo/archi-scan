@@ -2044,6 +2044,7 @@ export default function ArchiScanPage() {
           totalExclusiveArea: exclusiveArea,
           mix: preset.mix,
           basePricePerM2: effectiveSalesPrice || 5000000,
+          targetUnits: layout.units,
         })
         const parking = generateParkingLayout({
           requiredSpaces: layout.parking || Math.ceil(layout.units * (regulation?.parkingRatio || 1)),
@@ -2088,6 +2089,7 @@ export default function ArchiScanPage() {
           totalExclusiveArea: exclusiveArea,
           mix: preset.mix,
           basePricePerM2: effectiveSalesPrice || 5000000,
+          targetUnits: newUnits,
         })
         const parking = generateParkingLayout({
           requiredSpaces: newParking,
@@ -2133,6 +2135,7 @@ export default function ArchiScanPage() {
           totalExclusiveArea: exclusiveArea,
           mix: presetData.mix,
           basePricePerM2: effectiveSalesPrice || 5000000,
+          targetUnits: layout.units,
         })
         setTestfitData(prev => ({ ...prev, unitMix }))
       } catch (e) {

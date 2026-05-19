@@ -1496,10 +1496,12 @@ ${buildingType === 'lshape' ? `- The building in view is L-SHAPED (ㄱ자형). Y
 - Show the building entrance, windows, balconies, and materials at close range.
 - The SKY is visible above the building roofline. You CANNOT see the roof surface.
 - This is a STREET PHOTOGRAPH taken by a person walking, NOT an architectural model photo or aerial survey.`
-    : `- This is a MULTI-BUILDING COMPLEX with ${buildingCount} separate ${f}-story buildings. Show MULTIPLE distinct buildings, NOT one large structure.
+    : `- ★★★ CRITICAL: This is a MULTI-BUILDING COMPLEX. You MUST show EXACTLY ${buildingCount} SEPARATE buildings. NOT 1 building, NOT 2 buildings — EXACTLY ${buildingCount} distinct ${f}-story buildings visible from above.
+- Count the buildings: 1, 2, 3${buildingCount > 3 ? `, 4${buildingCount > 4 ? `, 5${buildingCount > 5 ? `, 6${buildingCount > 6 ? '...' : ''}` : ''}` : ''}` : ''} — there must be ${buildingCount} rooftops visible.
 - Each building MUST have EXACTLY ${f} floors. They should look like a cohesive village/community.
 - ${f <= 3 ? `★ HEIGHT: From above, the buildings are LOW — their roofs are at the SAME HEIGHT or LOWER than the surrounding trees. The trees partially HIDE the buildings. This is key to recognizing ${f}-story buildings from a drone view.` : `★ HEIGHT: Each building is ${f} floors (${Math.round(f * 3.3)}m). They are about the same height as the trees around them.`}
 - Show spaces BETWEEN buildings: gardens, walkways, small courtyards, parking areas.
+- FAILURE MODE TO AVOID: Generating ONE large building instead of ${buildingCount} separate small buildings. This would be completely wrong.
 ${buildingType === 'linear' ? `- ★★★ ARRANGEMENT: All buildings are LONG HORIZONTAL SLABS arranged PARALLEL to each other, running EAST-WEST. From above it looks like ${buildingCount} horizontal bars. This is a Korean 판상형 아파트 complex. DO NOT arrange them in a cluster or random pattern.` : ''}
 ${buildingType === 'lshape' ? `- ★★★ BUILDING SHAPE: Each building is L-SHAPED (ㄱ자형) when viewed from ABOVE.
   FROM THE SKY, each building looks like the letter "L" or Korean character "ㄱ":

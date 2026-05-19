@@ -254,8 +254,9 @@ export function calculateUnitMix(params: {
   totalExclusiveArea: number    // 총 전용면적 (㎡)
   mix: UnitMixConfig
   basePricePerM2: number        // 기본 분양가 (원/㎡)
+  targetUnits?: number          // ★ 배치안 세대수에 맞추기 (없으면 면적 기반)
 }): UnitMixResult {
-  const { totalExclusiveArea, mix, basePricePerM2 } = params
+  const { totalExclusiveArea, mix, basePricePerM2, targetUnits } = params
   
   const typeMap: Record<string, UnitType> = {
     studio: UNIT_LIBRARY[1],    // ST-02 (26㎡)
@@ -278,14 +279,33 @@ export function calculateUnitMix(params: {
   const units: UnitMixResult['units'] = []
   let usedArea = 0
   
-  for (const entry of mixEntries) {
-    const unitType = typeMap[entry.key]
-    if (!unitType) continue
-    const areaForType = totalExclusiveArea * entry.pct / 100
-    const count = Math.max(0, Math.round(areaForType / unitType.area))
-    const actualArea = count * unitType.area
-    units.push({ type: unitType, count, totalArea: actualArea })
-    usedArea += actualArea
+  if (targetUnits && targetUnits > 0) {
+    // ★ 배치안 세대수 기준 — 비율대로 분배
+    let remaining = targetUnits
+    for (let i = 0; i < mixEntries.length; i++) {
+      const entry = mixEntries[i]
+      const unitType = typeMap[entry.key]
+      if (!unitType) continue
+      const count = i === mixEntries.length - 1
+        ? remaining  // 마지막 타입이 나머지 흡수
+        : Math.max(0, Math.round(targetUnits * entry.pct / 100))
+      const actualCount = Math.min(count, remaining)
+      remaining -= actualCount
+      const actualArea = actualCount * unitType.area
+      units.push({ type: unitType, count: actualCount, totalArea: actualArea })
+      usedArea += actualArea
+    }
+  } else {
+    // 면적 기반 (기존 방식)
+    for (const entry of mixEntries) {
+      const unitType = typeMap[entry.key]
+      if (!unitType) continue
+      const areaForType = totalExclusiveArea * entry.pct / 100
+      const count = Math.max(0, Math.round(areaForType / unitType.area))
+      const actualArea = count * unitType.area
+      units.push({ type: unitType, count, totalArea: actualArea })
+      usedArea += actualArea
+    }
   }
   
   const totalUnits = units.reduce((s, u) => s + u.count, 0)
