@@ -190,8 +190,18 @@ export function SitePlan({
     const bY = anchorY - bH / 2
 
     // ━━━ 다동 배치: 폴리곤 직접 배치 (폴리곤 있을 때) ━━━
-    if (svgPolyCoords.length > 2 && (buildingCount || 1) > 1) {
-      const n = buildingCount || 2
+    const effectiveBldgCount = buildingCount || (() => {
+      // buildingCount 미설정 시 자동 계산
+      const f = floors || 3, u = units || 10
+      if (f <= 5 && u > 20 && siteArea > 1500) {
+        const perFloor: Record<string, number> = { linear: 12, lshape: 6, courtyard: 10, tower: 4, cluster: 4 }
+        return Math.max(2, Math.ceil(u / ((perFloor[originalType || type] || 4) * f)))
+      }
+      return 1
+    })()
+    
+    if (svgPolyCoords.length > 2 && effectiveBldgCount > 1) {
+      const n = effectiveBldgCount
       const totalFootprint = siteArea * buildingCoverage / 100
       const eachFootprint = totalFootprint / n
       
@@ -282,7 +292,11 @@ export function SitePlan({
       
       const label = originalType === 'linear' ? '판상형' : originalType === 'lshape' ? 'ㄱ자형' : 
                      originalType === 'courtyard' ? '중정형' : ''
-      return { shapes, label, courtyard: undefined }
+      // ★ 폴리곤 배치 성공 시에만 반환, 실패 시 building-geometry fallback
+      if (shapes.length > 0) {
+        return { shapes, label, courtyard: undefined }
+      }
+      // shapes가 비어있으면 아래 building-geometry 코드로 진행
     }
     
     // ━━━ 단동 또는 폴리곤 없는 경우: building-geometry 사용 ━━━
@@ -290,7 +304,7 @@ export function SitePlan({
       const { getBuildingDimensionsInMeters } = require('@/lib/building-geometry')
       const siteAR = bldZoneW > 0 && bldZoneH > 0 ? bldZoneW / bldZoneH : 1.0
       const geo = getBuildingDimensionsInMeters({
-        type, coverage: buildingCoverage, siteArea, floors, buildingCount: 1, originalType: originalType || type,
+        type, coverage: buildingCoverage, siteArea, floors, buildingCount: effectiveBldgCount, originalType: originalType || type,
         siteAspectRatio: siteAR,
       })
       const bm = geo.blocksInMeters

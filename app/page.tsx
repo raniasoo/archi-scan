@@ -776,6 +776,7 @@ export default function ArchiScanPage() {
     slope?: number; slopeDirection?: string; soilCode?: string; elevation?: number
     seismicRisk?: string; floodRisk?: string; buildabilityScore?: number
   }>({})
+  const [terrainGrid, setTerrainGrid] = useState<{ elevations: number[][]; gridSize: number; minElevation: number; maxElevation: number; areaWidth: number } | null>(null)
   const [analysisRawData, setAnalysisRawData] = useState<any>(null)
   const [siteCoords, setSiteCoords] = useState<{ lng: number, lat: number } | null>(null)
   const [show3DVolume, setShow3DVolume] = useState(false)
@@ -1128,6 +1129,21 @@ export default function ArchiScanPage() {
             soilCode, elevation: e, seismicRisk, floodRisk,
             buildabilityScore: Math.max(10, buildScore),
           })
+          // ★ 지형 그리드 저장 (3D 지형 표현용)
+          if (data.elevations && data.gridSize) {
+            const gs = data.gridSize
+            const elev2D: number[][] = []
+            for (let r = 0; r < gs; r++) {
+              elev2D.push(data.elevations.slice(r * gs, (r + 1) * gs))
+            }
+            setTerrainGrid({
+              elevations: elev2D,
+              gridSize: gs,
+              minElevation: data.minElevation || Math.min(...data.elevations),
+              maxElevation: data.maxElevation || Math.max(...data.elevations),
+              areaWidth: data.areaWidth || 100,
+            })
+          }
           console.log(`[SITE-COND] ✅ 대지조건 분석: 표고${e}m 경사${s}% 토질${soilCode} 침수${floodRisk} 지진${seismicRisk} 적합도${buildScore}점`)
         }
       })
@@ -2533,7 +2549,7 @@ export default function ArchiScanPage() {
             siteArea={siteAreaNum}
             coverage={selectedLayoutData.coverage}
             sitePolygon={sitePolygon}
-            terrain={analysisRawData?.terrain}
+            terrain={terrainGrid || analysisRawData?.terrain}
             siteCoords={siteCoords}
             regulation={{ frontSetback: regulation?.setbackFront ?? 3, sideSetback: regulation?.setbackSide ?? 1.5, rearSetback: regulation?.setbackRear ?? 2, roadWidth: regulation?.roadWidth || 8, maxHeight: regulation?.maxHeight || 30, setbackAngle: regulation?.setbackAngle ?? 45, northShadow: regulation?.setbackType === 'north' || regulation?.setbackType === 'both' }}
             onClose={() => setShow3DVolume(false)}
@@ -3233,7 +3249,7 @@ export default function ArchiScanPage() {
             strategy={strategy}
             gfa={gfa}
             sitePolygon={sitePolygon}
-            terrain={analysisRawData?.terrain}
+            terrain={terrainGrid || analysisRawData?.terrain}
             molitSupplementData={molitSupplementData}
             loadDxfGenerator={loadDxfGenerator}
             selectedPatterns={userValues.selectedPatterns}
