@@ -35,8 +35,9 @@ export function getBuildingGeometry(params: {
   buildingCount?: number
   originalType?: string
   floorHeight?: number
+  siteAspectRatio?: number  // 대지 가로/세로 비율 (1.0 = 정사각형)
 }): BuildingGeometry {
-  const { type, coverage, siteArea, floors, buildingCount = 1, originalType, floorHeight = 3.3 } = params
+  const { type, coverage, siteArea, floors, buildingCount = 1, originalType, floorHeight = 3.3, siteAspectRatio } = params
   const S = Math.sqrt(siteArea)
   const fp = Math.max(coverage, 20) / 100
   
@@ -46,7 +47,7 @@ export function getBuildingGeometry(params: {
 
   // 다동 배치 — type이 cluster가 아니더라도 buildingCount > 1이면 다동 분리
   if (buildingCount > 1) {
-    blocks = getClusterBlocks(buildingCount, originalType || type || 'tower', coverage)
+    blocks = getClusterBlocks(buildingCount, originalType || type || 'tower', coverage, siteAspectRatio)
     effectiveBuildingCount = buildingCount
   } else {
     // 단동 타입별 계산
@@ -238,7 +239,7 @@ export function getBuildingGeometry(params: {
 /**
  * 클러스터(다동) 블록 동적 생성
  */
-export function getClusterBlocks(n: number, originalType: string, coverage: number): BuildingBlock[] {
+export function getClusterBlocks(n: number, originalType: string, coverage: number, siteAspectRatio?: number): BuildingBlock[] {
   const covR = (coverage || 50) / 100
   const eachFP = covR / Math.max(n, 1)
   const lr = originalType === 'linear' ? 3.5 : originalType === 'lshape' ? 1.8 : originalType === 'courtyard' ? 1.5 : 1.4
@@ -246,18 +247,34 @@ export function getClusterBlocks(n: number, originalType: string, coverage: numb
   const d = eachFP / w
 
   const isLinear = originalType === 'linear'
-  const cols = isLinear ? 1 : n <= 2 ? 2 : n <= 4 ? 2 : 3
-  const rows = Math.ceil(n / cols)
-  const gapZ = isLinear ? Math.max(0.12, d * 0.8) : 0.15
+  const ar = siteAspectRatio || 1.0 // 대지 종횡비 (가로/세로)
+  
+  // ★ 대지 종횡비에 맞춰 열/행 배분
+  let cols: number, rows: number
+  if (isLinear) {
+    // 판상형: 가로 넓으면 2열, 세로 넓으면 1열
+    if (ar > 1.3 && n >= 4) {
+      cols = 2
+    } else {
+      cols = 1
+    }
+  } else {
+    cols = n <= 2 ? n : n <= 4 ? 2 : 3
+  }
+  rows = Math.ceil(n / cols)
+  
+  // 블록 간격 — 대지에 맞춰 조정
+  const gapX = isLinear ? 0.08 : 0.12
+  const gapZ = isLinear ? Math.max(0.08, d * 0.5) : 0.12
   const totalZ = rows * d + (rows - 1) * gapZ
-  const totalX = cols * w + (cols - 1) * 0.08
+  const totalX = cols * w + (cols - 1) * gapX
 
   const result: BuildingBlock[] = []
   let cnt = 0
   for (let r = 0; r < rows && cnt < n; r++) {
     for (let c = 0; c < cols && cnt < n; c++) {
       result.push({
-        x: cols === 1 ? 0 : -totalX / 2 + w / 2 + c * (w + 0.08),
+        x: cols === 1 ? 0 : -totalX / 2 + w / 2 + c * (w + gapX),
         z: -totalZ / 2 + d / 2 + r * (d + gapZ),
         w, d,
         label: `${String.fromCharCode(65 + cnt)}동`,
@@ -279,6 +296,7 @@ export function getBuildingDimensionsInMeters(params: {
   floors: number
   buildingCount?: number
   originalType?: string
+  siteAspectRatio?: number
 }) {
   const geo = getBuildingGeometry(params)
   const S = geo.siteWidth

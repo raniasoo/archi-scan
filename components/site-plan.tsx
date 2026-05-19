@@ -192,8 +192,11 @@ export function SitePlan({
     // ━━━ building-geometry 블록 데이터 사용 (3D 모델과 동일) ━━━
     try {
       const { getBuildingDimensionsInMeters } = require('@/lib/building-geometry')
+      // 대지 종횡비 계산 (폴리곤 건축가능영역 기준)
+      const siteAR = bldZoneW > 0 && bldZoneH > 0 ? bldZoneW / bldZoneH : 1.0
       const geo = getBuildingDimensionsInMeters({
         type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType: originalType || type,
+        siteAspectRatio: siteAR,
       })
       const bm = geo.blocksInMeters
       if (bm && bm.length > 0) {
