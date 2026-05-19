@@ -241,42 +241,77 @@ export function getBuildingGeometry(params: {
  */
 export function getClusterBlocks(n: number, originalType: string, coverage: number, siteAspectRatio?: number): BuildingBlock[] {
   const covR = (coverage || 50) / 100
-  const eachFP = covR / Math.max(n, 1)
-  const lr = originalType === 'linear' ? 3.5 : originalType === 'lshape' ? 1.8 : originalType === 'courtyard' ? 1.5 : 1.4
-  const w = Math.sqrt(eachFP * lr)
-  const d = eachFP / w
-
+  const totalFP = covR // 전체 건물 면적 (정규화)
   const isLinear = originalType === 'linear'
-  const ar = siteAspectRatio || 1.0 // 대지 종횡비 (가로/세로)
+  const ar = siteAspectRatio || 1.0
+
+  // ★ 대지에 맞는 열/행 결정 — 모든 건물이 대지 안에 들어가도록
+  let bestCols = 1, bestRows = n
+  let bestScore = Infinity
   
-  // ★ 대지 종횡비에 맞춰 열/행 배분
-  let cols: number, rows: number
-  if (isLinear) {
-    // 판상형: 가로 넓으면 2열, 세로 넓으면 1열
-    if (ar > 1.3 && n >= 4) {
-      cols = 2
-    } else {
-      cols = 1
+  for (let c = 1; c <= Math.min(n, 4); c++) {
+    const r = Math.ceil(n / c)
+    const gapFractionX = 0.06 * (c - 1)
+    const gapFractionZ = 0.06 * (r - 1)
+    
+    // 각 건물의 폭과 깊이 (정규화 좌표)
+    const eachFP = totalFP / n
+    const availW = (1.0 - gapFractionX) / c  // 열당 가용 폭
+    const availH = (1.0 / ar - gapFractionZ) / r  // 행당 가용 높이 (종횡비 반영)
+    
+    // 건물 종횡비 제약 적용
+    const targetLR = isLinear ? 3.5 : originalType === 'lshape' ? 1.8 : originalType === 'courtyard' ? 1.5 : 1.4
+    let bw = Math.sqrt(eachFP * targetLR)
+    let bd = eachFP / bw
+    
+    // 대지 가용 영역에 맞춰 스케일 다운
+    if (bw > availW) { bw = availW; bd = eachFP / bw }
+    if (bd > availH) { bd = availH; bw = eachFP / bd }
+    
+    // 전체가 대지(1.0 × 1.0/ar) 안에 들어가는지 평가
+    const usedW = c * bw + (c - 1) * 0.06
+    const usedH = r * bd + (r - 1) * 0.06
+    const siteH = 1.0 / Math.max(ar, 0.5)
+    
+    const overflowW = Math.max(0, usedW - 0.95)
+    const overflowH = Math.max(0, usedH - siteH * 0.9)
+    const fillRatio = (usedW * usedH) / (0.95 * siteH * 0.9)
+    
+    const score = overflowW * 10 + overflowH * 10 + Math.abs(1 - fillRatio)
+    if (score < bestScore) {
+      bestScore = score
+      bestCols = c
+      bestRows = r
     }
-  } else {
-    cols = n <= 2 ? n : n <= 4 ? 2 : 3
   }
-  rows = Math.ceil(n / cols)
   
-  // 블록 간격 — 대지에 맞춰 조정
-  const gapX = isLinear ? 0.08 : 0.12
-  const gapZ = isLinear ? Math.max(0.08, d * 0.5) : 0.12
-  const totalZ = rows * d + (rows - 1) * gapZ
-  const totalX = cols * w + (cols - 1) * gapX
+  const cols = bestCols
+  const rows = bestRows
+  const eachFP = totalFP / n
+  const gap = 0.06
+  
+  // 최종 건물 치수 — 대지에 맞춤
+  const siteH = 1.0 / Math.max(ar, 0.5)
+  const availCellW = (0.92 - gap * (cols - 1)) / cols
+  const availCellH = (siteH * 0.85 - gap * (rows - 1)) / rows
+  
+  const targetLR = isLinear ? 3.5 : originalType === 'lshape' ? 1.8 : originalType === 'courtyard' ? 1.5 : 1.4
+  let bw = Math.sqrt(eachFP * targetLR)
+  let bd = eachFP / bw
+  if (bw > availCellW) { bw = availCellW; bd = Math.min(eachFP / bw, availCellH) }
+  if (bd > availCellH) { bd = availCellH; bw = Math.min(eachFP / bd, availCellW) }
+  
+  const totalW = cols * bw + (cols - 1) * gap
+  const totalH = rows * bd + (rows - 1) * gap
 
   const result: BuildingBlock[] = []
   let cnt = 0
   for (let r = 0; r < rows && cnt < n; r++) {
     for (let c = 0; c < cols && cnt < n; c++) {
       result.push({
-        x: cols === 1 ? 0 : -totalX / 2 + w / 2 + c * (w + gapX),
-        z: -totalZ / 2 + d / 2 + r * (d + gapZ),
-        w, d,
+        x: -totalW / 2 + bw / 2 + c * (bw + gap),
+        z: -totalH / 2 + bd / 2 + r * (bd + gap),
+        w: bw, d: bd,
         label: `${String.fromCharCode(65 + cnt)}동`,
       })
       cnt++
