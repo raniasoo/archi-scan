@@ -189,111 +189,128 @@ export function SitePlan({
     const bX = anchorX - bW / 2
     const bY = anchorY - bH / 2
 
-    // ━━━ building-geometry 블록 데이터 사용 (3D 모델과 동일) ━━━
+    // ━━━ 다동 배치: 폴리곤 직접 배치 (폴리곤 있을 때) ━━━
+    if (svgPolyCoords.length > 2 && (buildingCount || 1) > 1) {
+      const n = buildingCount || 2
+      const totalFootprint = siteArea * buildingCoverage / 100
+      const eachFootprint = totalFootprint / n
+      
+      // 인셋 폴리곤 계산
+      const cx = svgPolyCoords.reduce((s, p) => s + p.x, 0) / svgPolyCoords.length
+      const cy = svgPolyCoords.reduce((s, p) => s + p.y, 0) / svgPolyCoords.length
+      const insetRatio = 1 - (avgSetback * svgScale * 2) / Math.max(siteW, siteH)
+      const safeR = Math.max(0.65, Math.min(0.92, insetRatio))
+      const insetPoly = svgPolyCoords.map(p => ({
+        x: cx + (p.x - cx) * safeR,
+        y: cy + (p.y - cy) * safeR,
+      }))
+      
+      // 인셋 폴리곤 바운딩박스
+      const ipMinY = Math.min(...insetPoly.map(p => p.y))
+      const ipMaxY = Math.max(...insetPoly.map(p => p.y))
+      const ipH = ipMaxY - ipMinY
+      
+      // 스캔라인: Y좌표에서 폴리곤 좌우 경계
+      function getPolyWidthAt(scanY: number): { left: number; right: number } | null {
+        const xs: number[] = []
+        for (let i = 0; i < insetPoly.length; i++) {
+          const p1 = insetPoly[i], p2 = insetPoly[(i + 1) % insetPoly.length]
+          if ((p1.y <= scanY && p2.y >= scanY) || (p2.y <= scanY && p1.y >= scanY)) {
+            const t = Math.abs(p2.y - p1.y) < 0.01 ? 0.5 : (scanY - p1.y) / (p2.y - p1.y)
+            xs.push(p1.x + t * (p2.x - p1.x))
+          }
+        }
+        if (xs.length < 2) return null
+        return { left: Math.min(...xs), right: Math.max(...xs) }
+      }
+      
+      // 행 수 결정: 2~3행이 적절
+      const rows = n <= 3 ? 1 : n <= 6 ? 2 : 3
+      const perRow: number[] = []
+      let remaining = n
+      for (let r = 0; r < rows; r++) {
+        const count = r === rows - 1 ? remaining : Math.ceil(n / rows)
+        perRow.push(Math.min(count, remaining))
+        remaining -= perRow[r]
+      }
+      
+      // 각 행의 Y 위치 + 건물 배치
+      const shapes: { x: number; y: number; w: number; h: number }[] = []
+      const rowGap = 8 // px
+      const colGap = 6 // px
+      const isLin = originalType === 'linear'
+      const bldgAR = isLin ? 3.0 : originalType === 'lshape' ? 1.6 : 1.3
+      
+      // 각 행에 균등 Y 배분 (상단 여백 포함)
+      const usableH = ipH - rowGap * (rows + 1)
+      const rowH = usableH / rows
+      
+      let bldgIdx = 0
+      for (let r = 0; r < rows; r++) {
+        const count = perRow[r]
+        const midY = ipMinY + rowGap * (r + 1) + rowH * (r + 0.5)
+        
+        // 이 Y에서 폴리곤 폭
+        const bounds = getPolyWidthAt(midY)
+        if (!bounds) continue
+        const polyW = bounds.right - bounds.left - colGap * 2
+        
+        // 건물 크기: 폴리곤 폭에 맞춰 계산
+        const totalGaps = colGap * (count - 1)
+        const availW = polyW - totalGaps
+        let bw = availW / count
+        let bh = rowH * 0.75
+        
+        // 종횡비 제약
+        if (bw / bh > bldgAR * 1.5) bh = bw / bldgAR
+        if (bw / bh < 0.5) bw = bh * 0.8
+        
+        // 행 내 건물 배치 — 폴리곤 중앙 정렬
+        const totalBW = count * bw + (count - 1) * colGap
+        const startX = bounds.left + colGap + (polyW - totalBW) / 2
+        
+        for (let c = 0; c < count; c++) {
+          shapes.push({
+            x: startX + c * (bw + colGap),
+            y: midY - bh / 2,
+            w: bw,
+            h: bh,
+          })
+          bldgIdx++
+        }
+      }
+      
+      const label = originalType === 'linear' ? '판상형' : originalType === 'lshape' ? 'ㄱ자형' : 
+                     originalType === 'courtyard' ? '중정형' : ''
+      return { shapes, label, courtyard: undefined }
+    }
+    
+    // ━━━ 단동 또는 폴리곤 없는 경우: building-geometry 사용 ━━━
     try {
       const { getBuildingDimensionsInMeters } = require('@/lib/building-geometry')
-      // 대지 종횡비 계산 (폴리곤 건축가능영역 기준)
       const siteAR = bldZoneW > 0 && bldZoneH > 0 ? bldZoneW / bldZoneH : 1.0
       const geo = getBuildingDimensionsInMeters({
-        type, coverage: buildingCoverage, siteArea, floors, buildingCount, originalType: originalType || type,
+        type, coverage: buildingCoverage, siteArea, floors, buildingCount: 1, originalType: originalType || type,
         siteAspectRatio: siteAR,
       })
       const bm = geo.blocksInMeters
       if (bm && bm.length > 0) {
-        const S = geo.siteWidthM || Math.sqrt(siteArea)
-        // 블록 바운딩 박스
         const minX = Math.min(...bm.map((b: any) => b.centerXM - b.widthM / 2))
         const maxX = Math.max(...bm.map((b: any) => b.centerXM + b.widthM / 2))
         const minZ = Math.min(...bm.map((b: any) => b.centerZM - b.depthM / 2))
         const maxZ = Math.max(...bm.map((b: any) => b.centerZM + b.depthM / 2))
         const bbW = maxX - minX, bbH = maxZ - minZ
-        
-        // ★ 다동 배치: 건축가능영역 전체를 사용 (대칭 스캔라인 대신)
-        const useW = bm.length > 1 ? bldZoneW * 0.9 : bW
-        const useH = bm.length > 1 ? bldZoneH * 0.85 : bH
-        const useX = bm.length > 1 ? bldZoneX + bldZoneW * 0.05 : bX
-        const useY = bm.length > 1 ? bldZoneY + bldZoneH * 0.05 : bY
-        
-        // SVG 좌표 스케일 — 건축가능영역에 맞춤
-        const scaleX = useW / Math.max(bbW, 1)
-        const scaleZ = useH / Math.max(bbH, 1)
+        const scaleX = bW / Math.max(bbW, 1)
+        const scaleZ = bH / Math.max(bbH, 1)
         const scale = Math.min(scaleX, scaleZ) * 0.9
-        let ofsX = useX + (useW - bbW * scale) / 2
-        let ofsY = useY + (useH - bbH * scale) / 2
-        
-        // ━━━ 건축가능영역 내부로 클램핑 ━━━
-        const totalBldW = bbW * scale, totalBldH = bbH * scale
-        if (ofsX < bldZoneX + 3) ofsX = bldZoneX + 3
-        if (ofsY < bldZoneY + 3) ofsY = bldZoneY + 3
-        if (ofsX + totalBldW > bldZoneX + bldZoneW - 3) ofsX = bldZoneX + bldZoneW - totalBldW - 3
-        if (ofsY + totalBldH > bldZoneY + bldZoneH - 3) ofsY = bldZoneY + bldZoneH - totalBldH - 3
-        
-        let shapes = bm.map((b: any, i: number) => ({
+        const ofsX = bX + (bW - bbW * scale) / 2
+        const ofsY = bY + (bH - bbH * scale) / 2
+        const shapes = bm.map((b: any) => ({
           x: ofsX + (b.centerXM - b.widthM / 2 - minX) * scale,
           y: ofsY + (b.centerZM - b.depthM / 2 - minZ) * scale,
           w: b.widthM * scale,
           h: b.depthM * scale,
         }))
-        
-        // ★ 폴리곤 스캔라인 — 각 건물을 인셋 폴리곤 내부에 맞춤
-        if (svgPolyCoords.length > 2 && shapes.length > 1) {
-          const insetRatio = 1 - (avgSetback * svgScale * 2) / Math.max(siteW, siteH)
-          const safeR = Math.max(0.6, Math.min(0.95, insetRatio))
-          const pcx = svgPolyCoords.reduce((s, p) => s + p.x, 0) / svgPolyCoords.length
-          const pcy = svgPolyCoords.reduce((s, p) => s + p.y, 0) / svgPolyCoords.length
-          const insetPoly = svgPolyCoords.map(p => ({
-            x: pcx + (p.x - pcx) * safeR,
-            y: pcy + (p.y - pcy) * safeR,
-          }))
-          
-          // 행별로 그룹핑 (같은 y좌표 = 같은 행)
-          const rowGroups: Map<number, typeof shapes> = new Map()
-          for (const s of shapes) {
-            const rowKey = Math.round(s.y * 10)
-            if (!rowGroups.has(rowKey)) rowGroups.set(rowKey, [])
-            rowGroups.get(rowKey)!.push(s)
-          }
-          
-          const adjustedShapes: typeof shapes = []
-          for (const [, rowShapes] of rowGroups) {
-            const midY = rowShapes[0].y + rowShapes[0].h / 2
-            
-            // 이 Y높이에서 폴리곤 좌우 경계 찾기
-            let xIntersections: number[] = []
-            for (let i = 0; i < insetPoly.length; i++) {
-              const p1 = insetPoly[i], p2 = insetPoly[(i + 1) % insetPoly.length]
-              if ((p1.y <= midY && p2.y >= midY) || (p2.y <= midY && p1.y >= midY)) {
-                const t = Math.abs(p2.y - p1.y) < 0.01 ? 0.5 : (midY - p1.y) / (p2.y - p1.y)
-                xIntersections.push(p1.x + t * (p2.x - p1.x))
-              }
-            }
-            
-            if (xIntersections.length >= 2) {
-              const polyLeft = Math.min(...xIntersections) + 5
-              const polyRight = Math.max(...xIntersections) - 5
-              const polyWidth = polyRight - polyLeft
-              
-              // 이 행의 건물들 총 폭
-              const totalRowW = rowShapes.reduce((s, sh) => s + sh.w, 0) + (rowShapes.length - 1) * 4
-              const rowScale = totalRowW > polyWidth ? polyWidth / totalRowW : 1.0
-              const startX = polyLeft + (polyWidth - totalRowW * rowScale) / 2
-              
-              let cx = startX
-              for (const sh of rowShapes) {
-                adjustedShapes.push({
-                  ...sh,
-                  x: cx,
-                  w: sh.w * rowScale,
-                })
-                cx += sh.w * rowScale + 4
-              }
-            } else {
-              adjustedShapes.push(...rowShapes)
-            }
-          }
-          shapes = adjustedShapes
-        }
-        
         const isCourtyard = type === 'courtyard'
         const courtyard = isCourtyard && bm.length >= 3 ? {
           x: ofsX + (bm[0].centerXM + bm[0].widthM / 2 - minX) * scale,
@@ -301,7 +318,6 @@ export function SitePlan({
           w: Math.abs(bm[bm.length - 1].centerXM - bm[0].centerXM) * scale * 0.5,
           h: Math.abs(bm[bm.length - 1].centerZM - bm[0].centerZM) * scale * 0.5,
         } : undefined
-        
         const label = type === 'tower' ? '타워동' : type === 'linear' ? '판상형' : 
                        type === 'lshape' ? 'ㄱ자형' : type === 'courtyard' ? 'ㅁ자형' : ''
         return { shapes, label, courtyard }
