@@ -262,6 +262,6 @@ export function evaluateAllPatterns(p: {
 
 
 // Stub for backward compatibility
-export interface PatternVisuals { patterns: string[] }
-export function getPatternVisuals(): PatternVisuals { return { patterns: [] } }
+export interface PatternVisuals { patterns: string[]; patternLabels: string[]; propertyLabels: string[] }
+export function getPatternVisuals(): PatternVisuals { return { patterns: [], patternLabels: [], propertyLabels: [] } }
 

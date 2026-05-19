@@ -278,12 +278,12 @@ export async function renderAllDiagrams(params: DiagramParams): Promise<DiagramR
 
   // ━━━ 패턴 라벨 추가 함수 ━━━
   function addPatternLabels(scene: any, x: number, y: number, z: number) {
-    const labels = pv.patternLabels.slice(0, 4)
+    const labels = (pv.patternLabels || []).slice(0, 4)
     labels.forEach((label, i) => {
       addLabel(scene, label, x, y - i * 1.5, z, 1.2, '#1a6b1a')
     })
-    if (pv.propertyLabels.length > 0) {
-      addLabel(scene, `속성: ${pv.propertyLabels.slice(0, 3).join(' · ')}`, x, y - labels.length * 1.5 - 1, z, 1, '#6a3399')
+    if ((pv.propertyLabels || []).length > 0) {
+      addLabel(scene, `속성: ${(pv.propertyLabels || []).slice(0, 3).join(' · ')}`, x, y - labels.length * 1.5 - 1, z, 1, '#6a3399')
     }
   }
 
