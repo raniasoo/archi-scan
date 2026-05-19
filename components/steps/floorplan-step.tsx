@@ -46,6 +46,7 @@ export interface FloorplanStepProps {
   molitSupplementData: Record<string, unknown>
   loadDxfGenerator: () => Promise<any>
   selectedPatterns?: string[]
+  terrain?: { elevations: number[][]; gridSize: number; minElevation: number; maxElevation: number; areaWidth: number }
 }
 
 export function FloorplanStep(props: FloorplanStepProps) {
@@ -57,6 +58,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
     address, siteArea, siteAreaNum, regulation, strategy, gfa,
     sitePolygon, molitSupplementData, loadDxfGenerator, selectedPatterns,
   } = props
+  const { terrain } = props
 
   const molit = molitSupplementData as {
     hasDistrictPlan?: boolean; zoneCode?: string; roadWidth?: number; heightLimit?: number
@@ -298,6 +300,7 @@ export function FloorplanStep(props: FloorplanStepProps) {
               buildingCount={renderData.buildingCount}
               originalType={renderData.originalType}
               sitePolygon={sitePolygon ?? undefined}
+              terrain={terrain}
               regulation={{
                 frontSetback: regulation?.setbackFront ?? 3,
                 sideSetback: regulation?.setbackSide ?? 1.5,

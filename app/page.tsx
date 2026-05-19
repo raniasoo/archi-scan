@@ -3233,6 +3233,7 @@ export default function ArchiScanPage() {
             strategy={strategy}
             gfa={gfa}
             sitePolygon={sitePolygon}
+            terrain={analysisRawData?.terrain}
             molitSupplementData={molitSupplementData}
             loadDxfGenerator={loadDxfGenerator}
             selectedPatterns={userValues.selectedPatterns}
