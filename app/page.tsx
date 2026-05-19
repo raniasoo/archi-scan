@@ -284,7 +284,8 @@ function generateLayouts(
     
     // 전략 파라미터 + 대지 조건 적용
     const coverage = Math.min(maxCoverage, Math.round(coverageBase * params.coverageMultiplier * coverageAdj * slopeCoverageAdj * floodCoverageAdj))
-    const floors = Math.min(effectiveMaxFloors, Math.round(floorBase * params.floorMultiplier * floorAdj * slopeFloorAdj * soilFloorAdj))
+    // ★ 최소 2층 보장 (1층 로비/상가 + 최소 1개 주거층) — effectiveMaxFloors가 1이면 1층 허용
+    const floors = Math.max(Math.min(effectiveMaxFloors, 2), Math.min(effectiveMaxFloors, Math.round(floorBase * params.floorMultiplier * floorAdj * slopeFloorAdj * soilFloorAdj)))
     const buildingArea = (siteArea * coverage) / 100
     const gfa = buildingArea * floors
     const openSpace = Math.round((100 - coverage) * params.openSpaceRatio * openSpaceAdj * 100) / 100
@@ -688,7 +689,7 @@ function generateLayouts(
     })
     if (adj.adjustments.length > 0) {
       layout.coverage = Math.min(maxCoverage, adj.coverage)
-      layout.floors = Math.min(effectiveMaxFloors, adj.floors)
+      layout.floors = Math.max(Math.min(effectiveMaxFloors, 2), Math.min(effectiveMaxFloors, adj.floors))
       // 재계산
       const fp = siteArea * layout.coverage / 100
       layout.gfa = fp * layout.floors
@@ -708,7 +709,7 @@ function generateLayouts(
       })
       if (redesign.result.wasRedesigned) {
         layout.coverage = Math.min(maxCoverage, redesign.coverage)
-        layout.floors = Math.min(effectiveMaxFloors, redesign.floors)
+        layout.floors = Math.max(Math.min(effectiveMaxFloors, 2), Math.min(effectiveMaxFloors, redesign.floors))
         const fp = siteArea * layout.coverage / 100
         layout.gfa = fp * layout.floors
         layout.units = Math.max(1, Math.round(layout.gfa * 0.65 / 85))
