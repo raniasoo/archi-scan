@@ -104,6 +104,7 @@ const LayoutsStep = dynamic(() => import("@/components/steps/layouts-step").then
 const InputStep = dynamic(() => import("@/components/steps/input-step").then(m => ({ default: m.InputStep })), { loading: LoadingBox })
 const StrategyStep = dynamic(() => import("@/components/steps/strategy-step").then(m => ({ default: m.StrategyStep })), { loading: LoadingBox })
 const RegulationStep = dynamic(() => import("@/components/steps/regulation-step").then(m => ({ default: m.RegulationStep })), { loading: LoadingBox })
+import { SiteAnalysisPanel } from "@/components/site-analysis-panel"
 const FinancialStep = dynamic(() => import("@/components/steps/financial-step").then(m => ({ default: m.FinancialStep })), { loading: LoadingBox })
 const ReportStep = dynamic(() => import("@/components/steps/report-step").then(m => ({ default: m.ReportStep })), { loading: LoadingBox })
 const DataVerification = dynamic(() => import("@/components/data-verification").then(m => ({ default: m.DataVerification })), { loading: LoadingBox })
@@ -2789,6 +2790,13 @@ export default function ArchiScanPage() {
 
         {/* Step: Strategy Selection */}
         {currentStep === "strategy" && (
+          <>
+          {/* ★ 대지조건분석 요약 — 전략 선택 시 참고 */}
+          {siteConditions.elevation !== undefined && (
+            <div className="px-4 mb-3">
+              <SiteAnalysisPanel siteConditions={siteConditions} address={address} />
+            </div>
+          )}
           <StrategyStep
             address={address} siteArea={siteArea} strategy={strategy}
             setStrategy={setStrategy} designApproach={designApproach}
@@ -2798,10 +2806,12 @@ export default function ArchiScanPage() {
             handleStrategyComplete={handleStrategyComplete}
             handleGenerate={handleGenerate}
           />
+          </>
         )}
 
-        {/* Step: Regulation */}
+        {/* Step: Regulation + 대지조건분석 */}
         {currentStep === "regulation" && (
+          <>
           <RegulationStep
             address={address} siteArea={siteArea} siteAreaNum={siteAreaNum}
             regulation={regulation} setRegulation={setRegulation}
@@ -2811,6 +2821,13 @@ export default function ArchiScanPage() {
             handleGenerate={handleGenerate}
             onNextStep={() => setCurrentStep("strategy")}
           />
+          {/* ★ 대지조건분석 패널 — 법규 검토 아래, 전략 선택 위 */}
+          {siteConditions.elevation !== undefined && (
+            <div className="px-4 mt-3">
+              <SiteAnalysisPanel siteConditions={siteConditions} address={address} />
+            </div>
+          )}
+          </>
         )}
 
         {/* Step: Layouts */}
