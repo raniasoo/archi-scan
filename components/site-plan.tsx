@@ -205,12 +205,18 @@ export function SitePlan({
         const maxZ = Math.max(...bm.map((b: any) => b.centerZM + b.depthM / 2))
         const bbW = maxX - minX, bbH = maxZ - minZ
         
+        // ★ 다동 배치: 건축가능영역 전체를 사용 (대칭 스캔라인 대신)
+        const useW = bm.length > 1 ? bldZoneW * 0.9 : bW
+        const useH = bm.length > 1 ? bldZoneH * 0.85 : bH
+        const useX = bm.length > 1 ? bldZoneX + bldZoneW * 0.05 : bX
+        const useY = bm.length > 1 ? bldZoneY + bldZoneH * 0.05 : bY
+        
         // SVG 좌표 스케일 — 건축가능영역에 맞춤
-        const scaleX = bW / Math.max(bbW, 1)
-        const scaleZ = bH / Math.max(bbH, 1)
+        const scaleX = useW / Math.max(bbW, 1)
+        const scaleZ = useH / Math.max(bbH, 1)
         const scale = Math.min(scaleX, scaleZ) * 0.9
-        let ofsX = bX + (bW - bbW * scale) / 2
-        let ofsY = bY + (bH - bbH * scale) / 2
+        let ofsX = useX + (useW - bbW * scale) / 2
+        let ofsY = useY + (useH - bbH * scale) / 2
         
         // ━━━ 건축가능영역 내부로 클램핑 ━━━
         const totalBldW = bbW * scale, totalBldH = bbH * scale
